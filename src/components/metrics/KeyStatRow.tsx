@@ -190,7 +190,7 @@ function Tile({ p, c }: { p: KeyStatRowProps; c: Computed }) {
                 c.avgText && (
                   <StatusChip tone="neutral" delta={c.dir} className={TILE_CHIP}>
                     {c.avgText}
-                    {p.unit && <span className="font-semibold">{p.unit === "%" ? "%" : ` ${p.unit}`}</span>}
+                    {p.unit && <span className="font-semibold">{p.unit === "%" ? "%" : `\u00a0${p.unit}`}</span>}
                   </StatusChip>
                 )
               )}

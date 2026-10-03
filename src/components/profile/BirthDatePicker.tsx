@@ -2,13 +2,14 @@
 
 import * as React from "react"
 import { format, parseISO } from "date-fns"
+import { DAY, formatDay } from "@/lib/format"
 import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+const MONTHS = Array.from({ length: 12 }, (_, i) => formatDay(`2026-${String(i + 1).padStart(2, "0")}`, { month: "short" }))
 /** Where the year grid opens when nothing is picked yet: the middle of the likely range. */
 const START_YEAR = 1995
 const OLDEST = 1920
@@ -80,7 +81,7 @@ export function BirthDatePicker({
             !picked && "text-muted-foreground",
           )}
         >
-          {picked ? format(picked, "d MMMM yyyy") : "Choose your birth date"}
+          {value ? formatDay(value, { ...DAY.full, month: "long" }) : "Choose your birth date"}
           <CalendarDays aria-hidden className="size-5 shrink-0 text-foreground-secondary" strokeWidth={1.75} />
         </button>
       </PopoverTrigger>
@@ -90,9 +91,9 @@ export function BirthDatePicker({
             type="button"
             onClick={() => setView(view === "year" ? (picked ? "day" : "year") : "year")}
             className="flex h-10 items-center gap-1 rounded-lg px-2 text-[15px] font-bold outline-none hover:bg-white/8 focus-visible:ring-2 focus-visible:ring-foreground/70"
-            aria-label={view === "year" ? "Years" : `Choose year, ${format(month, "MMMM yyyy")}`}
+            aria-label={view === "year" ? "Years" : `Choose year, ${formatDay(iso(month), DAY.monthYear)}`}
           >
-            {view === "year" ? "Year" : view === "month" ? year : format(month, "MMMM yyyy")}
+            {view === "year" ? "Year" : view === "month" ? year : formatDay(iso(month), DAY.monthYear)}
             {view !== "year" && <ChevronDown aria-hidden className="size-4" strokeWidth={2.25} />}
           </button>
           {view === "day" && (

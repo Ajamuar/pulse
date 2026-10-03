@@ -68,7 +68,7 @@ function RecoveryRow({ p, value, meta }: { p: Extract<ContributorRowProps, { var
   const unitSpoken = (v: number) => spoken(formatValue(p.format, v), p.unit)
   const sentence =
     value === null
-      ? `${p.label}: ${p.reasonCopy ?? "Not measured: left out of today's score"}`
+      ? `${p.label}: ${p.reasonCopy ?? "Not measured: left out of today’s score"}`
       : `${p.label} ${unitSpoken(value)}, ${value > mean + sd ? "above" : value < mean - sd ? "below" : "within"} your normal range of ${formatValue(p.format, mean - sd)} to ${formatValue(p.format, mean + sd)}${pts === null ? "" : pts === 0 ? ", no change" : `, ${pts > 0 ? "added" : "took off"} ${Math.abs(Math.round(pts))} points`}`
   return (
     <div className={cn("space-y-2 py-3", p.className)}>
@@ -99,8 +99,8 @@ function RecoveryRow({ p, value, meta }: { p: Extract<ContributorRowProps, { var
         </div>
         <p className={cn(CAPTION, "flex flex-wrap items-center gap-2")}>
           {value === null
-            ? (p.reasonCopy ?? "Not measured: left out of today's score")
-            : `Baseline ${formatValue(p.format, mean)} ± ${formatValue(p.format, sd).replace(/^\+/, "")}${p.unit ? (isSymbolUnit(p.unit) ? p.unit : ` ${p.unit}`) : ""}`}
+            ? (p.reasonCopy ?? "Not measured: left out of today’s score")
+            : `Baseline ${formatValue(p.format, mean)} ± ${formatValue(p.format, sd).replace(/^\+/, "")}${p.unit ? (isSymbolUnit(p.unit) ? p.unit : `\u00a0${p.unit}`) : ""}`}
           {meta && value !== null && <MetricTags provisional={meta.provisional} tags={meta.tags} />}
         </p>
       </div>

@@ -65,8 +65,8 @@ export function ConnectionBanner({ className }: { className?: string }) {
     },
     importing: {
       icon: <CloudDownload className="text-coach" />,
-      title: "Importing history",
-      body: `${done} of ${total} days. Scores fill in as days arrive.`,
+      title: "Importing history…",
+      body: `${done} of ${total}\u00a0days. Scores fill in as days arrive.`,
       action: null,
       role: "status",
     },

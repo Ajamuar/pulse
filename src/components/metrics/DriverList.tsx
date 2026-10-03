@@ -40,7 +40,7 @@ const unitWord = { pts: "points", "%": "percent", SD: "standard deviations" }
 
 function sentence(i: DriverItem, variant: DriverListProps["variant"], unit: DriverListProps["unit"], outcome = "Recovery") {
   const e = effectOf(i)
-  const size = `${formatValue(unit === "SD" ? "decimal1" : "int", Math.abs(i.delta))} ${unitWord[unit]}`
+  const size = `${formatValue(unit === "SD" ? "decimal1" : "int", Math.abs(i.delta))}\u00a0${unitWord[unit]}`
   if (variant === "recovery")
     return e === "none" ? `${i.label}: no clear effect` : `${i.label} ${e === "positive" ? "raised" : "lowered"} Recovery by ${size}`
   const k = unit === "SD" ? "decimal1" : "int"

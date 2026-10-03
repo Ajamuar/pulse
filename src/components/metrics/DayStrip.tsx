@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { format, parseISO } from "date-fns"
+import { DAY, formatDay } from "@/lib/format"
 import { Check } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { BAND_WORD, DATA_COLORS, recoveryBand, recoveryColor } from "@/lib/bands"
@@ -67,12 +67,11 @@ function Strip({ indicator, days }: DayStripProps) {
         className="w-max gap-1 px-4 py-1 md:px-1"
       >
         {days.map((day) => {
-          const date = parseISO(day.date)
-          const r = day.recovery ?? null
+                    const r = day.recovery ?? null
           const label =
             indicator === "recovery"
-              ? `${format(date, "EEEE d MMMM")}, ${r === null ? "no Recovery" : `Recovery ${Math.round(r)} percent, ${BAND_WORD[recoveryBand(r)].toLowerCase()}`}`
-              : `${format(date, "EEEE d MMMM")}, ${day.done ? "checked in" : "not checked in"}`
+              ? `${formatDay(day.date, DAY.long)}, ${r === null ? "no Recovery" : `Recovery ${Math.round(r)} percent, ${BAND_WORD[recoveryBand(r)].toLowerCase()}`}`
+              : `${formatDay(day.date, DAY.long)}, ${day.done ? "checked in" : "not checked in"}`
           const on = day.date === value
           return (
             <ToggleGroupItem
@@ -85,10 +84,10 @@ function Strip({ indicator, days }: DayStripProps) {
               className="h-auto w-11 flex-col justify-center gap-1 rounded-xl px-0 py-2 transition-[background-color,scale] duration-150 ease-standard hover:bg-white/6 active:scale-[0.96] data-[state=on]:bg-white/10"
             >
               <span aria-hidden className="text-[11px] leading-3 font-semibold text-muted-foreground">
-                {format(date, "EEEEE")}
+                {formatDay(day.date, { weekday: "narrow" })}
               </span>
               <span aria-hidden className="font-numeric text-[17px] leading-5 font-semibold tabular-nums">
-                {format(date, "d")}
+                {formatDay(day.date, { day: "numeric" })}
               </span>
               {indicator === "recovery" ? (
                 <span aria-hidden className={cn("h-1 w-4 rounded-full", r === null ? "bg-dial-track" : DATA_COLORS[recoveryColor(r)].bg)} />
