@@ -1,0 +1,102 @@
+---
+import Base from "../layouts/Base.astro"
+import GetStarted from "../components/GetStarted.astro"
+import { GLOSSARY } from "../data/glossary"
+import { metricByAppSlug, metricPath } from "../data/metrics"
+import { breadcrumbs } from "../lib/schema"
+
+const title = "Glossary: HRV, Strain, SRI and other wearable terms"
+const description = "Plain definitions of the terms behind recovery, strain and sleep scores: HRV, RMSSD, heart-rate reserve, ACWR, sleep debt, SRI, VO2 max and more."
+const terms = [...GLOSSARY].sort((a, b) => a.term.localeCompare(b.term))
+const url = new URL("/glossary/", Astro.site).href
+const schema = [
+  breadcrumbs(Astro.site!, [
+    { name: "Pulse", path: "/" },
+    { name: "Glossary", path: "/glossary/" },
+  ]),
+  {
+    "@type": "DefinedTermSet",
+    "@id": url,
+    name: "Pulse glossary",
+    hasDefinedTerm: terms.map((t) => ({ "@type": "DefinedTerm", name: t.term, description: t.definition, url: `${url}#${t.id}`, inDefinedTermSet: url })),
+  },
+]
+---
+
+<Base title={title} description={description} schema={schema}>
+  <header class="wrap head">
+    <h1>Glossary</h1>
+    <p class="lede">The words behind recovery, strain and sleep scores, in plain language. Where a term has its own page, the link goes there.</p>
+  </header>
+  <dl class="wrap terms">
+    {
+      terms.map((t) => {
+        const m = t.metric ? metricByAppSlug(t.metric) : undefined
+        return (
+          <div id={t.id}>
+            <dt>{t.term}</dt>
+            <dd>
+              {t.definition}
+              {m && (
+                <>
+                  {" "}
+                  <a href={metricPath(m)}>How Pulse uses it</a>
+                </>
+              )}
+            </dd>
+          </div>
+        )
+      })
+    }
+  </dl>
+  <div class="wrap block"><GetStarted /></div>
+</Base>
+
+<style>
+  .head {
+    padding-top: clamp(40px, 7vw, 88px);
+  }
+  h1 {
+    font-size: clamp(2.5rem, 6vw, 4.25rem);
+    letter-spacing: -0.035em;
+  }
+  .lede {
+    margin-top: 18px;
+    max-width: 56ch;
+    color: var(--foreground-secondary);
+    font-size: 1.1875rem;
+  }
+  .terms {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 36px 56px;
+    margin-top: 64px;
+  }
+  .terms div {
+    scroll-margin-top: 96px;
+  }
+  dt {
+    font-weight: 600;
+    font-size: 1.125rem;
+  }
+  dd {
+    margin: 6px 0 0;
+    max-width: 60ch;
+    color: var(--foreground-secondary);
+  }
+  dd a {
+    color: var(--foreground);
+    white-space: nowrap;
+  }
+  :target dt {
+    color: var(--optimal);
+  }
+  .block {
+    margin-top: 96px;
+  }
+  @media (max-width: 760px) {
+    .terms {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

@@ -1,0 +1,72 @@
+---
+// A metric's scale as one strip: each band takes its share of the range, coloured as in the app.
+import type { Scale } from "../data/metrics"
+
+interface Props {
+  scale: Scale
+  name: string
+}
+const { scale, name } = Astro.props
+const span = scale.max - scale.min
+const fmt = (n: number) => `${n}${scale.unit ?? ""}`
+// A band ends where the next starts, so 0-33 and 34-66 meet without a gap.
+const widths = scale.bands.map((b, i) => {
+  const end = scale.bands[i + 1]?.from ?? scale.max
+  return ((end - b.from) / span) * 100
+})
+---
+
+<figure class="scale">
+  <div class="strip" aria-hidden="true">
+    {scale.bands.map((b, i) => <span style={`flex-basis:${widths[i]}%;background:${b.color}`} />)}
+  </div>
+  <ol class="labels" style={`grid-template-columns:${widths.map((w) => `${w}fr`).join(" ")}`}>
+    {
+      scale.bands.map((b) => (
+        <li>
+          <span class="band">{b.label}</span>
+          <span class="range num">
+            {b.from}-{fmt(b.to)}
+          </span>
+        </li>
+      ))
+    }
+  </ol>
+  <figcaption class="visually-hidden">{name} scale, from {scale.min} to {fmt(scale.max)}</figcaption>
+</figure>
+
+<style>
+  .scale {
+    margin: 0;
+  }
+  .strip {
+    display: flex;
+    gap: 3px;
+    height: 10px;
+  }
+  .strip span {
+    border-radius: 5px;
+    min-width: 6px;
+  }
+  .labels {
+    display: grid;
+    gap: 3px;
+    margin: 12px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .labels li {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    font-size: 0.875rem;
+    line-height: 1.35;
+  }
+  .band {
+    color: var(--foreground);
+    font-weight: 600;
+  }
+  .range {
+    color: var(--muted-foreground);
+  }
+</style>

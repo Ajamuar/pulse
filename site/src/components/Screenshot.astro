@@ -1,0 +1,35 @@
+---
+import { Picture } from "astro:assets"
+import { SHOTS, isPhone } from "../lib/shots"
+import type { Shot } from "../data/metrics"
+
+interface Props {
+  shot: Shot
+  class?: string
+  /** The hero image: load eagerly with high priority. */
+  priority?: boolean
+  sizes?: string
+}
+const { shot, class: className, priority = false, sizes } = Astro.props
+const { src, alt } = SHOTS[shot]
+const phone = isPhone(shot)
+const widths = phone ? [320, 480, 720] : [640, 960, 1440]
+---
+
+<Picture
+  src={src}
+  alt={alt}
+  formats={["avif", "webp"]}
+  widths={widths}
+  sizes={sizes ?? (phone ? "(max-width: 700px) 70vw, 320px" : "(max-width: 900px) 100vw, 900px")}
+  loading={priority ? "eager" : "lazy"}
+  fetchpriority={priority ? "high" : undefined}
+  decoding="async"
+  class:list={["shot", phone ? "phone" : "laptop", className]}
+/>
+
+<style>
+  .phone {
+    border-radius: 28px;
+  }
+</style>

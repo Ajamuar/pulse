@@ -1,0 +1,223 @@
+@import "@fontsource-variable/figtree/wght.css";
+@import "@fontsource/barlow/latin-600.css";
+@import "@fontsource/barlow/latin-700.css";
+
+/* Tokens are the app's (src/app/globals.css). Dark only, like the app. */
+:root {
+  color-scheme: dark;
+  --background-top: #262e33;
+  --background-mid: #1b2024;
+  --background: #0f1113;
+  --foreground: #ffffff;
+  --foreground-secondary: #babac0;
+  --muted-foreground: #999ea3;
+  --card: #2b2f32;
+  --card-top: #2f3337;
+  --sheet: #14181c;
+  --inset: #111619;
+  --border: rgb(255 255 255 / 0.1);
+  --card-edge: rgb(255 255 255 / 0.06);
+
+  --recovery-green: #19ec06;
+  --recovery-yellow: #ffde00;
+  --recovery-red: #ff0026;
+  --recovery-red-text: #ff5a6a;
+  --strain: #0093e7;
+  --strain-text: #1fa0f0;
+  --strain-deep: #0d48be;
+  --sleep: #7ba1bb;
+  --sleep-deep: #39597b;
+  --optimal: #00f19f;
+  --warning: #ffa722;
+  --stress-low: #67aee6;
+  --stress-medium: #00f19f;
+  --stress-high: #ffa722;
+  --coach: #7095fe;
+
+  --font-sans: "Figtree Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-numeric: "Barlow", var(--font-sans);
+  --font-code: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+
+  --page: 1180px;
+  --gutter: clamp(16px, 4vw, 40px);
+  --radius-card: 16px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-padding-top: 88px;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background: linear-gradient(180deg, var(--background-top) 0, var(--background-mid) 340px, var(--background) 900px) no-repeat,
+    var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: rgb(0 241 159 / 0.28);
+  color: #fff;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-weight: 650;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+
+p,
+li,
+dd {
+  text-wrap: pretty;
+}
+
+p {
+  margin: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration-color: rgb(255 255 255 / 0.35);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+  transition: text-decoration-color 150ms var(--ease-standard), color 150ms var(--ease-standard);
+}
+
+a:hover {
+  text-decoration-color: currentColor;
+}
+
+:focus-visible {
+  outline: 2px solid var(--optimal);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+code,
+pre {
+  font-family: var(--font-code);
+  font-size: 0.875em;
+}
+
+:not(pre) > code {
+  padding: 0.1em 0.35em;
+  border-radius: 6px;
+  background: rgb(255 255 255 / 0.07);
+}
+
+.num {
+  font-family: var(--font-numeric);
+  font-variant-numeric: tabular-nums;
+}
+
+.wrap {
+  width: min(100% - 2 * var(--gutter), var(--page));
+  margin-inline: auto;
+}
+
+.prose {
+  max-width: 68ch;
+  color: var(--foreground-secondary);
+}
+
+.prose p + p {
+  margin-top: 1em;
+}
+
+.prose strong {
+  color: var(--foreground);
+  font-weight: 600;
+}
+
+.shot {
+  border-radius: 12px;
+  outline: 1px solid rgb(255 255 255 / 0.1);
+  outline-offset: -1px;
+  box-shadow: 0 24px 60px rgb(0 0 0 / 0.5), 0 4px 12px rgb(0 0 0 / 0.35);
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
+  min-height: 48px;
+  padding: 0 22px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 1rem;
+  text-decoration: none;
+  white-space: nowrap;
+  transition-property: scale, background-color, box-shadow;
+  transition-duration: 150ms;
+  transition-timing-function: var(--ease-standard);
+}
+
+.button:active {
+  scale: 0.96;
+}
+
+.button-primary {
+  background: #fff;
+  color: var(--background);
+}
+
+.button-primary:hover {
+  background: #e6edf2;
+}
+
+.button-quiet {
+  color: var(--foreground);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.18);
+}
+
+.button-quiet:hover {
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.4);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0s !important;
+    transition-duration: 0.01ms !important;
+  }
+}

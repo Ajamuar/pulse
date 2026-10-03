@@ -1,0 +1,32 @@
+---
+import Base from "../layouts/Base.astro"
+---
+
+<Base title="Page not found" description="This page does not exist. Start from the home page or the list of metrics.">
+  <div class="wrap nf">
+    <h1>That page does not exist</h1>
+    <p>The link may be old. The metrics and comparisons are all listed from the pages below.</p>
+    <p class="actions">
+      <a class="button button-primary" href="/">Home</a>
+      <a class="button button-quiet" href="/metrics/">All metrics</a>
+    </p>
+  </div>
+</Base>
+
+<style>
+  .nf {
+    padding-top: clamp(64px, 12vw, 160px);
+  }
+  h1 {
+    font-size: clamp(2.25rem, 5vw, 3.5rem);
+  }
+  p {
+    margin-top: 16px;
+    color: var(--foreground-secondary);
+  }
+  .actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 32px;
+  }
+</style>

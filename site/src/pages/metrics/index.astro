@@ -1,0 +1,109 @@
+---
+import Base from "../../layouts/Base.astro"
+import GetStarted from "../../components/GetStarted.astro"
+import { METRICS, metricPath } from "../../data/metrics"
+import { breadcrumbs } from "../../lib/schema"
+
+const title = "How Pulse scores your Fitbit Air data"
+const description = `Every score in Pulse, explained: what goes in, how it is weighted, what the bands mean and where it falls short. ${METRICS.length} metrics, with sources.`
+const fmt = (n: number, u = "") => `${n}${u}`
+const schema = [
+  breadcrumbs(Astro.site!, [
+    { name: "Pulse", path: "/" },
+    { name: "Metrics", path: "/metrics/" },
+  ]),
+  {
+    "@type": "ItemList",
+    itemListElement: METRICS.map((m, i) => ({ "@type": "ListItem", position: i + 1, url: new URL(metricPath(m), Astro.site).href, name: m.name })),
+  },
+]
+---
+
+<Base title={title} description={description} schema={schema}>
+  <header class="wrap head">
+    <h1>Every score, in the open</h1>
+    <p class="lede">
+      Pulse publishes how each number is made: the inputs, the weights, the bands and the limits. The text on these pages is the same text the app shows under More,
+      How Pulse works.
+    </p>
+  </header>
+  <ul class="wrap list">
+    {
+      METRICS.map((m) => (
+        <li>
+          <a href={metricPath(m)}>
+            <span class="name">{m.name}</span>
+            <span class="sum">{m.summary}</span>
+            {m.scale && (
+              <span class="range num">
+                {m.scale.min}-{fmt(m.scale.max, m.scale.unit)}
+              </span>
+            )}
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+  <div class="wrap block"><GetStarted /></div>
+</Base>
+
+<style>
+  .head {
+    padding-top: clamp(40px, 7vw, 88px);
+  }
+  h1 {
+    font-size: clamp(2.5rem, 6vw, 4.25rem);
+    letter-spacing: -0.035em;
+  }
+  .lede {
+    margin-top: 18px;
+    max-width: 56ch;
+    color: var(--foreground-secondary);
+    font-size: 1.1875rem;
+  }
+  .list {
+    margin-top: 56px;
+    padding: 0;
+    list-style: none;
+    columns: 2;
+    column-gap: 48px;
+  }
+  .list li {
+    break-inside: avoid;
+  }
+  .list a {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 4px 16px;
+    padding: 18px 0;
+    box-shadow: inset 0 -1px 0 rgb(255 255 255 / 0.08);
+    text-decoration: none;
+  }
+  .name {
+    font-weight: 600;
+    font-size: 1.125rem;
+    transition: color 150ms var(--ease-standard);
+  }
+  .list a:hover .name {
+    color: var(--optimal);
+  }
+  .sum {
+    grid-column: 1;
+    color: var(--foreground-secondary);
+    font-size: 0.9375rem;
+  }
+  .range {
+    grid-column: 2;
+    grid-row: 1;
+    color: var(--muted-foreground);
+    font-size: 0.9375rem;
+  }
+  .block {
+    margin-top: 96px;
+  }
+  @media (max-width: 760px) {
+    .list {
+      columns: 1;
+    }
+  }
+</style>

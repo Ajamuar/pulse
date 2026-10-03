@@ -1,0 +1,12 @@
+---
+// The Pulse mark, option 4g "Cool pair" (docs/design/brand.md): two staggered beats, teal then blue.
+interface Props {
+  class?: string
+}
+const { class: className } = Astro.props
+---
+
+<svg viewBox="4.5 4.5 15 15" aria-hidden="true" class={className}>
+  <rect x="6.9" y="4.5" width="4.2" height="11" rx="2.1" fill="var(--optimal)"></rect>
+  <rect x="12.9" y="8.5" width="4.2" height="11" rx="2.1" fill="var(--strain-text)"></rect>
+</svg>

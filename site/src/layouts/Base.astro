@@ -1,0 +1,281 @@
+---
+import "../styles/global.css"
+import Mark from "../components/Mark.astro"
+import Wordmark from "../components/Wordmark.astro"
+import { REPO, SETUP_GUIDE, LICENSE_URL, SITE_NAME, UMAMI } from "../config"
+import { METRICS, metricPath } from "../data/metrics"
+import { COMPARISONS } from "../data/compare"
+
+interface Props {
+  title: string
+  description: string
+  /** JSON-LD objects for this page; rendered as one @graph. */
+  schema?: object[]
+  /** OG image path under public/, absolute from the site root. */
+  ogImage?: string
+  ogType?: "website" | "article"
+}
+const { title, description, schema = [], ogImage = "/og.png", ogType = "website" } = Astro.props
+const canonical = new URL(Astro.url.pathname, Astro.site)
+const og = new URL(ogImage, Astro.site)
+const fullTitle = Astro.url.pathname === "/" ? title : `${title} | ${SITE_NAME}`
+const ld = schema.length ? JSON.stringify({ "@context": "https://schema.org", "@graph": schema }) : null
+const path = Astro.url.pathname
+const nav = [
+  { href: "/metrics/", label: "Metrics" },
+  { href: "/compare/", label: "Compare" },
+  { href: "/glossary/", label: "Glossary", wide: true },
+]
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="sitemap" href="/sitemap.xml" />
+    <meta name="theme-color" content="#262e33" />
+
+    <meta property="og:type" content={ogType} />
+    <meta property="og:site_name" content={SITE_NAME} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={og} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Pulse: recovery, sleep and strain dials from a Fitbit Air, on a dark screen" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={og} />
+
+    {ld && <script type="application/ld+json" set:html={ld} />}
+    {UMAMI.src && UMAMI.websiteId && <script is:inline defer src={UMAMI.src} data-website-id={UMAMI.websiteId} />}
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <header class="site-header">
+      <div class="wrap bar">
+        <a class="home" href="/" aria-label="Pulse home">
+          <Mark class="mark" />
+          <Wordmark class="wm" />
+        </a>
+        <nav aria-label="Main">
+          <ul>
+            {
+              nav.map((n) => (
+                <li class:list={[{ wide: n.wide }]}>
+                  <a href={n.href} aria-current={path.startsWith(n.href) ? "page" : undefined}>
+                    {n.label}
+                  </a>
+                </li>
+              ))
+            }
+            <li>
+              <a class="gh" href={REPO}>GitHub</a>
+            </li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <slot />
+    </main>
+
+    <footer class="site-footer">
+      <div class="wrap">
+        <div class="cols">
+          <div class="about">
+            <a class="home" href="/" aria-label="Pulse home">
+              <Mark class="mark" />
+              <Wordmark class="wm" />
+            </a>
+            <p>
+              Open source, self-hosted health scores for Fitbit Air owners. Free for personal and other noncommercial use under the <a
+                href={LICENSE_URL}>PolyForm Noncommercial 1.0.0</a
+              > license.
+            </p>
+          </div>
+          <nav aria-label="Metrics">
+            <h2>Metrics</h2>
+            <ul>{METRICS.map((m) => <li><a href={metricPath(m)}>{m.name}</a></li>)}</ul>
+          </nav>
+          <nav aria-label="Compare and learn">
+            <h2>Compare</h2>
+            <ul>{COMPARISONS.map((c) => <li><a href={`/compare/${c.slug}/`}>{c.nav}</a></li>)}</ul>
+            <h2>Project</h2>
+            <ul>
+              <li><a href={REPO}>Source on GitHub</a></li>
+              <li><a href={SETUP_GUIDE}>Setup guide</a></li>
+              <li><a href="/glossary/">Glossary</a></li>
+              <li><a href={`${REPO}/blob/main/SECURITY.md`}>Security policy</a></li>
+            </ul>
+          </nav>
+        </div>
+        <p class="legal">
+          Pulse is an independent project, not affiliated with or endorsed by the reference app, Inc. or Google LLC. The reference app is a trademark of the reference app, Inc.; Fitbit, Fitbit Air and
+          Google Health are trademarks of Google LLC. Pulse is a wellness tool, not a medical device, and its scores are estimates.
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>
+
+<style>
+  .skip {
+    position: absolute;
+    left: 16px;
+    top: -60px;
+    z-index: 20;
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: #fff;
+    color: var(--background);
+    font-weight: 600;
+  }
+  .skip:focus {
+    top: 12px;
+  }
+
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: rgb(38 46 51 / 0.72);
+    backdrop-filter: blur(16px) saturate(140%);
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
+    box-shadow: inset 0 -1px 0 rgb(255 255 255 / 0.06);
+  }
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .site-header {
+      background: #232a2f;
+    }
+  }
+  .bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+  }
+  .home {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+    color: var(--foreground);
+    text-decoration: none;
+  }
+  .home :global(.mark) {
+    width: 22px;
+    height: 22px;
+  }
+  .home :global(.wm) {
+    height: 17px;
+  }
+  nav ul {
+    display: flex;
+    gap: 4px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .bar nav a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 12px;
+    border-radius: 10px;
+    color: var(--foreground-secondary);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: color 150ms var(--ease-standard), background-color 150ms var(--ease-standard);
+  }
+  .bar nav a:hover,
+  .bar nav a[aria-current="page"] {
+    color: var(--foreground);
+  }
+  .bar nav a.gh {
+    margin-left: 6px;
+    color: var(--foreground);
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.18);
+  }
+  .bar nav a.gh:hover {
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.4);
+  }
+  @media (max-width: 520px) {
+    .wide {
+      display: none;
+    }
+    .bar nav a {
+      padding: 0 9px;
+    }
+  }
+
+  .site-footer {
+    margin-top: 120px;
+    padding: 64px 0 48px;
+    background: var(--sheet);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
+    color: var(--muted-foreground);
+    font-size: 0.9375rem;
+  }
+  .cols {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr 1fr;
+    gap: 48px;
+  }
+  .about p {
+    margin-top: 16px;
+    max-width: 36ch;
+  }
+  .site-footer h2 {
+    margin-bottom: 12px;
+    color: var(--foreground);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    letter-spacing: 0;
+  }
+  .site-footer h2:not(:first-child) {
+    margin-top: 28px;
+  }
+  .site-footer ul {
+    display: block;
+    columns: 1;
+  }
+  .site-footer nav[aria-label="Metrics"] ul {
+    columns: 2;
+    column-gap: 24px;
+  }
+  .site-footer li {
+    break-inside: avoid;
+  }
+  .site-footer li a {
+    display: inline-block;
+    padding: 4px 0;
+    color: var(--foreground-secondary);
+    text-decoration: none;
+  }
+  .site-footer li a:hover {
+    color: var(--foreground);
+  }
+  .legal {
+    margin-top: 56px;
+    padding-top: 24px;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
+    font-size: 0.8125rem;
+    max-width: 110ch;
+  }
+  @media (max-width: 860px) {
+    .cols {
+      grid-template-columns: 1fr;
+      gap: 36px;
+    }
+  }
+</style>

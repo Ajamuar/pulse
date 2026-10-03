@@ -1,0 +1,316 @@
+---
+import Base from "../../layouts/Base.astro"
+import BandScale from "../../components/BandScale.astro"
+import Faq from "../../components/Faq.astro"
+import GetStarted from "../../components/GetStarted.astro"
+import Screenshot from "../../components/Screenshot.astro"
+import { METRICS, metricPath, relatedOf, type Metric } from "../../data/metrics"
+import { isPhone } from "../../lib/shots"
+import { article, breadcrumbs, faqPage } from "../../lib/schema"
+import { ALGORITHMS_DIR, CONTENT_UPDATED } from "../../config"
+
+export function getStaticPaths() {
+  return METRICS.map((metric) => ({ params: { slug: metric.slug }, props: { metric } }))
+}
+
+const { metric } = Astro.props as { metric: Metric }
+const site = Astro.site!
+const path = metricPath(metric)
+const related = relatedOf(metric)
+
+// The full spec (formulas, constants, worked examples and tests) for the scores that have one in docs/algorithms.
+const SPEC: Record<string, string> = {
+  "pulse-age": "healthspan.md",
+  "energy-bank": "energy-bank.md",
+  fitness: "fitness-level.md",
+  "health-monitor": "health-monitor.md",
+  "journal-impact": "journal-impact.md",
+  "sleep-planner": "sleep-planner.md",
+  "sleep-consistency": "sleep-regularity.md",
+  "strain-target": "strain-target.md",
+  stress: "stress.md",
+}
+const spec = SPEC[metric.appSlug]
+const phone = metric.shot && isPhone(metric.shot)
+
+const schema = [
+  article(site, { type: "TechArticle", path, headline: metric.title, description: metric.description, modified: CONTENT_UPDATED }),
+  breadcrumbs(site, [
+    { name: "Pulse", path: "/" },
+    { name: "Metrics", path: "/metrics/" },
+    { name: metric.name, path },
+  ]),
+  ...(metric.faq?.length ? [faqPage(metric.faq)] : []),
+]
+---
+
+<Base title={metric.title} description={metric.description} schema={schema} ogType="article">
+  <article>
+    <header class="wrap head" class:list={[{ "with-phone": phone }]}>
+      <div class="intro">
+        <nav aria-label="Breadcrumb" class="crumbs">
+          <a href="/metrics/">Metrics</a>
+        </nav>
+        <h1>{metric.name}</h1>
+        <p class="lede">{metric.summary}</p>
+        {
+          metric.scale && (
+            <div class="scale">
+              <BandScale scale={metric.scale} name={metric.name} />
+            </div>
+          )
+        }
+      </div>
+      {phone && metric.shot && <Screenshot shot={metric.shot} class="phone-shot" priority sizes="(max-width: 760px) 62vw, 300px" />}
+    </header>
+
+    {
+      metric.shot && !phone && (
+        <div class="wrap laptop">
+          <Screenshot shot={metric.shot} priority />
+        </div>
+      )
+    }
+
+    <div class="wrap body">
+      {
+        metric.sections.map((s) => (
+          <section class="part">
+            <h2>{s.title}</h2>
+            <div class="content">
+              {/* The source orders paragraphs and rows as they should read; keep that order. */}
+              {Object.keys(s).map((k) =>
+                k === "paragraphs" ? (
+                  s.paragraphs!.map((p) => <p>{p}</p>)
+                ) : k === "rows" ? (
+                  <dl class="rows">
+                    {s.rows!.map((r) => (
+                      <div>
+                        <dt>{r.term}</dt>
+                        <dd>{r.detail}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                ) : null,
+              )}
+            </div>
+          </section>
+        ))
+      }
+
+      <section class="part">
+        <h2>Sources</h2>
+        <div class="content">
+          {
+            spec && (
+              <p>
+                The full specification, with formulas, constants and worked examples, is <a href={`${ALGORITHMS_DIR}/${spec}`}>{spec} on GitHub</a>. The code is
+                tested against those examples.
+              </p>
+            )
+          }
+          {
+            metric.sources && metric.sources.length > 0 ? (
+              <ol class="sources">
+                {metric.sources.map((s) => (
+                  <li>
+                    <a href={s.url}>{s.label}</a>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p>This is Pulse's own model and has no published validation. Read it as a rough guide.</p>
+            )
+          }
+        </div>
+      </section>
+    </div>
+
+    {
+      metric.faq && metric.faq.length > 0 && (
+        <div class="wrap block">
+          <Faq items={metric.faq} heading={`${metric.name}: questions`} />
+        </div>
+      )
+    }
+
+    {
+      related.length > 0 && (
+        <nav class="wrap block related" aria-labelledby="rel-h">
+          <h2 id="rel-h">Related</h2>
+          <ul>
+            {related.map((r) => (
+              <li>
+                <a href={metricPath(r)}>
+                  <span class="r-name">{r.name}</span>
+                  <span class="r-sum">{r.summary}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )
+    }
+
+    <div class="wrap block">
+      <GetStarted />
+    </div>
+  </article>
+</Base>
+
+<style>
+  .head {
+    display: grid;
+    gap: 40px;
+    padding-top: clamp(40px, 7vw, 88px);
+  }
+  .head.with-phone {
+    grid-template-columns: minmax(0, 1fr) 300px;
+    align-items: end;
+  }
+  .crumbs a {
+    color: var(--muted-foreground);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    text-decoration: none;
+  }
+  .crumbs a:hover {
+    color: var(--foreground);
+  }
+  h1 {
+    margin-top: 12px;
+    font-size: clamp(2.5rem, 6vw, 4.25rem);
+    letter-spacing: -0.035em;
+    line-height: 1.02;
+  }
+  .lede {
+    margin-top: 18px;
+    max-width: 34ch;
+    color: var(--foreground-secondary);
+    font-size: clamp(1.1875rem, 2vw, 1.4375rem);
+    line-height: 1.45;
+  }
+  .scale {
+    margin-top: 40px;
+    max-width: 560px;
+  }
+  .head :global(.phone-shot) {
+    width: 300px;
+    margin-bottom: -96px;
+  }
+  .laptop {
+    margin-top: 56px;
+  }
+  .body {
+    margin-top: clamp(64px, 10vw, 152px);
+  }
+  .laptop + .body {
+    margin-top: 80px;
+  }
+  .part {
+    display: grid;
+    grid-template-columns: minmax(0, 260px) minmax(0, 1fr);
+    gap: 16px 48px;
+    padding: 40px 0;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08);
+  }
+  .part h2 {
+    font-size: 1.375rem;
+    letter-spacing: -0.015em;
+  }
+  .content {
+    max-width: 68ch;
+    color: var(--foreground-secondary);
+  }
+  .content p + p,
+  .content p + .rows,
+  .content .rows + p,
+  .content p + .sources {
+    margin-top: 1em;
+  }
+  .rows {
+    display: grid;
+    gap: 14px;
+    margin: 0;
+  }
+  .rows div {
+    display: grid;
+    grid-template-columns: minmax(0, 15rem) minmax(0, 1fr);
+    gap: 4px 24px;
+  }
+  .rows dt {
+    color: var(--foreground);
+    font-weight: 600;
+  }
+  .rows dd {
+    margin: 0;
+  }
+  .sources {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding-left: 1.4em;
+    font-size: 0.9375rem;
+  }
+  .sources a {
+    color: var(--foreground-secondary);
+    overflow-wrap: anywhere;
+  }
+  .block {
+    margin-top: 96px;
+  }
+  .related h2 {
+    font-size: clamp(1.625rem, 3vw, 2.125rem);
+    margin-bottom: 24px;
+  }
+  .related ul {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .related a {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    height: 100%;
+    padding: 20px 22px;
+    border-radius: var(--radius-card);
+    background: linear-gradient(180deg, var(--card-top), var(--card));
+    box-shadow: inset 0 1px 0 var(--card-edge);
+    text-decoration: none;
+    transition: background-color 150ms var(--ease-standard), translate 220ms var(--ease-out-expo);
+  }
+  .related a:hover {
+    translate: 0 -2px;
+  }
+  .r-name {
+    font-weight: 600;
+  }
+  .r-sum {
+    color: var(--foreground-secondary);
+    font-size: 0.9375rem;
+    line-height: 1.45;
+  }
+  @media (max-width: 760px) {
+    .head.with-phone {
+      grid-template-columns: 1fr;
+    }
+    .head :global(.phone-shot) {
+      width: min(62vw, 280px);
+      margin: 8px auto 0;
+    }
+    .body {
+      margin-top: 48px;
+    }
+    .part {
+      grid-template-columns: 1fr;
+      padding: 32px 0;
+    }
+    .rows div {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

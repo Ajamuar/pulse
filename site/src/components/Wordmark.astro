@@ -1,0 +1,21 @@
+---
+import { GLYPHS, STROKE } from "../lib/wordmark"
+
+interface Props {
+  weight?: keyof typeof STROKE
+  class?: string
+}
+const { weight = "bold", class: className } = Astro.props
+const { d, viewBox } = GLYPHS[weight]
+---
+
+<svg viewBox={viewBox} role="img" aria-label="Pulse" class:list={["wordmark", className]}>
+  <path d={d} fill="none" stroke="currentColor" stroke-width={STROKE[weight]} stroke-miterlimit="8"></path>
+</svg>
+
+<style>
+  .wordmark {
+    width: auto;
+    flex-shrink: 0;
+  }
+</style>
