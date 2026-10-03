@@ -2,6 +2,7 @@
 // (src/lib/reasons.ts Metric, ZoneBars' ZoneRow, DriverList's DriverItem…), importing only types from the kit.
 // Conventions: instants are epoch **milliseconds** (as the kit's charts and cards take them), days are
 // local `YYYY-MM-DD`, Strain is on the reference app's 0–21 scale, and no number is ever NaN or ±Infinity.
+import type { DashboardKey } from "@/lib/dashboard";
 import type { FormatKey } from "@/lib/format";
 
 import type { ChipTone, GoodDirection, RecoveryBand as Band, StressLevel } from "@/lib/bands";
@@ -110,6 +111,10 @@ export type HomeVM = {
   energyBank: Metric<EnergyBankVM>;
   tonight: Metric<SleepPlanVM>;
   keyStats: KeyStat[];
+  /** My Dashboard's editor: the default list (v1 rows, or phone metrics without a band) and the metrics with no data in 30 days. */
+  dashboard: { defaults: DashboardKey[]; empty: DashboardKey[] };
+  /** No heart rate on the day but the phone counted steps (spec §11 CD2): those stats lead Home. Null otherwise. */
+  phone: KeyStat[] | null;
   weeklyTeaser: { period: string; start: string; end: string } | null;
   /** Morning outlook before 17:00 today, day in review after it and on past days (inferred I15); null with no data. */
   outlook: { kind: "outlook" | "review"; title: string; body: string } | null;

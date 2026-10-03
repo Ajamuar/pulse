@@ -1,7 +1,7 @@
 // Route loading states (spec §5.19): the real shells and each section's own box with its static
 // titles and labels; only values are bars, so nothing moves when data arrives. Headers never skeleton.
 import { Fragment } from "react"
-import { DASHBOARD_KEYS, DASHBOARD_LABEL, type DashboardKey } from "@/lib/dashboard"
+import { DASHBOARD_DEFAULT, DASHBOARD_LABEL, type DashboardKey } from "@/lib/dashboard"
 import { IntradayHrChartSkeleton } from "@/components/charts/IntradayHrChart"
 import { EnergyBankChartSkeleton } from "@/components/charts/EnergyBankChart"
 import { TrendChartSkeleton } from "@/components/charts/TrendChart"
@@ -60,7 +60,7 @@ const ICON_SLOT = <span aria-hidden className="block size-8" />
 const BannerSkeleton = () => <Skeleton className="h-14 rounded-2xl" />
 
 /** `stats`: My Dashboard's chosen metrics (getHome's order), so the skeleton has as many rows as the page will. */
-export function HomeSkeleton({ stats = DASHBOARD_KEYS }: { stats?: DashboardKey[] }) {
+export function HomeSkeleton({ stats = DASHBOARD_DEFAULT }: { stats?: DashboardKey[] }) {
   return (
     <PageShell loading
       title="Home"

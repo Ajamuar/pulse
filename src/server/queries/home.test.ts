@@ -1,6 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Db } from "../db";
-import { cleanup, ctxFor, dayAt, seeded } from "../testing";
+import { DASHBOARD_DEFAULT, PHONE_DEFAULT } from "@/lib/dashboard";
+import { recompute } from "../pipeline";
+import { cleanup, copyDb, ctxFor, dayAt, OPTS, seeded } from "../testing";
 import { getActivity } from "./activity";
 import { getFitness, getHealthHub, getHealthspan, getMonitor, getStress } from "./health";
 import { getHome } from "./home";
@@ -49,6 +51,7 @@ describe("getHome", () => {
     expect(Object.keys(vm).sort()).toEqual(
       [
         "activities",
+        "dashboard",
         "day",
         "dials",
         "energyBank",
@@ -59,6 +62,7 @@ describe("getHome", () => {
         "monitor",
         "monitorAlert",
         "outlook",
+        "phone",
         "strainRecovery",
         "stress",
         "strip",
@@ -117,6 +121,41 @@ describe("getHome", () => {
     expect(morning.energyBank.reason).toBe("awaiting_sleep_sync");
     expect(morning.dials.reason).toEqual({ reason: "awaiting_sleep_sync" });
     expect(morning.keyStats.find((s) => s.key === "hrv")!.metric.reason).toBe("awaiting_sleep_sync");
+  });
+
+  it("builds extra metrics and body readings generically, against their 30-day averages", () => {
+    const c = copyDb(db);
+    const day = dayAt(179);
+    const put = c.$client.prepare("insert or replace into daily_values (day, key, value) values (?, ?, ?)");
+    for (let k = 1; k <= 10; k++) put.run(dayAt(179 - k), "distance", k % 2 ? 3 : 5);
+    put.run(day, "distance", 6.25);
+    c.$client.prepare("update daily_metrics set weight_kg = 72.5 where day = ?").run(day);
+    ["distance", "weight", "glucose"].forEach((k, i) => c.$client.prepare("insert into dashboard_metrics (key, position) values (?, ?)").run(k, i));
+    const vm = getHome(day, ctxFor(c));
+    expect(vm.keyStats).toMatchObject([
+      { key: "distance", label: "Distance", unit: "km", format: "decimal2", direction: "up", href: "/strain", metric: { value: 6.25 }, average: 4 },
+      { key: "weight", label: "Weight", unit: "kg", metric: { value: 72.5 } },
+      { key: "glucose", label: "Blood glucose", metric: { value: null, reason: "no_data" }, average: null },
+    ]);
+    expect(vm.dashboard.empty).toContain("glucose");
+    expect(vm.dashboard.empty).not.toContain("distance");
+    expect(vm.dashboard.empty).not.toContain("hrv");
+    expect(vm.dashboard.defaults).toEqual(DASHBOARD_DEFAULT);
+    expect(vm.phone).toBeNull();
+  });
+
+  it("without a band, Home leads with the phone's stats and My Dashboard defaults to phone metrics", () => {
+    const c = copyDb(db);
+    c.$client.exec("delete from hr_samples; insert or ignore into intraday_dirty (day) select day from daily_metrics");
+    recompute(c, OPTS);
+    const vm = getHome(dayAt(170), ctxFor(c));
+    expect(vm.dials.strain.value).toBeNull();
+    expect(vm.phone?.map((s) => s.key)).toEqual(["steps", "calories"]);
+    expect(vm.phone?.[0]).toMatchObject({ label: "Steps", metric: { value: expect.any(Number) }, average: expect.any(Number) });
+    expect(vm.dashboard.defaults).toEqual(PHONE_DEFAULT);
+    expect(vm.keyStats.map((s) => s.key)).toEqual(PHONE_DEFAULT);
+    // A band-off day with no phone data either keeps the plain empty state.
+    expect(getHome(dayAt(156), ctxFor(c)).phone).toBeNull();
   });
 
   it("orders My Dashboard as chosen, skipping unknown keys, and falls back to the default list", () => {
