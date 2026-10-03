@@ -31,6 +31,9 @@ import {
 import { GoogleError } from "./oauth";
 
 export const BACKFILL_DAYS = 180;
+/** The sync_state row for the paired-device check; its lastError holds NO_PAIRED_DEVICE while the account has none. */
+export const DEVICES_KEY = "paired-devices";
+export const NO_DEVICE_ERROR = `[google] ${DEVICES_KEY}: NO_PAIRED_DEVICE`;
 /** daily-*, sleep, exercise, sample types and rollups re-fetch this many local days before synced_through. */
 const OVERLAP_DAYS = 3;
 /** heart-rate and steps re-fetch from synced_through minus this. */
@@ -67,6 +70,18 @@ export function createGoogleSource(deps: SyncDeps): Source {
       const client = createGoogleClient(deps); // one per run: it holds the rate limiter
       const w = writer(db, tz);
       const run = { changed: false };
+
+      // A Google Health profile with no paired device imports 180 empty days; say so instead (Settings,
+      // ConnectionBanner). Only a clear "none" sets it and a clear "some" clears it; an error or an unknown
+      // shape keeps the last answer, so a bad day at Google never claims the band is missing.
+      try {
+        const devices = await client.pairedDevices();
+        if (devices !== "unknown") {
+          setState(DEVICES_KEY, { lastAttemptAt: nowS(), lastSuccessAt: nowS(), lastError: devices === "none" ? NO_DEVICE_ERROR : null });
+        }
+      } catch (err) {
+        log.error(err instanceof GoogleError ? err.message : "[sync] pairedDevices: internal error");
+      }
 
       for (const job of JOBS) {
         setState(job.key, { lastAttemptAt: nowS() });

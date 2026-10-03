@@ -46,6 +46,14 @@ describe("Settings view", () => {
     expect(within(source()).getByRole("link", { name: "Reconnect Google" })).toHaveAttribute("href", "/oauth/start")
   })
 
+  it("no paired device explains how to pair, and keeps Sync now and Disconnect", () => {
+    render(<SettingsView vm={{ ...base, source: { label: "Google Health", status: "no_device" } }} now={NOW} account={account} />)
+    expect(within(source()).getByText("No Fitbit device")).toBeInTheDocument()
+    expect(within(source()).getByText(/Pair your Fitbit Air in the Google Health app/)).toBeInTheDocument()
+    expect(within(source()).getByRole("button", { name: "Sync now" })).toBeInTheDocument()
+    expect(within(source()).getByRole("button", { name: "Disconnect" })).toBeInTheDocument()
+  })
+
   it("connected offers Sync now and Disconnect; failing types open the per-type list", () => {
     render(<SettingsView vm={base} now={NOW} account={account} />)
     expect(within(source()).getByRole("button", { name: "Sync now" })).toBeInTheDocument()

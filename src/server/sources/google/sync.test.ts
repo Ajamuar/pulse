@@ -14,7 +14,7 @@ import {
   stepsMinutes,
   syncState,
 } from "../../db/schema";
-import { BACKFILL_DAYS, createGoogleSource } from "./sync";
+import { BACKFILL_DAYS, createGoogleSource, DEVICES_KEY, NO_DEVICE_ERROR } from "./sync";
 
 const TZ = "Asia/Kolkata"; // fixed +05:30, which the stub's civil-time filter relies on
 const NOW = Date.parse("2026-10-02T06:00:00Z"); // 11:30 local
@@ -69,11 +69,12 @@ beforeEach(() => {
 });
 
 /** A source over a stubbed Google that answers each request from the fixtures inside its window. */
-function setup(o: { failing?: string[]; onRequest?: (type: string, filter: string | null) => void } = {}) {
+function setup(o: { failing?: string[]; onRequest?: (type: string, filter: string | null) => void; devices?: () => Response } = {}) {
   let clock = NOW;
   const calls: { type: string; filter: string | null }[] = [];
   const fetch = vi.fn(async (input: string | URL | Request, init: RequestInit = {}) => {
     const url = new URL(String(input));
+    if (url.pathname.endsWith("/pairedDevices")) return o.devices?.() ?? json({ pairedDevices: [{ name: "users/me/pairedDevices/1" }] });
     const [, type, rollup] = /dataTypes\/([^/]+)\/dataPoints(:dailyRollUp)?$/.exec(url.pathname)!;
     const filter = url.searchParams.get("filter");
     calls.push({ type, filter });
@@ -234,6 +235,27 @@ describe("google sync", () => {
     expect(state("daily-respiratory-rate")?.lastError).toBeNull();
     const day = db.select().from(dailyMetrics).where(eq(dailyMetrics.day, "2026-10-01")).get();
     expect(day).toMatchObject({ spo2Pct: null, respBpm: 14.2, hrvMs: 41.5 });
+  });
+
+  it("records no paired device, clears it once one is paired, and keeps the last answer on an error or unknown shape", async () => {
+    let devices = () => json({});
+    const { source, log } = setup({ devices: () => devices() });
+    await source.pull();
+    expect(state(DEVICES_KEY)?.lastError).toBe(NO_DEVICE_ERROR);
+    expect(state("heart-rate")?.lastError).toBeNull(); // the import itself still runs
+
+    devices = () => json({ error: { code: 403, status: "PERMISSION_DENIED", message: "secret body text" } }, 403);
+    await source.pull();
+    expect(state(DEVICES_KEY)?.lastError).toBe(NO_DEVICE_ERROR);
+    expect(JSON.stringify(log.error.mock.calls)).not.toContain("secret");
+
+    devices = () => json({ somethingNew: true });
+    await source.pull();
+    expect(state(DEVICES_KEY)?.lastError).toBe(NO_DEVICE_ERROR);
+
+    devices = () => json({ pairedDevices: [{ name: "users/me/pairedDevices/1" }] });
+    await source.pull();
+    expect(state(DEVICES_KEY)?.lastError).toBeNull();
   });
 
   it("a failed backfill resumes from its last committed chunk", async () => {

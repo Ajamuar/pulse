@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { openDb } from "../db";
 import { oauthTokens, syncState } from "../db/schema";
@@ -29,6 +30,22 @@ describe("sync errors", () => {
     expect(vm.source.status).toBe("not_linked");
     expect(vm.import).toBeNull();
     expect(vm.sync.every((r) => r.error === null)).toBe(true);
+  });
+
+  it("a Google Health account with no paired device is one problem: no_device, no import progress, no sync error", () => {
+    const { db, ctx } = google();
+    db.insert(syncState).values({ type: "heart-rate", backfillDaysDone: 30, backfillDaysTotal: 180, lastSuccessAt: ctx.now }).run();
+    db.insert(syncState).values({ type: "paired-devices", lastSuccessAt: ctx.now, lastError: "[google] paired-devices: NO_PAIRED_DEVICE" }).run();
+    const shell = getShellStatus(ctx);
+    expect(shell).toMatchObject({ connection: "no_device", sync: { state: "ok" } });
+    expect(shell.importProgress).toBeUndefined();
+    const vm = getSettings(ctx);
+    expect(vm.source.status).toBe("no_device");
+    expect(vm.import).toBeNull();
+    expect(vm.sync.every((r) => r.error === null)).toBe(true);
+
+    db.update(syncState).set({ lastError: null }).where(eq(syncState.type, "paired-devices")).run();
+    expect(getShellStatus(ctx).connection).toBe("importing");
   });
 
   it("a working grant mid-import shows progress and readable row errors", () => {

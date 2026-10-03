@@ -5,7 +5,7 @@ import { openDb, type Db } from "../../db";
 import { oauthTokens, rawPayloads } from "../../db/schema";
 import { DATA_TYPE_IDS, DATA_TYPES } from "./catalogue";
 import { localDay, localMidnight } from "../../time";
-import { archivePage, buildFilter, createGoogleClient, localWindows } from "./client";
+import { archivePage, buildFilter, createGoogleClient, localWindows, parsePairedDevices } from "./client";
 import { GoogleError } from "./oauth";
 
 const TZ = "Asia/Kolkata"; // UTC+5:30, so a UTC date and the local date differ before 05:30
@@ -366,5 +366,19 @@ describe("dailyRollUp", () => {
     expect(await client.dailyRollUp("steps", "2026-09-10", "2026-09-11")).toEqual([]);
     expect((await caught(client.dailyRollUp("sleep", "2026-09-10", "2026-09-11"))).code).toBe("unsupported_action");
     expect(apiCalls()).toHaveLength(1);
+  });
+});
+
+describe("parsePairedDevices", () => {
+  it("says none only for the documented empty list, and unknown for any other shape", () => {
+    expect(parsePairedDevices(JSON.stringify({ pairedDevices: [{ name: "users/me/pairedDevices/1" }] }))).toBe("some");
+    expect(parsePairedDevices(JSON.stringify({ pairedDevices: [{}], nextPageToken: "n" }))).toBe("some");
+    expect(parsePairedDevices("{}")).toBe("none"); // proto3 JSON drops an empty list
+    expect(parsePairedDevices(JSON.stringify({ pairedDevices: [] }))).toBe("none");
+    expect(parsePairedDevices(JSON.stringify({ devices: [] }))).toBe("unknown");
+    expect(parsePairedDevices(JSON.stringify({ pairedDevices: {} }))).toBe("unknown");
+    expect(parsePairedDevices("[]")).toBe("unknown");
+    expect(parsePairedDevices("null")).toBe("unknown");
+    expect(parsePairedDevices("not json")).toBe("unknown");
   });
 });

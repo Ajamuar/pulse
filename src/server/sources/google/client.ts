@@ -12,6 +12,7 @@ import { DATA_TYPES, type DataType, type DataTypeId, type FilterMember } from ".
 import { errorCode, FETCH_TIMEOUT_MS, getAccessToken, GoogleError, markRevoked, parseJson } from "./oauth";
 
 const API = "https://health.googleapis.com/v4/users/me/dataTypes";
+const DEVICES_API = "https://health.googleapis.com/v4/users/me/pairedDevices";
 const MIN_GAP_MS = 250; // 4 req/s, under the documented 5 QPS per user
 const MAX_TRIES = 5; // per request, for 429, 5xx and network failures
 const BACKOFF_MS = 1000;
@@ -87,6 +88,25 @@ export function archivePage(
       .onConflictDoNothing()
       .run().changes > 0
   );
+}
+
+// --- Paired devices -----------------------------------------------------------------------------
+
+export type DeviceCheck = "some" | "none" | "unknown";
+
+/**
+ * A `pairedDevices.list` body as "some", "none" or "unknown". The documented shape is
+ * `{ pairedDevices: [...], nextPageToken? }`, and proto3 JSON drops an empty list, so `{}` is "none".
+ * Anything else (not an object, `pairedDevices` not an array, fields we don't know) is "unknown",
+ * never "none": a shape change must not tell a person their band is missing.
+ */
+export function parsePairedDevices(body: string): DeviceCheck {
+  const j = parseJson(body);
+  if (typeof j !== "object" || j === null || Array.isArray(j)) return "unknown";
+  const { pairedDevices: list = [], ...rest } = j as Record<string, unknown>;
+  if (!Array.isArray(list)) return "unknown";
+  if (list.length) return "some";
+  return Object.keys(rest).length ? "unknown" : "none";
 }
 
 // --- Client -------------------------------------------------------------------------------------
@@ -180,6 +200,12 @@ export function createGoogleClient({
   const fetchedAt = () => Math.floor(now() / 1000);
 
   return {
+    /** Whether the account has a paired device (`users.pairedDevices.list`, one page). Not archived: it is not health data. */
+    async pairedDevices(): Promise<DeviceCheck> {
+      return parsePairedDevices(await request(`${DEVICES_API}?pageSize=1`, "pairedDevices"));
+    },
+
+
     /**
      * Every data point of `type` in [from, to), split into local-day windows of at most the type's
      * `maxDays`, every page archived. Points come back in API order. Memory holds the whole range, so

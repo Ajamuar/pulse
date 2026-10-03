@@ -63,6 +63,11 @@ const SOURCE: Record<SettingsVM["source"]["status"], { line?: string; tone?: str
     tone: "text-warning",
     body: "This Google account has no Google Health profile, so there is no Fitbit data to read. Set up Google Health with this account (or move your Fitbit account to it), or disconnect and sign in with the account your Fitbit Air uses.",
   },
+  no_device: {
+    line: "No Fitbit device",
+    tone: "text-warning",
+    body: "This Google account has Google Health but no Fitbit device, so there is nothing to import. Pair your Fitbit Air in the Google Health app and sync again, or disconnect and sign in with the account it uses.",
+  },
   connected: {},
   revoked: { line: "Access revoked", tone: "text-recovery-red-text", body: "Google access was revoked or expired. Sync is paused until you reconnect." },
 }
@@ -127,7 +132,7 @@ export function DataSource({ vm, now }: { vm: Pick<SettingsVM, "source" | "sync"
   const last = vm.sync.reduce<number | null>((m, r) => (r.lastSuccessAt && (!m || r.lastSuccessAt > m) ? r.lastSuccessAt : m), null)
   const line = s.line ?? (last ? `Synced ${ago(last, now)}` : "Not synced yet")
   const actions =
-    source.status === "connected" ? (
+    source.status === "connected" || source.status === "no_device" ? (
       <>
         <SyncNowButton className="w-full" />
         <DisconnectButton />

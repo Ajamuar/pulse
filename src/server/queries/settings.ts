@@ -40,12 +40,19 @@ function syncRows(ctx: QueryCtx) {
     .all() as SyncRow[];
 }
 
-/** "not_linked": the grant works but the Google account has no Google Health profile, so every type fails the same way. */
-function authState(ctx: QueryCtx, rows: SyncRow[]): "not_connected" | "not_linked" | "connected" | "revoked" {
+/** The sync worker's paired-device check (sources/google/sync.ts `DEVICES_KEY`): account state, not a data type. */
+const DEVICES_ROW = "paired-devices";
+
+/**
+ * "not_linked": the grant works but the Google account has no Google Health profile, so every type fails the same way.
+ * "no_device": it has a profile but no paired Fitbit device, so every type imports nothing.
+ */
+function authState(ctx: QueryCtx, rows: SyncRow[]): "not_connected" | "not_linked" | "no_device" | "connected" | "revoked" {
   const t = ctx.db.$client.prepare("select revoked_at revokedAt from oauth_tokens where id = 1").get() as { revokedAt: number | null } | undefined;
   if (!t) return "not_connected";
   if (t.revokedAt != null) return "revoked";
-  return rows.some((r) => r.lastError?.includes("ACCOUNT_NOT_LINKED")) ? "not_linked" : "connected";
+  if (rows.some((r) => r.lastError?.includes("ACCOUNT_NOT_LINKED"))) return "not_linked";
+  return rows.some((r) => r.type === DEVICES_ROW && r.lastError?.includes("NO_PAIRED_DEVICE")) ? "no_device" : "connected";
 }
 
 /**
@@ -180,18 +187,20 @@ export function getWearStreak(ctx: QueryCtx = defaultCtx()): { days: number; asO
 const workerRunning = () => !!(globalThis as { __pulseWorker?: { state?: { running?: boolean } } }).__pulseWorker?.state?.running
 
 export function getShellStatus(ctx: QueryCtx = defaultCtx()): ShellStatusVM {
-  const rows = syncRows(ctx).filter((r) => (ctx.mode === "demo" ? r.type === "seed" : r.type !== "seed"));
+  const all = syncRows(ctx);
+  // The device check is account state (connection below), not a sync that succeeded or failed.
+  const rows = all.filter((r) => (ctx.mode === "demo" ? r.type === "seed" : r.type !== "seed" && r.type !== DEVICES_ROW));
   const successes = rows.map((r) => r.lastSuccessAt).filter((s): s is number => s != null);
   const lastSuccessAt = successes.length ? Math.max(...successes) * 1000 : null;
   const stale = lastSuccessAt == null || ctx.now * 1000 - lastSuccessAt > STALE_MS;
   const error = rows.some((r) => r.lastError);
-  const auth = ctx.mode === "google" ? authState(ctx, rows) : "connected";
+  const auth = ctx.mode === "google" ? authState(ctx, all) : "connected";
   const progress = ctx.mode === "google" && auth === "connected" ? importProgress(rows) : null;
   const first = firstDay(ctx);
   const connection: ShellStatusVM["connection"] =
     ctx.mode === "demo"
       ? "connected"
-      : auth === "not_connected" || auth === "not_linked"
+      : auth === "not_connected" || auth === "not_linked" || auth === "no_device"
         ? auth
         : auth === "revoked"
           ? "auth_revoked"

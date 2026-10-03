@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { CloudDownload, Plug, TriangleAlert, Unplug, UserX } from "lucide-react"
+import { CloudDownload, Plug, TriangleAlert, Unplug, UserX, Watch } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ago, clock } from "@/lib/format"
 import { useNow } from "@/hooks/use-now"
@@ -23,7 +23,7 @@ export function ConnectionBanner({ className }: { className?: string }) {
   const pathname = usePathname()
   if (s.mode === "demo" || s.connection === "connected") return null
   // Settings' Data source card already explains it, with the fix next to it.
-  if (s.connection === "not_linked" && pathname === "/settings") return null
+  if ((s.connection === "not_linked" || s.connection === "no_device") && pathname === "/settings") return null
 
   const total = s.importProgress?.total ?? 180
   const done = s.importProgress?.done ?? 0
@@ -45,6 +45,17 @@ export function ConnectionBanner({ className }: { className?: string }) {
       icon: <UserX className="text-warning" />,
       title: "No Google Health on this account",
       body: "This Google account has no Google Health profile, so there is nothing to sync. Settings has the fix.",
+      action: (
+        <Button asChild size="touch" variant="secondary">
+          <Link href="/settings#source">Open Settings</Link>
+        </Button>
+      ),
+      role: "alert",
+    },
+    no_device: {
+      icon: <Watch className="text-warning" />,
+      title: "No Fitbit device on this account",
+      body: "This Google account has Google Health but no Fitbit device. Pair your Fitbit Air in the Google Health app, or sign in with the account it uses.",
       action: (
         <Button asChild size="touch" variant="secondary">
           <Link href="/settings#source">Open Settings</Link>
