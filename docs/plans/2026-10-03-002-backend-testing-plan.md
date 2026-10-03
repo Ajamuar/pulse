@@ -1,7 +1,7 @@
 ---
 title: "test: backend testing plan"
 type: test
-status: proposed
+status: in progress (Phase 0 and 1 done, F1 F2 F4 fixed)
 date: 2026-10-03
 ---
 
@@ -23,6 +23,28 @@ The backend is already well tested where it matters most: core scorers (337 test
 6. **The 64 MB recompute budget (commit `1570da9`) is measured by hand only.** No test stops a change that brings back the growth.
 
 **Phase 1** (about 2–3 days) adds golden digests for the pipeline output, DST property tests for `src/server/time.ts`, an auth contract test that finds every action and handler on its own, and migration tests from every earlier schema. All of it runs on PRs and adds under 5 s.
+
+## Status
+
+Phase 0, Phase 1 and the fixes for F1, F2 and F4 are done (branch from `1d5f650`). What landed:
+
+| Item | Where | PR-time cost |
+|---|---|---|
+| **F1 fixed.** `localMidnight` tries midnight under each offset in force within a day of it and keeps the earliest instant on that day, so a spring-forward at 00:00 opens the day at 01:00 and a repeated midnight opens it at the first one. On the Santiago seed, 2026-09-06 is now the 23 h day (5,520 samples, 1,380 minutes) and 2026-09-05 is 24 h. `SCORING_VERSION` is 4 | `src/server/time.ts` | none |
+| `time.ts` properties: `localDay(localMidnight(d)) === d`, the second before is the day before, the 15-minute grid, a day length within 3 h of 24 h in quarter hours (Antarctica/Casey moved its offset by 3 h in 2020), `localMinutes` 0 at the start and length − 1 at the end, the clock reads 00:00:00 unless the clocks jump at that instant. Run on every day around each 2020–2030 transition, and every 30th day, in 12 zones (UTC, Kolkata, Kathmandu, St John's, London, New York, Santiago, Havana, Azores, Amman, Lord Howe, Chatham), plus 16 pinned transition days. Every IANA zone behind `PULSE_NIGHTLY` (12 s) | `src/server/time.test.ts` | 0.5 s |
+| **F2 fixed.** `stage1Key` includes `opts.timeZone`. The test moves the seed from Kolkata to UTC: before, 44 of 181 days reran; now every day does, and the result is byte-identical to a from-scratch UTC run | `src/server/pipeline/stage1.ts`, `timezone.test.ts` | runs in parallel |
+| **F4 fixed.** `/avatar` calls `requestSession` and answers 401 | `src/app/avatar/route.ts` | none |
+| Auth contract (R4 steps 1–2): every `"use server"` module and every `src/app/**/route.ts` is found by glob; each export refuses four bad sessions (no cookie, garbage, another instance's token, a demo token on a Google instance) on a demo and a Google instance, with no write to any table and no sync started. `PUBLIC` allow-lists `/healthz`, `/oauth/*`, `/login*`, `/logout`, which get their own tests (`/logout` 303 and cookie cleared, `/login/demo` 404 on Google and a verified demo cookie on demo, `/healthz` 200). Covers the missing `saveProfileAction`, `syncNow`, `loadCalendarMonth`, `/status`, `/logout`, `/login/demo` cases | `src/server/auth.contract.test.ts` | 0.1 s |
+| Shared template DB (Phase 0): `vitest.global-setup.ts` builds the default seeded DB once and caches it in `node_modules/.cache/pulse-test`, keyed by a hash of every non-test source file and migration; `seeded()` with default arguments copies it. If the build throws, tests fall back to their own build so only they fail. `pipeline.test.ts` still builds one from scratch and compares | `vitest.global-setup.ts`, `src/server/testing.ts` | saves time |
+| Migration drift in CI: `pnpm db:generate` must write nothing under `drizzle/` | `.github/workflows/ci.yml` (`checks`) | about 3 s |
+| Golden fingerprints (R1): a hash per `daily_scores` column, per `intraday_series` kind and for `reports`, in `GOLDEN[SCORING_VERSION]`. Numbers are rounded to 10 significant digits before hashing | `src/server/pipeline/golden.test.ts` | 0.4 s |
+| Migrations (R3): upgrade from each of 0000–0005 with fixtures in every table, then rows kept, schema equal to a fresh DB, integrity and foreign-key checks; one fixture per migration enforced; destructive-SQL guard with a rebuild-copy check against the previous snapshot | `src/server/db/migrations.test.ts` | 0.6 s |
+
+**Suite time** (`pnpm test`, same laptop, measured back to back while other jobs loaded it to 11–20): before, 24.9–29.8 s wall and 122–132 s CPU for 711 tests; after, 17.7–18.2 s wall and 102–107 s CPU for 767 tests, 21 s with a cold template cache (as on CI). The two self-seeding tests of `pipeline.test.ts` moved to `incremental.test.ts` so the longest file is no longer the tail.
+
+**Found on the way.** Drizzle's SQLite table rebuild (any column change it cannot `ALTER`) recreates the table without `WITHOUT ROWID`. `index.test.ts` would catch it on `hr_samples` or `steps_minutes`, but such a migration needs hand editing.
+
+**Still open from Phase 1:** the proxy matcher checked against the routes on disk (R4 step 3), the session edge cases (step 4), the two-connection claim race (step 5), the OAuth CSRF pin (step 6), and the Today-boundary and `hrMinutesAm/Pm` DST cases (R2). Nothing runs the `PULSE_NIGHTLY` tests yet: that needs `nightly.yml` (Phase 3). A TZ change still leaves `sleep_sessions.day` and `exercises.day` as synced under the old zone, so it still needs a documented resync path. F3 (the 429 stall) waits for the `client.ts` work.
 
 ---
 
@@ -111,12 +133,12 @@ Counts come from the vitest JSON report. "Gap" lists what no test exercises.
 
 These came from running code against the `a7282a5` tree with throwaway scripts (in the scratchpad, not committed). Each one becomes a test in Phase 1 or 2, and that test fails until the code is fixed.
 
-- **F1. `localMidnight` is wrong in zones where DST changes at midnight.** A property check ran over all 418 IANA zones for every day from 2020 to 2030 (1.68 M days).
+- **F1 (fixed). `localMidnight` is wrong in zones where DST changes at midnight.** A property check ran over all 418 IANA zones for every day from 2020 to 2030 (1.68 M days).
   - Spring-forward at 00:00: `localDay(localMidnight(d)) !== d` on the DST day in `America/Santiago`, `America/Havana`, `America/Asuncion`, `Atlantic/Azores`, `America/Scoresbysund` and `America/Coyhaique`. The returned instant is 23:00 of the day before.
   - Fall-back to 00:00 (`Asia/Amman`, `Asia/Gaza`, `Asia/Hebron` in 2020–21): it returns the second midnight, so the first hour of the day lies before its own start.
   - The effect in the pipeline: a 180-day seed in `America/Santiago` scores 2026-09-05 as a 23 h day (5,520 HR samples, 1,380-minute series) and 2026-09-06 as 24 h. The clocks actually jump on 2026-09-06. So the last hour of the 5th counts toward the 6th's strain, stress and Energy Bank, while the sync writer's `dayOf` (built on `localDay`) marks it dirty under the 5th.
   - `Europe/London` is correct: 2026-10-25 has 6,000 samples over 1,500 minutes and 2027-03-28 has 5,520 over 1,380.
-- **F2. Stage 1's cache key ignores the timezone.**
+- **F2 (fixed). Stage 1's cache key ignores the timezone.**
   - `stage1Key` (`pipeline/stage1.ts`) hashes `SCORING_VERSION`, max HR, RHR, sessions and exercises. It does not hash `opts.timeZone`, yet the day bounds come from it.
   - A seed scored in `Asia/Kolkata` and then rescored with `TZ=UTC` reruns stage 1 for **44 of 180 days**. The other 136 keep strain computed over Kolkata midnights.
   - A one-line fix adds `opts.timeZone` to the key; that changes every key, so stage 1 reruns in full once. The rows that sync stored under the old zone (`sleep_sessions.day`, `exercises.day`) stay stale either way, so changing `TZ` also needs a documented "resync" path.
@@ -124,7 +146,7 @@ These came from running code against the `a7282a5` tree with throwaway scripts (
   - Each request makes 5 attempts and waits `min(Retry-After, 5 min)` between them, so a job that gets `429 Retry-After: 3600` on every call waits 4 × 5 min = 20 min and then fails.
   - There are 31 jobs plus the paired-device check, so the run takes about 10.7 h.
   - All that time the worker shows `running` and blocks every `requestSync`, and "Sync now" gives up after 60 s.
-- **F4. `/avatar` is the only signed-in route handler that does not call `requestSession` itself.** `/status` and `/export/*` do. It is low risk (a profile photo), but it breaks the "check again in the handler" rule.
+- **F4 (fixed). `/avatar` is the only signed-in route handler that does not call `requestSession` itself.** `/status` and `/export/*` do. It is low risk (a profile photo), but it breaks the "check again in the handler" rule.
 - **F5. Memory and time budgets for a 3-year history (1,095 days, 6.29 M HR rows; seeding took 4.1 s):**
 
   | Run | Heap | Result |
@@ -478,22 +500,22 @@ flowchart LR
   P3 --> P4["Phase 4 · L<br/>Google-mode e2e over HTTP,<br/>recorded fixtures,<br/>write APIs"]
 ```
 
-### Phase 0: make room (S)
+### Phase 0: make room (S) — done
 
 1. **Shared template DB.**
-   - A vitest `globalSetup` seeds and recomputes the pinned 180-day demo DB once per run and passes its path in through `provide`.
+   - Done. A vitest `globalSetup` seeds and recomputes the pinned 180-day demo DB once per run (cached on disk while the sources are unchanged) and passes its path in through `provide`.
    - `seeded()` with default arguments then becomes `copyDb()` from that template (`copyDb` already exists in `testing.ts`).
    - The same DB is built five times across four files today (`pipeline.test.ts` twice, `profile.test.ts`, `sleep.test.ts`, `home.test.ts`), at about 2–3 s each. This should save about 10 s of CPU per run.
-2. **Migration drift step** in `ci.yml` (`checks`).
-3. **Docs.** Mention `vitest related` and `--changed` in `CONTRIBUTING.md`.
+2. **Migration drift step** in `ci.yml` (`checks`). Done.
+3. **Docs.** Mention `vitest related` and `--changed` in `CONTRIBUTING.md`. Done.
 
-### Phase 1: highest value per effort (M, 2–3 days)
+### Phase 1: highest value per effort (M, 2–3 days) — done except 4 (steps 3–6)
 
-1. **Golden digests per output column**, keyed by `SCORING_VERSION` (R1). S.
-2. **`time.ts` DST properties** on the PR zone list (R2). S. These fail on F1, so fix `localMidnight` in the same PR: for a day whose midnight falls in a gap, return the first instant whose `localDay` is that day; for a repeated midnight, return the first one.
-3. **TZ-change test** plus the F2 one-line key fix (R2). S.
-4. **Auth contract**: auto-discovered actions and handlers, a matcher checked against the routes on disk, session edge cases (R4), plus the `requestSession` check in `/avatar` (F4). M.
-5. **Migrations from every earlier schema**, plus the destructive-SQL guard (R3). M.
+1. **Golden digests per output column**, keyed by `SCORING_VERSION` (R1). S. Done (`golden.test.ts`, its own file so it runs in parallel).
+2. **`time.ts` DST properties** on the PR zone list (R2). S. Done, with the F1 fix.
+3. **TZ-change test** plus the F2 one-line key fix (R2). S. Done.
+4. **Auth contract**: auto-discovered actions and handlers, a matcher checked against the routes on disk, session edge cases (R4), plus the `requestSession` check in `/avatar` (F4). M. Actions, handlers and F4 done; matcher and session edge cases open.
+5. **Migrations from every earlier schema**, plus the destructive-SQL guard (R3). M. Done (no recompute smoke on the upgraded DB: the fixtures are too sparse to score, and the golden test covers the pipeline).
 
 ### Phase 2: Google robustness (M–L, 3–4 days)
 
