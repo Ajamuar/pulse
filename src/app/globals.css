@@ -324,6 +324,12 @@
   ::selection {
     background-color: rgb(255 255 255 / 0.25);
   }
+  /* Recharts 3 draws each chart layer (bars, reference lines, dials) as <g tabindex="-1">, so a tap or click on a
+     mark focuses that <g>, and Chromium's SVG UA sheet outlines any focused SVG element on :focus, ignoring
+     :focus-visible (spec §11 UX3). Only the plot's <svg> is a tab stop; it keeps the app's ring on :focus-visible. */
+  svg [tabindex="-1"]:focus {
+    outline: none;
+  }
   /* Reduced motion keeps fades and drops movement (spec §2.7): tw-animate entrances and exits lose
      their translate, scale and blur and run 120 ms; every press loses its scale here, so no control
      needs its own motion-reduce: for it; components drop their own translates with motion-reduce:. */

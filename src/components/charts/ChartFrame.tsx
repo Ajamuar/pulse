@@ -28,7 +28,8 @@ export function ChartFigure({
       <figcaption className="sr-only">{summary}</figcaption>
       {/* Recharts' keyboard layer makes the plot (its <svg>) a tab stop; arrows scrub the tooltip. The default outline
           box is off: it showed on click (user report, 2026-10-03). The focus ring is the app's, on :focus-visible only,
-          so tabbing to a chart shows it and a click or tap does not. An outline, since box-shadow rings skip <svg>. */}
+          so tabbing to a chart shows it and a click or tap does not. An outline, since box-shadow rings skip <svg>. A tap on a
+          mark focuses Recharts' <g tabindex="-1"> layer instead; globals.css drops that outline (spec §11 UX3). */}
       <ChartContainer
         config={config}
         className={cn(
