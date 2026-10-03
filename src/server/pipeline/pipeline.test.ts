@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { type Db, openDb } from "./db";
-import { type JournalImpactRow, lastRun, needsRecompute, recompute, type RecoveryRow, SCORING_VERSION, type SleepRow, type StrainTargetRow } from "./pipeline";
-import { seedPull } from "./sources/seed/generate";
-import { localMidnight } from "./time";
-import { cleanup, copyDb, DAY_S, dayAt, dump, NOW, OPTS, seeded, TZ, PROFILE, tempFile } from "./testing";
+import { type Db, openDb } from "../db";
+import { type JournalImpactRow, lastRun, needsRecompute, recompute, type RecoveryRow, SCORING_VERSION, type SleepRow, type StrainTargetRow } from ".";
+import { seedPull } from "../sources/seed/generate";
+import { localMidnight } from "../time";
+import { cleanup, copyDb, DAY_S, dayAt, dump, NOW, OPTS, seeded, TZ, PROFILE, tempFile } from "../testing";
 
 afterAll(cleanup);
 

@@ -1,4 +1,4 @@
-// End-to-end check on demo data, run by hand: PULSE_E2E=1 pnpm vitest run src/server/pipeline.seed.test.ts
+// End-to-end check on demo data, run by hand: PULSE_E2E=1 pnpm vitest run src/server/pipeline/pipeline.seed.test.ts
 // Starts the real worker (seed source + recomputeIfNeeded) once against a fresh temp demo database and
 // prints the distributions docs/data-notes.md records.
 import fs from "node:fs";
@@ -19,16 +19,16 @@ describe.skipIf(!process.env.PULSE_E2E)("demo end to end", () => {
       DATABASE_PATH: path.join(dir, "demo.db"),
       TZ: "Asia/Kolkata",
     });
-    const { createWorker } = await import("./worker");
-    const { seedSource } = await import("./sources/seed/generate");
-    const { recomputeIfNeeded, lastRun, recompute } = await import("./pipeline");
-    const { getDb } = await import("./db");
-    const { getConfig } = await import("./config");
-    const { getProfile } = await import("./profile");
-    const { ensureDefaultTags } = await import("./journalTags");
-    const { getHome } = await import("./queries/home");
-    const { defaultCtx, todayOf } = await import("./queries/common");
-    const { addDays } = await import("./time");
+    const { createWorker } = await import("../worker");
+    const { seedSource } = await import("../sources/seed/generate");
+    const { recomputeIfNeeded, lastRun, recompute } = await import(".");
+    const { getDb } = await import("../db");
+    const { getConfig } = await import("../config");
+    const { getProfile } = await import("../profile");
+    const { ensureDefaultTags } = await import("../journalTags");
+    const { getHome } = await import("../queries/home");
+    const { defaultCtx, todayOf } = await import("../queries/common");
+    const { addDays } = await import("../time");
 
     const log = { info: vi.fn(), error: vi.fn() };
     ensureDefaultTags(getDb());

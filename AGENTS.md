@@ -20,7 +20,7 @@ Run `pnpm typecheck && pnpm lint && pnpm test` before every commit. Run `pnpm e2
 - `src/core/`: pure TypeScript with no I/O.
   - `scoring/` is the port of noop's analytics (baselines, recovery, strain, sleep, readiness, training load, illness, HR recovery).
   - `algorithms/` holds Pulse's own models: healthspan, strain target, sleep planner, energy bank, stress, SRI, fitness level, health monitor, journal impact and reports.
-- `src/server/`: server-only code: the database, sources (`seed/` demo data, `google/` OAuth + Health API), the sync worker, the two-stage `pipeline.ts`, and `queries/` (one view model per screen, with reason codes).
+- `src/server/`: server-only code: the database, sources (`seed/` demo data, `google/` OAuth + Health API), the sync worker, the two-stage `pipeline/` (stage 1, stage 2 and one scorer per score in `scores.ts`), and `queries/` (one view model per screen, with reason codes).
 - `src/components/`:
   - `ui/` holds the shadcn primitives.
   - `shells/` holds the layout: AppShell, PageShell, DetailShell, the headers, sheets and calendar.
