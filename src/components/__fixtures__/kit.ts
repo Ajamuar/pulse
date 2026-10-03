@@ -158,11 +158,10 @@ export const hrDay: HrSeries = {
     return { t, bpm: Math.round(base + run + noise(i) * 14) }
   }),
   zones: [
-    { zone: 1, min: 112, max: 136 },
-    { zone: 2, min: 137, max: 148 },
-    { zone: 3, min: 149, max: 160 },
-    { zone: 4, min: 161, max: 172 },
-    { zone: 5, min: 173, max: 186 },
+    { zone: 1, label: "Light", min: 98, max: 117 },
+    { zone: 2, label: "Moderate", min: 118, max: 136 },
+    { zone: 3, label: "Vigorous", min: 137, max: 156 },
+    { zone: 4, label: "Peak", min: 157, max: 186 },
   ],
   spans: [
     { kind: "sleep", start: DAY0 + 51 * MIN, end: DAY0 + 7 * HOUR + 38 * MIN, label: "Sleep" },
@@ -176,11 +175,10 @@ export const hrActivity: HrSeries = {
 }
 
 export const zones: ZoneRow[] = [
-  { zone: 5, min: 173, max: null, seconds: 0 },
-  { zone: 4, min: 161, max: 172, seconds: 61 },
-  { zone: 3, min: 149, max: 160, seconds: 1360 },
-  { zone: 2, min: 137, max: 148, seconds: 2108 },
-  { zone: 1, min: 112, max: 136, seconds: 6211 },
+  { zone: 4, label: "Peak", min: 157, max: null, seconds: 61 },
+  { zone: 3, label: "Vigorous", min: 137, max: 156, seconds: 1360 },
+  { zone: 2, label: "Moderate", min: 118, max: 136, seconds: 2108 },
+  { zone: 1, label: "Light", min: 98, max: 117, seconds: 6211 },
 ]
 export const recoveryBreakdown: StackedSegment[] = [
   { key: "green", label: "Green (67-100%)", count: 4, color: "recovery-green" },

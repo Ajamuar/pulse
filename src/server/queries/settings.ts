@@ -20,6 +20,8 @@ const GROUPS: { key: string; label: string; types: string[] }[] = [
   { key: "rhr", label: "Resting heart rate", types: ["daily-resting-heart-rate"] },
   { key: "resp", label: "Respiratory rate", types: ["daily-respiratory-rate"] },
   { key: "temp", label: "Skin temperature", types: ["daily-sleep-temperature-derivations"] },
+  { key: "zones", label: "Heart rate zones", types: ["daily-heart-rate-zones", "time-in-heart-rate-zone"] },
+  { key: "ranges", label: "Personal ranges", types: ["rhr-personal-range", "hrv-personal-range"] },
   { key: "spo2", label: "Blood oxygen", types: ["daily-oxygen-saturation"] },
   { key: "exercise", label: "Exercise", types: ["exercise"] },
   { key: "vo2max", label: "VO2 max", types: ["daily-vo2-max", "run-vo2-max"] },
@@ -32,11 +34,12 @@ const GROUPS: { key: string; label: string; types: string[] }[] = [
 ];
 
 /**
- * Shown-only types (extra metrics, records, height). Optional for the shell: one that fails (a scope granted only on
+ * Shown-only types (extra metrics, records, height) and the Google inputs Pulse falls back from (zones, personal
+ * ranges). Optional for the shell: one that fails (a scope granted only on
  * the next sign-in, a type the account never has) shows in Settings, but never turns the sync dot red or holds the
  * import banner open.
  */
-const OPTIONAL_TYPES = new Set(GROUPS.filter((g) => ["activity", "nutrition", "vitals", "rhythm"].includes(g.key)).flatMap((g) => g.types).concat("height"));
+const OPTIONAL_TYPES = new Set(GROUPS.filter((g) => ["zones", "ranges", "activity", "nutrition", "vitals", "rhythm"].includes(g.key)).flatMap((g) => g.types).concat("height"));
 
 type SyncRow = {
   type: string;
@@ -126,7 +129,7 @@ export function getSettings(ctx: QueryCtx = defaultCtx()): SettingsVM {
       age: wholeYears(p.birthDate, today),
       sex: p.sex,
       maxHr: p.maxHr,
-      maxHrSource: p.maxHrSet ? "set" : "estimated",
+      maxHrSource: p.maxHrSource,
       timeZone: ctx.timeZone,
       heightCm: p.heightCm,
     },

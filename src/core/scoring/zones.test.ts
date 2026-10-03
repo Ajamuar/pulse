@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { defaultLowerBounds, secondsInZone, timeInZone, totalSeconds, zoneNumber, zones, zonesForAge } from "./zones";
+import { googleZones, secondsInZone, timeInZone, totalSeconds, zoneNumber, zones } from "./zones";
 
 describe("HrZonesTest", () => {
   it("a huge positive gap is capped at the median interval", () => {
@@ -15,39 +15,39 @@ describe("HrZonesTest", () => {
     expect(totalSeconds(tiz)).toBeLessThan(10);
     expect(secondsInZone(tiz, 1)).toBeCloseTo(totalSeconds(tiz), 9);
   });
-
-  it("custom BPM boundaries replace percentage edges", () => {
-    const zs = zones(200, "manual", [95, 118, 142, 168, 184]);
-    expect(zs.source).toBe("custom");
-    expect(zs.zones.map((z) => z.lower)).toEqual([95, 118, 142, 168, 184]);
-    expect([117, 118, 168, 184, 230].map((b) => zoneNumber(zs, b))).toEqual([1, 2, 4, 5, 5]);
-  });
-
-  it("invalid custom boundaries fall back to defaults", () => {
-    const zs = zones(200, "manual", [100, 120, 120, 160, 180]);
-    expect(zs.source).toBe("manual");
-    expect(zs.zones.map((z) => z.lower)).toEqual([100, 120, 140, 160, 180]);
-  });
-
-  it("default editor bounds preserve integer classification", () => {
-    expect(defaultLowerBounds(187)).toEqual([94, 113, 131, 150, 169]);
-  });
 });
 
 describe("zones", () => {
-  it("Tanaka from age, or a manual override", () => {
-    expect(zonesForAge(30)).toMatchObject({ maxHR: 187, source: "tanaka" });
-    expect(zonesForAge(30, 190)).toMatchObject({ maxHR: 190, source: "manual" });
-  });
-
-  it("buckets a constant-rate stream fully, top zone inclusive at HRmax", () => {
+  it("fallback: four zones on % of max HR, top zone open", () => {
     const zs = zones(200);
-    expect([99, 100, 119, 120, 180, 200, 210].map((b) => zoneNumber(zs, b))).toEqual([0, 1, 1, 2, 5, 5, 5]);
+    expect(zs.source).toBe("max_hr");
+    expect(zs.zones.map((z) => z.lower)).toEqual([100, 140, 160, 180]);
+    expect([99, 100, 139, 140, 160, 180, 200, 210].map((b) => zoneNumber(zs, b))).toEqual([0, 1, 1, 2, 3, 4, 4, 4]);
     const hr = [...Array(60)].map((_, i) => ({ ts: i * 2, bpm: i < 30 ? 90 : 150 }));
     const tiz = timeInZone(hr, zs);
+    expect(tiz.seconds).toHaveLength(4);
     expect(tiz.belowZone1).toBe(60);
-    expect(secondsInZone(tiz, 3)).toBe(60); // 150 / 200 = 75%
+    expect(secondsInZone(tiz, 2)).toBe(60); // 150 / 200 = 75%
     expect(totalSeconds(tiz)).toBe(120);
     expect(secondsInZone(tiz, 9)).toBe(0);
+  });
+
+  it("Google's bounds: minimums are the lower edges, the peak maximum the top", () => {
+    const zs = googleZones([98, 118, 137, 157, 186])!;
+    expect(zs).toMatchObject({ source: "google", maxHR: 186 });
+    expect(zs.zones.map((z) => [z.lower, z.upper])).toEqual([
+      [98, 118],
+      [118, 137],
+      [137, 157],
+      [157, 186],
+    ]);
+    expect([97, 98, 117, 118, 156, 157, 200].map((b) => zoneNumber(zs, b))).toEqual([0, 1, 1, 2, 3, 4, 4]);
+  });
+
+  it("unreadable Google bounds are no zones", () => {
+    expect(googleZones(null)).toBeNull();
+    expect(googleZones([98, 118, 137, 157])).toBeNull();
+    expect(googleZones([98, 118, 118, 157, 186])).toBeNull();
+    expect(googleZones([0, 118, 137, 157, 186])).toBeNull();
   });
 });

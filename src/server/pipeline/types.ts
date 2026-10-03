@@ -18,9 +18,10 @@ import type { StrainTarget } from "@/core/algorithms/strainTarget";
  * 1: U5 scorers. 2: SRI consistency in sleep performance (U7), U10 pipeline. 3: one age helper
  * (healthspan and fitness age agree with whole years on birthdays). 4: local days open at the right instant
  * where DST starts at midnight (Santiago, Havana, Azores...), so the 23-hour day is the right one. 5: Pulse Age's
- * stored key is `pulseAge` (was a brand name), so stored healthspan rows rescore.
+ * stored key is `pulseAge` (was a brand name), so stored healthspan rows rescore. 6: Google's inputs first (its daily
+ * zones, resting HR, time in zones, skin-temperature baseline and personal ranges), four named zones.
  */
-export const SCORING_VERSION = 5;
+export const SCORING_VERSION = 6;
 
 export type PipelineOptions = {
   timeZone: string;
@@ -39,13 +40,16 @@ export type Stage1Day = {
   hrMinutesPm: number;
   lastHrTs: number | null;
   restingHr: number;
-  restingHrSource: "session" | "daily" | "default";
+  /** Google's daily resting HR first, then Pulse's sleep-session estimate. */
+  restingHrSource: "daily" | "session" | "default";
   maxHr: number;
   /** Effort 0–100, or null with too little HR. */
   effort: number | null;
-  /** %HRmax zones 1–5: lower bounds (bpm) and seconds. */
+  /** Zones 1–4 (Light, Moderate, Vigorous, Peak): lower bounds (bpm) and seconds. */
   zoneLower: number[];
   zoneSeconds: number[];
+  /** "google": the day's zones from Google; "max_hr": Pulse's % of max HR fallback. */
+  zoneSource: "google" | "max_hr";
   /** Stress Monitor's resting daytime HR for the day (independent of the baseline). */
   dayAggregate: number | null;
   stillMinutes: number;

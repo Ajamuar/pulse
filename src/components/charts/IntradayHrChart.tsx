@@ -15,7 +15,7 @@ import { AXIS, ChartFigure, GRID, LINE_CURSOR, TOOLTIP_CLASS, TooltipLine, useSe
 
 /** A marked stretch on an intraday chart. `label` is the short name: "Run", "Ride", "Strength", "Sleep", "Nap". */
 export type ChartSpan = { kind: "workout" | "sleep"; start: number; end: number; label: string }
-export type HrZone = { zone: number; min: number; max: number }
+export type HrZone = { zone: number; label: string; min: number; max: number }
 
 export type HrSeries = {
   /** Per-minute heart rate (epoch ms); null is a gap, never interpolated. */
@@ -54,7 +54,7 @@ function Chart({ hr, variant }: { hr: HrSeries; variant: "day" | "activity" }) {
   const last = hr.points.at(-1)?.t ?? 0
   const domain = paddedDomain(hr.points.map((p) => p.bpm))
   const bpms = hr.points.map((p) => p.bpm).filter((b): b is number => b !== null)
-  const zoneOf = (bpm: number) => hr.zones?.find((z) => bpm >= z.min && bpm <= z.max)?.zone
+  const zoneOf = (bpm: number) => hr.zones?.find((z) => bpm >= z.min && bpm <= z.max)?.label
   const summary = `Heart rate from ${clock(first, tz)} to ${clock(last, tz)}: low ${Math.min(...bpms)}, high ${Math.max(...bpms)} beats per minute.`
 
   return (
@@ -75,7 +75,7 @@ function Chart({ hr, variant }: { hr: HrSeries; variant: "day" | "activity" }) {
             fill={z.zone % 2 ? "var(--chart-band)" : "transparent"}
             fillOpacity={1}
             ifOverflow="hidden"
-            label={{ value: `Z${z.zone}`, position: "insideRight", fill: "var(--muted-foreground)", fontSize: 10 }}
+            label={{ value: z.label, position: "insideRight", fill: "var(--muted-foreground)", fontSize: 10 }}
           />
         ))}
         {spanAreas(hr.spans)}
@@ -106,7 +106,7 @@ function Chart({ hr, variant }: { hr: HrSeries; variant: "day" | "activity" }) {
                 return (
                   <div className="grid gap-1">
                     <TooltipLine color="var(--strain)">{bpm} bpm</TooltipLine>
-                    {z && <span className="text-muted-foreground">Zone {z}</span>}
+                    {z && <span className="text-muted-foreground">{z}</span>}
                   </div>
                 )
               }}

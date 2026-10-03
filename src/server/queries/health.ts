@@ -112,7 +112,7 @@ const HS_META: Record<string, Omit<HealthspanContributor, "metric" | "target" | 
   },
   zone13: {
     group: "strain",
-    label: "Time in zones 1‑3",
+    label: "Light and moderate zones",
     unit: "min",
     domain: [0, 300],
     higherIsBetter: true,
@@ -121,7 +121,7 @@ const HS_META: Record<string, Omit<HealthspanContributor, "metric" | "target" | 
   },
   zone45: {
     group: "strain",
-    label: "Time in zones 4‑5",
+    label: "Vigorous and peak zones",
     unit: "min",
     domain: [0, 150],
     higherIsBetter: true,
@@ -257,7 +257,7 @@ function healthspanInsight(pace: number, cs: HealthspanContribution[]) {
 const VITALS: { key: VitalKey; short: string; unit: string; signed?: boolean; pick: (r: DayRow) => number | null | undefined }[] = [
   { key: "resp", short: "Resp", unit: "rpm", pick: (r) => r.metrics?.respBpm },
   { key: "spo2", short: "SpO2", unit: "%", pick: (r) => r.metrics?.spo2Pct },
-  { key: "restingHr", short: "RHR", unit: "bpm", pick: (r) => r.sessionRhr },
+  { key: "restingHr", short: "RHR", unit: "bpm", pick: (r) => r.metrics?.rhrBpm ?? r.sessionRhr },
   { key: "hrv", short: "HRV", unit: "ms", pick: (r) => r.metrics?.hrvMs },
   { key: "skinTempDev", short: "Temp", unit: "°C", signed: true, pick: (r) => r.recovery?.inputs.skinTempDev },
 ];

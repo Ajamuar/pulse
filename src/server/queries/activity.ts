@@ -17,7 +17,7 @@ import {
   todayOf,
   toStrain,
 } from "./common";
-import { hrChart, zoneRows } from "./strain";
+import { hrChart, zoneNote, zoneRows } from "./strain";
 import type { ActivityVM, KeyStat } from "./types";
 
 /** Activity `/activity/[id]` (spec §7.4); null for an unknown id. */
@@ -77,16 +77,17 @@ export function getActivity(id: string, ctx: QueryCtx = defaultCtx()): ActivityV
     hr: hrChart(ctx, row, e.day, e.day === todayOf(ctx), e.startTs - 600, e.endTs + 600),
     zones: a ? zoneRows(row, a.zoneSeconds) : none(reason),
     maxHr: row?.s1?.maxHr ?? ctx.profile.maxHr,
+    zoneNote: zoneNote(row, ctx),
     hrr,
   };
 }
 
+/** Seconds per zone: Light, Moderate, Vigorous, Peak. */
 function zoneInsight(seconds: number[]): string | null {
   const min = seconds.map((s) => Math.round(s / 60));
-  const hard = min[3] + min[4];
-  const aerobic = min[1] + min[2];
-  if (hard >= 10) return `You spent ${hard} minutes in zones 4 and 5, hard work that builds speed and power.`;
-  if (aerobic >= 10) return `You spent ${aerobic} minutes in zones 2 and 3, steady aerobic work that builds your base.`;
-  if (min[0] >= 10) return `You spent ${min[0]} minutes in zone 1, easy movement that helps you recover.`;
+  const hard = min[2] + min[3];
+  if (hard >= 10) return `You spent ${hard} minutes in the vigorous and peak zones, hard work that builds speed and power.`;
+  if (min[1] >= 10) return `You spent ${min[1]} minutes in the moderate zone, steady aerobic work that builds your base.`;
+  if (min[0] >= 10) return `You spent ${min[0]} minutes in the light zone, easy movement that helps you recover.`;
   return null;
 }

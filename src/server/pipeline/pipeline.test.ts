@@ -1,6 +1,17 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { type Db, openDb } from "../db";
-import { type JournalImpactRow, lastRun, needsRecompute, recompute, type RecoveryRow, SCORING_VERSION, type SleepRow, type StrainTargetRow } from ".";
+import {
+  type HealthMonitorRow,
+  type JournalImpactRow,
+  lastRun,
+  needsRecompute,
+  recompute,
+  type RecoveryRow,
+  SCORING_VERSION,
+  type SleepRow,
+  type Stage1Day,
+  type StrainTargetRow,
+} from ".";
 import { load } from "./data";
 import { stage1 } from "./stage1";
 import { seedPull } from "../sources/seed/generate";
@@ -208,5 +219,39 @@ describe("recovery gating on the seed", () => {
     expect(r.stale).toContain("skinTemp");
     expect(r.terms).not.toContain("skinTemp");
     expect(json<RecoveryRow>(db, "recovery", dayAt(101)).terms).toContain("skinTemp");
+  });
+});
+
+describe("Google's inputs first (docs/research/google-vs-pulse-metrics.md)", () => {
+  const metric = (day: string, col: string) => db.$client.prepare(`select ${col} from daily_metrics where day = ?`).pluck().get(day) as number | string | null;
+
+  it("a day with Google's zones uses its bounds; a day without falls back to % of max HR", () => {
+    const s1 = json<Stage1Day>(db, "strain", dayAt(120));
+    expect(s1.zoneSource).toBe("google");
+    expect(s1.zoneLower).toEqual((JSON.parse(metric(dayAt(120), "hr_zones") as string) as number[]).slice(0, 4));
+    expect(s1.zoneSeconds).toHaveLength(4);
+    const off = json<Stage1Day>(db, "strain", dayAt(157)); // band-off night: no zones record
+    expect(metric(dayAt(157), "hr_zones")).toBeNull();
+    expect(off).toMatchObject({ zoneSource: "max_hr", zoneLower: [0.5, 0.7, 0.8, 0.9].map((e) => Math.round(e * PROFILE.maxHr * 10) / 10) });
+  });
+
+  it("Recovery and Strain read Google's daily resting HR, not the sleep-session estimate", () => {
+    const rhr = metric(dayAt(120), "rhr_bpm");
+    expect(json<RecoveryRow>(db, "recovery", dayAt(120)).inputs.rhr).toBe(rhr);
+    expect(json<Stage1Day>(db, "strain", dayAt(120))).toMatchObject({ restingHr: rhr, restingHrSource: "daily" });
+  });
+
+  it("skin temperature: nightly − Google's baseline; Health Monitor takes Google's ranges", () => {
+    const d = dayAt(120);
+    const dev = (metric(d, "nightly_temp_c") as number) - (metric(d, "temp_baseline_c") as number);
+    expect(json<RecoveryRow>(db, "recovery", d).inputs.skinTempDev).toBeCloseTo(dev, 9);
+    const hm = json<HealthMonitorRow>(db, "health_monitor", d);
+    if (hm.reason !== null) throw new Error("no health monitor");
+    const by = Object.fromEntries(hm.vitals.map((v) => [v.key, v]));
+    expect(by.restingHr).toMatchObject({ rangeSource: "google", range: { low: metric(d, "rhr_range_low"), high: metric(d, "rhr_range_high") } });
+    expect(by.hrv).toMatchObject({ rangeSource: "google", range: { low: metric(d, "hrv_range_low"), high: metric(d, "hrv_range_high") } });
+    const sd = metric(d, "temp_sd_c") as number;
+    expect(by.skinTempDev).toMatchObject({ rangeSource: "google", range: { low: -2 * sd, high: 2 * sd } });
+    expect(by.resp.rangeSource).toBe("pulse");
   });
 });

@@ -219,6 +219,44 @@ function night(ctx: Ctx, i: number) {
   return { bed, wake, segments, summary, rhr, metrics };
 }
 
+/** Karvonen shares of heart-rate reserve where LIGHT, MODERATE, VIGOROUS and PEAK start (demo values). */
+const ZONE_HRR = [0.4, 0.55, 0.7, 0.85];
+
+const mean = (xs: number[]) => xs.reduce((a, x) => a + x, 0) / xs.length;
+const sd = (xs: number[], m = mean(xs)) => Math.sqrt(xs.reduce((a, x) => a + (x - m) ** 2, 0) / xs.length);
+
+/**
+ * Google-shaped daily derivations for the night ending on day i, from the 30 seeded nights up to it (never later):
+ * the day's zone bounds, the skin-temperature baseline (30-night median) and its SD, and personal ranges for
+ * resting HR and HRV (mean ± 2 SD, once 14 nights exist).
+ */
+function googleDerived(ctx: Ctx, i: number, rhr: number) {
+  const nights = Array.from({ length: Math.min(30, i + 1) }, (_, k) => night(ctx, i - k)?.metrics).filter((m) => m != null);
+  const temps = nights.flatMap((m) => (m.nightlyTempC == null ? [] : [m.nightlyTempC]));
+  // Like Fitbit after a long gap, no baseline until 4 of the last 14 nights have a reading, so the demo also
+  // shows Pulse's own fallback baseline (and its stale state after the skin-temperature gap).
+  const recent = nights.slice(0, 14).filter((m) => m.nightlyTempC != null).length;
+  const sorted = [...temps].sort((a, b) => a - b);
+  const median = sorted.length ? (sorted[(sorted.length - 1) >> 1] + sorted[sorted.length >> 1]) / 2 : null;
+  const range = (xs: number[]) => {
+    if (xs.length < 14) return [null, null];
+    const m = mean(xs);
+    const s = sd(xs, m);
+    return [round(m - 2 * s, 1), round(m + 2 * s, 1)];
+  };
+  const [rhrRangeLow, rhrRangeHigh] = range(nights.map((m) => m.rhrBpm));
+  const [hrvRangeLow, hrvRangeHigh] = range(nights.flatMap((m) => (m.hrvMs == null ? [] : [m.hrvMs])));
+  return {
+    hrZones: JSON.stringify([...ZONE_HRR.map((p) => Math.round(rhr + p * (ctx.maxHr - rhr))), ctx.maxHr]),
+    tempBaselineC: recent >= 4 ? round(median!, 2) : null,
+    tempSdC: recent >= 4 ? round(sd(temps.map((t) => t - median!)), 2) : null,
+    rhrRangeLow,
+    rhrRangeHigh,
+    hrvRangeLow,
+    hrvRangeHigh,
+  };
+}
+
 /** An afternoon nap on day i, more likely when ill or short on sleep. Naps carry no stages. */
 function nap(ctx: Ctx, i: number) {
   if (isBandOffDay(i)) return null;
@@ -245,7 +283,23 @@ const HR_CADENCE_S = 15;
 const BMR_KCAL = 1700;
 /** Sleep HR relative to the night's resting HR, by stage. */
 const STAGE_HR: Record<Stage, number> = { awake: 6, light: -2, deep: -4, rem: 1 };
-const NO_NIGHT = { hrvMs: null, hrvDeepMs: null, rhrBpm: null, rhrMethod: null, respBpm: null, nightlyTempC: null, spo2Pct: null, vo2maxDaily: null };
+const NO_NIGHT = {
+  hrvMs: null,
+  hrvDeepMs: null,
+  rhrBpm: null,
+  rhrMethod: null,
+  respBpm: null,
+  nightlyTempC: null,
+  spo2Pct: null,
+  vo2maxDaily: null,
+  hrZones: null,
+  tempBaselineC: null,
+  tempSdC: null,
+  rhrRangeLow: null,
+  rhrRangeHigh: null,
+  hrvRangeLow: null,
+  hrvRangeHigh: null,
+};
 
 /** Everything that happens on local day i, before any "now" cut. Pure: same inputs, same output. */
 export function generateDay(ctx: Ctx, i: number) {
@@ -426,7 +480,7 @@ export function generateDay(ctx: Ctx, i: number) {
     nightly: lastNight && {
       availableAt: lastNight.wake + SLEEP_SYNC_DELAY_S,
       // Weekly, like Fitbit's resting-HR-based estimate.
-      values: { ...lastNight.metrics, vo2maxDaily: i % 7 === 6 ? round(vo2 - 0.8 + 0.3 * r.g(), 1) : null },
+      values: { ...lastNight.metrics, vo2maxDaily: i % 7 === 6 ? round(vo2 - 0.8 + 0.3 * r.g(), 1) : null, ...googleDerived(ctx, i, lastNight.rhr) },
     },
     runVo2: run && { at: run.endTs, value: round(vo2 + 0.4 * r.g(), 1) },
     weighIn: i % 30 === 2 && {
@@ -453,16 +507,36 @@ function metricsAt(g: Day, now: number): typeof dailyMetrics.$inferInsert {
     kcal += g.kcal[m];
   }
   const night = g.nightly && g.nightly.availableAt <= now ? g.nightly.values : NO_NIGHT;
+  const temp = g.nightly && g.nightly.availableAt + SKIN_TEMP_LAG_S <= now;
   return {
     day: g.day,
     ...night,
-    nightlyTempC: g.nightly && g.nightly.availableAt + SKIN_TEMP_LAG_S <= now ? night.nightlyTempC : null,
+    // The temperature record carries its baseline and SD, so they land together.
+    nightlyTempC: temp ? night.nightlyTempC : null,
+    tempBaselineC: temp && night.nightlyTempC != null ? night.tempBaselineC : null,
+    tempSdC: temp && night.nightlyTempC != null ? night.tempSdC : null,
+    ...timeInZones(g, night.hrZones, now),
     vo2maxRun: g.runVo2 && g.runVo2.at <= now ? g.runVo2.value : null,
     steps: g.worn ? steps : null,
     calories: Math.round(BMR_KCAL * Math.min(1, (now - g.start) / (g.end - g.start)) + kcal),
     ...(g.weighIn && g.weighIn.at <= now ? g.weighIn.values : { weightKg: null, bodyFatPct: null }),
     source: "seed",
   };
+}
+
+/** Google's all-day time in zones as of `now`, from the day's samples and its zones; none without zones. */
+function timeInZones(g: Day, zones: string | null, now: number) {
+  if (!zones) return { lightModerateMin: null, vigorousPeakMin: null };
+  const [light, , vigorous] = JSON.parse(zones) as number[];
+  let lm = 0;
+  let vp = 0;
+  for (let s = 0; s < g.bpm.length && g.start + (s + 1) * HR_CADENCE_S <= now; s++) {
+    const b = g.bpm[s];
+    if (b >= vigorous) vp++;
+    else if (b >= light) lm++;
+  }
+  const min = (n: number) => round((n * HR_CADENCE_S) / 60, 1);
+  return { lightModerateMin: min(lm), vigorousPeakMin: min(vp) };
 }
 
 /** Fitbit's daily roll-ups (src/lib/extraMetrics.ts) as of `now`; none on a day the band was off all day. */

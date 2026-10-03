@@ -226,7 +226,7 @@ const spec = (
 /** Each dashboard metric on `row`'s day: its value path (for averages), the metric with its reason, unit and link. */
 function statSpecs(row: DayRow | undefined, isToday: boolean): Record<DashboardKey, StatSpec> {
   const m = row?.metrics;
-  const rhr = (r: DayRow) => r.sessionRhr ?? r.metrics?.rhrBpm ?? null;
+  const rhr = (r: DayRow) => r.metrics?.rhrBpm ?? r.sessionRhr ?? null;
   const skin = (r: DayRow) => r.recovery?.inputs.skinTempDev ?? null;
   const skinReason = m?.nightlyTempC != null ? "calibrating" : vitalReason(row, isToday);
   const dailyReason = !row?.s1 || row.s1.hrCount === 0 ? hrReason(row?.s1 ?? null) : "no_data";

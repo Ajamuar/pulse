@@ -51,7 +51,7 @@ export default async function ActivityPage({ params }: PageProps<"/activity/[id]
             <h2 id="zones-title" className="sr-only">
               Time in zones
             </h2>
-            <ZoneBars variant="rows" data={vm.zones} maxHr={vm.maxHr} emptyCopy="No heart-rate zones for this activity." />
+            <ZoneBars variant="rows" data={vm.zones} note={vm.zoneNote} emptyCopy="No heart-rate zones for this activity." />
           </section>
         </div>
       }

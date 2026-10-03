@@ -1,6 +1,6 @@
 // Own algorithm (docs/algorithms/health-monitor.md): last night's five vitals against personal ranges
-// (baseline mean ± 2σ from the Winsorized EWMA baselines, SpO2 also floored at 95 %), plus noop's
-// illness signal as the combined flag.
+// (Google's where the caller has them, else baseline mean ± 2σ from the Winsorized EWMA baselines; SpO2 also
+// floored at 95 %), plus noop's illness signal as the combined flag.
 import { foldHistory, hrvCfg, isUsable, respCfg, restingHRCfg, sigma, skinTempCfg } from "../scoring/baselines";
 import { illnessFromDays, type IllnessContext, type IllnessDay, type IllnessResult } from "../scoring/illness";
 import type { MetricCfg } from "../scoring/types";
@@ -28,8 +28,10 @@ export interface HealthMonitorDay extends IllnessDay {
 export interface VitalReading {
   key: VitalKey;
   value: number | null;
-  /** null while the baseline is not usable. */
+  /** null while the baseline is not usable and no range was given. */
   range: { low: number; high: number } | null;
+  /** Where the range came from: Google's own, or Pulse's baseline. */
+  rangeSource?: "google" | "pulse";
   /** no_data when the value or a usable baseline is missing. */
   status: VitalStatus;
 }
@@ -55,13 +57,23 @@ const vitals: [VitalKey, (d: HealthMonitorDay) => number | null | undefined, Met
  * @param days nightly rows oldest first; the newest is shown, the rest are its history. Use the same causal
  *   `skinTempDev` (°C from the skin-temperature baseline) that Recovery uses.
  * @param journal same-day confounders for the illness signal.
+ * @param ranges the latest night's ranges from Google; a vital given one uses it instead of its baseline.
  */
-export function healthMonitor(days: HealthMonitorDay[], journal: Omit<IllnessContext, "baselineTrusted"> = {}): HealthMonitorResult {
+export function healthMonitor(
+  days: HealthMonitorDay[],
+  journal: Omit<IllnessContext, "baselineTrusted"> = {},
+  ranges: Partial<Record<VitalKey, { low: number; high: number }>> = {},
+): HealthMonitorResult {
   const c = healthMonitorConfig;
   const latest = days.at(-1);
   const prior = days.slice(0, -1);
   const readings = vitals.map(([key, pick, cfg]): VitalReading => {
     const value = latest ? (pick(latest) ?? null) : null;
+    const given = ranges[key];
+    if (given) {
+      const status: VitalStatus = value == null ? "no_data" : value < given.low ? "low" : value > given.high ? "high" : "in_range";
+      return { key, value, range: given, rangeSource: "google", status };
+    }
     const state = foldHistory(prior.map((d) => pick(d) ?? null), cfg);
     if (!isUsable(state)) return { key, value, range: null, status: "no_data" };
     let low = state.baseline - c.rangeSigmas * sigma(state);
@@ -69,7 +81,7 @@ export function healthMonitor(days: HealthMonitorDay[], journal: Omit<IllnessCon
     // SpO2 is one-sided: never high, and low below the floor even inside the personal range.
     if (key === "spo2") [low, high] = [Math.max(low, c.spo2FloorPct), 100];
     const status: VitalStatus = value == null ? "no_data" : value < low ? "low" : value > high ? "high" : "in_range";
-    return { key, value, range: { low, high }, status };
+    return { key, value, range: { low, high }, rangeSource: "pulse", status };
   });
   return {
     vitals: readings,

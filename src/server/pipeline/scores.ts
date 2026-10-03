@@ -14,7 +14,7 @@ import { foldDaytimeBaseline } from "@/core/scoring/stressBase";
 import type { BaselineState } from "@/core/scoring/types";
 import { energyBank, energyBankConfig } from "@/core/algorithms/energyBank";
 import { fitnessLevel } from "@/core/algorithms/fitnessLevel";
-import { healthMonitor, type HealthMonitorDay } from "@/core/algorithms/healthMonitor";
+import { healthMonitor, healthMonitorConfig, type HealthMonitorDay, type VitalKey } from "@/core/algorithms/healthMonitor";
 import { healthspan, STRENGTH_TYPES, type HealthspanDay } from "@/core/algorithms/healthspan";
 import type { OutcomeDay } from "@/core/algorithms/journalImpact";
 import type { ReportDay } from "@/core/algorithms/reports";
@@ -209,9 +209,10 @@ export function scoreRecovery(f: Fold, d: Day, sleep: SleepRow): RecoveryRow {
   const { dm, mainSession, main } = d;
   const { hrvB, rhrB, respB, skinB } = f;
   const hrv = dm?.hrvMs ?? null;
-  const sessionRhr = d.cache.sessionRhr;
+  // Google's daily resting HR first; Pulse's sleep-session estimate only on days Google has none.
+  const rhr = dm?.rhrBpm ?? d.cache.sessionRhr;
   const resp = dm?.respBpm ?? null;
-  const skinTempDev = dm?.nightlyTempC != null && skinB && isUsable(skinB) ? dm.nightlyTempC - skinB.baseline : null;
+  const skinTempDev = skinDeviation(d, skinB);
   const sleepPerf = sleep.performance != null ? sleep.performance / 100 : main ? main.efficiency : null;
   const stale = (
     [
@@ -221,7 +222,8 @@ export function scoreRecovery(f: Fold, d: Day, sleep: SleepRow): RecoveryRow {
       ["skinTemp", skinB],
     ] as const
   )
-    .filter(([, b]) => b?.status === "stale")
+    // Google's skin-temperature baseline never goes stale here: it comes with the night.
+    .filter(([k, b]) => b?.status === "stale" && !(k === "skinTemp" && dm?.tempBaselineC != null))
     .map(([k]) => k);
   const rhrUsable = rhrB && isUsable(rhrB) ? rhrB : null;
   const respUsable = respB && isUsable(respB) ? respB : null;
@@ -234,14 +236,14 @@ export function scoreRecovery(f: Fold, d: Day, sleep: SleepRow): RecoveryRow {
   else if (mainSession.stagesStatus !== "SUCCEEDED" || hrv == null) reason = "no_hrv_last_night";
   else {
     const g = hrvB
-      ? gatedRecovery({ hrv, rhr: sessionRhr, resp, hrvBaseline: hrvB, rhrBaseline: rhrUsable, respBaseline: respUsable, sleepPerf, skinTempDev })
+      ? gatedRecovery({ hrv, rhr, resp, hrvBaseline: hrvB, rhrBaseline: rhrUsable, respBaseline: respUsable, sleepPerf, skinTempDev })
       : { recovery: null };
     if (g.recovery == null) {
       reason = "calibrating";
       nightsLeft = Math.max(1, minBaselineNights - (hrvB?.nValid ?? 0));
     } else {
       value = g.recovery;
-      drivers = chargeDrivers({ hrv, rhr: sessionRhr, resp, hrvBaseline: hrvB!, rhrBaseline: rhrUsable, respBaseline: respUsable, sleepPerf, skinTempDev });
+      drivers = chargeDrivers({ hrv, rhr, resp, hrvBaseline: hrvB!, rhrBaseline: rhrUsable, respBaseline: respUsable, sleepPerf, skinTempDev });
     }
   }
   const terms =
@@ -249,7 +251,7 @@ export function scoreRecovery(f: Fold, d: Day, sleep: SleepRow): RecoveryRow {
       ? []
       : [
           "hrv",
-          ...(rhrUsable && sessionRhr != null ? ["rhr"] : []),
+          ...(rhrUsable && rhr != null ? ["rhr"] : []),
           ...(respUsable && resp != null ? ["resp"] : []),
           ...(sleepPerf != null ? ["sleep"] : []),
           ...(skinTempDev != null ? ["skinTemp"] : []),
@@ -266,13 +268,21 @@ export function scoreRecovery(f: Fold, d: Day, sleep: SleepRow): RecoveryRow {
     stale,
     terms,
     updated,
-    inputs: { hrv, rhr: sessionRhr, resp, sleepPerf, skinTempDev },
+    inputs: { hrv, rhr, resp, sleepPerf, skinTempDev },
     baselines: { hrv: summarize(hrvB), rhr: summarize(rhrB), resp: summarize(respB), skinTemp: summarize(skinB) },
     hrvZ,
     drivers,
     forecast: null,
     forecastNightsLeft: Math.max(0, 14 - f.recoveries.length),
   };
+}
+
+/** Last night's skin temperature against Google's baseline (its 30-night median), else Pulse's own causal one. */
+function skinDeviation(d: Day, skinB: BaselineState | null): number | null {
+  const t = d.dm?.nightlyTempC;
+  if (t == null) return null;
+  if (d.dm?.tempBaselineC != null) return t - d.dm.tempBaselineC;
+  return skinB && isUsable(skinB) ? t - skinB.baseline : null;
 }
 
 // ── Training load and readiness (today's strain counts toward today's ACWR) ──
@@ -453,8 +463,24 @@ export function scoreHealthMonitor(f: Fold, d: Day, inputs: Inputs, rec: Recover
           sauna: inputs.tagOn(yesterday, "sauna"),
           travelPhaseJump: inputs.tagOn(yesterday, "travel"),
           alreadyUnwell: inputs.tagOn(yesterday, "illness"),
-        }),
+        }, googleRanges(d)),
       };
+}
+
+/**
+ * Google's ranges for last night: resting HR and HRV from its personal-range roll-ups, skin temperature as
+ * ± 2 of its 30-night SD around the baseline (the deviation's zero). A vital without one keeps Pulse's.
+ */
+function googleRanges(d: Day): Partial<Record<VitalKey, { low: number; high: number }>> {
+  const m = d.dm;
+  const out: Partial<Record<VitalKey, { low: number; high: number }>> = {};
+  if (m?.rhrRangeLow != null && m.rhrRangeHigh != null) out.restingHr = { low: m.rhrRangeLow, high: m.rhrRangeHigh };
+  if (m?.hrvRangeLow != null && m.hrvRangeHigh != null) out.hrv = { low: m.hrvRangeLow, high: m.hrvRangeHigh };
+  if (m?.tempBaselineC != null && m.tempSdC != null && m.tempSdC > 0) {
+    const half = healthMonitorConfig.rangeSigmas * m.tempSdC;
+    out.skinTempDev = { low: -half, high: half };
+  }
+  return out;
 }
 
 // ── Healthspan ───────────────────────────────────────────────────────────────
@@ -468,8 +494,9 @@ export function scoreHealthspan(data: Data, f: Fold, d: Day, sleep: SleepRow, op
     day,
     sleepHours: main ? main.asleepMin / 60 : null,
     sri: sleep.sri,
-    zone13Min: worn ? (s1.zoneSeconds[0] + s1.zoneSeconds[1] + s1.zoneSeconds[2]) / 60 : null,
-    zone45Min: worn ? (s1.zoneSeconds[3] + s1.zoneSeconds[4]) / 60 : null,
+    // Google's all-day time in zones: Light + Moderate, Vigorous + Peak. Pulse's own time-in-zone only without it.
+    zone13Min: dm?.lightModerateMin ?? (worn ? (s1.zoneSeconds[0] + s1.zoneSeconds[1]) / 60 : null),
+    zone45Min: dm?.vigorousPeakMin ?? (worn ? (s1.zoneSeconds[2] + s1.zoneSeconds[3]) / 60 : null),
     strengthMin: worn ? strengthMin : null,
     steps: dm?.steps ?? null,
     vo2maxRun: dm?.vo2maxRun ?? null,

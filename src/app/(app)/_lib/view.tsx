@@ -134,7 +134,7 @@ export function trendProps(t: Trend) {
 export const hrSeries = (m: Metric<HrChart>, maxHr: number): Metric<HrSeries> =>
   mapMetric(m, (h) => ({
     points: h.points.map((p) => ({ t: p.t, bpm: p.v })),
-    zones: h.zones.map((z) => ({ zone: z.zone, min: z.min, max: z.max ?? maxHr })),
+    zones: h.zones.map((z) => ({ zone: z.zone, label: z.label, min: z.min, max: z.max ?? maxHr })),
     spans: h.spans.map((s) => ({ kind: s.kind === "workout" ? "workout" : "sleep", label: s.label, start: s.start, end: s.end })),
     now: h.now ?? undefined,
   }))

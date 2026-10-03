@@ -147,7 +147,8 @@ export function contributors(row: DayRow | undefined, isToday: boolean): Contrib
       label: "Skin temperature",
       unit: "°C",
       metric: metric("skinTemp", inputs?.skinTempDev, row?.metrics?.nightlyTempC != null ? "calibrating" : missing),
-      baseline: b?.skinTemp && usable(b.skinTemp) ? { mean: 0, sd: b.skinTemp.sd } : null,
+      // Google's 30-night SD when it gives one, else Pulse's own baseline spread.
+      baseline: row?.metrics?.tempSdC ? { mean: 0, sd: row.metrics.tempSdC } : b?.skinTemp && usable(b.skinTemp) ? { mean: 0, sd: b.skinTemp.sd } : null,
       points: pts("skinTemp"),
       direction: "toward_zero",
     },

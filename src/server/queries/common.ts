@@ -56,6 +56,11 @@ export type MetricsRow = {
   calories: number | null;
   weightKg: number | null;
   bodyFatPct: number | null;
+  /** Google's all-day minutes in Light + Moderate and Vigorous + Peak. */
+  lightModerateMin: number | null;
+  vigorousPeakMin: number | null;
+  /** Google's 30-night SD of skin temperature from its baseline, °C. */
+  tempSdC: number | null;
 };
 
 export type DayRow = {
@@ -100,7 +105,8 @@ export function loadDays(ctx: QueryCtx, from: string, to: string): Map<string, D
       c
         .prepare(
           `select day, hrv_ms hrvMs, rhr_bpm rhrBpm, resp_bpm respBpm, nightly_temp_c nightlyTempC, spo2_pct spo2Pct,
-             vo2max_daily vo2maxDaily, vo2max_run vo2maxRun, steps, calories, weight_kg weightKg, body_fat_pct bodyFatPct
+             vo2max_daily vo2maxDaily, vo2max_run vo2maxRun, steps, calories, weight_kg weightKg, body_fat_pct bodyFatPct,
+             light_moderate_min lightModerateMin, vigorous_peak_min vigorousPeakMin, temp_sd_c tempSdC
            from daily_metrics where day >= ? and day <= ?`,
         )
         .all(from, to) as MetricsRow[]

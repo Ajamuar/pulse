@@ -7,15 +7,17 @@ import { EmptyState } from "@/components/shells/EmptyState"
 import { MetricState } from "@/components/shells/MetricState"
 import { LABEL } from "@/components/metrics/primitives"
 
-export type ZoneRow = { zone: number; min: number; max: number | null; seconds: number }
+/** `zone` 1-4 orders the rows; `label` names it (Light, Moderate, Vigorous, Peak). */
+export type ZoneRow = { zone: number; label: string; min: number; max: number | null; seconds: number }
 export type StackedSegment = { key: string; label: string; count: number; color: DataColor }
 
 export type ZoneBarsProps =
   | {
       variant: "rows"
-      /** Zones in any order; drawn 5 down to 1. `max: null` is the open top zone ("173+ bpm"). */
+      /** Zones in any order; drawn top zone first. `max: null` is the open top zone ("173+ bpm"). */
       data: Metric<ZoneRow[]> | null | undefined
-      maxHr?: number
+      /** Where the zones came from, under the rows. */
+      note?: string
       emptyCopy?: string
     }
   | {
@@ -32,11 +34,11 @@ function share(part: number, total: number) {
   return p < 1 ? "<1%" : `${Math.round(p)}%`
 }
 
-function Rows({ zones, maxHr }: { zones: ZoneRow[]; maxHr?: number }) {
+function Rows({ zones, note }: { zones: ZoneRow[]; note?: string }) {
   const total = zones.reduce((a, z) => a + z.seconds, 0)
   const sorted = [...zones].sort((a, b) => b.zone - a.zone)
   return (
-    // In a stretched card (Strain's Time in zones beside two stacked cards) the five rows share the spare height
+    // In a stretched card (Strain's Time in zones beside two stacked cards) the rows share the spare height
     // evenly instead of leaving it under the last row (SYM5). In a natural-height parent nothing grows.
     <div className="flex flex-1 flex-col">
       <ul role="list" className="flex flex-1 flex-col gap-2">
@@ -48,11 +50,11 @@ function Rows({ zones, maxHr }: { zones: ZoneRow[]; maxHr?: number }) {
           return (
             <li
               key={z.zone}
-              aria-label={`Zone ${z.zone}, ${range.replace("-", " to ").replace("+", " and above")}, ${durationWords(minutes)}, ${sh === "<1%" ? "under 1 percent" : sh.replace("%", " percent")}`}
+              aria-label={`${z.label} zone, ${range.replace("-", " to ").replace("+", " and above")}, ${durationWords(minutes)}, ${sh === "<1%" ? "under 1 percent" : sh.replace("%", " percent")}`}
               className={cn("flex flex-1 flex-col justify-center gap-2 rounded-lg bg-secondary px-3 py-2.5", !z.seconds && "opacity-40")}
             >
               <div aria-hidden className="flex items-baseline gap-3">
-                <span className={LABEL}>Zone {z.zone}</span>
+                <span className={LABEL}>{z.label}</span>
                 <span className={cn(LABEL, "font-numeric text-muted-foreground")}>{range}</span>
                 <span className={cn(LABEL, "font-numeric text-foreground-secondary")}>{sh}</span>
                 <span className="ml-auto font-numeric text-lg leading-6 font-bold tabular-nums">
@@ -67,7 +69,7 @@ function Rows({ zones, maxHr }: { zones: ZoneRow[]; maxHr?: number }) {
           )
         })}
       </ul>
-      {maxHr && <p className="mt-3 text-xs leading-4 font-medium text-muted-foreground">Zones from your max heart rate of {maxHr} bpm.</p>}
+      {note && <p className="mt-3 text-xs leading-4 font-medium text-muted-foreground">{note}</p>}
     </div>
   )
 }
@@ -109,7 +111,7 @@ export function ZoneBars(p: ZoneBarsProps) {
   if (p.variant === "rows")
     return (
       <MetricState metric={p.data} skeleton={<ZoneBarsSkeleton variant="rows" />} empty={empty}>
-        {(zones) => <Rows zones={zones} maxHr={p.maxHr} />}
+        {(zones) => <Rows zones={zones} note={p.note} />}
       </MetricState>
     )
   return (
@@ -122,12 +124,12 @@ export function ZoneBars(p: ZoneBarsProps) {
 export function ZoneBarsSkeleton({ variant }: { variant: "rows" | "stacked" }) {
   if (variant === "rows")
     return (
-      // Each zone row's own box: the real "Zone n" label, bars for range and time, the hatched track.
+      // Each zone row's own box: the real zone name, bars for range and time, the hatched track.
       <div aria-hidden className="space-y-2">
-        {[5, 4, 3, 2, 1].map((k) => (
+        {["Peak", "Vigorous", "Moderate", "Light"].map((k) => (
           <div key={k} className="space-y-2 rounded-lg bg-secondary px-3 py-2.5">
             <div className="flex items-center gap-3">
-              <span className={LABEL}>Zone {k}</span>
+              <span className={LABEL}>{k}</span>
               <SkeletonText className={cn(LABEL, "w-20")} />
               <SkeletonText className="ml-auto w-[7ch] font-numeric text-lg leading-6 font-bold" />
             </div>

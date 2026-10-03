@@ -26,6 +26,7 @@ import {
   type ExerciseRow,
   trendPoints,
 } from "./common";
+import { ZONE_NAMES } from "@/core/scoring/zones";
 import type { HrChart, KeyStat, Metric, SplitPoint, StrainVM, ZoneRow } from "./types";
 
 /** The activity roll-ups the Strain summary shows after Steps (spec §11 EX1). */
@@ -50,8 +51,9 @@ export function getStrain(day: string, ctx: QueryCtx = defaultCtx()): StrainVM {
 
   const exs = exercisesBetween(ctx, addDays(day, -59), day);
   const strengthMin = (d: string) => exs.filter((e) => e.day === d && isStrength(e)).reduce((a, e) => a + (e.endTs - e.startTs) / 60, 0);
-  const zoneMin = (r: DayRow | undefined, from: number, to: number) =>
-    r?.s1 && r.s1.hrCount > 0 ? r.s1.zoneSeconds.slice(from, to).reduce((a, b) => a + b, 0) / 60 : null;
+  // Google's all-day time in zones, as Pulse Age reads it; Pulse's own time-in-zone only on days without it.
+  const zoneMin = (r: DayRow | undefined, google: number | null | undefined, from: number, to: number) =>
+    google ?? (r?.s1 && r.s1.hrCount > 0 ? r.s1.zoneSeconds.slice(from, to).reduce((a, b) => a + b, 0) / 60 : null);
   const reason = hrReason(row?.s1 ?? null);
   const stat = (key: string, label: string, pick: (d: string) => number | null, unit: string | undefined, why = reason): KeyStat => {
     const prior = meanSd(Array.from({ length: 30 }, (_, k) => pick(addDays(day, -k - 1))));
@@ -65,8 +67,8 @@ export function getStrain(day: string, ctx: QueryCtx = defaultCtx()): StrainVM {
   };
   const worn = (d: string) => (rows.get(d)?.s1?.hrCount ?? 0) > 0;
   const summary: KeyStat[] = [
-    stat("zones13", "Heart rate zones 1‑3", (d) => zoneMin(rows.get(d), 0, 3), "min"),
-    stat("zones45", "Heart rate zones 4‑5", (d) => zoneMin(rows.get(d), 3, 5), "min"),
+    stat("zones13", "Light and moderate zones", (d) => zoneMin(rows.get(d), rows.get(d)?.metrics?.lightModerateMin, 0, 2), "min"),
+    stat("zones45", "Vigorous and peak zones", (d) => zoneMin(rows.get(d), rows.get(d)?.metrics?.vigorousPeakMin, 2, 4), "min"),
     stat("strength", "Strength activity time", (d) => (worn(d) ? strengthMin(d) : null), "min"),
     stat("steps", "Steps", (d) => rows.get(d)?.metrics?.steps ?? null, undefined),
     ...STRAIN_EXTRAS.map(extra),
@@ -89,6 +91,7 @@ export function getStrain(day: string, ctx: QueryCtx = defaultCtx()): StrainVM {
     hr: hrChart(ctx, row, day, isToday),
     zones: zoneRows(row),
     maxHr: row?.s1?.maxHr ?? ctx.profile.maxHr,
+    zoneNote: zoneNote(row, ctx),
     activities: exs.filter((e) => e.day === day).map((e) => activityItem(e, row)),
     trend: { points: pts, target: target.value ? [target.value.low, target.value.high] : null },
     calories: calorieSplit(rows, day, soFar),
@@ -128,7 +131,13 @@ export function coach(strain: Metric<number>, target: { low: number; high: numbe
 }
 
 export const zoneBounds = (lower: number[]): ZoneRow[] =>
-  lower.map((min, i) => ({ zone: i + 1, min: Math.round(min), max: i < 4 ? Math.round(lower[i + 1]) - 1 : null, seconds: 0 }));
+  lower.map((min, i) => ({ zone: i + 1, label: ZONE_NAMES[i], min: Math.round(min), max: i < lower.length - 1 ? Math.round(lower[i + 1]) - 1 : null, seconds: 0 }));
+
+/** Where the day's zones came from, under the zone rows. */
+export const zoneNote = (row: DayRow | undefined, ctx: QueryCtx) =>
+  row?.s1?.zoneSource === "google"
+    ? "Zones from Google for this day, set from your resting and max heart rate."
+    : `Zones from your max heart rate of ${row?.s1?.maxHr ?? ctx.profile.maxHr} bpm.`;
 
 export function zoneRows(row: DayRow | undefined, seconds = row?.s1?.zoneSeconds): Metric<ZoneRow[]> {
   const s1 = row?.s1;

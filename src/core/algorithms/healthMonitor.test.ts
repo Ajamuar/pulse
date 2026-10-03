@@ -53,6 +53,14 @@ describe("healthMonitor", () => {
     expect(status(history({ spo2: 100 })).spo2).toBe("in_range");
   });
 
+  it("a range from Google replaces the baseline's, even before the baseline is usable", () => {
+    const r = healthMonitor(history({ rhr: 59 }, 3), {}, { restingHr: { low: 50, high: 58 } });
+    const rhr = r.vitals.find((v) => v.key === "restingHr")!;
+    expect(rhr).toMatchObject({ range: { low: 50, high: 58 }, rangeSource: "google", status: "high" });
+    expect(r.vitals.find((v) => v.key === "hrv")).toMatchObject({ range: null, status: "no_data" });
+    expect(healthMonitor(history()).vitals.every((v) => v.rangeSource === "pulse")).toBe(true);
+  });
+
   it("missing values and unusable baselines are no_data, not in range", () => {
     expect(status(history({ spo2: null })).spo2).toBe("no_data");
     const short = history({}, 3);

@@ -1,85 +1,67 @@
-// Ports HrZones.kt: the five %HRmax display zones and time-in-zone. Independent of Strain's Edwards %HRR
-// zones. Not ported: the single-entry zone-set cache.
+// Display heart-rate zones and time-in-zone. Four zones, named as Google names them (LIGHT, MODERATE,
+// VIGOROUS, PEAK): Google's own bounds for a day when `daily-heart-rate-zones` has that day, else Pulse's
+// fallback on % of max HR, cut so Light + Moderate = the old zones 1-3 (50-80%) and Vigorous + Peak = the
+// old zones 4-5 (80%+). Independent of Strain's Edwards %HRR zones. Time-in-zone ports noop's HrZones.kt.
 import type { HrSample } from "./types";
 
+export const ZONE_NAMES = ["Light", "Moderate", "Vigorous", "Peak"] as const;
+
 export interface HrZone {
-  /** 1..5 */
+  /** 1..4: Light, Moderate, Vigorous, Peak. */
   number: number;
   /** Inclusive, bpm. */
   lower: number;
-  /** Exclusive except for zone 5. */
+  /** Exclusive except for the top zone. */
   upper: number;
-  lowerPct: number;
-  upperPct: number;
 }
 
 export interface HrZoneSet {
   zones: HrZone[];
   maxHR: number;
-  source: "tanaka" | "manual" | "custom";
+  /** "google": the day's own bounds from Google; "max_hr": Pulse's % of max HR fallback. */
+  source: "google" | "max_hr";
 }
 
 export interface TimeInZone {
-  /** Seconds in zones 1..5 (seconds[0] is zone 1). */
+  /** Seconds per zone (seconds[0] is Light). */
   seconds: number[];
   belowZone1: number;
 }
 
-export const zoneEdges = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
-/** Editable BPM range for personalized zone starts. */
-export const customBPMRange = { min: 30, max: 250 };
+/** Fallback lower edges as a share of max HR, then the top. */
+export const zoneEdges = [0.5, 0.7, 0.8, 0.9, 1.0];
 
-export const tanakaMaxHR = (age: number): number => 208.0 - 0.7 * age;
-
-/** Zones from age (Tanaka) or a manual HRmax override. */
-export function zonesForAge(age: number, maxHROverride: number | null = null, customLowerBounds: number[] | null = null): HrZoneSet {
-  return maxHROverride != null
-    ? zones(maxHROverride, "manual", customLowerBounds)
-    : zones(tanakaMaxHR(age), "tanaka", customLowerBounds);
+/** Zones from four lower bounds (bpm) and the top of the last zone. */
+function fromBounds(lower: number[], maxHR: number, source: HrZoneSet["source"]): HrZoneSet {
+  return {
+    zones: lower.map((l, i) => ({ number: i + 1, lower: l, upper: i < lower.length - 1 ? lower[i + 1] : Math.max(maxHR, l) })),
+    maxHR,
+    source,
+  };
 }
 
-/** Zones from a known HRmax, optionally from five personalized lower bounds (invalid ones fall back). */
-export function zones(
-  maxHR: number,
-  source: "tanaka" | "manual" = "manual",
-  customLowerBounds: number[] | null = null,
-): HrZoneSet {
-  const custom = customLowerBounds ? validCustomLowerBounds(customLowerBounds) : null;
-  const built: HrZone[] = [];
-  for (let i = 0; i < 5; i++) {
-    const lower = custom ? custom[i] : zoneEdges[i] * maxHR;
-    const upper = custom ? (i < 4 ? custom[i + 1] : Math.max(maxHR, custom[i])) : zoneEdges[i + 1] * maxHR;
-    built.push({
-      number: i + 1,
-      lower,
-      upper,
-      lowerPct: maxHR > 0 ? lower / maxHR : 0.0,
-      upperPct: maxHR > 0 ? upper / maxHR : 0.0,
-    });
-  }
-  return { zones: built, maxHR, source: custom ? "custom" : source };
+/** Pulse's fallback: % of max HR. */
+export const zones = (maxHR: number): HrZoneSet =>
+  fromBounds(
+    zoneEdges.slice(0, 4).map((e) => e * maxHR),
+    maxHR,
+    "max_hr",
+  );
+
+/**
+ * Google's zones for a day: `[light, moderate, vigorous, peak]` minimum bpm plus the peak maximum, as the
+ * Google mapper stores them. Null unless the four minimums are positive and strictly increasing.
+ */
+export function googleZones(bounds: number[] | null | undefined): HrZoneSet | null {
+  if (!bounds || bounds.length !== 5 || !bounds.every((v) => Number.isFinite(v) && v > 0)) return null;
+  for (let i = 1; i < 4; i++) if (bounds[i] <= bounds[i - 1]) return null;
+  return fromBounds(bounds.slice(0, 4), bounds[4], "google");
 }
 
-/** Zone 1..5 for a bpm, or 0 below zone 1. */
+/** Zone 1..4 for a bpm, or 0 below zone 1. The top zone is open-ended. */
 export function zoneNumber(set: HrZoneSet, bpm: number): number {
-  for (const z of set.zones) {
-    if (z.number === 5) {
-      if (bpm >= z.lower) return 5;
-    } else if (bpm >= z.lower && bpm < z.upper) {
-      return z.number;
-    }
-  }
+  for (let i = set.zones.length - 1; i >= 0; i--) if (bpm >= set.zones[i].lower) return set.zones[i].number;
   return 0;
-}
-
-/** Conventional lower bounds rounded up to whole BPM, for an editor. */
-export const defaultLowerBounds = (maxHR: number): number[] => zoneEdges.slice(0, 5).map((e) => Math.ceil(e * maxHR));
-
-/** The bounds if positive, finite and strictly increasing; otherwise null. */
-export function validCustomLowerBounds(values: number[]): number[] | null {
-  if (values.length !== 5 || !values.every((v) => Number.isFinite(v) && v > 0)) return null;
-  for (let i = 1; i < values.length; i++) if (values[i] <= values[i - 1]) return null;
-  return values;
 }
 
 /**
@@ -88,7 +70,7 @@ export function validCustomLowerBounds(values: number[]): number[] | null {
  */
 export function timeInZone(hr: HrSample[], zoneSet: HrZoneSet): TimeInZone {
   const sorted = [...hr].sort((a, b) => a.ts - b.ts);
-  const seconds = [0, 0, 0, 0, 0];
+  const seconds = zoneSet.zones.map(() => 0);
   let below = 0.0;
   if (sorted.length === 0) return { seconds, belowZone1: 0.0 };
   const tail = medianInterval(sorted);
@@ -120,4 +102,4 @@ export function medianInterval(sorted: HrSample[]): number {
 
 export const totalSeconds = (t: TimeInZone): number => t.seconds.reduce((a, b) => a + b, 0) + t.belowZone1;
 
-export const secondsInZone = (t: TimeInZone, zone: number): number => (zone < 1 || zone > 5 ? 0.0 : t.seconds[zone - 1]);
+export const secondsInZone = (t: TimeInZone, zone: number): number => (zone < 1 || zone > t.seconds.length ? 0.0 : t.seconds[zone - 1]);

@@ -14,11 +14,22 @@ describe("profile", () => {
     const db = openDb(":memory:");
     saveProfile(db, input);
     // Age 36 on 2026-10-02: 208 - 0.7 * 36 = 182.8
-    expect(getProfile(db, "2026-10-02")).toEqual({ birthDate: "1990-06-15", sex: "female", maxHr: 183, maxHrSet: false, heightCm: 165 });
+    expect(getProfile(db, "2026-10-02")).toEqual({ birthDate: "1990-06-15", sex: "female", maxHr: 183, maxHrSource: "estimated", heightCm: 165 });
     // Birthday not reached yet, age 35: 183.5
     expect(getProfile(db, "2026-06-14")!.maxHr).toBe(184);
     saveProfile(db, { ...input, maxHr: 190 });
-    expect(getProfile(db)).toMatchObject({ maxHr: 190, maxHrSet: true });
+    expect(getProfile(db)).toMatchObject({ maxHr: 190, maxHrSource: "set" });
+  });
+
+  it("without the user's own, max HR is the top of Google's latest peak zone", () => {
+    const db = openDb(":memory:");
+    saveProfile(db, input);
+    const zones = db.$client.prepare("insert into daily_metrics (day, hr_zones, source) values (?, ?, 'google')");
+    zones.run("2026-09-30", "[98,118,137,157,186]");
+    zones.run("2026-10-01", "[99,119,138,158,188]");
+    expect(getProfile(db, "2026-10-02")).toMatchObject({ maxHr: 188, maxHrSource: "google" });
+    saveProfile(db, { ...input, maxHr: 190 });
+    expect(getProfile(db)).toMatchObject({ maxHr: 190, maxHrSource: "set" });
   });
 
   it("saving a change marks every day for recompute; saving the same values does nothing", () => {

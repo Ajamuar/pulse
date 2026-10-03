@@ -32,6 +32,16 @@ export type Metrics = {
   calories: number | null;
   weightKg: number | null;
   bodyFatPct: number | null;
+  /** Google's zone bounds for the day (see daily_metrics.hr_zones), parsed. */
+  hrZones: number[] | null;
+  lightModerateMin: number | null;
+  vigorousPeakMin: number | null;
+  tempBaselineC: number | null;
+  tempSdC: number | null;
+  rhrRangeLow: number | null;
+  rhrRangeHigh: number | null;
+  hrvRangeLow: number | null;
+  hrvRangeHigh: number | null;
 };
 export type Segment = { sessionId: string; startTs: number; endTs: number; stage: "awake" | "light" | "deep" | "rem" };
 
@@ -51,11 +61,13 @@ export function groupBy<T>(xs: T[], key: (x: T) => string) {
 export function load(db: Db, { timeZone: tz }: PipelineOptions) {
   const c = db.$client;
   const all = <T>(q: string) => c.prepare(q).all() as T[];
-  const metrics = all<Metrics>(
+  const metrics = all<Omit<Metrics, "hrZones"> & { hrZones: string | null }>(
     `select day, hrv_ms hrvMs, rhr_bpm rhrBpm, resp_bpm respBpm, nightly_temp_c nightlyTempC, spo2_pct spo2Pct,
-       vo2max_daily vo2maxDaily, vo2max_run vo2maxRun, steps, calories, weight_kg weightKg, body_fat_pct bodyFatPct
+       vo2max_daily vo2maxDaily, vo2max_run vo2maxRun, steps, calories, weight_kg weightKg, body_fat_pct bodyFatPct,
+       hr_zones hrZones, light_moderate_min lightModerateMin, vigorous_peak_min vigorousPeakMin, temp_baseline_c tempBaselineC,
+       temp_sd_c tempSdC, rhr_range_low rhrRangeLow, rhr_range_high rhrRangeHigh, hrv_range_low hrvRangeLow, hrv_range_high hrvRangeHigh
      from daily_metrics order by day`,
-  );
+  ).map((m): Metrics => ({ ...m, hrZones: m.hrZones == null ? null : (JSON.parse(m.hrZones) as number[]) }));
   const sessions = all<Session>(
     `select id, day, start_ts startTs, end_ts endTs, is_main isMain, processed, stages_status stagesStatus,
        asleep_min asleepMin, awake_min awakeMin, deep_min deepMin, light_min lightMin, rem_min remMin

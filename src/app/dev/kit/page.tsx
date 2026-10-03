@@ -387,7 +387,7 @@ export default function KitPage() {
             </div>
           </SectionShell>
           <SectionShell variant="card" title="Time in zones">
-            <ZoneBars variant="rows" data={fx.ok(fx.zones)} maxHr={186} />
+            <ZoneBars variant="rows" data={fx.ok(fx.zones)} note="Zones from Google for this day, set from your resting and max heart rate." />
           </SectionShell>
           <SectionShell variant="card" title="Recovery breakdown" aside={<span className="text-xs font-medium text-muted-foreground">Days</span>}>
             <div className="space-y-6">

@@ -9,7 +9,7 @@ import type { QueryCtx } from "./queries/common";
 import { seedPull } from "./sources/seed/generate";
 
 export const TZ = "Asia/Kolkata";
-export const PROFILE = { birthDate: "1990-01-01", sex: "male" as const, maxHr: 183, maxHrSet: true, heightCm: 178 };
+export const PROFILE = { birthDate: "1990-01-01", sex: "male" as const, maxHr: 183, maxHrSource: "set" as const, heightCm: 178 };
 export const OPTS: PipelineOptions = { timeZone: TZ, profile: PROFILE };
 /** Friday 14:00, after wake; the seeded range then starts on Monday 2026-04-06 (day index 0). */
 export const NOW = Date.parse("2026-10-02T14:00:00+05:30") / 1000;
