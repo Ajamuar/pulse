@@ -1,3 +1,4 @@
+import { type ExtraKey, extraMetric } from "@/lib/extraMetrics";
 import { addDays } from "../time";
 import {
   activityItem,
@@ -27,6 +28,9 @@ import {
 } from "./common";
 import type { HrChart, KeyStat, Metric, StrainVM, ZoneRow } from "./types";
 
+/** The activity roll-ups the Strain summary shows after Steps (spec §11 EX1). */
+export const STRAIN_EXTRAS = ["distance", "floors", "active_minutes", "azm", "active_calories"] as const satisfies readonly ExtraKey[];
+
 const isStrength = (e: ExerciseRow) => activityKind(e.type) === "strength";
 
 /** Strain `/strain` for `day` (spec §7.3). */
@@ -49,9 +53,15 @@ export function getStrain(day: string, ctx: QueryCtx = defaultCtx()): StrainVM {
   const zoneMin = (r: DayRow | undefined, from: number, to: number) =>
     r?.s1 && r.s1.hrCount > 0 ? r.s1.zoneSeconds.slice(from, to).reduce((a, b) => a + b, 0) / 60 : null;
   const reason = hrReason(row?.s1 ?? null);
-  const stat = (key: string, label: string, pick: (d: string) => number | null, unit: string | undefined): KeyStat => {
+  const stat = (key: string, label: string, pick: (d: string) => number | null, unit: string | undefined, why = reason): KeyStat => {
     const prior = meanSd(Array.from({ length: 30 }, (_, k) => pick(addDays(day, -k - 1))));
-    return { key, label, metric: maybe(pick(day), reason), ...(unit && { unit }), average: prior.mean, ...(prior.sd !== undefined && { sd: prior.sd }), direction: "up" };
+    return { key, label, metric: maybe(pick(day), why), ...(unit && { unit }), average: prior.mean, ...(prior.sd !== undefined && { sd: prior.sd }), direction: "up" };
+  };
+  // Google's roll-ups beside Steps: a missing one is the band left off, or a day the account has none.
+  const extra = (key: ExtraKey): KeyStat => {
+    const m = extraMetric(key);
+    const why = (row?.s1?.hrCount ?? 0) > 0 ? "no_data" : "band_not_worn";
+    return { ...stat(key, m.label, (d) => rows.get(d)?.extra[key] ?? null, m.unit, why), format: m.format, direction: m.direction };
   };
   const worn = (d: string) => (rows.get(d)?.s1?.hrCount ?? 0) > 0;
   const summary: KeyStat[] = [
@@ -59,6 +69,7 @@ export function getStrain(day: string, ctx: QueryCtx = defaultCtx()): StrainVM {
     stat("zones45", "Heart rate zones 4‑5", (d) => zoneMin(rows.get(d), 3, 5), "min"),
     stat("strength", "Strength activity time", (d) => (worn(d) ? strengthMin(d) : null), "min"),
     stat("steps", "Steps", (d) => rows.get(d)?.metrics?.steps ?? null, undefined),
+    ...STRAIN_EXTRAS.map(extra),
   ];
 
   const pts = trendPoints(rows, day, (r) => (finite(r.s1?.effort) ? toStrain(r.s1.effort) : null));
