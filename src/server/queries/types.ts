@@ -172,6 +172,16 @@ export type HrChart = { points: TimePoint[]; zones: ZoneRow[]; spans: Span[]; no
 
 export type ActivityItem = Extract<TimelineItem, { kind: "activity" }>;
 
+/** `/activities`: one group per day with a workout (today always), newest first. */
+export type ActivitiesVM = {
+  today: string;
+  /** How many days back the list reaches. */
+  days: number;
+  groups: { day: string; items: ActivityItem[]; minutes: number; steps: number | null; dayStrain: number | null }[];
+  /** True when workouts exist before the window, so "Show older" has something to load. */
+  older: boolean;
+};
+
 export type StrainVM = {
   day: string;
   isToday: boolean;

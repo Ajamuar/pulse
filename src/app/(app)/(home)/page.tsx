@@ -188,7 +188,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
                 variant="card"
                 title={vm.activities.title}
                 action={
-                  <Link href={at("/strain")} aria-label="Open Strain" className={ICON_LINK}>
+                  <Link href="/activities" aria-label="All activities" className={ICON_LINK}>
                     <Maximize2 aria-hidden className="size-[18px]" strokeWidth={1.75} />
                   </Link>
                 }

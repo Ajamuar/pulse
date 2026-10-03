@@ -15,6 +15,7 @@ const OTHER_ROUTES = [
   "/settings",
   // The More hub (U21).
   "/reports",
+  "/activities",
   "/trends",
   "/trends?metric=hrv&r=1y",
   "/more/behaviours",
@@ -149,7 +150,7 @@ test.describe("sweep", () => {
   test("headers share one top padding", async ({ page }) => {
     // The first row of every screen's header sits at the same height: its controls' vertical centre.
     const centres: Record<string, number> = {};
-    for (const route of ["/", "/recovery", "/strain", "/sleep", "/health", "/health/healthspan", "/health/monitor", "/health/stress", "/health/fitness", "/journal", "/journal/insights", "/more", "/settings", "/trends", "/reports", "/more/behaviours"]) {
+    for (const route of ["/", "/recovery", "/strain", "/sleep", "/health", "/health/healthspan", "/health/monitor", "/health/stress", "/health/fitness", "/journal", "/journal/insights", "/more", "/settings", "/trends", "/reports", "/activities", "/more/behaviours"]) {
       await page.goto(route);
       await settle(page);
       centres[route] = await page.evaluate(() => {
