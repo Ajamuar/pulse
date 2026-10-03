@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import Link from "next/link"
+import { connection } from "next/server"
 import { Mail } from "lucide-react"
 import { getConfig } from "@/server/config"
 import { AUTH_FOOTNOTE, AUTH_LINK, AuthHero } from "@/components/auth/AuthHero"
@@ -23,7 +24,9 @@ const mailto = (to: string) =>
  * Forgot password `/forgot`. Pulse sends no email, so whoever runs the server sets a temporary password (the command is
  * in docs/setup.md, not on this page). SUPPORT_EMAIL, when set, becomes a prefilled email to them.
  */
-export default function ForgotPage() {
+export default async function ForgotPage() {
+  // Per request: SUPPORT_EMAIL is runtime config, and a prerendered page would freeze the build's (unset) value.
+  await connection()
   const support = getConfig().supportEmail
   const steps = [
     support ? "Email the admin your username or the email you signed up with." : "Ask the person who runs this Pulse to reset your password. Tell them your username or email.",
