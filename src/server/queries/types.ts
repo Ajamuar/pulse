@@ -22,6 +22,8 @@ export type Trend = {
   /** Strain trend: today's Strain Target band. */
   target?: [number, number] | null;
 };
+/** A day's total with its parts; `parts` null when the day has a total but no breakdown. */
+export type SplitPoint = DayPoint & { parts: Record<string, number> | null };
 export type TimePoint = { t: number; v: number | null };
 export type Span = { kind: "workout" | "sleep" | "nap"; label: string; start: number; end: number };
 
@@ -183,6 +185,10 @@ export type StrainVM = {
   maxHr: number;
   activities: ActivityItem[];
   trend: Trend;
+  /** 30 days ending on the day: total kcal split into active and resting (resting = total − active, never below 0). */
+  calories: SplitPoint[];
+  /** 60 days ending on the day: minutes of recorded workouts (0 on a day with data but none). */
+  workouts: Trend;
 };
 
 export type ActivityVM = {

@@ -38,6 +38,44 @@ describe("getStrain summary", () => {
   });
 });
 
+describe("getStrain calories and workouts", () => {
+  it("splits each day's total into active and resting, with today faded as a running total", () => {
+    const ctx = ctxFor(db);
+    const today = getStrain(dayAt(179), ctx);
+    expect(today.isToday).toBe(true);
+    expect(today.calories).toHaveLength(30);
+    const last = today.calories.at(-1)!;
+    expect(last).toMatchObject({ day: dayAt(179), provisional: true });
+    const total = db.$client.prepare("select calories from daily_metrics where day = ?").pluck().get(dayAt(178)) as number;
+    const active = db.$client.prepare("select value from daily_values where day = ? and key = 'active_calories'").pluck().get(dayAt(178)) as number;
+    const past = getStrain(dayAt(178), ctx).calories.at(-1)!;
+    expect(past).toEqual({ day: dayAt(178), value: total, parts: { active, resting: total - active } });
+  });
+
+  it("says no breakdown when active is missing and never puts resting below 0", () => {
+    const ctx = ctxFor(db);
+    db.$client.prepare("delete from daily_values where day = ? and key = 'active_calories'").run(dayAt(175));
+    db.$client.prepare("update daily_values set value = 99999 where day = ? and key = 'active_calories'").run(dayAt(174));
+    const pts = getStrain(dayAt(176), ctx).calories;
+    const total = (d: string) => db.$client.prepare("select calories from daily_metrics where day = ?").pluck().get(d) as number;
+    expect(pts.find((p) => p.day === dayAt(175))).toEqual({ day: dayAt(175), value: total(dayAt(175)), parts: null });
+    expect(pts.find((p) => p.day === dayAt(174))!.parts).toEqual({ active: total(dayAt(174)), resting: 0 });
+  });
+
+  it("sums workout minutes per day, 0 on a day with data and none", () => {
+    const ctx = ctxFor(db);
+    const pts = getStrain(dayAt(178), ctx).workouts.points;
+    expect(pts).toHaveLength(60);
+    const minutes = db.$client
+      .prepare("select day, sum(end_ts - start_ts) / 60.0 m from exercises where day >= ? and day <= ? group by day")
+      .all(dayAt(119), dayAt(178)) as { day: string; m: number }[];
+    expect(minutes.length).toBeGreaterThan(0);
+    for (const { day, m } of minutes) expect(pts.find((p) => p.day === day)!.value).toBeCloseTo(m, 6);
+    const rest = pts.find((p) => !minutes.some((x) => x.day === p.day))!;
+    expect(rest.value).toBe(0);
+  });
+});
+
 describe("activity distance", () => {
   const ex = (type: string, distanceM: number | null): ExerciseRow => ({ id: "x", day: dayAt(1), startTs: 0, endTs: 30 * 60, type, name: null, calories: null, distanceM });
 
