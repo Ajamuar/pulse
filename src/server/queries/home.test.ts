@@ -126,6 +126,7 @@ describe("getHome", () => {
   it("builds extra metrics and body readings generically, against their 30-day averages", () => {
     const c = copyDb(db);
     const day = dayAt(179);
+    c.$client.exec("delete from daily_values where key = 'distance'"); // the demo seed writes its own; pin the window
     const put = c.$client.prepare("insert or replace into daily_values (day, key, value) values (?, ?, ?)");
     for (let k = 1; k <= 10; k++) put.run(dayAt(179 - k), "distance", k % 2 ? 3 : 5);
     put.run(day, "distance", 6.25);
@@ -150,7 +151,8 @@ describe("getHome", () => {
     recompute(c, OPTS);
     const vm = getHome(dayAt(170), ctxFor(c));
     expect(vm.dials.strain.value).toBeNull();
-    expect(vm.phone?.map((s) => s.key)).toEqual(["steps", "calories"]);
+    // The demo seed writes the phone extras (distance, active minutes) beside steps and calories.
+    expect(vm.phone?.map((s) => s.key)).toEqual(["steps", "distance", "calories", "active_minutes"]);
     expect(vm.phone?.[0]).toMatchObject({ label: "Steps", metric: { value: expect.any(Number) }, average: expect.any(Number) });
     expect(vm.dashboard.defaults).toEqual(PHONE_DEFAULT);
     expect(vm.keyStats.map((s) => s.key)).toEqual(PHONE_DEFAULT);
