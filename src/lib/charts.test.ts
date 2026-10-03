@@ -81,6 +81,6 @@ describe("ScoreDial slices", () => {
     expect(markerSlices(0, 3, 0.06).map((v) => +v.toFixed(2))).toEqual([0, 0.06, 2.94]);
   });
   it("ring radii leave 2 px for the tick", () => {
-    expect(ringRadii(96, 6)).toEqual({ outer: "95.8%", inner: "83.3%", tickOuter: "100%", tickInner: "79.2%" });
+    expect(ringRadii(96, 6)).toEqual({ outer: "95.8%", inner: "83.3%", tickOuter: "100%", tickInner: "79.2%", hole: "8.3%" });
   });
 });

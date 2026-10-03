@@ -53,14 +53,20 @@ export type ScoreDialProps = {
   compact?: boolean
 }
 
+// Centre type is sized in cqi of the ring's hole (the square inside the stroke, `ringRadii().hole`), so every
+// size and the 768 px step keep the same proportions and clearance (spec §11 F23). 1cqi = 1% of the inner diameter.
 const SIZE = {
-  sm: { box: "size-14", d: 56, ring: 5, value: "text-base leading-none" },
+  sm: { box: "size-14", d: 56, ring: 5, value: "text-[38cqi]" },
   // Home row: an 88 px ring 6 px thick inside the 92 px box, the reference app's size at 390 [latest-home-top-2], [latest-home-top-3] (spec §11 F2).
-  md: { box: "size-23 md:size-30", d: 92, ring: 6, value: "text-[26px] leading-none tracking-[-0.01em] md:text-[30px]" },
+  md: { box: "size-23 md:size-30", d: 92, ring: 6, value: "text-[34cqi] tracking-[-0.01em]" },
   // v2 hero ring: a 252 px ring 17 px thick at 390, measured on [latest-recovery-1], [latest-strain-1] (spec §11 F11).
-  lg: { box: "size-64 md:size-70", d: 256, ring: 17, value: "text-[68px] leading-none tracking-[-0.01em] md:text-[76px]" },
+  lg: { box: "size-64 md:size-70", d: 256, ring: 17, value: "text-[31cqi] tracking-[-0.01em]" },
 } as const
-const COMPACT = { box: "size-16", d: 64, ring: 5, value: "text-[20px] leading-none" } as const
+const COMPACT = { box: "size-16", d: 64, ring: 5, value: "text-[40cqi]" } as const
+// The reference app's strain hero runs larger than its percentages (cap 64 vs 48 pt) [latest-strain-1].
+const STRAIN_LG = "text-[40cqi]"
+// Trims each text box to cap height and baseline, so the cqi gaps between rows are the visible gaps.
+const TRIM = "leading-none [text-box:trim-both_cap_alphabetic]"
 
 const DIAL_LABEL = "text-xs leading-4 font-bold tracking-[0.08em] uppercase"
 const STATUS_LIT = { poor: "bg-warning", sufficient: "bg-foreground-secondary", optimal: "bg-optimal" } as const
@@ -249,41 +255,48 @@ export function ScoreDial(props: ScoreDialProps) {
         </ChartContainer>
       )}
 
-      <div className="absolute inset-0 grid place-content-center justify-items-center px-[12%] text-center">
+      {/* The hole: the square inside the stroke. One centred column whose type and gaps scale with the inner
+          diameter, so wordmark, value, label and tags keep the same clearance from the ring at every size (spec §11 F23). */}
+      <div className="absolute @container grid place-content-center justify-items-center text-center" style={{ inset: radii.hole }}>
         {lg && (!empty || loading) && !gauge && (
           // The wordmark over the value, as the reference app's ring carries its own (spec §11 F11; brand.md: never "PULSE" in a font).
-          <span aria-hidden className="mb-2 text-foreground-secondary">
-            <Wordmark className="h-[15px]" />
-          </span>
+          // Never under the brand minimum (h 15 px); `block` drops the inline line box that pushed it into the stroke.
+          <Wordmark className="mb-[6cqi] block h-[max(15px,6.8cqi)] text-foreground-secondary" />
         )}
         {loading ? (
-          size !== "sm" && <SkeletonText className={cn("font-numeric font-bold", s.value, lg ? "w-[2.4ch]" : "w-[2.2ch]")} />
+          size !== "sm" && <SkeletonText className={cn("font-numeric font-bold", TRIM, s.value, lg ? "w-[2.4ch]" : "w-[2.2ch]")} />
         ) : lg && empty && reason?.code !== "no_data" ? (
           <ReasonCentre icon={reason!.icon} text={reason!.short} />
         ) : (
           <span
             data-dial-part="value"
-            // the reference app's strain hero runs larger than its percentages (cap 64 vs 48 pt) [latest-strain-1].
-            className={cn("font-numeric font-bold tabular-nums", s.value, lg && variant === "strain" && "text-[88px] md:text-[96px]", empty && "text-muted-foreground", compact && gauge && r.word?.className)}
+            className={cn(
+              "font-numeric font-bold tabular-nums",
+              TRIM,
+              s.value,
+              lg && variant === "strain" && STRAIN_LG,
+              empty && "text-muted-foreground",
+              compact && gauge && r.word?.className,
+            )}
           >
             {r.text}
             {r.unit && !empty && <span className="text-[0.55em]">{r.unit}</span>}
           </span>
         )}
-        {gauge && !compact && r.word && <span className={cn(DIAL_LABEL, "mt-1", r.word.className)}>{r.word.text}</span>}
-        {gauge && !compact && props.caption && <span className="mt-1 text-xs leading-4 font-medium text-foreground-secondary">{props.caption}</span>}
+        {gauge && !compact && r.word && <span className={cn(DIAL_LABEL, TRIM, "mt-[4cqi]", r.word.className)}>{r.word.text}</span>}
+        {gauge && !compact && props.caption && <span className={cn("mt-[3cqi] text-xs font-medium text-foreground-secondary", TRIM)}>{props.caption}</span>}
         {lg && !gauge && (
           <>
-            <span className={cn(DIAL_LABEL, "mt-2 max-w-36 text-balance")}>{r.label}</span>
-            {r.word && <span className={cn(DIAL_LABEL, "mt-1", r.word.className)}>{r.word.text}</span>}
+            <span className={cn(DIAL_LABEL, TRIM, "mt-[6cqi] max-w-36 text-balance")}>{r.label}</span>
+            {r.word && <span className={cn(DIAL_LABEL, TRIM, "mt-[3cqi]", r.word.className)}>{r.word.text}</span>}
             {props.status && !empty && !loading && (
-              <span aria-hidden className="mt-3 flex gap-1">
+              <span aria-hidden className="mt-[4cqi] flex gap-1">
                 {(["poor", "sufficient", "optimal"] as const).map((k) => (
                   <span key={k} className={cn("h-1 w-5 rounded-full", props.status === k ? STATUS_LIT[k] : "bg-dial-track")} />
                 ))}
               </span>
             )}
-            {!loading && <span className="mt-2 empty:hidden">{tagNode}</span>}
+            {!loading && <span className="mt-[4cqi] flex max-w-[70cqi] justify-center empty:hidden">{tagNode}</span>}
           </>
         )}
       </div>
@@ -349,7 +362,7 @@ function ReasonCentre({ icon: Icon, text }: { icon: ReturnType<typeof reasonCopy
   return (
     <span className="flex flex-col items-center gap-2">
       {Icon && <Icon aria-hidden className="size-6 text-foreground-secondary" strokeWidth={1.75} />}
-      <span className="line-clamp-2 max-w-40 text-base leading-[22px] font-semibold text-balance text-foreground-secondary">{text}</span>
+      <span className="line-clamp-2 max-w-[72cqi] text-base leading-[22px] font-semibold text-balance text-foreground-secondary">{text}</span>
     </span>
   )
 }

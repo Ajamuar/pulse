@@ -97,7 +97,9 @@ export function markerSlices(value: number, max: number, width: number) {
 
 /**
  * Ring radii as percentages of the dial radius, so the 768 px size step needs no JS. `inset` px
- * are reserved outside the ring for the strain tick, which overhangs the ring by 2 px.
+ * are reserved outside the ring for the strain tick, which overhangs the ring by 2 px. `hole` is
+ * the inset of the ring's inner edge from the box edge, as a percentage of the diameter: the
+ * dial's centre content lays out in that square and sizes itself from it (spec §11 F23).
  */
 export function ringRadii(diameter: number, ring: number, inset = 2) {
   const r = diameter / 2;
@@ -107,5 +109,6 @@ export function ringRadii(diameter: number, ring: number, inset = 2) {
     inner: pct(r - inset - ring),
     tickOuter: "100%",
     tickInner: pct(r - inset - ring - 2),
+    hole: `${Math.round(((inset + ring) / diameter) * 1000) / 10}%`,
   };
 }
