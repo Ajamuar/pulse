@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useRouter } from "next/navigation"
 
 /** Global shell state read by the headers, nav, sync status and ConnectionBanner (spec §4.2, D2). */
 export type ShellStatus = {
@@ -26,17 +27,51 @@ const Ctx = React.createContext<ShellStatus | null>(null)
 export type ShellCalendar = Pick<ShellStatus, "today" | "firstDay" | "timeZone">
 const CalendarCtx = React.createContext<ShellCalendar | null>(null)
 
+/** How often the client asks `/status` while a sync or import runs. */
+export const STATUS_POLL_MS = 2000
+
+const busy = (s: ShellStatus) => s.sync.state === "syncing" || s.connection === "importing"
+
 /**
  * Two contexts, so a sync or a `router.refresh()` re-renders only what shows sync state (headers, banner, nav
  * status), not every chart and date control. The server sends a new status object on each refresh, so both values
  * are rebuilt only when their fields actually change: a refresh with nothing new re-renders no consumer.
+ *
+ * The server renders the status once per navigation, so while a sync or import runs the provider polls `/status`
+ * for the sync ring and import progress, and refreshes the page once the run ends to bring in the new scores.
  */
 export function ShellStatusProvider({ value, children }: { value: ShellStatus; children: React.ReactNode }) {
-  const { today, firstDay, timeZone } = value
+  const router = useRouter()
+  const [polled, setPolled] = React.useState<{ from: ShellStatus; status: ShellStatus } | null>(null)
+  // A new server render (navigation, refresh) supersedes what polling saw. Avatar only comes from the layout.
+  const current = polled?.from === value ? { ...polled.status, avatar: value.avatar } : value
+  const running = busy(current)
+  React.useEffect(() => {
+    if (!running) return
+    let live = true
+    const id = setInterval(async () => {
+      try {
+        const res = await fetch("/status", { cache: "no-store" })
+        if (!res.ok || !live) return
+        const next = (await res.json()) as ShellStatus
+        if (!live) return
+        setPolled({ from: value, status: next })
+        if (!busy(next)) router.refresh()
+      } catch {
+        // Offline or signed out: the next tick or navigation tries again.
+      }
+    }, STATUS_POLL_MS)
+    return () => {
+      live = false
+      clearInterval(id)
+    }
+  }, [running, value, router])
+
+  const { today, firstDay, timeZone } = current
   const calendar = React.useMemo(() => ({ today, firstDay, timeZone }), [today, firstDay, timeZone])
-  const key = JSON.stringify(value)
+  const key = JSON.stringify(current)
   // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on content: a new object with the same fields is the same status
-  const status = React.useMemo(() => value, [key])
+  const status = React.useMemo(() => current, [key])
   return (
     <CalendarCtx.Provider value={calendar}>
       <Ctx.Provider value={status}>{children}</Ctx.Provider>

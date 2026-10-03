@@ -1,6 +1,9 @@
-import { render } from "@testing-library/react"
-import { describe, expect, it } from "vitest"
-import { ShellStatusProvider, useShellCalendar, useShellStatus, type ShellStatus } from "./ShellStatus"
+import { act, render } from "@testing-library/react"
+import { afterEach, describe, expect, it, vi } from "vitest"
+import { ShellStatusProvider, STATUS_POLL_MS, useShellCalendar, useShellStatus, type ShellStatus } from "./ShellStatus"
+
+const refresh = vi.fn()
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }))
 
 const base: ShellStatus = {
   mode: "google",
@@ -45,5 +48,49 @@ describe("ShellStatusProvider", () => {
     expect(renders).toEqual({ calendar: 1, status: 2 })
     r.rerender(ui({ ...base, sync: { state: "ok", lastSuccessAt: 2 }, today: "2026-10-04" }))
     expect(renders).toEqual({ calendar: 2, status: 3 })
+  })
+})
+
+describe("ShellStatusProvider polling", () => {
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
+    refresh.mockReset()
+  })
+
+  it("polls /status while syncing, shows each answer, and refreshes the page once the sync ends", async () => {
+    vi.useFakeTimers()
+    const answers: ShellStatus[] = [
+      { ...base, sync: { state: "syncing", lastSuccessAt: 1 }, connection: "importing", importProgress: { done: 40, total: 90 } },
+      { ...base, sync: { state: "ok", lastSuccessAt: 9 } },
+    ]
+    const fetchMock = vi.fn(async () => Response.json(answers.shift()))
+    vi.stubGlobal("fetch", fetchMock)
+    const seen: (ShellStatus["importProgress"] | null)[] = []
+    function Probe() {
+      seen.push(useShellStatus().importProgress ?? null)
+      return null
+    }
+    render(
+      <ShellStatusProvider value={{ ...base, sync: { state: "syncing", lastSuccessAt: 1 }, connection: "importing", importProgress: { done: 10, total: 90 } }}>
+        <Probe />
+      </ShellStatusProvider>
+    )
+    await act(() => vi.advanceTimersByTimeAsync(STATUS_POLL_MS))
+    expect(seen.at(-1)).toEqual({ done: 40, total: 90 })
+    expect(refresh).not.toHaveBeenCalled()
+    await act(() => vi.advanceTimersByTimeAsync(STATUS_POLL_MS))
+    expect(refresh).toHaveBeenCalledTimes(1)
+    await act(() => vi.advanceTimersByTimeAsync(STATUS_POLL_MS * 3))
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it("does not poll when idle", async () => {
+    vi.useFakeTimers()
+    const fetchMock = vi.fn()
+    vi.stubGlobal("fetch", fetchMock)
+    render(<ShellStatusProvider value={base}>{null}</ShellStatusProvider>)
+    await act(() => vi.advanceTimersByTimeAsync(STATUS_POLL_MS * 3))
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 })
