@@ -10,6 +10,7 @@ import { cache } from "react";
 import { getConfig } from "./config";
 import { type Db, getDb } from "./db";
 import * as schema from "./db/schema";
+import { DEMO_SECRET } from "./demo";
 import { ensureDefaultTags } from "./journalTags";
 
 export const MIN_PASSWORD = 10;
@@ -94,9 +95,5 @@ export async function requestUser(req: Request): Promise<SessionUser | null> {
 export const SIGNED_OUT = { ok: false as const, error: "Signed out. Sign in again." };
 
 // ── Demo instance ────────────────────────────────────────────────────────────
-
-export const DEMO_EMAIL = "demo@pulse.local";
-const DEMO_SECRET = "pulse-demo-instance-generated-data-only";
-// The demo user's data is generated, so its password protects nothing; it only lets "Continue with demo data"
-// sign in through the normal path.
-export const DEMO_PASSWORD = "pulse-demo-generated-data";
+// The demo user's credentials live in ./demo (no Next imports), so scripts and the seed can use them.
+export { DEMO_EMAIL, DEMO_PASSWORD } from "./demo";

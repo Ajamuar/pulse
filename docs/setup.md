@@ -162,6 +162,17 @@ When someone asks:
 
 `No account with the email or username "..."` means nothing matched; usernames are lowercase.
 
+## Test accounts with generated data
+
+To try every screen without a Fitbit, fill a test account with 180 days of generated data:
+
+```sh
+docker exec pulse node scripts/seed-user.mjs <username-or-email>
+```
+
+It refuses an account that has connected Google, so generated data never mixes with real data. Locally the same is
+`pnpm seed:demo <username>` (or no argument for the demo account).
+
 ## Backups
 
 Dump Postgres daily from cron; this keeps 14 days:

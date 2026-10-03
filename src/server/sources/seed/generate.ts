@@ -12,7 +12,7 @@ import { hash, mulberry32 } from "@/core/algorithms/journalImpact";
 import { and, eq, getTableColumns, inArray, min, sql } from "drizzle-orm";
 import { hashPassword } from "better-auth/crypto";
 import type { ExtraKey } from "@/lib/extraMetrics";
-import { DEMO_EMAIL, DEMO_PASSWORD } from "../../auth";
+import { DEMO_EMAIL, DEMO_PASSWORD } from "../../demo";
 import { type Db, getDb } from "../../db";
 import {
   account,
