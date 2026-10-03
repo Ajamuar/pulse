@@ -22,7 +22,7 @@ You need Node 24, pnpm (`corepack enable` uses the version pinned in `package.js
 git clone https://github.com/adityaongit/pulse.git
 cd pulse
 pnpm install
-cp .env.example .env                           # GOOGLE_OAUTH_ENABLED=false: demo mode
+cp .env.example .env                           # DATA_SOURCE=demo: demo mode
 docker compose -f compose.dev.yaml up -d       # Postgres on localhost:5432
 pnpm dev                                       # open http://localhost:3000 and "Continue with demo data"
 ```
@@ -61,7 +61,7 @@ that account). Otherwise Pulse refuses the connection with "That Google account 
 In `.env`:
 
 ```sh
-GOOGLE_OAUTH_ENABLED=true
+DATA_SOURCE=google
 BETTER_AUTH_SECRET=...                 # openssl rand -base64 32
 GOOGLE_CLIENT_ID=...apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=...
@@ -121,7 +121,7 @@ list of what's wrong.
 
 | Variable | Required | Meaning |
 |---|---|---|
-| `GOOGLE_OAUTH_ENABLED` | no (false) | `false`: demo instance; `true`: real data, open sign-up |
+| `DATA_SOURCE` | no (`demo`) | `demo`: generated data for one shared demo user; `google`: real data, open sign-up, each user connects Google |
 | `POSTGRES_PASSWORD` | with compose | The database password; compose builds `DATABASE_URL` from it |
 | `DATABASE_URL` | outside compose | Defaults to `postgres://pulse:pulse@localhost:5432/pulse` (compose.dev.yaml) |
 | `BETTER_AUTH_SECRET` | in production | Signs sessions; `openssl rand -base64 32` |

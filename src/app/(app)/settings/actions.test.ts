@@ -11,7 +11,7 @@ vi.mock("next/cache", () => ({ revalidatePath: h.revalidate }));
 vi.mock("@/server/config", async (orig) => ({ ...(await orig<object>()), getConfig: () => h.cfg as Config }));
 vi.mock("@/server/db", async (orig) => ({ ...(await orig<object>()), getDb: () => h.db as Db }));
 
-const live = parseConfig({ GOOGLE_OAUTH_ENABLED: "true", GOOGLE_CLIENT_ID: "cid", GOOGLE_CLIENT_SECRET: "csecret" });
+const live = parseConfig({ DATA_SOURCE: "google", GOOGLE_CLIENT_ID: "cid", GOOGLE_CLIENT_SECRET: "csecret" });
 const me = { userId: USER, email: "me@example.com", name: "Me", username: "me", image: null };
 
 let db: Db;

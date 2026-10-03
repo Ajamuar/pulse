@@ -19,7 +19,7 @@ Demo mode generates deterministic data for a shared demo user, so no Google acco
 
 ```sh
 pnpm install
-cp .env.example .env   # GOOGLE_OAUTH_ENABLED=false is already set
+cp .env.example .env   # DATA_SOURCE=demo is already set
 pnpm dev               # http://localhost:3000, health check at /healthz
 ```
 
@@ -29,7 +29,7 @@ The database is created and migrated on boot, and the sync worker starts once (`
 
 Every variable is listed and explained in [`.env.example`](.env.example). It is validated at startup, and the server exits on invalid config.
 
-- `GOOGLE_OAUTH_ENABLED=true` switches to real data from the Google Health API. It needs `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` and `BETTER_AUTH_SECRET`. People sign up with a name, username, email and password (better-auth), sign in with the username or the email, and connect their own Google account from inside Pulse.
+- `DATA_SOURCE=google` switches to real data from the Google Health API. It needs `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` and `BETTER_AUTH_SECRET`. People sign up with a name, username, email and password (better-auth), sign in with the username or the email, and connect their own Google account from inside Pulse.
 - The first sign-in asks for your birth date and sex (onboarding). Settings › Profile edits them.
 
 ## Deploy

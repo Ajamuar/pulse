@@ -12,7 +12,7 @@ import { freshDb, NOW, TZ, USER } from "./testing";
 const h = vi.hoisted(() => ({ cfg: undefined as unknown }));
 vi.mock("@/server/config", async (orig) => ({ ...(await orig<object>()), getConfig: () => h.cfg as Config }));
 vi.mock("./config", async (orig) => ({ ...(await orig<object>()), getConfig: () => h.cfg as Config }));
-const googleCfg = parseConfig({ GOOGLE_OAUTH_ENABLED: "true", GOOGLE_CLIENT_ID: "cid", GOOGLE_CLIENT_SECRET: "cs" });
+const googleCfg = parseConfig({ DATA_SOURCE: "google", GOOGLE_CLIENT_ID: "cid", GOOGLE_CLIENT_SECRET: "cs" });
 
 const ADA = { name: "Ada Lovelace", email: "ada@example.com", password: "analytical-engine", username: "ada.l" };
 
@@ -106,7 +106,7 @@ describe("better-auth", () => {
   });
 
   it("sign-up is closed on a demo instance and with DISABLE_SIGNUP", async () => {
-    for (const cfg of [parseConfig({}), parseConfig({ GOOGLE_OAUTH_ENABLED: "true", GOOGLE_CLIENT_ID: "c", GOOGLE_CLIENT_SECRET: "s", DISABLE_SIGNUP: "true" })]) {
+    for (const cfg of [parseConfig({}), parseConfig({ DATA_SOURCE: "google", GOOGLE_CLIENT_ID: "c", GOOGLE_CLIENT_SECRET: "s", DISABLE_SIGNUP: "true" })]) {
       h.cfg = cfg;
       db = await freshDb(); // a new auth instance reads the config
       expect(await codeOf(getAuth().api.signUpEmail({ body: ADA }))).toBe("EMAIL_PASSWORD_SIGN_UP_DISABLED");

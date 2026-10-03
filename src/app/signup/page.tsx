@@ -14,8 +14,8 @@ export const metadata: Metadata = { title: "Create account" }
 export default async function SignupPage() {
   await connection()
   if (await currentUser()) redirect("/")
-  const { googleOAuthEnabled, disableSignup } = getConfig()
-  if (!googleOAuthEnabled || disableSignup) redirect("/login")
+  const { dataSource, disableSignup } = getConfig()
+  if (dataSource !== "google" || disableSignup) redirect("/login")
   return (
     <AuthShell align="top">
       <AuthHero compact title="Create your account" body="Your data stays on this server, visible only to you." />

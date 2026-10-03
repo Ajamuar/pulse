@@ -151,7 +151,7 @@ const g = globalThis as typeof globalThis & { __pulseWorker?: Worker };
 /** Starts the process-wide worker once. Called from instrumentation register(). */
 export function startWorker() {
   if (g.__pulseWorker) return;
-  const google = getConfig().googleOAuthEnabled;
+  const google = getConfig().dataSource === "google";
   // Demo instance: the one demo user, created on the first cycle (and retried on the next if that fails).
   let demo: Promise<number> | undefined;
   const demoUser = () =>

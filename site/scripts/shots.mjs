@@ -1,5 +1,5 @@
 // Retakes the app screenshots in docs/screenshots/ from a running demo-mode app, framed with margin:
-//   GOOGLE_OAUTH_ENABLED=false TZ=Asia/Kolkata pnpm dev -p 3317   (repo root, in another terminal)
+//   DATA_SOURCE=demo TZ=Asia/Kolkata pnpm dev -p 3317   (repo root, in another terminal)
 //   pnpm shots                                                    (in site/; APP_URL overrides the address)
 // Needs the repo root's `pnpm install` (Playwright). Phone: 390 wide at 3x in a device frame, cut on a clean row or
 // card boundary (see cleanCut). Laptop: 1440 x 900 at 2x in a window frame. Both on a transparent margin, so they sit

@@ -1,7 +1,7 @@
 // Fetches the last 7 days of every catalogue type into raw_payloads and prints shapes, never values:
 // field paths and JSON types, point counts, cadence, and the answers docs/data-notes.md asks for.
 //
-// Needs GOOGLE_OAUTH_ENABLED=true and a completed consent (/oauth/start). Stop the server first, or
+// Needs DATA_SOURCE=google and a completed consent (/oauth/start). Stop the server first, or
 // the two processes share the 5 QPS per-user limit. From the repo root, with the Pulse user id whose grant to use:
 //   pnpm tsx --env-file=.env src/server/sources/google/probe.ts <userId>
 import { getConfig } from "../../config";
@@ -61,7 +61,7 @@ async function fetchType(client: GoogleClient, id: DataTypeId, from: string, to:
 
 async function main() {
   const cfg = getConfig();
-  if (!cfg.google) throw new Error("set GOOGLE_OAUTH_ENABLED=true");
+  if (!cfg.google) throw new Error("set DATA_SOURCE=google");
   const userId = Number(process.argv[2]);
   if (!Number.isInteger(userId) || userId <= 0) throw new Error("usage: probe.ts <userId>");
   const db = getDb();

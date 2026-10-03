@@ -25,7 +25,7 @@ const ROOT = process.cwd();
 const PUBLIC = [/^\/healthz$/, /^\/oauth\//, /^\/api\/auth\//, /^\/login(\/|$)/, /^\/logout$/];
 
 const demoCfg = parseConfig({});
-const googleCfg = parseConfig({ GOOGLE_OAUTH_ENABLED: "true", GOOGLE_CLIENT_ID: "cid", GOOGLE_CLIENT_SECRET: "cs" });
+const googleCfg = parseConfig({ DATA_SOURCE: "google", GOOGLE_CLIENT_ID: "cid", GOOGLE_CLIENT_SECRET: "cs" });
 
 const files = (pattern: string) => fs.globSync(pattern, { cwd: ROOT }).filter((f) => !/\.test\.tsx?$/.test(f)).sort();
 const actionFiles = files("src/**/*.{ts,tsx}").filter((f) => /^\s*["']use server["']/.test(fs.readFileSync(path.join(ROOT, f), "utf8")));

@@ -12,7 +12,7 @@ vi.mock("../auth", async (orig) => ({ ...(await orig<object>()), currentUser: as
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("../config", async (orig) => ({
   ...(await orig<object>()),
-  getConfig: () => ({ googleOAuthEnabled: !!h.google, google: h.google }) as unknown as Config,
+  getConfig: () => ({ dataSource: h.google ? "google" : "demo", google: h.google }) as unknown as Config,
 }));
 vi.mock("../db", async (orig) => ({ ...(await orig<object>()), getDb: () => h.db as Db }));
 vi.mock("../sources/google/client", () => ({ createGoogleClient: () => ({ create: h.create, batchDelete: vi.fn() }) }));

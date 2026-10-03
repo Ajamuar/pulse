@@ -1,6 +1,6 @@
 // Shared by `pnpm shots` and `pnpm screens`: the demo app's screens, the two device sizes, a demo session, and the
 // in-page helpers that end a phone screen on a clean row. Both scripts drive a running demo-mode app:
-//   GOOGLE_OAUTH_ENABLED=false TZ=Asia/Kolkata pnpm dev -p 3317   (repo root, in another terminal)
+//   DATA_SOURCE=demo TZ=Asia/Kolkata pnpm dev -p 3317   (repo root, in another terminal)
 import { createRequire } from "node:module"
 
 const require = createRequire(new URL("../../package.json", import.meta.url))

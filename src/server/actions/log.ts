@@ -68,7 +68,7 @@ export async function logEntry(input: LogInput): Promise<ActionResult<{ demo: bo
   if (!r.success) return { ok: false, error: r.error.issues[0].message };
   const v = r.data;
   const db = getDb();
-  const { googleOAuthEnabled } = getConfig();
+  const { dataSource } = getConfig();
   const p = await getProfile(db, userId);
   if (!p) return { ok: false, error: "Finish setting up your profile first" };
   const tz = p.timeZone;
@@ -118,15 +118,15 @@ export async function logEntry(input: LogInput): Promise<ActionResult<{ demo: bo
   }
 
   // A grant without the write scope fails at Google with 403 anyway; asking first saves the request and says why.
-  const access = await logAccess(db, userId, googleOAuthEnabled ? "google" : "demo");
+  const access = await logAccess(db, userId, dataSource === "google" ? "google" : "demo");
   if (entries.some((e) => access[e.type] === "reconnect" || access[e.type] === "not_connected")) return { ok: false, error: RECONNECT };
 
-  const res = await saveEntries(db, userId, entries, { tz, writer: googleOAuthEnabled ? writer(userId, tz) : null, now });
+  const res = await saveEntries(db, userId, entries, { tz, writer: dataSource === "google" ? writer(userId, tz) : null, now });
   revalidatePath("/journal");
   if (!res.ok) return { ok: false, error: MESSAGE[res.reason] };
   // Water, food and weight come back through the sync, which owns their totals: fetch them now.
-  if (googleOAuthEnabled && entries.some((e) => isReadable(e.type))) requestSync({ userId, force: true });
-  return { ok: true, data: { demo: !googleOAuthEnabled } };
+  if (dataSource === "google" && entries.some((e) => isReadable(e.type))) requestSync({ userId, force: true });
+  return { ok: true, data: { demo: dataSource !== "google" } };
 }
 
 const Delete = z.object({ id: z.uuid() });
@@ -138,11 +138,11 @@ export async function deleteLogEntry(input: z.input<typeof Delete>): Promise<Act
   const { userId } = user;
   const r = Delete.safeParse(input);
   if (!r.success) return { ok: false, error: r.error.issues[0].message };
-  const { googleOAuthEnabled } = getConfig();
-  const tz = googleOAuthEnabled ? ((await userTimeZone(getDb(), userId)) ?? "UTC") : "UTC";
-  const res = await deleteEntry(getDb(), userId, r.data.id, googleOAuthEnabled ? writer(userId, tz) : null);
+  const { dataSource } = getConfig();
+  const tz = dataSource === "google" ? ((await userTimeZone(getDb(), userId)) ?? "UTC") : "UTC";
+  const res = await deleteEntry(getDb(), userId, r.data.id, dataSource === "google" ? writer(userId, tz) : null);
   revalidatePath("/journal");
   if (!res.ok) return { ok: false, error: MESSAGE[res.reason] };
-  if (googleOAuthEnabled && res.type && isReadable(res.type)) requestSync({ userId, force: true });
+  if (dataSource === "google" && res.type && isReadable(res.type)) requestSync({ userId, force: true });
   return { ok: true, data: undefined };
 }

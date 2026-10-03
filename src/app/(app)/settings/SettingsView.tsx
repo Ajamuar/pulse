@@ -68,7 +68,7 @@ export function Account({ account }: { account: SettingsAccount }) {
 const SOURCE: Record<SettingsVM["source"]["status"], { line?: string; tone?: string; body?: string }> = {
   demo: {
     line: "180 days of generated data",
-    body: "Every screen runs on realistic generated data. Set GOOGLE_OAUTH_ENABLED=true on the server to use your Fitbit data.",
+    body: "Every screen runs on realistic generated data. Set DATA_SOURCE=google on the server to use your Fitbit data.",
   },
   not_connected: { line: "Not connected", body: "Connect the Google account your Fitbit Air syncs to. Pulse reads your data and writes only what you log in Pulse." },
   not_linked: {

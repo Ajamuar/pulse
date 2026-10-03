@@ -18,9 +18,9 @@ export const metadata: Metadata = { title: "Sign in" }
 export default async function LoginPage() {
   await connection()
   if (await currentUser()) redirect("/")
-  const { googleOAuthEnabled, disableSignup } = getConfig()
+  const { dataSource, disableSignup } = getConfig()
 
-  if (!googleOAuthEnabled) {
+  if (dataSource !== "google") {
     return (
       <AuthShell
         actions={

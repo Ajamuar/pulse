@@ -7,7 +7,7 @@ import { appOrigin, authUrl, createState, hasGrant, missingScopes, redirectUri }
 /**
  * Connect Google: redirects to consent. Needs a Pulse session (the account signs in with its own password; Google
  * only feeds the data); the state is bound to that user. `?switch=1` always shows the account chooser and consent,
- * to connect a different account. 404 on a demo instance (`google` is null unless GOOGLE_OAUTH_ENABLED=true).
+ * to connect a different account. 404 on a demo instance (`google` is null unless DATA_SOURCE=google).
  */
 export async function GET(request: NextRequest) {
   const { google } = getConfig();

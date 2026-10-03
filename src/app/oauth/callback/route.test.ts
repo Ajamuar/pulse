@@ -14,7 +14,7 @@ vi.mock("@/server/config", async (orig) => ({ ...(await orig<object>()), getConf
 vi.mock("@/server/db", async (orig) => ({ ...(await orig<object>()), getDb: () => h.db as Db }));
 
 const env = {};
-const googleEnv = { GOOGLE_OAUTH_ENABLED: "true", GOOGLE_CLIENT_ID: "cid", GOOGLE_CLIENT_SECRET: "csecret" };
+const googleEnv = { DATA_SOURCE: "google", GOOGLE_CLIENT_ID: "cid", GOOGLE_CLIENT_SECRET: "csecret" };
 const live = parseConfig({ ...env, ...googleEnv, APP_URL: "https://pulse.example.com" });
 
 const idToken = (email: string) =>

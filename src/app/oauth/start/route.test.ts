@@ -13,7 +13,7 @@ vi.mock("@/server/config", async (orig) => ({ ...(await orig<object>()), getConf
 vi.mock("@/server/db", async (orig) => ({ ...(await orig<object>()), getDb: () => h.db as Db }));
 
 const env = {};
-const google = { GOOGLE_OAUTH_ENABLED: "true", GOOGLE_CLIENT_ID: "cid", GOOGLE_CLIENT_SECRET: "csecret" };
+const google = { DATA_SOURCE: "google", GOOGLE_CLIENT_ID: "cid", GOOGLE_CLIENT_SECRET: "csecret" };
 const start = (url = "http://192.168.1.10:3000/oauth/start") => GET(new NextRequest(url));
 const location = (res: Response) => new URL(res.headers.get("location")!);
 

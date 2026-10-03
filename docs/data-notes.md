@@ -26,7 +26,7 @@ flowchart LR
 ## Running the probe
 
 1. In `.env`, set:
-   - `GOOGLE_OAUTH_ENABLED=true`
+   - `DATA_SOURCE=google`
    - `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`
    - `APP_URL=http://localhost:3000`
 
@@ -323,7 +323,7 @@ These are the plan's open data questions, plus the gaps in Hælan's findings. Ti
 
 ## Fitted baseline spreads (seed values)
 
-**These are seed values, not Fitbit Air data.** They come from one run of the pipeline (U10) on a fresh 180-day demo database (`GOOGLE_OAUTH_ENABLED=false`, the seed scenario in `src/server/sources/seed/scenario.ts`), via `PULSE_E2E=1 pnpm vitest run src/server/pipeline/pipeline.seed.test.ts`. Repeat this section with real values after the first real backfill.
+**These are seed values, not Fitbit Air data.** They come from one run of the pipeline (U10) on a fresh 180-day demo database (`DATA_SOURCE=demo`, the seed scenario in `src/server/sources/seed/scenario.ts`), via `PULSE_E2E=1 pnpm vitest run src/server/pipeline/pipeline.seed.test.ts`. Repeat this section with real values after the first real backfill.
 
 ```mermaid
 flowchart LR

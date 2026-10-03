@@ -2,7 +2,7 @@
 
 Demo mode, seeded data. Click any image for the full size.
 
-To retake them, run the app in demo mode (`GOOGLE_OAUTH_ENABLED=false TZ=Asia/Kolkata pnpm dev -p 3317`), then `pnpm shots` in `site/` ([site/scripts/shots.mjs](../site/scripts/shots.mjs)). It signs in to demo mode, captures each screen on a phone (390 wide, 3x) and a laptop (1440 x 900, 2x), and frames them. The marketing site in `site/` shows the same screens as live markup instead, captured by `pnpm screens` (see the plan, `docs/plans/2026-10-03-003-landing-and-programmatic-seo.md`).
+To retake them, run the app in demo mode (`DATA_SOURCE=demo TZ=Asia/Kolkata pnpm dev -p 3317`), then `pnpm shots` in `site/` ([site/scripts/shots.mjs](../site/scripts/shots.mjs)). It signs in to demo mode, captures each screen on a phone (390 wide, 3x) and a laptop (1440 x 900, 2x), and frames them. The marketing site in `site/` shows the same screens as live markup instead, captured by `pnpm screens` (see the plan, `docs/plans/2026-10-03-003-landing-and-programmatic-seo.md`).
 
 ## Phone
 

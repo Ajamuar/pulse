@@ -9,7 +9,7 @@ const PORT = 3300;
 const STORAGE = "test-results/.auth/demo.json";
 
 const env = {
-  GOOGLE_OAUTH_ENABLED: "false",
+  DATA_SOURCE: "demo",
   DATABASE_URL: e2eUrl(E2E_DB),
   BETTER_AUTH_SECRET: "e2e-only-secret-0123456789abcdefghijklmnop",
   NEXT_DIST_DIR: ".next/e2e",

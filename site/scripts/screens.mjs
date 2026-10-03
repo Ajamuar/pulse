@@ -1,5 +1,5 @@
 // Captures the app's screens as static HTML for the site's device frames, so they render crisp at any size:
-//   GOOGLE_OAUTH_ENABLED=false TZ=Asia/Kolkata pnpm dev -p 3317   (repo root, in another terminal)
+//   DATA_SOURCE=demo TZ=Asia/Kolkata pnpm dev -p 3317   (repo root, in another terminal)
 //   pnpm screens                                                  (in site/; APP_URL overrides the address)
 // Each screen is the app's own rendered DOM (React, Recharts and lucide output, in demo mode with seeded data), opened
 // exactly like `pnpm shots` and cleaned of script, links, focus and accessibility hooks (the site shows it inert, as a

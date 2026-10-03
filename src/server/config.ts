@@ -7,7 +7,8 @@ export class ConfigError extends Error {
 
 const Env = z
   .object({
-    GOOGLE_OAUTH_ENABLED: z.stringbool().default(false),
+    /** Where the data comes from: `demo` (generated, one shared demo user) or `google` (each user connects Google). */
+    DATA_SOURCE: z.enum(["demo", "google"], "must be demo or google").default("demo"),
     /** Postgres. Unset: the local dev database from compose.dev.yaml. */
     DATABASE_URL: z.string().regex(/^postgres(ql)?:\/\//, "must be a postgres:// URL").optional(),
     /** Signs sessions and auth tokens (better-auth). Required in production: `openssl rand -base64 32`. */
@@ -27,11 +28,11 @@ const Env = z
     const need = (keys: (keyof typeof e)[], why: string) => {
       for (const k of keys) if (!e[k]) ctx.addIssue({ code: "custom", path: [k], message: `required ${why}` });
     };
-    if (e.GOOGLE_OAUTH_ENABLED) {
-      need(["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"], "when GOOGLE_OAUTH_ENABLED=true");
+    if (e.DATA_SOURCE === "google") {
+      need(["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"], "when DATA_SOURCE=google");
       // Real accounts: sessions must be signed with a secret of your own. Not checked at build time (no .env there).
       if (process.env.NODE_ENV === "production" && process.env.NEXT_PHASE !== "phase-production-build") {
-        need(["BETTER_AUTH_SECRET"], "in production when GOOGLE_OAUTH_ENABLED=true (openssl rand -base64 32)");
+        need(["BETTER_AUTH_SECRET"], "in production when DATA_SOURCE=google (openssl rand -base64 32)");
       }
     }
   });
@@ -46,7 +47,7 @@ export function parseConfig(env: Record<string, string | undefined>) {
   }
   const e = r.data;
   return {
-    googleOAuthEnabled: e.GOOGLE_OAUTH_ENABLED,
+    dataSource: e.DATA_SOURCE,
     databaseUrl: e.DATABASE_URL ?? "postgres://pulse:pulse@localhost:5432/pulse",
     authSecret: e.BETTER_AUTH_SECRET ?? null,
     appUrl: e.APP_URL?.replace(/\/$/, "") ?? null,
@@ -54,7 +55,7 @@ export function parseConfig(env: Record<string, string | undefined>) {
     supportEmail: e.SUPPORT_EMAIL ?? null,
     port: e.PORT,
     avatarUrl: e.AVATAR_URL ?? null,
-    google: e.GOOGLE_OAUTH_ENABLED
+    google: e.DATA_SOURCE === "google"
       ? {
           clientId: e.GOOGLE_CLIENT_ID!,
           clientSecret: e.GOOGLE_CLIENT_SECRET!,

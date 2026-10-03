@@ -8,7 +8,7 @@ Guide for coding agents (and humans) working on Pulse: a self-hosted Next.js app
 |---|---|
 | `docker compose -f compose.dev.yaml up -d` | Postgres on localhost:5432 for `pnpm dev` and e2e |
 | `pnpm seed:demo` | Local only: a demo account (`demo@pulse.local` / `pulse-demo-generated-data`) with 180 days of generated data, for a Google-mode dev server |
-| `pnpm dev` | Dev server on :3000. With `GOOGLE_OAUTH_ENABLED=false` it seeds 180 days of demo data for the demo user |
+| `pnpm dev` | Dev server on :3000. With `DATA_SOURCE=demo` it seeds 180 days of demo data for the demo user |
 | `pnpm typecheck` | `next typegen` + `tsc --noEmit` |
 | `pnpm lint` | ESLint |
 | `pnpm test` | Vitest: `*.test.ts` in Node, `*.test.tsx` in happy-dom |

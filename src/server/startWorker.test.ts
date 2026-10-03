@@ -17,7 +17,7 @@ afterEach(() => {
 
 it("startWorker() is a process-wide singleton that syncs only the demo user on a demo instance", async () => {
   vi.useFakeTimers();
-  vi.stubEnv("GOOGLE_OAUTH_ENABLED", "false");
+  vi.stubEnv("DATA_SOURCE", "demo");
   const info = vi.spyOn(console, "info").mockImplementation(() => {});
   const { startWorker } = await import("./worker");
   startWorker();
