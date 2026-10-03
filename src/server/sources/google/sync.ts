@@ -3,6 +3,11 @@
 // row whose values differ, so an unchanged re-fetch is a no-op, `changed` is honest, and only days
 // whose intraday inputs actually changed land in intraday_dirty.
 //
+// Deletions: `list` returns a window whole or throws, so within a list window we hold exactly what
+// Google returns. A sleep session, exercise or band HR sample there that Google left out was deleted
+// in Fitbit; it is removed and its day marked dirty. Rows outside the window are never touched.
+// This assumes Google omits deleted points; a tombstone shape would need a filter in map.ts.
+//
 // Each type runs on its own: a failure records the GoogleError's safe message (status and code,
 // never a body or token) in its sync_state row and the next type carries on. A chunk's rows and its
 // cursor commit in one transaction, so an interrupted backfill resumes where it stopped.
@@ -131,7 +136,7 @@ export function createGoogleSource(deps: SyncDeps): Source {
               ? await client.dailyRollUp(job.type, localDay(win.start, tz), dayAfter(win.end, tz))
               : await client.list(job.type, win.start, win.end);
           db.$client.transaction(() => {
-            if (w.write(job, points)) run.changed = true;
+            if (w.write(job, points, win)) run.changed = true;
             if (backfilling) done = Math.min(BACKFILL_DAYS, done + daysIn(win, tz));
             setState(job.key, { syncedThrough: win.end, ...(backfilling && { backfillDaysDone: done }) });
           })();
@@ -202,8 +207,16 @@ function writer(db: Db, tz: string) {
     return true;
   }
 
-  /** Writes a batch of points for a job; marks changed days dirty. True when anything changed. */
-  function write(job: Job, points: unknown[]): boolean {
+  /** Deletes the rows of `table` with `col` in the window whose id Google did not return. Returns their days. */
+  function prune(table: "sleep_sessions" | "exercises", col: "start_ts" | "end_ts", win: TimeWindow, returned: { id: string }[]) {
+    const keep = new Set(returned.map((r) => r.id));
+    const held = prep(`SELECT id, day FROM ${table} WHERE ${col} >= ? AND ${col} < ?`).all(win.start, win.end) as { id: string; day: string }[];
+    const del = prep(`DELETE FROM ${table} WHERE id = ?`); // a session's segments cascade
+    return held.filter((r) => !keep.has(r.id)).map((r) => (del.run(r.id), r.day));
+  }
+
+  /** Writes a list window's points (or a rollup's) for a job; marks changed days dirty. True when anything changed. */
+  function write(job: Job, points: unknown[], win: TimeWindow): boolean {
     const dirty = new Set<string>();
     let changed = false;
     switch (job.kind) {
@@ -215,7 +228,15 @@ function writer(db: Db, tz: string) {
         break;
       case "hr": {
         const q = prep("INSERT INTO hr_samples (ts, bpm) VALUES (?, ?) ON CONFLICT (ts) DO UPDATE SET bpm = excluded.bpm WHERE bpm IS NOT excluded.bpm");
-        for (const [ts, bpm] of mapHeartRate(points)) if (q.run(ts, bpm).changes) dirty.add(dayOf(ts));
+        const hr = mapHeartRate(points);
+        for (const [ts, bpm] of hr) if (q.run(ts, bpm).changes) dirty.add(dayOf(ts));
+        // ponytail: only when the window has band HR, so an empty or unreadable answer never wipes a day;
+        // a whole window deleted upstream stays. Drop the guard if that is ever seen.
+        if (hr.size) {
+          const del = prep("DELETE FROM hr_samples WHERE ts = ?");
+          const held = prep("SELECT ts FROM hr_samples WHERE ts >= ? AND ts < ?").pluck().all(win.start, win.end) as number[];
+          for (const ts of held) if (!hr.has(ts) && del.run(ts).changes) dirty.add(dayOf(ts));
+        }
         break;
       }
       case "steps": {
@@ -233,11 +254,17 @@ function writer(db: Db, tz: string) {
           const b = segments(s.id, segs.filter((g) => g.sessionId === s.id));
           if (a || b) dirty.add(s.day);
         }
+        // Only when every point was readable: a shape change must not read as "all deleted".
+        if (sessions.length === points.length) for (const d of prune("sleep_sessions", "end_ts", win, sessions)) dirty.add(d);
         break;
       }
-      case "exercise":
-        for (const e of mapExercises(points, tz)) if (upsert(exercises, "id", e)) dirty.add(e.day);
+      case "exercise": {
+        const rows = mapExercises(points, tz);
+        for (const e of rows) if (upsert(exercises, "id", e)) dirty.add(e.day);
+        // The filter is on civil start time, which is start_ts in this zone.
+        if (rows.length === points.length) for (const d of prune("exercises", "start_ts", win, rows)) dirty.add(d);
         break;
+      }
     }
     const mark = prep("INSERT INTO intraday_dirty (day) VALUES (?) ON CONFLICT DO NOTHING");
     for (const d of dirty) mark.run(d);

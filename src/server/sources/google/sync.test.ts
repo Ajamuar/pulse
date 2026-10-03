@@ -16,6 +16,7 @@ import {
   syncState,
 } from "../../db/schema";
 import { RAW_RETENTION_DAYS } from "./client";
+import { recompute } from "../../pipeline";
 import { BACKFILL_DAYS, createGoogleSource, DEVICES_KEY, NO_DEVICE_ERROR } from "./sync";
 
 const TZ = "Asia/Kolkata"; // fixed +05:30, which the stub's civil-time filter relies on
@@ -268,6 +269,78 @@ describe("google sync", () => {
     const kept = db.select().from(rawPayloads).all();
     expect(kept.length).toBeGreaterThan(0); // this pull's pages
     expect(kept.every((r) => r.fetchedAt > old)).toBe(true);
+  });
+
+  describe("records deleted in Fitbit", () => {
+    const OPTS = { timeZone: TZ, profile: { birthDate: "1990-01-01", sex: "male" as const, maxHr: 183 } };
+    const ids = (t: typeof sleepSessions | typeof exercises) => db.select({ id: t.id }).from(t).all().map((r) => r.id.split("/").pop()).sort();
+    const scores = (day: string) => {
+      const r = db.$client.prepare("select activities, sleep from daily_scores where day = ?").get(day) as { activities: string; sleep: string };
+      return { activities: JSON.parse(r.activities) as unknown[], sleep: JSON.parse(r.sleep) as { reason: string | null } };
+    };
+    const s = (iso: string) => Date.parse(iso) / 1000;
+
+    it("a deleted workout and a deleted night leave the tables and the scores; older rows stay", async () => {
+      const { source, advance } = setup();
+      await source.pull();
+      // A night outside the 3-day re-fetch window that Google no longer returns either: never re-checked, so kept.
+      db.insert(sleepSessions)
+        .values({ id: "old-night", day: "2026-09-20", startTs: s("2026-09-19T17:00:00Z"), endTs: s("2026-09-20T01:00:00Z"), isMain: true, processed: true, source: "FITBIT" })
+        .run();
+      recompute(db, OPTS);
+      expect(scores("2026-10-01").activities).toHaveLength(1);
+      expect(scores("2026-10-01").sleep.reason).toBeNull();
+
+      data.exercise = [];
+      data.sleep = data.sleep.filter((p) => !String(at(p, "name")).endsWith("/sleep-a")); // the night ending 1 October
+      advance(15 * 60_000);
+      expect(await source.pull()).toEqual({ changed: true });
+
+      expect(ids(exercises)).toEqual([]);
+      expect(ids(sleepSessions)).toEqual(["old-night", "sleep-b", "sleep-c", "sleep-d"]);
+      expect(db.select().from(sleepSegments).all().filter((g) => g.sessionId.endsWith("/sleep-a"))).toEqual([]); // cascaded
+      expect(dirtyDays()).toEqual(["2026-10-01"]);
+
+      recompute(db, OPTS);
+      expect(scores("2026-10-01").activities).toEqual([]);
+      expect(scores("2026-10-01").sleep.reason).toBe("band_not_worn");
+    });
+
+    it("a failed fetch, or a page with a point we cannot read, deletes nothing", async () => {
+      await setup().source.pull();
+      const before = counts();
+      data.exercise = [];
+      data.sleep = [];
+      await setup({ failing: ["sleep", "exercise"] }).source.pull();
+      expect(counts()).toEqual(before);
+
+      // A changed shape: in the window, but unreadable, so the window can't vouch for what is missing.
+      data.sleep = [{ name: "x", sleep: { interval: { endTime: "2026-10-01T01:40:00Z" } } }];
+      data.exercise = [{ name: "y", exercise: { interval: { startTime: "2026-10-01T12:30:00Z" } } }];
+      await setup().source.pull();
+      expect(counts()).toEqual(before);
+    });
+
+    it("band HR samples Google no longer returns in the window are deleted, but an empty answer deletes nothing", async () => {
+      const extra = { dataSource: { platform: "FITBIT" }, heartRate: { beatsPerMinute: "64", sampleTime: { physicalTime: "2026-10-02T05:30:00Z" } } };
+      data["heart-rate"].push(extra);
+      const { source, advance } = setup();
+      await source.pull();
+      expect(counts().hrSamples).toBe(6);
+      db.delete(intradayDirty).run();
+
+      data["heart-rate"] = data["heart-rate"].filter((p) => p !== extra);
+      advance(15 * 60_000);
+      expect(await source.pull()).toEqual({ changed: true });
+      expect(db.select().from(hrSamples).all().map((r) => r.ts)).not.toContain(s("2026-10-02T05:30:00Z"));
+      expect(counts().hrSamples).toBe(5);
+      expect(dirtyDays()).toEqual(["2026-10-02"]);
+
+      data["heart-rate"] = [];
+      advance(15 * 60_000);
+      await source.pull();
+      expect(counts().hrSamples).toBe(5);
+    });
   });
 
   it("a failed backfill resumes from its last committed chunk", async () => {
