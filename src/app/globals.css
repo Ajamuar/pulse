@@ -296,6 +296,14 @@
   [role="button"]:not([aria-disabled="true"]) {
     cursor: pointer;
   }
+  /* No double-tap zoom delay on anything you tap; pinch zoom still works. */
+  a,
+  button,
+  label,
+  summary,
+  [role="button"] {
+    touch-action: manipulation;
+  }
   /* Fixed to the viewport (a fixed pseudo-element works on iOS, background-attachment: fixed does not). */
   body::before {
     content: "";
@@ -309,8 +317,13 @@
     background-color: rgb(255 255 255 / 0.25);
   }
   /* Reduced motion keeps fades and drops movement (spec §2.7): tw-animate entrances and exits lose
-     their translate, scale and blur and run 120 ms; components drop their own translates with motion-reduce:. */
+     their translate, scale and blur and run 120 ms; every press loses its scale here, so no control
+     needs its own motion-reduce: for it; components drop their own translates with motion-reduce:. */
   @media (prefers-reduced-motion: reduce) {
+    :is(a, button, summary, [role="button"]):active,
+    :is(a, button, summary, [role="button"]):active * {
+      scale: none !important;
+    }
     *,
     ::before,
     ::after {
