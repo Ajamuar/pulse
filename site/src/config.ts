@@ -6,6 +6,9 @@ export const ALGORITHMS_DIR = `${REPO}/tree/main/docs/algorithms`
 
 export const SITE_NAME = "Pulse"
 
+// The one contact on the site, for a company with a concern about the project (the notice in the footer and on the landing page).
+export const CONTACT_EMAIL = "work.adityajindal@gmail.com"
+
 // Umami (self-hosted). Both must be set at build time for the script tag to render; otherwise no analytics.
 // PUBLIC_UMAMI_SRC: the script URL, e.g. https://<your-umami-host>/script.js
 // PUBLIC_UMAMI_WEBSITE_ID: the website id from Umami's settings.

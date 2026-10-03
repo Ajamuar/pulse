@@ -75,7 +75,7 @@ const schema = [
           {
             c.sources.map((s) => (
               <li>
-                <a href={s.url}>{s.label}</a>
+                {s.url ? <a href={s.url}>{s.label}</a> : s.label}
               </li>
             ))
           }

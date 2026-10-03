@@ -25,12 +25,8 @@ const SRC = {
   googleBlog: { label: "Google: Fitbit Air and the Google Health app (launch post, 2026-05-07)", url: "https://blog.google/products-and-platforms/products/google-health/google-health-fitbit/" },
   googleIndia: { label: "Google India: Fitbit Air comes to India (2026)", url: "https://blog.google/intl/en-in/products/hardware/the-all-new-fitbit-air-comes-to-india/" },
   premiumPrice: { label: "Android Authority: Google Health Premium price and features", url: "https://www.androidauthority.com/google-health-premium-price-inclusions-features-3664507/" },
-  dtFree: { label: "Digital Trends: Fitbit Air's core features don't need a subscription", url: "#" },
-  kygo: { label: "Kygo: Fitbit Air vs the reference app (updated 2026-09-18)", url: "#" },
+  dtFree: { label: "Digital Trends: Fitbit Air's core features don't need a subscription" },
   fiveK: { label: "the5krunner: Fitbit Air review and buyer's guide (2026-05-07)", url: "https://the5krunner.com/2026/05/07/fitbit-air-opinion-review-buyers-guide/" },
-  refRecovery: { label: "the reference app support: How is Recovery calculated?", url: "#" },
-  refStrain: { label: "the reference app: How does the reference app Strain work?", url: "#" },
-  pulseAge: { label: "the reference app support: Healthspan, Pulse Age and Pace of Aging guide", url: "#" },
   oauthCap: { label: "Google Cloud help: unverified apps and the 100-user cap", url: "https://support.google.com/cloud/answer/7454865?hl=en" },
   noop: { label: "noop on GitHub", url: "https://github.com/ryanbr/noop" },
   haelan: { label: "Hælan on GitHub", url: "https://github.com/bardesss/haelan" },
@@ -54,7 +50,7 @@ export const COMPARISONS: Comparison[] = [
         h: "What the Google Health app gives you",
         p: [
           "The Fitbit Air is Google's screenless band, announced in May 2026 at $99 in the US. Reviews list heart rate, HRV, SpO2, skin temperature, sleep stages, Cardio Load and Daily Readiness among the features that need no subscription. Google Health Premium adds the Gemini-based Google Health Coach, adaptive plans and deeper sleep insights.",
-          "Reviewers who compared the Air with the reference app describe its recovery scoring as simpler, with no 0-21 daily strain scale.",
+          "Reviewers who compared the Air with subscription recovery bands describe its recovery scoring as simpler, with no 0-21 daily strain scale.",
         ],
       },
       {
@@ -76,7 +72,7 @@ export const COMPARISONS: Comparison[] = [
       {
         h: "What it does not change",
         p: [
-          "Pulse works with what the band records. If the Air misses a night's sleep stages, there is no HRV for that night and Pulse shows no Recovery rather than a guess. Its scores use the same scales as the reference app's but a different method and sensor, so the numbers are not interchangeable.",
+          "Pulse works with what the band records. If the Air misses a night's sleep stages, there is no HRV for that night and Pulse shows no Recovery rather than a guess. Its scores use familiar scales (0-100% Recovery, 0-21 Strain) with its own method, so they are not interchangeable with any other product's numbers.",
         ],
       },
     ],
@@ -84,39 +80,39 @@ export const COMPARISONS: Comparison[] = [
       { q: "Do I need Google Health Premium for Pulse?", a: "No. Pulse reads the data the band records, which does not need Premium. Premium adds Google's own coaching features inside the Google Health app." },
       { q: "Does Pulse work on iPhone?", a: "Yes. Pulse is a web app: open your server's address in Safari or any browser and add it to the home screen. The band still pairs with the Google Health app on your phone." },
     ],
-    sources: [SRC.googleBlog, SRC.dtFree, SRC.kygo, SRC.fiveK, SRC.premiumPrice, SRC.oauthCap],
+    sources: [SRC.googleBlog, SRC.dtFree, SRC.fiveK, SRC.premiumPrice, SRC.oauthCap],
     checked: CHECKED,
   },
   {
-    slug: "pulse-vs-refapp",
-    nav: "Pulse and the reference app",
-    title: "Pulse and the reference app compared: scores, cost and data",
-    h1: "Pulse and the reference app, compared",
-    description: "A factual comparison of Pulse on a Fitbit Air with a the reference app membership: which scores each has, how they are paid for, where the data lives, and who each suits.",
+    slug: "pulse-vs-subscription-wearables",
+    nav: "Pulse vs subscription wearables",
+    title: "Pulse vs subscription recovery wearables: scores, cost and data",
+    h1: "Pulse and subscription recovery wearables, compared",
+    description: "Pulse on a Fitbit Air next to a recovery wearable sold with a membership: which scores each has, how you pay, where the data lives, and who each suits.",
     answer:
-      "the reference app is a band, an app and a membership in one product. Pulse is free, open-source software that computes similar scores (Recovery, Strain, Sleep Performance, a biological-age estimate) from a Fitbit Air you already own, on a server you run. The reference app works out of the box and comes with support; Pulse is for people who want no subscription and their data on their own machine.",
+      "A subscription recovery wearable is a band, an app and a membership in one product. Pulse is free, open-source software that computes similar scores (Recovery, Strain, Sleep Performance, a biological-age estimate) from a Fitbit Air you already own, on a server you run. A membership works out of the box and comes with support; Pulse is for people who want no subscription and their data on their own machine.",
     sections: [
       {
         h: "Side by side",
         table: {
           caption: `Checked ${CHECKED}. Prices are as reported by the sources below and change often.`,
-          head: ["", "the reference app", "Pulse on a Fitbit Air"],
+          head: ["", "Subscription recovery wearable", "Pulse on a Fitbit Air"],
           rows: [
-            ["Hardware", "the reference app's own band, included with the membership", "Fitbit Air, bought once ($99 in the US at launch)"],
-            ["How you pay", "Annual membership; reported tiers from $199 a year", "Pulse is free for noncommercial use. You run it on your own computer or server"],
-            ["Recovery", "0-100%, green, yellow and red bands", "0-100%, the same bands; method published"],
-            ["Strain", "0-21 scale", "0-21 scale; method published"],
-            ["Sleep", "Sleep performance, sleep planner", "Sleep Performance, Sleep Planner, sleep consistency (SRI)"],
-            ["Biological age", "Pulse Age and Pace of Aging", "Pulse Age and Pace of Aging, from cited studies"],
-            ["Method", "Proprietary; weights not published", "Open source, with formulas, constants and citations"],
-            ["Where your data lives", "the reference app's cloud", "Your server (SQLite); the band's data also stays in Google Health"],
-            ["Apps", "iOS and Android apps", "A web app you install from the browser"],
-            ["Coaching and support", "AI coach, company support", "No coach; GitHub issues and the docs"],
+            ["Hardware", "The maker's own band, usually included with the membership", "Fitbit Air, bought once ($99 in the US at launch)"],
+            ["How you pay", "A monthly or annual membership", "Pulse is free for noncommercial use. You run it on your own computer or server"],
+            ["Recovery", "Usually a 0-100% daily score", "0-100%, green, yellow and red bands; method published"],
+            ["Strain", "A daily effort score; scales vary", "0-21 scale; method published"],
+            ["Sleep", "A sleep score, often with a bedtime planner", "Sleep Performance, Sleep Planner, sleep consistency (SRI)"],
+            ["Biological age", "Offered by some", "Pulse Age and Pace of Aging, from cited studies"],
+            ["Method", "Usually proprietary; weights not published", "Open source, with formulas, constants and citations"],
+            ["Where your data lives", "The company's cloud", "Your server (SQLite); the band's data also stays in Google Health"],
+            ["Apps", "Native iOS and Android apps", "A web app you install from the browser"],
+            ["Coaching and support", "Often a coach and company support", "No coach; GitHub issues and the docs"],
           ],
         },
       },
       {
-        h: "Where the reference app is the better choice",
+        h: "Where a membership is the better choice",
         list: [
           "You want one product that works out of the box, with support behind it.",
           "You want a band whose sensors and sampling were designed for its own scores.",
@@ -135,19 +131,19 @@ export const COMPARISONS: Comparison[] = [
       {
         h: "The numbers are not interchangeable",
         p: [
-          "Pulse uses the reference app's familiar scales so the numbers read naturally, but its method is its own, ported from the open-source noop project and published. A 70% Recovery in Pulse and a 70% Recovery in the reference app come from different sensors and different maths. Compare yourself with yourself.",
+          "Pulse uses familiar scales so the numbers read naturally, but its method is its own, ported from the open-source noop project and published. A 70% Recovery in Pulse and a 70% Recovery from another product come from different sensors and different maths. Compare yourself with yourself.",
         ],
       },
     ],
-    sources: [SRC.kygo, SRC.googleBlog, SRC.refRecovery, SRC.refStrain, SRC.pulseAge, SRC.noop],
+    sources: [SRC.googleBlog, SRC.noop],
     checked: CHECKED,
   },
   {
-    slug: "refapp-alternative-without-subscription",
+    slug: "recovery-tracking-without-subscription",
     nav: "Without a subscription",
     title: "Recovery and strain tracking without a subscription",
     h1: "Recovery and strain tracking without a subscription",
-    description: "Open-source and subscription-free ways to get recovery, strain and sleep scores: Pulse for the Fitbit Air, noop for the reference app straps, Hælan and fitbit-grafana.",
+    description: "Open-source and subscription-free ways to get recovery, strain and sleep scores: Pulse for the Fitbit Air, noop for subscription recovery straps, Hælan and fitbit-grafana.",
     answer:
       "If you want recovery and strain scores with no monthly fee, the cheapest route is a band without a required subscription plus software that computes the scores. Pulse does this for the Fitbit Air, self-hosted and free for noncommercial use. Other open-source projects cover nearby needs.",
     sections: [
@@ -167,7 +163,7 @@ export const COMPARISONS: Comparison[] = [
           head: ["Project", "Works with", "What it gives you", "License"],
           rows: [
             ["Pulse", "Fitbit Air (Google Health API)", "Recovery, Strain, sleep scores, Pulse Age, Stress, Energy Bank, journal insights", "PolyForm Noncommercial 1.0.0"],
-            ['<a href="https://github.com/ryanbr/noop">noop</a>', "the reference app straps", "An offline companion app with recovery, strain and sleep scoring; Pulse's scoring is ported from it", "PolyForm Noncommercial 1.0.0"],
+            ['<a href="https://github.com/ryanbr/noop">noop</a>', "A subscription brand's recovery straps (see its README)", "An offline companion app with recovery, strain and sleep scoring; Pulse's scoring is ported from it", "PolyForm Noncommercial 1.0.0"],
             ['<a href="https://github.com/bardesss/haelan">Hælan</a>', "Google Health", "A self-hosted mirror of your Google Health data, with a dashboard and tools", "AGPL-3.0"],
             ['<a href="https://github.com/arpanghosh8453/fitbit-grafana">fitbit-grafana</a>', "Fitbit / Google Health", "Raw metrics in InfluxDB and Grafana charts", "BSD-4-Clause"],
           ],
@@ -176,7 +172,7 @@ export const COMPARISONS: Comparison[] = [
       {
         h: "Choosing between them",
         p: [
-          "If you own a the reference app strap and want to stop paying for the membership, noop is built for that. If you own a Fitbit Air and want computed scores rather than raw charts, Pulse is. If you mostly want your Google Health data mirrored and searchable, look at Hælan or fitbit-grafana. They can run side by side.",
+          "If you own a subscription recovery strap and want to stop paying for the membership, noop is built for that. If you own a Fitbit Air and want computed scores rather than raw charts, Pulse is. If you mostly want your Google Health data mirrored and searchable, look at Hælan or fitbit-grafana. They can run side by side.",
         ],
       },
     ],
