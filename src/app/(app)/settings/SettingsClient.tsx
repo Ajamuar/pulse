@@ -9,7 +9,9 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ResponsiveSheet } from "@/components/shells/ResponsiveSheet"
 import { ProfileForm, SaveButton, type ProfileDefaults } from "@/components/profile/ProfileForm"
+import type { Crop } from "@/lib/crop"
 import { disconnectGoogle } from "./actions"
+import { AvatarCropSheet, decodePhoto, encodeAvatar } from "./AvatarCropSheet"
 
 /** Landing back from Google with `?oauth=connected` or `?oauth=<code>` shows one toast, then drops the param. */
 function OAuthToastInner() {
@@ -108,11 +110,22 @@ export function EditProfileButton({ defaults }: { defaults: ProfileDefaults }) {
   )
 }
 
-/** Settings › Account: change the photo (a file picker, uploaded on choice) and, for an uploaded one, remove it. */
+/** Upload failures as a message, never a throw: a thrown action error would replace Settings with the error screen. */
+const UPLOAD_FAILED = "Couldn’t upload the photo. Check your connection and try again."
+
+/**
+ * Settings › Account: change the photo (pick, crop in a sheet, then upload a 512 px WebP) and, for an uploaded one,
+ * remove it. The photo is shrunk in the browser so a phone photo never meets the Server Action body limit.
+ */
 export function AvatarButtons({ customPhoto }: { customPhoto: boolean }) {
   const router = useRouter()
   const input = React.useRef<HTMLInputElement>(null)
   const [pending, start] = React.useTransition()
+  const [photo, setPhoto] = React.useState<ImageBitmap | null>(null)
+  const [cropping, setCropping] = React.useState(false)
+  const [opening, setOpening] = React.useState(false)
+  const [error, setError] = React.useState<string | null>(null)
+  React.useEffect(() => () => photo?.close(), [photo])
   const done = (r: { ok: boolean; error?: string }, ok: string) => {
     if (!r.ok) {
       toast.error(r.error ?? "Couldn’t update the photo", { id: "avatar" })
@@ -121,20 +134,42 @@ export function AvatarButtons({ customPhoto }: { customPhoto: boolean }) {
     router.refresh()
     toast.success(ok, { id: "avatar" })
   }
-  const upload = (file: File | undefined) => {
+  const pick = async (file: File | undefined) => {
+    if (input.current) input.current.value = "" // so picking the same file again still fires change
     if (!file) return
-    const form = new FormData()
-    form.set("photo", file)
+    setOpening(true)
+    const bitmap = await decodePhoto(file)
+    setOpening(false)
+    if (!bitmap) {
+      toast.error("Couldn’t open this photo. Choose a JPEG, PNG or WebP.", { id: "avatar" })
+      return
+    }
+    setError(null)
+    setPhoto(bitmap)
+    setCropping(true)
+  }
+  const use = (crop: Crop) => {
+    if (!photo) return
+    setError(null)
     start(async () => {
-      done(await uploadAvatar(form), "Photo updated")
+      const r = await encodeAvatar(photo, crop)
+        .then((blob) => {
+          const form = new FormData()
+          form.set("photo", new File([blob], blob.type === "image/webp" ? "avatar.webp" : "avatar.jpg", { type: blob.type }))
+          return uploadAvatar(form)
+        })
+        .catch(() => ({ ok: false as const, error: UPLOAD_FAILED }))
+      if (!r.ok) return setError(r.error)
+      setCropping(false)
+      done(r, "Photo updated")
     })
   }
   return (
     <div className="flex gap-2">
-      <input ref={input} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(e) => upload(e.target.files?.[0])} />
-      <Button variant="secondary" size="touch" className="flex-1" disabled={pending} onClick={() => input.current?.click()}>
+      <input ref={input} type="file" accept="image/*" hidden onChange={(e) => pick(e.target.files?.[0])} />
+      <Button variant="secondary" size="touch" className="flex-1" disabled={pending || opening} onClick={() => input.current?.click()}>
         <Camera aria-hidden strokeWidth={2} />
-        {pending ? "Saving…" : "Photo"}
+        {opening ? "Opening…" : pending && !cropping ? "Saving…" : "Photo"}
       </Button>
       {customPhoto && (
         <Button
@@ -144,7 +179,7 @@ export function AvatarButtons({ customPhoto }: { customPhoto: boolean }) {
           disabled={pending}
           onClick={() =>
             start(async () => {
-              done(await removeAvatar(), "Photo removed")
+              done(await removeAvatar().catch(() => ({ ok: false as const, error: "Couldn’t remove the photo. Try again." })), "Photo removed")
             })
           }
           className="rounded-xl text-muted-foreground hover:bg-white/[0.06] hover:text-foreground"
@@ -152,6 +187,7 @@ export function AvatarButtons({ customPhoto }: { customPhoto: boolean }) {
           <X aria-hidden strokeWidth={2} />
         </Button>
       )}
+      <AvatarCropSheet photo={photo} open={cropping} pending={pending} error={error} onCancel={() => setCropping(false)} onUse={use} />
     </div>
   )
 }
