@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { parseConfig, type Config } from "@/server/config";
 import { openDb, type Db } from "@/server/db";
 import { oauthTokens } from "@/server/db/schema";
-import { consumeState } from "@/server/sources/google/oauth";
+import { consumeState, SCOPES } from "@/server/sources/google/oauth";
 import { GET } from "./route";
 
 const h = vi.hoisted(() => ({ cfg: undefined as unknown, db: undefined as unknown }));
@@ -48,7 +48,13 @@ describe("GET /oauth/start", () => {
 
   it("a returning owner with a working grant only picks the account", () => {
     h.cfg = parseConfig({ ...env, ...google });
-    (h.db as Db).insert(oauthTokens).values({ id: 1, accessToken: "a", refreshToken: "r", expiresAt: 1, scope: "s", updatedAt: 1 }).run();
+    (h.db as Db).insert(oauthTokens).values({ id: 1, accessToken: "a", refreshToken: "r", expiresAt: 1, scope: SCOPES.join(" "), updatedAt: 1 }).run();
     expect(location(start()).searchParams.get("prompt")).toBe("select_account");
+  });
+
+  it("a grant missing a newer scope asks for consent again", () => {
+    h.cfg = parseConfig({ ...env, ...google });
+    (h.db as Db).insert(oauthTokens).values({ id: 1, accessToken: "a", refreshToken: "r", expiresAt: 1, scope: SCOPES.slice(0, 3).join(" "), updatedAt: 1 }).run();
+    expect(location(start()).searchParams.get("prompt")).toBe("consent");
   });
 });
