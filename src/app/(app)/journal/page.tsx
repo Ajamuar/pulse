@@ -18,9 +18,15 @@ import { pageDay, type SearchParams } from "../_lib/day"
 
 export const metadata = { title: "Journal" }
 
+/** History rows before "Show 30 days": a week. The day strip above already reaches every day of the last three weeks. */
+const RECENT = 7
+
 /** Journal `/journal?d=` (spec §7.11, journey 7). */
 export default async function JournalPage({ searchParams }: PageProps<"/journal">) {
   const { d, today } = await pageDay(searchParams as SearchParams, "/journal")
+  const allHistory = (await searchParams).history === "all"
+  const base = dayHref("/journal", d, today)
+  const historyHref = allHistory ? base : `${base}${d === today ? "?" : "&"}history=all`
   const vm = getJournal(d)
   const log = getLog()
   const date = formatDay(d, DAY.short)
@@ -33,35 +39,32 @@ export default async function JournalPage({ searchParams }: PageProps<"/journal"
         <DayStrip indicator="journal" days={vm.strip.map((s) => ({ date: s.day, done: s.done }))} />
       </div>
 
-      {/* Phone: check-in, insights, history, top to bottom. From 1280 px the day's work (check-in over history) takes the
-          wide column and Insights rides beside it, pinned, at its own height: stretching it to the check-in's height left
-          an empty bordered box. */}
+      {/* Phone: log, check-in, insights, history, top to bottom. From 1280 px the day's work (log over check-in) takes
+          the wide column and the look back (insights over a week of history) the other, so neither column runs on alone
+          (J-02: a 30-row history under the check-in left the right column empty). */}
       <div className="flex flex-col gap-8 xl:grid xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] xl:items-start xl:gap-x-6 xl:gap-y-10">
         {/* Log first: a drink or a weigh-in is a two-tap job, the check-in an evening one (spec §11 LG1). */}
-        <SectionShell variant="section" title="Log" className="xl:col-start-1">
+        <div className="flex flex-col gap-8">
+        <SectionShell variant="section" title="Log">
           <Log vm={log} />
         </SectionShell>
 
-        <SectionShell variant="section" title="Check-in" className="xl:col-start-1">
+        <SectionShell variant="section" title="Check-in">
           <CheckIn key={d} day={d} dayLabel={date} tags={vm.tags} checkIn={vm.checkIn} />
         </SectionShell>
+        </div>
 
-        <SectionShell
-          variant="section"
-          title="Insights"
-          action={{ label: "See all", href: "/journal/insights" }}
-          className="xl:sticky xl:top-24 xl:col-start-2 xl:row-span-3 xl:row-start-1"
-        >
-          <InsightCard body={vm.teaser.text} action={vm.teaser.ready ? { label: "See all insights", href: "/journal/insights" } : undefined} />
-        </SectionShell>
+        <div className="flex flex-col gap-8">
+          <SectionShell variant="section" title="Insights" action={{ label: "See all", href: "/journal/insights" }}>
+            <InsightCard body={vm.teaser.text} action={vm.teaser.ready ? { label: "See all insights", href: "/journal/insights" } : undefined} />
+          </SectionShell>
 
-        <SectionShell variant="section" title="History" className="xl:col-start-1">
+          <SectionShell variant="section" title="History">
           {vm.history.length ? (
             <Card className="gap-0 px-4 py-1 xl:px-5">
-              {/* One column everywhere: on laptop it sits in the main column (about 620 px), so rows stay short (U18 J-01). */}
               <ul>
-                {vm.history.map((h, i) => {
-                  const shown = h.yes.slice(0, 3)
+                {(allHistory ? vm.history : vm.history.slice(0, RECENT)).map((h, i) => {
+                  const shown = h.yes.slice(0, 2) // the narrow column fits two tags beside the date
                   const more = h.yes.length - shown.length
                   return (
                     <li key={h.day} className={cn(i > 0 && "border-t border-border")}>
@@ -87,6 +90,15 @@ export default async function JournalPage({ searchParams }: PageProps<"/journal"
                   )
                 })}
               </ul>
+              {vm.history.length > RECENT && (
+                <Link
+                  href={historyHref}
+                  scroll={false}
+                  className="-mx-2 mb-1 grid h-11 place-items-center rounded-lg border-t border-border text-xs font-bold tracking-[0.08em] text-foreground/85 uppercase outline-none transition-[background-color,color] duration-150 ease-standard hover:bg-accent hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+                >
+                  {allHistory ? "Show last week" : "Show 30 days"}
+                </Link>
+              )}
             </Card>
           ) : (
             <EmptyState
@@ -97,7 +109,8 @@ export default async function JournalPage({ searchParams }: PageProps<"/journal"
               }}
             />
           )}
-        </SectionShell>
+          </SectionShell>
+        </div>
       </div>
     </PageShell>
   )
