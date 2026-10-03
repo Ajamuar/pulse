@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { CalendarRange, Check, ChevronRight, CircleAlert, Lightbulb, Maximize2, Moon, Plus, Sun, TriangleAlert } from "lucide-react"
+import { CalendarRange, Check, ChevronRight, CircleAlert, Info, Lightbulb, Maximize2, Moon, Plus, Sun, TriangleAlert } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { isDashboardKey } from "@/lib/dashboard"
 import { clock, DAY, formatDay, formatValue, MISSING, rangeLabel } from "@/lib/format"
@@ -52,6 +52,15 @@ const ADD_ACTIVITY_INFO = {
     <>
       <p>Pulse reads your workouts from Fitbit through Google Health, so it cannot add one here.</p>
       <p>Start or log the workout in the Fitbit app. It appears in your activities after the next sync, with its Strain.</p>
+    </>
+  ),
+}
+const NO_BAND_INFO = {
+  title: "No band data yet",
+  body: (
+    <>
+      <p>Sleep, Recovery and Strain are scored from your Fitbit’s heart rate, which your phone can’t measure.</p>
+      <p>Until your Fitbit syncs, Home shows what your phone counts: steps, distance, calories and active minutes.</p>
     </>
   ),
 }
@@ -113,20 +122,25 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
                 {/* The sentinel above pulls the stack up to the labels; give the note its own 12 px back. */}
                 {dials.reason && (
                   <p className="pt-3 text-center md:pt-4">
-                    <ReasonPlaceholder
-                      reason={dials.reason.reason}
-                      nightsLeft={dials.reason.nightsLeft}
-                      size="sm"
-                      // Phone data but no band: say what the dials need, not just that the band was off (§11 CD2).
-                      copy={vm.phone ? "No band data: Sleep, Recovery and Strain need your Fitbit" : undefined}
-                    />
+                    {vm.phone ? (
+                      // Phone data but no band: one short line, the reason in its info card (§11 CD2, MD2).
+                      <InfoCardTrigger
+                        info={NO_BAND_INFO}
+                        className="relative inline-flex items-center gap-1.5 rounded-md whitespace-nowrap outline-none after:absolute after:-inset-x-2 after:-inset-y-3 hover:[&>*]:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+                      >
+                        <ReasonPlaceholder reason={dials.reason.reason} size="sm" copy="No band data yet" className="transition-[color] duration-150 ease-standard" />
+                        <Info aria-hidden className="size-3.5 shrink-0 text-muted-foreground transition-[color] duration-150 ease-standard" strokeWidth={1.75} />
+                      </InfoCardTrigger>
+                    ) : (
+                      <ReasonPlaceholder reason={dials.reason.reason} nightsLeft={dials.reason.nightsLeft} size="sm" />
+                    )}
                   </p>
                 )}
               </div>
               {vm.phone && (
                 // Leads where the monitor cards sit: with no band they would only say "No readings" (§11 CD2).
                 <div className="xl:col-start-2 xl:row-start-1">
-                  <PhoneActivity stats={vm.phone} isToday={vm.isToday} link={{ d, today }} />
+                  <PhoneActivity stats={vm.phone} link={{ d, today }} />
                 </div>
               )}
               {vm.insights.length > 0 && (
@@ -373,9 +387,9 @@ function MonitorAlert({ alert, href }: { alert: NonNullable<HomeVM["monitorAlert
  * A day with no band but phone data (spec §11 CD2): the phone's own numbers as Health Monitor tiles, against their
  * 30-day averages, so Home opens on what was recorded instead of three empty dials and "No readings" cards.
  */
-function PhoneActivity({ stats, isToday, link }: { stats: KeyStat[]; isToday: boolean; link: { d: string; today: string } }) {
+function PhoneActivity({ stats, link }: { stats: KeyStat[]; link: { d: string; today: string } }) {
   return (
-    <SectionShell variant="section" title={isToday ? "Today from your phone" : "From your phone"} aside="vs. 30-day average">
+    <SectionShell variant="section" title="From your phone" aside={<span className="whitespace-nowrap">vs. 30-day avg</span>}>
       <ul className="grid grid-cols-2 gap-3 xl:gap-4">
         {stats.map((s, i) => (
           // An odd count lets the first tile (steps) span the row, so the grid never ends on a hole.
