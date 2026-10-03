@@ -132,7 +132,8 @@ describe("the public routes", () => {
     h.cfg = googleCfg;
     const res = await post("/logout");
     expect(res.status).toBe(303);
-    expect(new URL(res.headers.get("location")!).pathname).toBe("/login");
+    // Relative, never the container's own address (behind a tunnel request.url is http://0.0.0.0:3000).
+    expect(res.headers.get("location")).toBe("/login");
     expect(res.headers.get("set-cookie")).toMatch(new RegExp(`^${SESSION_COOKIE}=;.*(Max-Age=0|Expires=Thu, 01 Jan 1970)`, "i"));
   });
 
@@ -145,6 +146,7 @@ describe("the public routes", () => {
     h.cfg = demoCfg;
     const res = await post("/login/demo");
     expect(res.status).toBe(303);
+    expect(res.headers.get("location")).toBe("/");
     const token = res.headers.get("set-cookie")!.match(new RegExp(`^${SESSION_COOKIE}=([^;]+)`))![1];
     expect(await verifySession(db, token, { googleEnabled: false, ownerEmail: null })).toEqual({ kind: "demo" });
   });

@@ -11,7 +11,8 @@ export async function POST(request: Request) {
   const db = getDb();
   // The seed worker writes it too; doing it here means a visitor right after first boot never sees onboarding.
   if (!getProfile(db) && seedsDemoProfile()) saveProfile(db, DEMO_PROFILE);
-  const res = NextResponse.redirect(new URL("/", request.url), 303);
+  // Relative, like /logout: request.url is the container's address behind a tunnel.
+  const res = new NextResponse(null, { status: 303, headers: { Location: "/" } });
   res.cookies.set(SESSION_COOKIE, await signSession(db, { kind: "demo" }), cookieOptions(isHttps(request)));
   return res;
 }
