@@ -8,7 +8,8 @@ import { cn } from "@/lib/utils"
 import { Mark } from "@/components/brand/Mark"
 import { Wordmark } from "@/components/brand/Wordmark"
 import { dayLabel } from "@/lib/format"
-import { dayHref, parseDay, tabForPath, TAB_ROOT, type Tab } from "@/lib/url"
+import { parseDay, tabForPath, TAB_ROOT, type Tab } from "@/lib/url"
+import { SheetTrigger } from "./SheetTrigger"
 import { useShellCalendar } from "./ShellStatus"
 import { DemoChip, SyncStatus } from "./TopBar"
 
@@ -179,7 +180,7 @@ function Monogram() {
 
 /**
  * The "Check in" action (spec §4.2.1), the reference app's coach button: indigo-rimmed glass with the "P" monogram. Opens the
- * journal check-in for the day on screen through `?checkin=1`. `float`: the round button over the content (phone).
+ * check-in for the day on screen over the screen itself through `?checkin=1` (spec §11 UX2). `float`: the round button over the content (phone).
  * `rail` and `sidebar`: the same action docked in the tablet rail and laptop sidebar, where floating over the content
  * column hid its right-hand controls (U18 G-02, D-L5).
  */
@@ -187,18 +188,17 @@ function CheckInAction({ variant }: { variant: "float" | "rail" | "sidebar" }) {
   const { today } = useShellCalendar()
   const params = useSearchParams()
   const { d } = parseDay(params.get("d") ?? undefined, today)
-  const href = `${dayHref("/journal", d, today)}${d === today ? "?" : "&"}checkin=1`
   const label = `Check in for ${dayLabel(d, today)}`
   if (variant === "sidebar")
     return (
-      <Link href={href} aria-label={label} className={cn(ACTION_FACE, "flex h-12 items-center gap-3 rounded-full pr-4 pl-2.5 text-[15px] leading-5 font-semibold")}>
+      <SheetTrigger sheet="checkin" aria-label={label} className={cn(ACTION_FACE, "flex h-12 items-center gap-3 rounded-full pr-4 pl-2.5 text-[15px] leading-5 font-semibold")}>
         <Monogram />
         Check in
-      </Link>
+      </SheetTrigger>
     )
   return (
-    <Link
-      href={href}
+    <SheetTrigger
+      sheet="checkin"
       aria-label={label}
       className={cn(
         ACTION_FACE,
@@ -207,7 +207,7 @@ function CheckInAction({ variant }: { variant: "float" | "rail" | "sidebar" }) {
       )}
     >
       <Monogram />
-    </Link>
+    </SheetTrigger>
   )
 }
 

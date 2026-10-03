@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react"
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 import { LOG_KINDS, type LogKind } from "@/lib/log"
 import type { LogAccess } from "@/server/log"
 import type { LogVM } from "@/server/queries/log"
@@ -7,10 +7,9 @@ import { Log } from "./Log"
 
 const h = vi.hoisted(() => ({ log: vi.fn<(input: unknown) => Promise<{ ok: true; data: { demo: boolean } }>>(async () => ({ ok: true, data: { demo: true } })) }))
 vi.mock("@/server/actions/log", () => ({ logEntry: h.log, deleteLogEntry: vi.fn() }))
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({ replace: vi.fn(), refresh: vi.fn() }),
-  usePathname: () => "/journal",
-  useSearchParams: () => new URLSearchParams(),
+vi.mock("next/navigation", async () => ({
+  useRouter: () => ({ refresh: vi.fn() }),
+  useSearchParams: (await import("@/components/shells/testing")).useLocationSearchParams,
 }))
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
@@ -27,6 +26,8 @@ const vm = (o: Partial<LogVM> = {}): LogVM => ({
 })
 const tiles = () => within(screen.getByRole("list", { name: "Log" })).getAllByRole("button").map((b) => b.textContent)
 
+beforeEach(() => window.history.replaceState(null, "", "/journal"))
+
 describe("Log", () => {
   it("a male profile gets no cycle tiles; a female one does", () => {
     const { unmount } = render(<Log vm={vm()} />)
@@ -40,6 +41,7 @@ describe("Log", () => {
   it("water's quick add saves straight away and says it is demo", async () => {
     render(<Log vm={vm()} />)
     fireEvent.click(screen.getByRole("button", { name: /^Water/ }))
+    expect(window.location.search).toBe("?log=water")
     expect(await screen.findByText("Demo: saved in Pulse only")).toBeInTheDocument()
     fireEvent.click(screen.getByRole("button", { name: "+250 ml" }))
     await waitFor(() => expect(h.log).toHaveBeenCalledWith(expect.objectContaining({ kind: "water", ml: 250 })))

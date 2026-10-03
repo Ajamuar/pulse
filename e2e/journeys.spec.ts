@@ -117,8 +117,10 @@ test("6. illness week: Home alert → Health Monitor flags", async ({ page }) =>
 
 test("7. journal: check in with the round button or + → save → Insights shows the alcohol effect", async ({ page }) => {
   await page.goto("/");
-  // The round button on phone, the sidebar's "Check in" on laptop: the same link, one visible per width.
-  await page.getByRole("link", { name: "Check in for Today" }).filter({ visible: true }).click();
+  // The round button on phone, the sidebar's "Check in" on laptop: the same button, one visible per width. The sheet
+  // opens over Home and closes back to it (spec §11 UX2).
+  await page.getByRole("button", { name: "Check in for Today" }).filter({ visible: true }).click();
+  await expect(page).toHaveURL(url("/?checkin=1"));
   const sheet = page.getByRole("dialog", { name: "Check in" });
   await expect(sheet).toBeVisible();
   await sheet.getByRole("radiogroup", { name: "Alcohol" }).getByRole("radio", { name: "Yes" }).click();
@@ -126,6 +128,7 @@ test("7. journal: check in with the round button or + → save → Insights show
   await sheet.getByRole("button", { name: "Save check-in" }).click();
   await expect(page.getByText("Check-in saved")).toBeVisible();
   await expect(sheet).toBeHidden();
+  await expect(page).toHaveURL(url("/"));
 
   await page.goto("/journal/insights");
   const alcohol = page.getByRole("button", { name: /^Alcohol lowered next-day Recovery/ });

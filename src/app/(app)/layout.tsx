@@ -1,5 +1,7 @@
+import { Suspense } from "react"
 import { connection } from "next/server"
 import { AppShell } from "@/components/shells/AppShell"
+import { CheckInSheet } from "./journal/CheckIn"
 import { avatarSrc } from "@/server/avatar"
 import { getDb } from "@/server/db"
 import { getShellStatus, requestSync } from "@/server/queries/settings"
@@ -14,5 +16,13 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   await connection()
   // Fire and forget: the worker throttles itself; the page renders from what is already stored.
   requestSync()
-  return <AppShell live status={{ ...getShellStatus(), avatar: avatarSrc(getDb()) }}>{children}</AppShell>
+  return (
+    <AppShell live status={{ ...getShellStatus(), avatar: avatarSrc(getDb()) }}>
+      {children}
+      {/* One check-in sheet for every screen, opened over it by `?checkin=1` (spec §11 UX2). */}
+      <Suspense>
+        <CheckInSheet />
+      </Suspense>
+    </AppShell>
+  )
 }

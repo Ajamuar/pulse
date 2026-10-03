@@ -21,6 +21,7 @@ import { HEADER_SENTINEL, HOME_DIALS, HOME_DIALS_CLASS } from "@/lib/header-stat
 import { MetricState } from "@/components/shells/MetricState"
 import { PageShell } from "@/components/shells/PageShell"
 import { SectionShell } from "@/components/shells/SectionShell"
+import { SheetTrigger } from "@/components/shells/SheetTrigger"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { CARD_MATERIAL } from "@/components/ui/card"
 import { getHome } from "@/server/queries/home"
@@ -73,7 +74,6 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
   const vm = getHome(d)
   const at = (href: string) => dayHref(href, d, today)
   const { dials } = vm
-  const checkIn = `${at("/journal")}${vm.isToday ? "?" : "&"}checkin=1`
 
   return (
     <PageShell
@@ -170,15 +170,16 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
             title="My Day"
             className="xl:flex xl:h-full xl:flex-col"
             action={
-              <Link
-                href={checkIn}
-                aria-label="Add to today"
+              // Opens the check-in over Home, for the day on screen (spec §11 UX2).
+              <SheetTrigger
+                sheet="checkin"
+                aria-label={vm.isToday ? "Add to today" : `Add to ${formatDay(d, DAY.short)}`}
                 // the reference app's "+" is a ~34 pt white tile with a soft top-light, centred on the title, about 15 pt above
                 // the first card [latest-home-collapsed-1]; the hit area grows to 44 px without moving it.
                 className="relative grid size-[34px] place-items-center rounded-[10px] bg-linear-to-b from-white to-zinc-200 text-primary-foreground shadow-sm transition-[scale,filter] duration-150 ease-standard outline-none after:absolute after:-inset-[5px] hover:brightness-95 focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96]"
               >
                 <Plus aria-hidden className="size-5" strokeWidth={2.25} />
-              </Link>
+              </SheetTrigger>
             }
           >
             <div className="flex flex-col gap-3 xl:flex-1 xl:gap-4">

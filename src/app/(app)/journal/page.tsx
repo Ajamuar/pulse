@@ -50,7 +50,7 @@ export default async function JournalPage({ searchParams }: PageProps<"/journal"
         </SectionShell>
 
         <SectionShell variant="section" title="Check-in">
-          <CheckIn key={d} day={d} dayLabel={date} tags={vm.tags} checkIn={vm.checkIn} />
+          <CheckIn dayLabel={date} checkIn={vm.checkIn} />
         </SectionShell>
         </div>
 
@@ -103,10 +103,7 @@ export default async function JournalPage({ searchParams }: PageProps<"/journal"
           ) : (
             <EmptyState
               body="No check-ins yet. Your first one takes under a minute."
-              action={{
-                label: "Check in",
-                href: `${dayHref("/journal", d, today)}${d === today ? "?" : "&"}checkin=1`,
-              }}
+              action={{ label: "Check in", sheet: "checkin" }}
             />
           )}
           </SectionShell>

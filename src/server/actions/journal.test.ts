@@ -7,7 +7,8 @@ import { type Db, openDb } from "../db";
 import { intradayDirty, journalEntries, journalTags } from "../db/schema";
 import { DEFAULT_JOURNAL_TAGS, ensureDefaultTags } from "../journalTags";
 import { needsRecompute } from "../pipeline";
-import { addCustomTag, reorderBehaviours, saveJournalEntry, setBehaviourHidden } from "./journal";
+import { saveProfile } from "../profile";
+import { addCustomTag, loadCheckIn, reorderBehaviours, saveJournalEntry, setBehaviourHidden } from "./journal";
 
 const h = vi.hoisted(() => ({ db: undefined as unknown, revalidate: vi.fn(), requestSync: vi.fn(), session: { kind: "demo" } as unknown }));
 vi.mock("../worker", () => ({ requestSync: h.requestSync }));
@@ -24,6 +25,7 @@ beforeAll(() => {
   dir = fs.mkdtempSync(path.join(os.tmpdir(), "pulse-journal-"));
   db = h.db = openDb(path.join(dir, "test.db")) as Db;
   ensureDefaultTags(db);
+  saveProfile(db, { birthDate: "1990-01-01", sex: "male", maxHr: null, heightCm: null });
   // 20:00 UTC on Oct 2 is 01:30 on Oct 3 in Kolkata.
   vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-10-02T20:00:00Z") });
 });
@@ -110,6 +112,19 @@ describe("saveJournalEntry", () => {
     expect(await saveJournalEntry({ day: "2026-10-01", tag: "alcohol", value: null })).toMatchObject({ ok: true });
     expect(entries()).toEqual([{ day: "2026-10-01", tag: "sauna", value: 0 }]);
     expect(await saveJournalEntry({ day: "2026-10-04", tag: "alcohol", value: null })).toMatchObject({ ok: false });
+  });
+});
+
+describe("loadCheckIn", () => {
+  it("returns the shown behaviours and the day's answers; refuses a future day and a signed-out caller", async () => {
+    await saveJournalEntry({ day: "2026-10-01", tag: "alcohol", value: true });
+    const r = await loadCheckIn("2026-10-01");
+    expect(r.ok && r.data.checkIn).toMatchObject({ done: true, entries: { alcohol: 1 } });
+    expect(r.ok && r.data.tags.some((t) => t.tag === "alcohol")).toBe(true);
+    expect(await loadCheckIn("2026-10-04")).toMatchObject({ ok: false });
+    expect(await loadCheckIn("nope")).toMatchObject({ ok: false });
+    h.session = null;
+    expect(await loadCheckIn("2026-10-01")).toMatchObject({ ok: false });
   });
 });
 

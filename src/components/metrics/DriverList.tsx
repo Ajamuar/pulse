@@ -27,8 +27,6 @@ export type DriverListProps = {
   selectedKey?: string
   /** Client parents only: impact rows open their detail. */
   onSelect?: (key: string) => void
-  /** Impact empty state's "Check in" target. */
-  checkInHref?: string
   /** Impact variant: the next-day outcome in the spoken sentence ("Recovery", "HRV", "sleep performance"). */
   outcome?: string
 }
@@ -161,7 +159,7 @@ export function DriverList(p: DriverListProps) {
     ) : (
       <EmptyState
         body="Not enough check-ins yet. Insights need 5 days with and 5 without a behaviour in the last 90 days."
-        action={{ label: "Check in", href: p.checkInHref ?? "/journal" }}
+        action={{ label: "Check in", sheet: "checkin" }}
       />
     )
   return (

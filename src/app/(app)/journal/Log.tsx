@@ -2,11 +2,10 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { CalendarHeart, Droplet, FlaskConical, Scale, Smile, Thermometer, Trash2, Utensils, type LucideIcon } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
-import { withParam } from "@/lib/url"
 import {
   CYCLE_SYMPTOMS,
   FLOWS,
@@ -25,6 +24,7 @@ import { deleteLogEntry, logEntry, type LogInput } from "@/server/actions/log"
 import type { LogVM } from "@/server/queries/log"
 import { CAPTION } from "@/components/metrics/primitives"
 import { ResponsiveSheet, SHEET_SECTION } from "@/components/shells/ResponsiveSheet"
+import { closeSheet, openSheet } from "@/components/shells/SheetTrigger"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { CARD_MATERIAL, Card } from "@/components/ui/card"
@@ -177,7 +177,6 @@ export type LogProps = { vm: LogVM }
 export function Log({ vm }: LogProps) {
   const { demo } = vm
   const router = useRouter()
-  const pathname = usePathname()
   const params = useSearchParams()
   const [kind, setKind] = React.useState<LogKind | null>(null)
   const [shown, setShown] = React.useState<LogKind>("water")
@@ -199,16 +198,19 @@ export function Log({ vm }: LogProps) {
     setKind(k)
   }
 
-  // `?log=water` (Home's water metric, a bookmark) opens that sheet once, as `?checkin=1` does.
+  // The sheet follows `?log=water`: a tile pushes it, a bookmark arrives with it, and Back closes the sheet without
+  // leaving Journal (spec §11 UX2).
   const wanted = params.get("log") as LogKind | null
   const [handled, setHandled] = React.useState<string | null>(null)
   if (wanted !== handled) {
     setHandled(wanted)
     if (wanted && vm.kinds.includes(wanted)) open(wanted)
+    else if (!wanted) setKind(null)
   }
-  React.useEffect(() => {
-    if (wanted) router.replace(`${pathname}${withParam(params.toString(), "log", null)}`, { scroll: false })
-  }, [wanted, router, pathname, params])
+  const shut = () => {
+    setKind(null)
+    closeSheet("log")
+  }
 
   const set = (k: string) => (v: string | string[]) => {
     setForm((f) => ({ ...f, [k]: v }))
@@ -225,7 +227,7 @@ export function Log({ vm }: LogProps) {
       else setError(r.error)
       return
     }
-    if (close) setKind(null)
+    if (close) shut()
     toast.success(r.data.demo ? `${KIND_LABEL[input.kind]} saved in Pulse (demo)` : `${KIND_LABEL[input.kind]} saved to Google Health`)
     router.refresh()
   }
@@ -266,7 +268,8 @@ export function Log({ vm }: LogProps) {
             <li key={k} className="shrink-0 snap-start">
               <button
                 type="button"
-                onClick={() => open(k)}
+                aria-haspopup="dialog"
+                onClick={() => openSheet("log", k)}
                 aria-label={k === "water" ? `Water, ${vm.waterToday ? `${vm.waterToday.toLocaleString("en-US")} ml` : "none"} today` : undefined}
                 className={cn(
                   CARD_MATERIAL,
@@ -325,7 +328,7 @@ export function Log({ vm }: LogProps) {
 
       <ResponsiveSheet
         open={kind !== null}
-        onOpenChange={(o) => !o && !saving && setKind(null)}
+        onOpenChange={(o) => !o && !saving && shut()}
         title={`Log ${KIND_LABEL[shown].toLowerCase()}`}
         description={blocked ? undefined : demo ? "Demo: saved in Pulse only" : "Saved to Google Health"}
         footer={

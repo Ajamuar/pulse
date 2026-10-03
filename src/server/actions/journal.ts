@@ -8,6 +8,8 @@ import { getConfig } from "../config";
 import { getDb } from "../db";
 import { intradayDirty, journalEntries, journalTags } from "../db/schema";
 import { addTag, reorderTags, setTagHidden, tagKey } from "../journalTags";
+import { getJournal } from "../queries/journal";
+import type { JournalVM } from "../queries/types";
 import { requestSync } from "../worker";
 
 export type ActionResult<T = undefined> = { ok: true; data: T } | { ok: false; error: string };
@@ -46,6 +48,19 @@ export async function saveJournalEntry(input: z.input<typeof Entry>): Promise<Ac
   revalidatePath("/journal");
   revalidatePath("/");
   return { ok: true, data: undefined };
+}
+
+/**
+ * Read-only: the check-in sheet's behaviours and a day's answers. The sheet opens over any screen (`?checkin=1`,
+ * spec §11 UX2), so it fetches what the Journal page would have passed it.
+ */
+export async function loadCheckIn(day: string): Promise<ActionResult<Pick<JournalVM, "tags" | "checkIn">>> {
+  if (!(await currentSession())) return SIGNED_OUT;
+  const r = z.iso.date().safeParse(day);
+  if (!r.success || r.data > localToday()) return { ok: false, error: "Invalid day" };
+  // ponytail: getJournal also builds the strip, history and teaser the sheet drops; a lean query if it ever shows.
+  const { tags, checkIn } = getJournal(r.data);
+  return { ok: true, data: { tags, checkIn } };
 }
 
 const CustomTag = z.object({ label: z.string().trim().min(1).max(40) });

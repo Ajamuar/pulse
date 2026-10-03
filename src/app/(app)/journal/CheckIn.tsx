@@ -1,16 +1,20 @@
 "use client"
 
 import * as React from "react"
-import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { useSearchParams } from "next/navigation"
+import { LoaderCircle } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { TAG_GROUPS, tagIcon } from "@/lib/journal"
-import { withParam } from "@/lib/url"
-import { addCustomTag, saveJournalEntry } from "@/server/actions/journal"
-import type { JournalTag, JournalVM } from "@/server/queries/types"
+import { DAY, formatDay } from "@/lib/format"
+import { parseDay } from "@/lib/url"
+import { addCustomTag, loadCheckIn, saveJournalEntry } from "@/server/actions/journal"
+import type { JournalVM } from "@/server/queries/types"
 import { StatusChip } from "@/components/metrics/primitives"
 import { ResponsiveSheet, SHEET_SECTION } from "@/components/shells/ResponsiveSheet"
 import { SectionShell } from "@/components/shells/SectionShell"
+import { closeSheet, openSheet } from "@/components/shells/SheetTrigger"
+import { useShellCalendar } from "@/components/shells/ShellStatus"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -36,21 +40,69 @@ export function changedEntries(values: Values, saved: Record<string, number>): [
 }
 
 export type CheckInProps = {
-  day: string
   /** "Mon, Sep 28". */
   dayLabel: string
-  tags: JournalTag[]
   checkIn: JournalVM["checkIn"]
 }
 
-/** The check-in card and its sheet (spec §7.11, journey 7). `?checkin=1` opens the sheet on arrival. */
-export function CheckIn({ day, dayLabel, tags, checkIn }: CheckInProps) {
-  const router = useRouter()
-  const pathname = usePathname()
+/** The Journal's check-in card (spec §7.11, journey 7). Its button opens the app-wide `CheckInSheet`. */
+export function CheckIn({ dayLabel, checkIn }: CheckInProps) {
+  const start = () => openSheet("checkin")
+  // The section above is headed "Check-in", so the card is titled by its day, as History's rows are (SYM2).
+  return (
+    <SectionShell variant="card" title={dayLabel} fill>
+      {checkIn.done ? (
+        <div className="flex flex-1 flex-col gap-4">
+          {/* Status and the day's behaviours on one wrapping line. */}
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusChip tone="optimal">Checked in</StatusChip>
+            {checkIn.yes.length > 0 && (
+              <ul className="flex flex-wrap gap-2" aria-label="Behaviours logged">
+                {checkIn.yes.map((y) => (
+                  <li key={y.tag}>
+                    <Badge variant="secondary" className={TAG_CLASS}>
+                      {y.label}
+                    </Badge>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          {/* Full width at the card's foot, as Check in and Home's card buttons are (SYM3). */}
+          <Button aria-haspopup="dialog" data-sheet="checkin" variant="secondary" size="touch" className="mt-auto w-full" onClick={start}>
+            Edit check-in
+          </Button>
+        </div>
+      ) : (
+        <div className="flex flex-1 flex-col gap-4">
+          <p className="max-w-[65ch] text-[15px] leading-[22px] text-pretty text-foreground-secondary">
+            Log what you did today. Pulse compares it with tomorrow’s Recovery.
+          </p>
+          <Button aria-haspopup="dialog" data-sheet="checkin" size="touch" className="mt-auto w-full" onClick={start}>
+            Check in
+          </Button>
+        </div>
+      )}
+    </SectionShell>
+  )
+}
+
+type Loaded = { day: string } & Pick<JournalVM, "tags" | "checkIn">
+
+/**
+ * The check-in sheet (spec §7.11), mounted once in the app layout: `?checkin=1` opens it over whatever screen is
+ * showing, for that screen's day (`?d=`), and closing it (X, swipe, Save, Back) leaves that screen as it was
+ * (spec §11 UX2). The behaviours and answers load when it opens.
+ */
+export function CheckInSheet() {
+  const { today } = useShellCalendar()
   const params = useSearchParams()
+  const wants = params.get("checkin") === "1"
+  const { d: day } = parseDay(params.get("d") ?? undefined, today)
   const [open, setOpen] = React.useState(false)
-  // The card's Edit / Check in button: focus returns here when the sheet opened from `?checkin=1` (U18 O-02).
-  const trigger = React.useRef<HTMLButtonElement>(null)
+  const [data, setData] = React.useState<Loaded | null>(null)
+  const [request, setRequest] = React.useState<{ day: string; n: number } | null>(null)
+  const [loadError, setLoadError] = React.useState(false)
   const [values, setValues] = React.useState<Values>({})
   const [saving, setSaving] = React.useState(false)
   const [saveError, setSaveError] = React.useState(false)
@@ -59,8 +111,13 @@ export function CheckIn({ day, dayLabel, tags, checkIn }: CheckInProps) {
   const [addError, setAddError] = React.useState<string | null>(null)
   const [adding, setAdding] = React.useState(false)
   const input = React.useRef<HTMLInputElement>(null)
+  // Opened from a link, focus goes back to a visible check-in button on close (U18 O-02).
+  const fallback = React.useRef<HTMLElement | null>(null)
 
-  const dirty = Object.keys(values).some((t) => values[t] !== checkIn.entries[t])
+  const tags = data?.tags ?? []
+  const saved = data?.checkIn.entries ?? {}
+  const dirty = Object.keys(values).some((t) => values[t] !== saved[t])
+  const dayLabel = formatDay(data?.day ?? day, DAY.short)
 
   // Closing the sheet asks before discarding (Discard changes?); a reload or leaving the page asks the browser's way.
   React.useEffect(() => {
@@ -70,46 +127,82 @@ export function CheckIn({ day, dayLabel, tags, checkIn }: CheckInProps) {
     return () => window.removeEventListener("beforeunload", warn)
   }, [open, dirty])
 
+  React.useEffect(() => {
+    if (!request) return
+    let live = true
+    loadCheckIn(request.day)
+      .then((r) => {
+        if (!live) return
+        if (!r.ok) return setLoadError(true)
+        setData({ day: request.day, ...r.data })
+        setValues({ ...r.data.checkIn.entries })
+      })
+      .catch(() => live && setLoadError(true))
+    return () => {
+      live = false
+    }
+  }, [request])
+
+  // The URL drives the sheet. Back with unsaved answers asks first; "Keep editing" pushes the entry again.
+  const [seen, setSeen] = React.useState(false)
+  if (wants !== seen) {
+    setSeen(wants)
+    if (wants && !open) {
+      setData(null)
+      setValues({})
+      setLoadError(false)
+      setSaveError(false)
+      setAddError(null)
+      setLabel("")
+      setOpen(true)
+      setRequest((r) => ({ day, n: (r?.n ?? 0) + 1 }))
+    } else if (!wants && open && !confirm) {
+      if (dirty && !saving) setConfirm(true)
+      else setOpen(false)
+    }
+  }
+
+  React.useEffect(() => {
+    if (!open) return
+    fallback.current = Array.from(document.querySelectorAll<HTMLElement>("[data-sheet=checkin]")).find((e) => e.checkVisibility()) ?? null
+  }, [open])
+
+  const finish = () => {
+    setConfirm(false)
+    setOpen(false)
+    closeSheet("checkin")
+  }
+  const retry = () => {
+    setLoadError(false)
+    setRequest((r) => r && { ...r, n: r.n + 1 })
+  }
+  const keepEditing = () => {
+    setConfirm(false)
+    if (!new URLSearchParams(window.location.search).has("checkin")) openSheet("checkin")
+  }
+
   // An invalid name keeps focus on the field, so the error under it is read out and fixable in place.
   const invalid = (message: string) => {
     setAddError(message)
     input.current?.focus()
   }
 
-  const start = () => {
-    setValues({ ...checkIn.entries })
-    setSaveError(false)
-    setAddError(null)
-    setLabel("")
-    setOpen(true)
-  }
-
-  // `?checkin=1` (Journal Insights' empty state, the history empty state) opens the sheet once.
-  const wantsOpen = params.get("checkin") === "1"
-  const [handled, setHandled] = React.useState(false)
-  if (wantsOpen !== handled) {
-    setHandled(wantsOpen)
-    if (wantsOpen) start()
-  }
-  React.useEffect(() => {
-    if (wantsOpen) router.replace(`${pathname}${withParam(params.toString(), "checkin", null)}`, { scroll: false })
-  }, [wantsOpen, router, pathname, params])
-
   const close = (next: boolean) => {
-    if (next) return setOpen(true)
+    if (next) return
     if (dirty && !saving) return setConfirm(true)
-    setOpen(false)
+    finish()
   }
 
   const save = async () => {
+    if (!data) return
     setSaving(true)
     setSaveError(false)
     try {
-      for (const [tag, value] of changedEntries(values, checkIn.entries)) {
-        const r = await saveJournalEntry({ day, tag, value })
+      for (const [tag, value] of changedEntries(values, data.checkIn.entries)) {
+        const r = await saveJournalEntry({ day: data.day, tag, value })
         if (!r.ok) throw new Error(r.error)
       }
-      setOpen(false)
+      finish()
       toast.success("Check-in saved")
     } catch {
       setSaveError(true)
@@ -137,49 +230,13 @@ export function CheckIn({ day, dayLabel, tags, checkIn }: CheckInProps) {
 
   return (
     <>
-      {/* The section above is headed "Check-in", so the card is titled by its day, as History's rows are (SYM2). */}
-      <SectionShell variant="card" title={dayLabel} fill>
-        {checkIn.done ? (
-          <div className="flex flex-1 flex-col gap-4">
-            {/* Status and the day's behaviours on one wrapping line. */}
-            <div className="flex flex-wrap items-center gap-2">
-              <StatusChip tone="optimal">Checked in</StatusChip>
-              {checkIn.yes.length > 0 && (
-                <ul className="flex flex-wrap gap-2" aria-label="Behaviours logged">
-                  {checkIn.yes.map((y) => (
-                    <li key={y.tag}>
-                      <Badge variant="secondary" className={TAG_CLASS}>
-                        {y.label}
-                      </Badge>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-            {/* Full width at the card's foot, as Check in and Home's card buttons are (SYM3). */}
-            <Button ref={trigger} variant="secondary" size="touch" className="mt-auto w-full" onClick={start}>
-              Edit check-in
-            </Button>
-          </div>
-        ) : (
-          <div className="flex flex-1 flex-col gap-4">
-            <p className="max-w-[65ch] text-[15px] leading-[22px] text-pretty text-foreground-secondary">
-              Log what you did today. Pulse compares it with tomorrow’s Recovery.
-            </p>
-            <Button ref={trigger} size="touch" className="mt-auto w-full" onClick={start}>
-              Check in
-            </Button>
-          </div>
-        )}
-      </SectionShell>
-
       <ResponsiveSheet
         open={open}
         onOpenChange={close}
         title="Check in"
         description={dayLabel}
         size="tall"
-        fallbackFocus={trigger}
+        fallbackFocus={fallback}
         footer={
           <>
             {saveError && (
@@ -187,13 +244,28 @@ export function CheckIn({ day, dayLabel, tags, checkIn }: CheckInProps) {
                 <AlertDescription className="text-recovery-red-text">Couldn’t save. Check your connection and try again.</AlertDescription>
               </Alert>
             )}
-            <Button size="sheet" onClick={save} disabled={saving} aria-live="polite">
+            <Button size="sheet" onClick={save} disabled={saving || !data} aria-live="polite">
               {saving ? "Saving…" : "Save check-in"}
             </Button>
           </>
         }
       >
-        {TAG_GROUPS.map((g) => {
+        {!data &&
+          (loadError ? (
+            <Alert role="alert" className="mt-2 border-0 bg-recovery-red/15 px-3 py-2">
+              <AlertDescription className="flex items-center justify-between gap-3 text-recovery-red-text">
+                Couldn’t load your check-in.
+                <Button variant="secondary" size="touch" onClick={retry}>
+                  Try again
+                </Button>
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <div role="status" aria-label="Loading" className="grid place-items-center py-16">
+              <LoaderCircle aria-hidden className="size-5 animate-spin text-muted-foreground motion-reduce:animate-none" strokeWidth={2} />
+            </div>
+          ))}
+        {data && TAG_GROUPS.map((g) => {
           const items = tags.filter((t) => t.group === g.key)
           if (!items.length && g.key !== "custom") return null
           return (
@@ -271,24 +343,21 @@ export function CheckIn({ day, dayLabel, tags, checkIn }: CheckInProps) {
         })}
       </ResponsiveSheet>
 
-      <Dialog open={confirm} onOpenChange={setConfirm}>
+      <Dialog open={confirm} onOpenChange={(o) => !o && keepEditing()}>
         <DialogContent showCloseButton={false} className="ring-1 ring-border">
           <DialogHeader>
             <DialogTitle>Discard changes?</DialogTitle>
             <DialogDescription>Your check-in for {dayLabel} isn’t saved.</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="secondary" size="touch" onClick={() => setConfirm(false)}>
+            <Button variant="secondary" size="touch" onClick={keepEditing}>
               Keep editing
             </Button>
             <Button
               variant="outline"
               size="touch"
               className="text-recovery-red-text"
-              onClick={() => {
-                setConfirm(false)
-                setOpen(false)
-              }}
+              onClick={finish}
             >
               Discard
             </Button>

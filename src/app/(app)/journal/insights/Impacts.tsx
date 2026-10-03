@@ -69,7 +69,6 @@ export function ImpactList({ vm }: { vm: JournalInsightsVM }) {
           setOpen(k)
           setLast(vm.items.find((i) => i.key === k) ?? null)
         }}
-        checkInHref="/journal?checkin=1"
         outcome={metricWord(vm.metric)}
       />
       <ResponsiveSheet open={!!current} onOpenChange={(o) => !o && setOpen(null)} title={item?.label ?? "Behaviour"}>

@@ -326,12 +326,12 @@ export const METRICS: KitEntry[] = [
     name: "DriverList",
     file: "src/components/metrics/DriverList.tsx",
     use: "Recovery's “What shaped it” and Journal Insights' behaviour impacts.",
-    props: ["variant: recovery | impact", "unit: pts | % | SD", "data: Metric<DriverItem[]>", "selectedKey, onSelect", "checkInHref, outcome"],
+    props: ["variant: recovery | impact", "unit: pts | % | SD", "data: Metric<DriverItem[]>", "selectedKey, onSelect", "outcome"],
     states: [
       { name: "recovery", node: <DriverList variant="recovery" unit="pts" data={fx.recoveryDrivers} /> },
       { name: "impact, provisional, selectable", node: <SelectableImpact /> },
       { name: "empty (recovery)", node: <DriverList variant="recovery" unit="pts" data={null} /> },
-      { name: "empty (impact): check in prompt", node: <DriverList variant="impact" unit="%" data={fx.ok([])} checkInHref="/journal" /> },
+      { name: "empty (impact): check in prompt", node: <DriverList variant="impact" unit="%" data={fx.ok([])} /> },
       {
         name: "every reason code",
         node: (
