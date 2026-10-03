@@ -4,7 +4,7 @@ import Mark from "../components/Mark.astro"
 import Wordmark from "../components/Wordmark.astro"
 import Icon from "../components/Icon.astro"
 import GitHubMark from "../components/GitHubMark.astro"
-import { REPO, SETUP_GUIDE, LICENSE_URL, SITE_NAME, UMAMI, CONTACT_EMAIL } from "../config"
+import { REPO, SETUP_GUIDE, LICENSE_URL, SITE_NAME, UMAMI, CONTACT_EMAIL, GOOGLE_SITE_VERIFICATION } from "../config"
 import { METRICS, metricPath } from "../data/metrics"
 import { COMPARISONS } from "../data/compare"
 import { siteGraph } from "../lib/schema"
@@ -50,6 +50,7 @@ const nav = [
     <meta name="keywords" content={keywords.join(", ")} />
     <meta name="robots" content={noindex ? "noindex, follow" : "index, follow, max-image-preview:large"} />
     <meta name="author" content="Pulse contributors" />
+    {GOOGLE_SITE_VERIFICATION && <meta name="google-site-verification" content={GOOGLE_SITE_VERIFICATION} />}
     <meta name="publisher" content={SITE_NAME} />
     <link rel="canonical" href={canonical} />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
