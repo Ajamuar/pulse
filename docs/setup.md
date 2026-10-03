@@ -83,10 +83,12 @@ docker compose logs -f pulse    # "[worker] started (source: google)"
 Build the image on the server itself (or with `--platform` for its architecture): the SQLite driver is a
 native module.
 
-The image is about 100 MB. One person's instance uses about 110–125 MB of RAM when idle and about 170 MB
+The image is about 100 MB. One person's instance uses about 100 MB of RAM when idle and about 150 MB
 while you browse, as `docker stats` reports it. The database grows by about 4 MB per month of data. The
-image sets `MALLOC_ARENA_MAX=2` and a small V8 heap (`NODE_OPTIONS` in the [`Dockerfile`](../Dockerfile)),
-and `compose.yaml` caps the container at 384 MB.
+image sets `MALLOC_ARENA_MAX=2` and sizes the V8 heap at 50% of the container's memory limit
+(`NODE_OPTIONS` in the [`Dockerfile`](../Dockerfile)). `compose.yaml` sets that limit to 384 MB, so the
+heap gets 192 MB; a full recompute of three years of data needs under 64 MB. If you raise `mem_limit`,
+the heap grows with it.
 
 ## 5. Put it on HTTPS
 

@@ -6,7 +6,7 @@ services:
     container_name: pulse
     restart: unless-stopped
     env_file: .env
-    # Uses ~110-180 MB; the limit is headroom for the first Google backfill.
+    # Uses ~100-150 MB. The V8 heap is 50% of this limit (Dockerfile), so raising it grows the heap too.
     mem_limit: 384m
     volumes:
       - pulse-data:/app/data

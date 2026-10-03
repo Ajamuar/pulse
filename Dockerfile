@@ -14,9 +14,10 @@ RUN pnpm build
 FROM node:24-slim
 WORKDIR /app
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0
-# Memory for a one-user instance: fewer glibc malloc arenas and a small V8 young generation cut RSS
-# after load from ~490 MB to ~230 MB (idle ~140 MB) at the same throughput. See docs/setup.md.
-ENV MALLOC_ARENA_MAX=2 NODE_OPTIONS="--max-old-space-size=128 --max-semi-space-size=2"
+# Memory: fewer glibc malloc arenas and a small V8 young generation keep RSS low (idle ~100 MB). The heap
+# cap scales with the container's memory limit (50% of compose's 384m = 192 MB); a full 3-year recompute
+# needs under 64 MB. Raise mem_limit and the heap follows. See docs/setup.md.
+ENV MALLOC_ARENA_MAX=2 NODE_OPTIONS="--max-old-space-size-percentage=50 --max-semi-space-size=2"
 COPY --from=build --chown=node:node /app/.next/standalone ./
 COPY --from=build --chown=node:node /app/.next/static ./.next/static
 COPY --from=build --chown=node:node /app/public ./public
