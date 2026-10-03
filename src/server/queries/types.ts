@@ -2,6 +2,7 @@
 // (src/lib/reasons.ts Metric, ZoneBars' ZoneRow, DriverList's DriverItem…), importing only types from the kit.
 // Conventions: instants are epoch **milliseconds** (as the kit's charts and cards take them), days are
 // local `YYYY-MM-DD`, Strain is on the reference app's 0–21 scale, and no number is ever NaN or ±Infinity.
+import type { FormatKey } from "@/lib/format";
 
 import type { ChipTone, GoodDirection, RecoveryBand as Band, StressLevel } from "@/lib/bands";
 import type { Metric, MetricTag, ReasonCode } from "@/lib/reasons";
@@ -38,6 +39,8 @@ export type KeyStat = {
   caption?: string;
   /** Detail route without `?d=`; U13 adds the day. */
   href?: string;
+  /** Overrides the format the unit implies (extra metrics: `src/lib/extraMetrics.ts`). */
+  format?: FormatKey;
 };
 
 export type ZoneRow = { zone: number; min: number; max: number | null; seconds: number };

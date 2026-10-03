@@ -1,5 +1,35 @@
 // View-model → kit-prop mappers shared by the half-A screens (Home, Recovery, Strain, Activity, Sleep).
-import { Activity, BatteryCharging, CalendarCheck, ChartNoAxesColumn, Droplet, Dumbbell, Footprints, Heart, HeartPulse, Hourglass, Moon, Thermometer, Wind, Zap } from "lucide-react"
+import {
+  Activity,
+  Armchair,
+  BatteryCharging,
+  Building2,
+  CalendarCheck,
+  ChartNoAxesColumn,
+  Droplet,
+  Droplets,
+  Dumbbell,
+  Flame,
+  Footprints,
+  GlassWater,
+  Heart,
+  HeartPulse,
+  Hourglass,
+  Moon,
+  Mountain,
+  Percent,
+  Route,
+  Syringe,
+  Thermometer,
+  ThermometerSun,
+  Timer,
+  Utensils,
+  Waves,
+  Weight,
+  Wheat,
+  Wind,
+  Zap,
+} from "lucide-react"
 import type { EnergySeries } from "@/components/charts/EnergyBankChart"
 import type { HrSeries } from "@/components/charts/IntradayHrChart"
 import type { TrendPoint } from "@/components/charts/TrendChart"
@@ -37,6 +67,26 @@ export const STAT_ICON: Record<string, React.ReactNode> = {
   consistency: <CalendarCheck />,
   efficiency: <ChartNoAxesColumn />,
   restorative: <BatteryCharging />,
+  // Extra metrics (src/lib/extraMetrics.ts) and the body measurements.
+  distance: <Route />,
+  floors: <Building2 />,
+  elevation: <Mountain />,
+  active_minutes: <Timer />,
+  light_minutes: <Timer />,
+  azm: <HeartPulse />,
+  active_calories: <Flame />,
+  sedentary_minutes: <Armchair />,
+  avg_hr: <Heart />,
+  water: <GlassWater />,
+  calories_in: <Utensils />,
+  protein: <Utensils />,
+  carbs: <Wheat />,
+  fat: <Droplets />,
+  glucose: <Syringe />,
+  core_temp: <ThermometerSun />,
+  swim_strokes: <Waves />,
+  weight: <Weight />,
+  body_fat: <Percent />,
 }
 
 /**
@@ -49,7 +99,7 @@ export function statProps(s: KeyStat, link?: { d: string; today: string }, icons
     icon: icons ? STAT_ICON[s.key] : undefined,
     metric: s.metric,
     unit: s.unit === "min" ? undefined : s.unit,
-    format: s.unit ? (FORMAT_BY_UNIT[s.unit] ?? "decimal1") : "grouped",
+    format: s.format ?? (s.unit ? (FORMAT_BY_UNIT[s.unit] ?? "decimal1") : "grouped"),
     average: s.average,
     sd: s.sd,
     direction: s.direction,
