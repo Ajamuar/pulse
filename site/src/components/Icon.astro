@@ -1,0 +1,29 @@
+---
+// One lucide icon, inlined at build time from lucide-static (the app's icon set, at the app's lucide version).
+// Decorative by default: the text beside it carries the meaning.
+import { readFileSync } from "node:fs"
+import { join } from "node:path"
+
+interface Props {
+  name: string
+  class?: string
+  /** 1.75 beside regular text, 2 beside semibold (the app's own pairing). */
+  stroke?: number
+}
+const { name, class: className, stroke = 1.75 } = Astro.props
+// Read from the site's node_modules (builds run in site/), not bundled: only the icons a page uses reach its HTML.
+const file = readFileSync(join(process.cwd(), "node_modules/lucide-static/icons", `${name}.svg`), "utf8")
+const inner = /<svg[^>]*>([\s\S]*)<\/svg>/.exec(file)![1].replace(/\s+/g, " ").trim()
+---
+
+<svg
+  class:list={["icon", className]}
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width={stroke}
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  aria-hidden="true"
+  set:html={inner}
+/>

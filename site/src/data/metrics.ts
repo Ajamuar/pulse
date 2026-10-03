@@ -1,6 +1,6 @@
 // One page per metric under /metrics/<slug>/. The method text is the app's own "How Pulse works" content
 // (src/app/(app)/more/how-it-works/content.ts), so the site and the app say the same thing and every number is
-// the code's. This file adds what only the site needs: a URL slug, SEO copy, a band scale, a screenshot,
+// the code's. This file adds what only the site needs: a URL slug, SEO copy, a band scale, an app screen,
 // sources and related links. A new entry in SCORE_DOCS gets a page with sensible defaults and no edit here.
 import { SCORE_DOCS, type ScoreDoc } from "../../../src/app/(app)/more/how-it-works/content"
 

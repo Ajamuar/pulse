@@ -1,228 +1,264 @@
 @import "@fontsource-variable/figtree/wght.css";
+@import "@fontsource/barlow/latin-500.css";
 @import "@fontsource/barlow/latin-600.css";
 @import "@fontsource/barlow/latin-700.css";
 
-/* Tokens are the app's (src/app/globals.css). Dark only, like the app. */
-:root {
-  color-scheme: dark;
-  --background-top: #262e33;
-  --background-mid: #1b2024;
-  --background: #0f1113;
-  --foreground: #ffffff;
-  --foreground-secondary: #babac0;
-  --muted-foreground: #999ea3;
-  --card: #2b2f32;
-  --card-top: #2f3337;
-  --sheet: #14181c;
-  --inset: #111619;
-  --border: rgb(255 255 255 / 0.1);
-  --card-edge: rgb(255 255 255 / 0.06);
+/* The site's own rules sit in the `site` layer, below `kit` (the app screens, src/kit/kit.css), so the app's
+   utilities win inside a screen while the site's element rules (headings, links, images) stay outside it. */
+@layer site, kit;
 
-  --recovery-green: #19ec06;
-  --recovery-yellow: #ffde00;
-  --recovery-red: #ff0026;
-  --recovery-red-text: #ff5a6a;
-  --strain: #0093e7;
-  --strain-text: #1fa0f0;
-  --strain-deep: #0d48be;
-  --sleep: #7ba1bb;
-  --sleep-deep: #39597b;
-  --optimal: #00f19f;
-  --warning: #ffa722;
-  --stress-low: #67aee6;
-  --stress-medium: #00f19f;
-  --stress-high: #ffa722;
-  --coach: #7095fe;
+@layer site {
+  /* Tokens are the app's (src/app/globals.css). Dark only, like the app. */
+  :root {
+    color-scheme: dark;
+    --background-top: #262e33;
+    --background-mid: #1b2024;
+    --background: #0f1113;
+    --foreground: #ffffff;
+    --foreground-secondary: #babac0;
+    --muted-foreground: #999ea3;
+    --card: #2b2f32;
+    --card-top: #2f3337;
+    --sheet: #14181c;
+    --inset: #111619;
+    --border: rgb(255 255 255 / 0.1);
+    --card-edge: rgb(255 255 255 / 0.06);
 
-  --font-sans: "Figtree Variable", ui-sans-serif, system-ui, sans-serif;
-  --font-numeric: "Barlow", var(--font-sans);
-  --font-code: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --recovery-green: #19ec06;
+    --recovery-yellow: #ffde00;
+    --recovery-red: #ff0026;
+    --recovery-red-text: #ff5a6a;
+    --strain: #0093e7;
+    --strain-text: #1fa0f0;
+    --strain-deep: #0d48be;
+    --sleep: #7ba1bb;
+    --sleep-deep: #39597b;
+    --optimal: #00f19f;
+    --warning: #ffa722;
+    --stress-low: #67aee6;
+    --stress-medium: #00f19f;
+    --stress-high: #ffa722;
+    --coach: #7095fe;
 
-  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+    --font-sans: "Figtree Variable", ui-sans-serif, system-ui, sans-serif;
+    --font-numeric: "Barlow", var(--font-sans);
+    --font-code: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
-  --page: 1180px;
-  --gutter: clamp(16px, 4vw, 40px);
-  --radius-card: 16px;
-}
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-standard: cubic-bezier(0.2, 0, 0, 1);
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
+    --page: 1180px;
+    --gutter: clamp(16px, 4vw, 40px);
+    --radius-card: 16px;
 
-html {
-  -webkit-text-size-adjust: 100%;
-  scroll-padding-top: 88px;
-}
-
-body {
-  margin: 0;
-  min-height: 100dvh;
-  background: linear-gradient(180deg, var(--background-top) 0, var(--background-mid) 340px, var(--background) 900px) no-repeat,
-    var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans);
-  font-size: 1.0625rem;
-  line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
-}
-
-::selection {
-  background: rgb(0 241 159 / 0.28);
-  color: #fff;
-}
-
-h1,
-h2,
-h3 {
-  margin: 0;
-  font-weight: 650;
-  line-height: 1.1;
-  letter-spacing: -0.025em;
-  text-wrap: balance;
-}
-
-p,
-li,
-dd {
-  text-wrap: pretty;
-}
-
-p {
-  margin: 0;
-}
-
-a {
-  color: inherit;
-  text-decoration-color: rgb(255 255 255 / 0.35);
-  text-decoration-thickness: 1px;
-  text-underline-offset: 0.2em;
-  transition: text-decoration-color 150ms var(--ease-standard), color 150ms var(--ease-standard);
-}
-
-a:hover {
-  text-decoration-color: currentColor;
-}
-
-:focus-visible {
-  outline: 2px solid var(--optimal);
-  outline-offset: 3px;
-  border-radius: 4px;
-}
-
-img {
-  display: block;
-  max-width: 100%;
-  height: auto;
-}
-
-code,
-pre {
-  font-family: var(--font-code);
-  font-size: 0.875em;
-}
-
-:not(pre) > code {
-  padding: 0.1em 0.35em;
-  border-radius: 6px;
-  background: rgb(255 255 255 / 0.07);
-}
-
-.num {
-  font-family: var(--font-numeric);
-  font-variant-numeric: tabular-nums;
-}
-
-.wrap {
-  width: min(100% - 2 * var(--gutter), var(--page));
-  margin-inline: auto;
-}
-
-.prose {
-  max-width: 68ch;
-  color: var(--foreground-secondary);
-}
-
-.prose p + p {
-  margin-top: 1em;
-}
-
-.prose strong {
-  color: var(--foreground);
-  font-weight: 600;
-}
-
-/* Screenshots carry their own frame, margin and shadow (site/scripts/shots.mjs). */
-.shot {
-  width: 100%;
-}
-
-/* Pages cross-fade into each other where the browser supports it. */
-@media (prefers-reduced-motion: no-preference) {
-  @view-transition {
-    navigation: auto;
+    /* Film grain: white specks at a few percent, so flat dark areas read as a material, not a void. */
+    --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   }
-}
 
-.button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5em;
-  min-height: 48px;
-  padding: 0 22px;
-  border-radius: 12px;
-  font-weight: 600;
-  font-size: 1rem;
-  text-decoration: none;
-  white-space: nowrap;
-  transition-property: scale, background-color, box-shadow;
-  transition-duration: 150ms;
-  transition-timing-function: var(--ease-standard);
-}
-
-.button:active {
-  scale: 0.96;
-}
-
-.button-primary {
-  background: #fff;
-  color: var(--background);
-}
-
-.button-primary:hover {
-  background: #e6edf2;
-}
-
-.button-quiet {
-  color: var(--foreground);
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.18);
-}
-
-.button-quiet:hover {
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.4);
-}
-
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
-@media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    animation-delay: 0s !important;
-    transition-duration: 0.01ms !important;
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-padding-top: 88px;
+  }
+
+  /* The ground, in four quiet layers (never more than a few percent of colour, so text contrast holds):
+     1. the app's slate top light, scrolling with the page;
+     2. a teal and a blue glow under the top of every page, in the mark's two colours;
+     3. a vignette and a fine grain, fixed to the window (body::before), over those and under all content;
+     4. per-section glows and tonal bands, in the pages' own styles. */
+  /* 1 and 2 sit on the root, so the body's fixed layer (z-index -1) paints over them and under everything else. */
+  html {
+    /* Sized explicitly: on the root, a layer's box is otherwise the window, and its edge shows as a seam. */
+    background:
+      radial-gradient(42rem 26rem at 12% 4rem, rgb(0 241 159 / 0.07), transparent 70%) 0 0 / 100% 1100px no-repeat,
+      radial-gradient(56rem 34rem at 82% 10rem, rgb(0 147 231 / 0.1), transparent 72%) 0 0 / 100% 1100px no-repeat,
+      linear-gradient(180deg, var(--background-top) 0, var(--background-mid) 360px, var(--background) 960px) 0 0 / 100% 1100px no-repeat,
+      var(--background);
+  }
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-size: 1.0625rem;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      var(--grain) 0 0 / 180px 180px,
+      radial-gradient(130% 90% at 50% 30%, transparent 55%, rgb(0 0 0 / 0.42) 100%);
+  }
+
+  ::selection {
+    background: rgb(0 241 159 / 0.28);
+    color: #fff;
+  }
+
+  h1,
+  h2,
+  h3 {
+    margin: 0;
+    font-weight: 650;
+    line-height: 1.1;
+    letter-spacing: -0.025em;
+    text-wrap: balance;
+  }
+
+  p,
+  li,
+  dd {
+    text-wrap: pretty;
+  }
+
+  p {
+    margin: 0;
+  }
+
+  a {
+    color: inherit;
+    text-decoration-color: rgb(255 255 255 / 0.35);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.2em;
+    transition: text-decoration-color 150ms var(--ease-standard), color 150ms var(--ease-standard);
+  }
+
+  a:hover {
+    text-decoration-color: currentColor;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--optimal);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+  }
+
+  code,
+  pre {
+    font-family: var(--font-code);
+    font-size: 0.875em;
+  }
+
+  :not(pre) > code {
+    padding: 0.1em 0.35em;
+    border-radius: 6px;
+    background: rgb(255 255 255 / 0.07);
+  }
+
+  .num {
+    font-family: var(--font-numeric);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .wrap {
+    width: min(100% - 2 * var(--gutter), var(--page));
+    margin-inline: auto;
+  }
+
+  .prose {
+    max-width: 68ch;
+    color: var(--foreground-secondary);
+  }
+
+  .prose p + p {
+    margin-top: 1em;
+  }
+
+  .prose strong {
+    color: var(--foreground);
+    font-weight: 600;
+  }
+
+  /* Pages cross-fade into each other where the browser supports it. */
+  @media (prefers-reduced-motion: no-preference) {
+    @view-transition {
+      navigation: auto;
+    }
+  }
+
+  .button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5em;
+    min-height: 48px;
+    padding: 0 22px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 1rem;
+    text-decoration: none;
+    white-space: nowrap;
+    transition-property: scale, background-color, box-shadow;
+    transition-duration: 150ms;
+    transition-timing-function: var(--ease-standard);
+  }
+
+  /* An icon leads the label: 18 px, a little lifted so it sits on the text's optical centre. */
+  .button .icon {
+    flex: none;
+    width: 18px;
+    height: 18px;
+    margin-left: -2px;
+  }
+
+  .button:active {
+    scale: 0.96;
+  }
+
+  .button-primary {
+    background: #fff;
+    color: var(--background);
+  }
+
+  .button-primary:hover {
+    background: #e6edf2;
+  }
+
+  .button-quiet {
+    color: var(--foreground);
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.18);
+  }
+
+  .button-quiet:hover {
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.4);
+  }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      animation-delay: 0s !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }

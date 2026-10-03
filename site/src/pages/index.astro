@@ -1,12 +1,15 @@
 ---
 import Base from "../layouts/Base.astro"
 import Faq from "../components/Faq.astro"
-import Screenshot from "../components/Screenshot.astro"
+import Device from "../components/Device.astro"
+import Icon from "../components/Icon.astro"
+import GitHubMark from "../components/GitHubMark.astro"
 import { METRICS, metricPath, metricByAppSlug } from "../data/metrics"
 import { COMPARISONS } from "../data/compare"
 import { REPO, SETUP_GUIDE, LICENSE_URL, CONTACT_EMAIL } from "../config"
 import { faqPage, softwareApp } from "../lib/schema"
 import type { Shot } from "../data/metrics"
+import type { Part } from "../lib/screens"
 
 const title = "Pulse: recovery and strain for Fitbit Air, self-hosted"
 const description =
@@ -27,11 +30,11 @@ const href = (appSlug: string) => {
   return m ? metricPath(m) : "/metrics/"
 }
 
-// The home screen's three dials, with example values. `max` is the dial's full scale.
-const dials = [
-  { name: "Sleep", value: 86, max: 100, unit: "%", color: "var(--sleep)", line: "How well last night's sleep met your need.", href: href("sleep") },
-  { name: "Recovery", value: 74, max: 100, unit: "%", color: "var(--recovery-green)", line: "How ready your body is to take on strain today.", href: href("recovery") },
-  { name: "Strain", value: 12.4, max: 21, unit: "", color: "var(--strain)", line: "The day's cardiovascular load, from 0 to 21.", href: href("strain") },
+// The home screen's three dials: the app's own large dials from the demo, each with a line and its metric page.
+const dials: { part: Part; name: string; line: string; href: string }[] = [
+  { part: "dial-sleep", name: "Sleep", line: "How well last night's sleep met your need.", href: href("sleep") },
+  { part: "dial-recovery", name: "Recovery", line: "How ready your body is to take on strain today.", href: href("recovery") },
+  { part: "dial-strain", name: "Strain", line: "The day's cardiovascular load, from 0 to 21.", href: href("strain") },
 ]
 
 const strip: { shot: Shot; name: string; line: string }[] = [
@@ -42,34 +45,36 @@ const strip: { shot: Shot; name: string; line: string }[] = [
   { shot: "phone-journal", name: "Journal", line: "Log water, food, weight and mood." },
 ]
 
-const story: { shot: Shot; name: string; text: string }[] = [
+const story: { shot: Shot; name: string; icon: string; text: string }[] = [
   {
     shot: "laptop-dashboard-editor",
     name: "My Dashboard",
+    icon: "layout-dashboard",
     text: "Choose which metrics sit on Home and in what order: heart rate variability first and steps last, or the other way round.",
   },
-  { shot: "laptop-trends", name: "Trends", text: "Recovery, sleep, activity and body metrics by week, month, six months or year, each with averages to compare against." },
+  { shot: "laptop-trends", name: "Trends", icon: "chart-column", text: "Recovery, sleep, activity and body metrics by week, month, six months or year, each with averages to compare against." },
   {
     shot: "laptop-health-monitor",
     name: "Health Monitor",
+    icon: "heart-pulse",
     text: "Last night's vitals against your normal range, ECG readings and irregular rhythm notifications, weight and body fat.",
   },
-  { shot: "laptop-journal", name: "Journal", text: "Log your day, check in each evening, and see which habits move the next morning's Recovery." },
+  { shot: "laptop-journal", name: "Journal", icon: "notebook-pen", text: "Log your day, check in each evening, and see which habits move the next morning's Recovery." },
 ]
 
 const flow = [
-  { name: "Fitbit Air", detail: "Records heart rate, sleep and nightly vitals, and syncs to your phone." },
-  { name: "Google Health app", detail: "Holds the band's data in your Google account, as it always has." },
-  { name: "Google Health API", detail: "Pulse reads it with an OAuth client from your own Google Cloud project." },
-  { name: "Your server", detail: "One Docker container scores every day and keeps the history in SQLite." },
-  { name: "Your browser", detail: "Open it on your phone or laptop, and install it like an app." },
+  { name: "Fitbit Air", icon: "watch", detail: "Records heart rate, sleep and nightly vitals, and syncs to your phone." },
+  { name: "Google Health app", icon: "smartphone", detail: "Holds the band's data in your Google account, as it always has." },
+  { name: "Google Health API", icon: "key-round", detail: "Pulse reads it with an OAuth client from your own Google Cloud project." },
+  { name: "Your server", icon: "server", detail: "One Docker container scores every day and keeps the history in SQLite." },
+  { name: "Your browser", icon: "app-window", detail: "Open it on your phone or laptop, and install it like an app." },
 ]
 
 const facts = [
-  { t: "No Pulse account", d: "You sign in with your own Google account, to your own instance. There is no Pulse service to sign up for." },
-  { t: "No analytics in the app", d: "The app talks to Google's sign-in and Health API, and nothing else." },
-  { t: "One owner per instance", d: "Only the Google account you name can sign in. Nobody else's data is on your server, and yours is on nobody else's." },
-  { t: "Leave whenever you like", d: "Disconnecting removes Pulse's access in your Google account. The database is one SQLite file you can back up or delete." },
+  { t: "No Pulse account", icon: "user-round-x", d: "You sign in with your own Google account, to your own instance. There is no Pulse service to sign up for." },
+  { t: "No analytics in the app", icon: "eye-off", d: "The app talks to Google's sign-in and Health API, and nothing else." },
+  { t: "One owner per instance", icon: "lock-keyhole", d: "Only the Google account you name can sign in. Nobody else's data is on your server, and yours is on nobody else's." },
+  { t: "Leave whenever you like", icon: "log-out", d: "Disconnecting removes Pulse's access in your Google account. The database is one SQLite file you can back up or delete." },
 ]
 
 const faq = [
@@ -112,7 +117,6 @@ const faq = [
 ]
 
 const schema = [softwareApp(Astro.site!, description), faqPage(faq)]
-const R = 88
 ---
 
 <Base title={title} description={description} schema={schema} keywords={keywords}>
@@ -127,15 +131,15 @@ const R = 88
         <p class="sub">Open source and self-hosted. Pulse turns your Google Health data into daily scores, on a server you own.</p>
         <div class="actions">
           <a class="button button-primary" href={SETUP_GUIDE}>Self-host Pulse</a>
-          <a class="button button-quiet" href={REPO}>View source</a>
+          <a class="button button-quiet" href={REPO}><GitHubMark class="b-icon" />View source</a>
         </div>
       </div>
       <div class="stage">
         <div class="layer layer-laptop">
-          <Screenshot shot="laptop-home" class="dev dev-laptop" priority sizes="(max-width: 960px) 100vw, 720px" />
+          <Device shot="laptop-home" class="dev dev-laptop" />
         </div>
         <div class="layer layer-phone">
-          <Screenshot shot="phone-recovery" class="dev dev-phone" priority sizes="(max-width: 960px) 44vw, 240px" />
+          <Device shot="phone-recovery" class="dev dev-phone" />
         </div>
       </div>
     </div>
@@ -148,23 +152,8 @@ const R = 88
       {
         dials.map((d) => (
           <li>
-            <a class="dial" href={d.href} style={`--c:${d.color}`}>
-              <span class="ring">
-                <svg viewBox="0 0 200 200" aria-hidden="true">
-                  <circle class="track" cx="100" cy="100" r={R} pathLength="100" />
-                  <circle class="arc" cx="100" cy="100" r={R} pathLength="100" style={`--p:${((d.value / d.max) * 100).toFixed(1)}`} />
-                </svg>
-                <span class="value num">
-                  <span class="visually-hidden">
-                    {d.value}
-                    {d.unit}
-                  </span>
-                  <span aria-hidden="true" data-count={d.value}>
-                    {d.value}
-                  </span>
-                  {d.unit && <small aria-hidden="true">{d.unit}</small>}
-                </span>
-              </span>
+            <a class="dial" href={d.href}>
+              <Device shot={d.part} class="ring" />
               <span class="d-name">{d.name}</span>
               <span class="d-line">{d.line}</span>
             </a>
@@ -172,7 +161,7 @@ const R = 88
         ))
       }
     </ul>
-    <p class="note">Example values. Each score has its own page with its inputs, weights and limits.</p>
+    <p class="note">The app's own dials, with demo values. Each score has its own page with its inputs, weights and limits.</p>
   </section>
 
   <section class="sec screens" aria-labelledby="screens-h">
@@ -186,7 +175,7 @@ const R = 88
           <li>
             <figure>
               <div class="drift">
-                <Screenshot shot={s.shot} sizes="(max-width: 960px) min(62vw, 260px), 220px" />
+                <Device shot={s.shot} />
               </div>
               <figcaption>
                 <strong>{s.name}</strong>
@@ -205,16 +194,18 @@ const R = 88
       <ol class="steps-list">
         {
           story.map((s, i) => (
-            <li class="step" data-step={i}>
-              <h3>{s.name}</h3>
+            <li class="step" data-step={i} style={`--i:${i}`}>
+              <h3>
+                <Icon name={s.icon} class="s-icon" stroke={2} />
+                {s.name}
+              </h3>
               <p>{s.text}</p>
-              <Screenshot shot={s.shot} class="inline-shot" sizes="100vw" />
             </li>
           ))
         }
       </ol>
       <div class="screen-stack" aria-hidden="true" data-active="0">
-        {story.map((s, i) => <Screenshot shot={s.shot} class={`stack-shot s${i}`} sizes="760px" />)}
+        {story.map((s, i) => <Device shot={s.shot} class={`stack-shot s${i}`} />)}
       </div>
     </div>
   </section>
@@ -251,6 +242,9 @@ const R = 88
         {
           flow.map((f) => (
             <li>
+              <span class="f-node">
+                <Icon name={f.icon} class="f-icon" />
+              </span>
               <span class="f-name">{f.name}</span>
               <span class="f-detail">{f.detail}</span>
             </li>
@@ -267,7 +261,10 @@ const R = 88
         {
           facts.map((f) => (
             <div>
-              <dt>{f.t}</dt>
+              <dt>
+                <Icon name={f.icon} class="fact-icon" stroke={2} />
+                {f.t}
+              </dt>
               <dd>{f.d}</dd>
             </div>
           ))
@@ -281,7 +278,7 @@ const R = 88
     <p class="lede">Try the demo on your laptop in a few commands, then point it at your own data. You need Node 24 and pnpm for the demo, Docker for a server.</p>
     <div class="steps">
       <div class="step-card">
-        <h3>Try the demo</h3>
+        <h3><Icon name="laptop" class="c-icon" stroke={2} />Try the demo</h3>
         <pre><code>git clone https://github.com/adityaongit/pulse.git
 cd pulse
 pnpm install
@@ -290,14 +287,14 @@ pnpm dev</code></pre>
         <p>Open localhost:3000 and choose Continue with demo data.</p>
       </div>
       <div class="step-card">
-        <h3>Run it on a server</h3>
+        <h3><Icon name="server" class="c-icon" stroke={2} />Run it on a server</h3>
         <pre><code># in .env: Google OAuth client, OWNER_EMAIL, TZ
 docker compose up -d --build
 docker compose logs -f pulse</code></pre>
         <p>Put a tunnel or HTTPS reverse proxy in front, then open it on your phone.</p>
       </div>
     </div>
-    <a class="button button-primary guide" href={SETUP_GUIDE}>Read the setup guide</a>
+    <a class="button button-primary guide" href={SETUP_GUIDE}><Icon name="book-open" class="b-icon" stroke={2} />Read the setup guide</a>
   </section>
 
   <section class="wrap sec about" aria-labelledby="about-h">
@@ -414,6 +411,18 @@ docker compose logs -f pulse</code></pre>
     overflow-x: clip;
     padding: clamp(32px, 5vw, 72px) 0 150px;
   }
+  /* The devices stand in a pool of strain blue, with a thin teal rim light from the left. */
+  .stage::before {
+    content: "";
+    position: absolute;
+    inset: -18% -20% -12% -10%;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(48% 46% at 58% 46%, rgb(0 147 231 / 0.16), transparent 72%),
+      radial-gradient(30% 34% at 20% 70%, rgb(0 241 159 / 0.08), transparent 70%);
+  }
+
   .hero-grid {
     position: relative;
     display: grid;
@@ -496,6 +505,7 @@ docker compose logs -f pulse</code></pre>
 
   /* Dials */
   .dial-list {
+    position: relative;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 24px;
@@ -518,48 +528,35 @@ docker compose logs -f pulse</code></pre>
   .dial:hover {
     background-color: rgb(255 255 255 / 0.03);
   }
-  .ring {
-    position: relative;
-    display: grid;
-    place-items: center;
+  /* Each dial sits on a faint wash of its own colour. */
+  .dial-list::before {
+    content: "";
+    position: absolute;
+    inset: -8% 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(26% 60% at 17% 40%, rgb(123 161 187 / 0.09), transparent 70%),
+      radial-gradient(26% 60% at 50% 40%, rgb(255 222 0 / 0.06), transparent 70%),
+      radial-gradient(26% 60% at 83% 40%, rgb(0 147 231 / 0.1), transparent 70%);
+  }
+  /* The app's large dial, scaled down from its 256 px. */
+  .dial :global(.ring) {
     width: min(100%, 220px);
-    aspect-ratio: 1;
     margin-bottom: 14px;
   }
-  .ring svg {
-    position: absolute;
-    inset: 0;
-    rotate: -90deg;
+  /* The fill draws round from the top: a conic mask over the app's arc, opened by `.in` (script). */
+  @property --sweep {
+    syntax: "<angle>";
+    inherits: false;
+    initial-value: 360deg;
   }
-  .ring circle {
-    fill: none;
-    stroke-width: 12;
+  .dial :global([data-dial-part="ring"] > [data-slot="chart"]:nth-child(2)) {
+    mask-image: conic-gradient(#000 var(--sweep), transparent 0);
+    transition: --sweep 1400ms var(--ease-out-expo);
   }
-  .track {
-    stroke: rgb(255 255 255 / 0.09);
-  }
-  .arc {
-    stroke: var(--c);
-    stroke-linecap: round;
-    stroke-dasharray: 100;
-    stroke-dashoffset: calc(100 - var(--p));
-    transition: stroke-dashoffset 1400ms var(--ease-out-expo);
-  }
-  :global(html.js) .dials:not(.in) .arc {
-    stroke-dashoffset: 100;
-  }
-  .value {
-    position: relative;
-    font-size: clamp(2.75rem, 5vw, 3.75rem);
-    font-weight: 700;
-    letter-spacing: -0.02em;
-    line-height: 1;
-  }
-  .value small {
-    margin-left: 2px;
-    font-size: 0.42em;
-    font-weight: 600;
-    color: var(--foreground-secondary);
+  :global(html.js) .dials:not(.in) .dial :global([data-dial-part="ring"] > [data-slot="chart"]:nth-child(2)) {
+    --sweep: 0deg;
   }
   .d-name {
     font-weight: 650;
@@ -568,7 +565,7 @@ docker compose logs -f pulse</code></pre>
     transition: color 150ms var(--ease-standard);
   }
   .dial:hover .d-name {
-    color: var(--c);
+    color: var(--optimal);
   }
   .d-line {
     max-width: 28ch;
@@ -585,7 +582,11 @@ docker compose logs -f pulse</code></pre>
   /* Phone strip */
   .screens {
     padding: clamp(72px, 9vw, 120px) 0;
-    background: radial-gradient(80% 60% at 75% 0%, #14302d 0%, transparent 70%), var(--sheet);
+    /* A darker band, see-through so the grain carries on, lit teal from the top right and blue from the bottom left. */
+    background:
+      radial-gradient(60% 50% at 80% 0%, rgb(0 241 159 / 0.09), transparent 70%),
+      radial-gradient(50% 45% at 10% 100%, rgb(0 147 231 / 0.08), transparent 70%),
+      rgb(10 12 14 / 0.55);
     box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06), inset 0 -1px 0 rgb(255 255 255 / 0.06);
   }
   .strip {
@@ -640,15 +641,21 @@ docker compose logs -f pulse</code></pre>
     opacity: 0.4;
   }
   .step h3 {
+    display: flex;
+    align-items: center;
+    gap: 12px;
     font-size: 1.5rem;
     letter-spacing: -0.02em;
+  }
+  .step :global(.s-icon) {
+    width: 22px;
+    height: 22px;
+    flex: none;
+    color: var(--optimal);
   }
   .step p {
     max-width: 36ch;
     color: var(--foreground-secondary);
-  }
-  .step :global(.inline-shot) {
-    display: none;
   }
   .story-grid:has(.screen-stack[data-active="0"]) .step[data-step="0"],
   .story-grid:has(.screen-stack[data-active="1"]) .step[data-step="1"],
@@ -656,18 +663,26 @@ docker compose logs -f pulse</code></pre>
   .story-grid:has(.screen-stack[data-active="3"]) .step[data-step="3"] {
     opacity: 1;
   }
-  /* Centred in the viewport below the header: the framed laptop is 0.671 of its width tall. */
+  /* Centred in the viewport below the header: the laptop is 0.618 of its width tall, its column 0.69 of the row. */
   .screen-stack {
     position: sticky;
-    top: max(80px, calc(50vh + 32px - 0.232 * (min(100vw - 80px, 1180px) - 48px)));
+    top: max(80px, calc(50vh + 32px - 0.213 * (min(100vw - 2 * var(--gutter), 1180px) - 48px)));
     display: grid;
     align-self: start;
   }
-  .screen-stack > :global(picture) {
+  /* A blue pool under the laptop. */
+  .screen-stack::before {
+    content: "";
+    grid-area: 1 / 1;
+    margin: -12% 0;
+    z-index: -1;
+    pointer-events: none;
+    background: radial-gradient(50% 50% at 50% 50%, rgb(0 147 231 / 0.12), transparent 70%);
+  }
+  .screen-stack > :global(.device) {
     grid-area: 1 / 1;
   }
   .screen-stack :global(.stack-shot) {
-    width: 100%;
     opacity: 0;
     scale: 0.985;
     filter: blur(6px);
@@ -730,7 +745,7 @@ docker compose logs -f pulse</code></pre>
   /* Flow */
   .flow-body {
     position: relative;
-    margin-top: 48px;
+    margin-top: 68px;
   }
   .flow-track {
     position: absolute;
@@ -754,21 +769,32 @@ docker compose logs -f pulse</code></pre>
     display: grid;
     align-content: start;
     gap: 8px;
-    padding: 28px 24px 0 0;
+    padding: 40px 24px 0 0;
   }
-  .flow-list li::after {
-    content: "";
+  /* Each step is a node on the track: an icon in a ring, the server (where Pulse runs) filled. */
+  .f-node {
     position: absolute;
-    top: -5px;
+    top: -20px;
     left: 0;
-    width: 12px;
-    height: 12px;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
     background: var(--background);
-    box-shadow: inset 0 0 0 2px var(--optimal);
+    box-shadow:
+      inset 0 0 0 1.5px rgb(0 241 159 / 0.55),
+      0 0 0 6px var(--background);
+    color: var(--optimal);
   }
-  .flow-list li:nth-child(4)::after {
+  .flow-list li:nth-child(4) .f-node {
     background: var(--optimal);
+    box-shadow: 0 0 0 6px var(--background), 0 0 24px rgb(0 241 159 / 0.35);
+    color: var(--background);
+  }
+  .f-node :global(.f-icon) {
+    width: 20px;
+    height: 20px;
   }
   .f-name {
     font-weight: 600;
@@ -804,7 +830,16 @@ docker compose logs -f pulse</code></pre>
     box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.1);
   }
   .facts dt {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     font-weight: 600;
+  }
+  .facts :global(.fact-icon) {
+    width: 20px;
+    height: 20px;
+    flex: none;
+    color: var(--optimal);
   }
   .facts dd {
     margin: 6px 0 0;
@@ -823,12 +858,21 @@ docker compose logs -f pulse</code></pre>
   .step-card {
     padding: 28px;
     border-radius: 20px;
-    background: var(--inset);
+    background: linear-gradient(180deg, rgb(255 255 255 / 0.025), transparent 40%), rgb(17 22 25 / 0.82);
     box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.07);
   }
   .step-card h3 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     font-size: 1.125rem;
     letter-spacing: -0.01em;
+  }
+  .step-card :global(.c-icon) {
+    width: 20px;
+    height: 20px;
+    flex: none;
+    color: var(--foreground-secondary);
   }
   pre {
     margin: 16px 0 0;
@@ -967,7 +1011,7 @@ docker compose logs -f pulse</code></pre>
       }
       /* The phones drift in at two speeds and settle by the time the strip is half way up the screen. At rest
          they sit at exactly 0: a fractional translate on a moving layer is drawn with cheaper image filtering,
-         which blurs the small UI text in the screenshots. */
+         which blurs the small UI text in the screens. */
       .drift {
         animation: drift linear both;
         animation-timeline: view();
@@ -1036,20 +1080,43 @@ docker compose logs -f pulse</code></pre>
       grid-template-columns: minmax(0, 1fr);
       gap: 0;
     }
+    /* One column: each step, then its laptop. The list and the stack open up (display: contents) so their
+       items interleave by order, and the laptops are not drawn twice. */
+    .story-grid {
+      display: flex;
+      flex-direction: column;
+    }
+    .steps-list,
     .screen-stack {
-      display: none;
+      display: contents;
+    }
+    .screen-stack::before {
+      content: none;
     }
     .step,
     :global(html.js) .step {
+      order: calc(var(--i) * 2);
       min-height: 0;
-      padding: 32px 0 0;
+      padding: 40px 0 0;
       opacity: 1;
     }
-    .step :global(.inline-shot) {
-      display: block;
-      width: calc(100% + 24px);
-      max-width: none;
-      margin: 8px -12px 0;
+    .screen-stack :global(.stack-shot) {
+      margin-top: 20px;
+      opacity: 1;
+      scale: 1;
+      filter: none;
+    }
+    .screen-stack :global(.s0) {
+      order: 1;
+    }
+    .screen-stack :global(.s1) {
+      order: 3;
+    }
+    .screen-stack :global(.s2) {
+      order: 5;
+    }
+    .screen-stack :global(.s3) {
+      order: 7;
     }
     .metric-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1057,7 +1124,7 @@ docker compose logs -f pulse</code></pre>
     .flow-track {
       top: 6px;
       bottom: 0;
-      left: 5px;
+      left: 19px;
       right: auto;
       width: 2px;
       height: auto;
@@ -1071,15 +1138,15 @@ docker compose logs -f pulse</code></pre>
     }
     .flow-list {
       grid-template-columns: 1fr;
-      gap: 28px;
-      padding-left: 32px;
+      gap: 36px;
+      padding-left: 54px;
     }
     .flow-list li {
       padding: 0;
     }
-    .flow-list li::after {
-      top: 3px;
-      left: -32px;
+    .f-node {
+      top: -9px;
+      left: -54px;
     }
     .facts {
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1102,16 +1169,10 @@ docker compose logs -f pulse</code></pre>
       padding: 20px;
       text-align: left;
     }
-    .ring {
+    .dial :global(.ring) {
       grid-row: span 2;
       width: 112px;
       margin: 0;
-    }
-    .ring circle {
-      stroke-width: 14;
-    }
-    .value {
-      font-size: 1.875rem;
     }
     .d-name {
       align-self: end;
