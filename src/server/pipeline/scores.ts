@@ -46,8 +46,9 @@ export type Cached = { s1: Stage1Day; activities: Stage1Activity[]; sessionRhr: 
 /** What stage 2 reads once, besides `Data`. */
 export type Inputs = {
   cached: Map<string, Cached>;
-  stillHr: Map<string, (number | null)[]>;
-  loadSeries: Map<string, (number | null)[]>;
+  /** Per-minute series, read one day at a time (only the day being scored is ever asked for). */
+  stillHr: Pick<Map<string, (number | null)[]>, "get">;
+  loadSeries: Pick<Map<string, (number | null)[]>, "get">;
   segments: Map<string, Segment[]>;
   tagOn: (day: string, tag: string) => boolean;
 };

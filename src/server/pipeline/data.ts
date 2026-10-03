@@ -107,6 +107,9 @@ export const sha = (s: string) => createHash("sha1").update(s).digest("hex").sli
 export const round = (x: number, dp: number) => Math.round(x * 10 ** dp) / 10 ** dp;
 export const r1 = (x: number | null) => (x == null ? null : round(x, 1));
 
+/** Days per write transaction: keeps memory flat in history length and each write lock short. */
+export const BATCH_DAYS = 30;
+
 /** Upserts a per-minute series, writing only when it differs. */
 export const SERIES_UPSERT = `insert into intraday_series (day, kind, data) values (?, ?, ?)
      on conflict(day, kind) do update set data = excluded.data where data is not excluded.data`;

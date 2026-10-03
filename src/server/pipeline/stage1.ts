@@ -9,7 +9,7 @@ import type { BaselineState, HrSample } from "@/core/scoring/types";
 import { timeInZone, zones as hrZones } from "@/core/scoring/zones";
 import { minuteLoad } from "@/core/algorithms/energyBank";
 import { minuteMeanHr, stress } from "@/core/algorithms/stress";
-import { type Data, type Exercise, r1, round, SERIES_UPSERT, type Session, sha, touching } from "./data";
+import { BATCH_DAYS, type Data, type Exercise, r1, round, SERIES_UPSERT, type Session, sha, touching } from "./data";
 import { type PipelineOptions, SCORING_VERSION, type Stage1Activity, type Stage1Day } from "./types";
 
 /** A baseline whose centre is set, so stress() scores every still minute; only the still mask is kept. */
@@ -60,26 +60,27 @@ export function stage1(db: Db, data: Data, opts: PipelineOptions): string[] {
   );
   const series = c.prepare(SERIES_UPSERT);
 
-  const results = todo.map((day) => {
-    const start = data.dayStart(day);
-    const end = data.dayStart(addDays(day, 1));
-    const main = data.mainOf.get(day);
-    const exs = data.exercisesByDay.get(day) ?? [];
-    const lo = Math.min(start, main?.startTs ?? start);
-    const hi = Math.max(end, ...exs.map((e) => e.endTs + 330));
-    const hr = readHr.all(lo, hi) as HrSample[];
-    const steps = readSteps.all(start, end) as { ts: number; steps: number }[];
-    return { day, ...stage1Day(data, day, start, end, main, exs, hr, steps, keys.get(day)!, opts) };
-  });
-
-  c.transaction(() => {
-    for (const r of results) {
-      upsert.run(r.day, JSON.stringify(r.s1), JSON.stringify(r.activities), r.sessionRhr);
-      series.run(r.day, "hr", JSON.stringify(r.hrSeries));
-      series.run(r.day, "still_hr", JSON.stringify(r.still));
-      series.run(r.day, "load", JSON.stringify(r.load));
+  // Written in batches as it goes: holding every day's three per-minute series until one final write made
+  // memory grow with history (3 years of a full recompute overflowed a 96 MB heap). Each day's key is its own,
+  // so a crash between batches just recomputes the days not yet written.
+  const write = c.transaction((batch: string[]) => {
+    for (const day of batch) {
+      const start = data.dayStart(day);
+      const end = data.dayStart(addDays(day, 1));
+      const main = data.mainOf.get(day);
+      const exs = data.exercisesByDay.get(day) ?? [];
+      const lo = Math.min(start, main?.startTs ?? start);
+      const hi = Math.max(end, ...exs.map((e) => e.endTs + 330));
+      const hr = readHr.all(lo, hi) as HrSample[];
+      const steps = readSteps.all(start, end) as { ts: number; steps: number }[];
+      const r = stage1Day(data, day, start, end, main, exs, hr, steps, keys.get(day)!, opts);
+      upsert.run(day, JSON.stringify(r.s1), JSON.stringify(r.activities), r.sessionRhr);
+      series.run(day, "hr", JSON.stringify(r.hrSeries));
+      series.run(day, "still_hr", JSON.stringify(r.still));
+      series.run(day, "load", JSON.stringify(r.load));
     }
-  })();
+  });
+  for (let i = 0; i < todo.length; i += BATCH_DAYS) write(todo.slice(i, i + BATCH_DAYS));
   return todo;
 }
 

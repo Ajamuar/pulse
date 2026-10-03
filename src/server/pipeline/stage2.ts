@@ -5,7 +5,7 @@ import { addDays } from "../time";
 import { hrvCfg, respCfg, restingHRCfg, skinTempCfg, update } from "@/core/scoring/baselines";
 import { journalImpact, type JournalDay, type TagImpact } from "@/core/algorithms/journalImpact";
 import { buildReport, periodBounds, reportPeriods } from "@/core/algorithms/reports";
-import { type Data, groupBy, type Segment, SERIES_UPSERT, sha } from "./data";
+import { BATCH_DAYS, type Data, groupBy, type Segment, SERIES_UPSERT, sha } from "./data";
 import {
   type Cached,
   dayOf,
@@ -34,8 +34,20 @@ export function stage2(db: Db, data: Data, opts: PipelineOptions) {
 
   const f = newFold();
   const out = new Map<string, Omit<Stage2Row, "journal_impact">>();
-  const stressSeries = new Map<string, (number | null)[]>();
-  const energySeries = new Map<string, (number | null)[]>();
+  // Stress and Energy Bank series go out in batches during the fold rather than all at the end, so memory
+  // doesn't grow with history. They are idempotent upserts; a crash before the final commit leaves
+  // intraday_dirty set, so the next run redoes everything.
+  const series = c.prepare(SERIES_UPSERT);
+  const dropEnergy = c.prepare("delete from intraday_series where day = ? and kind = 'energy_bank'");
+  let pending: { day: string; stress: (number | null)[]; energy: (number | null)[] | null }[] = [];
+  const flush = c.transaction(() => {
+    for (const p of pending) {
+      series.run(p.day, "stress", JSON.stringify(p.stress));
+      if (p.energy) series.run(p.day, "energy_bank", JSON.stringify(p.energy));
+      else dropEnergy.run(p.day);
+    }
+    pending = [];
+  });
 
   // Order matters: each scorer reads the fold as earlier scorers left it for today.
   for (const day of days) {
@@ -47,9 +59,9 @@ export function stage2(db: Db, data: Data, opts: PipelineOptions) {
     const planner = scorePlanner(f, d, sleep, tz);
     recovery.forecast = forecastOf(f, d, recovery, planner.plan, planner.tonightNeed);
     const stress = scoreStress(f, d, inputs);
-    stressSeries.set(day, stress.series);
     const energy = scoreEnergyBank(data, inputs, d, recovery, sleep, stress.minutes);
-    if (energy.curve) energySeries.set(day, energy.curve);
+    pending.push({ day, stress: stress.series, energy: energy.curve });
+    if (pending.length >= BATCH_DAYS) flush();
     const healthMonitor = scoreHealthMonitor(f, d, inputs, recovery);
     const healthspan = scoreHealthspan(data, f, d, sleep, opts);
     const fitness = scoreFitness(f, d, opts);
@@ -75,6 +87,7 @@ export function stage2(db: Db, data: Data, opts: PipelineOptions) {
     f.efforts.push(d.s1.effort);
     f.prevAcwr = trainingLoad.acwr;
   }
+  flush();
 
   // ── Journal impact: as of each day, memoised on its inputs ────────────────
   const entries: JournalDay[] = [...journal].map(([day, es]) => ({ day, tags: Object.fromEntries(es.map((e) => [e.tag, e.value])) }));
@@ -103,8 +116,6 @@ export function stage2(db: Db, data: Data, opts: PipelineOptions) {
     `update daily_scores set scoring_version = ?, ${cols.map((k) => `${k} = ?`).join(", ")}
      where day = ? and (scoring_version, ${cols.join(", ")}) is not (?, ${cols.map(() => "?").join(", ")})`,
   );
-  const series = c.prepare(SERIES_UPSERT);
-  const dropEnergy = c.prepare("delete from intraday_series where day = ? and kind = 'energy_bank'");
   const report = c.prepare(
     "insert into reports (period, data) values (?, ?) on conflict(period) do update set data = excluded.data where data is not excluded.data",
   );
@@ -114,10 +125,6 @@ export function stage2(db: Db, data: Data, opts: PipelineOptions) {
       const row = rows.get(day)!;
       const values = cols.map((k) => JSON.stringify(row[k]));
       write.run(SCORING_VERSION, ...values, day, SCORING_VERSION, ...values);
-      series.run(day, "stress", JSON.stringify(stressSeries.get(day)));
-      const eb = energySeries.get(day);
-      if (eb) series.run(day, "energy_bank", JSON.stringify(eb));
-      else dropEnergy.run(day);
     }
     for (const period of periods) {
       const { end } = periodBounds(period);
@@ -153,13 +160,16 @@ function readInputs(db: Db) {
       },
     ]),
   );
-  const seriesOf = (kind: string) =>
-    new Map(
-      (c.prepare("select day, data from intraday_series where kind = ?").all(kind) as { day: string; data: string }[]).map((r) => [
-        r.day,
-        JSON.parse(r.data) as (number | null)[],
-      ]),
-    );
+  // Read per day on demand: loading every day's series up front made memory grow with history.
+  const seriesOf = (kind: string) => {
+    const read = c.prepare("select data from intraday_series where day = ? and kind = ?").pluck();
+    return {
+      get(day: string) {
+        const json = read.get(day, kind) as string | undefined;
+        return json === undefined ? undefined : (JSON.parse(json) as (number | null)[]);
+      },
+    };
+  };
   const journal = groupBy(
     c.prepare("select day, tag, value from journal_entries order by day, tag").all() as { day: string; tag: string; value: number }[],
     (e) => e.day,
