@@ -33,6 +33,15 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm lint
+      # schema.ts and drizzle/ agree: generating from the schema must write nothing (about 3 s).
+      - name: migration drift
+        run: |
+          pnpm db:generate
+          if [ -n "$(git status --porcelain drizzle/)" ]; then
+            git status --porcelain drizzle/
+            echo "::error::src/server/db/schema.ts changed without a migration: run pnpm db:generate and commit drizzle/"
+            exit 1
+          fi
       - run: pnpm test
 
   # Runs beside `checks`, not after it: the two are independent and e2e is the long one.
