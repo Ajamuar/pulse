@@ -16,7 +16,9 @@ const DEVICES_API = "https://health.googleapis.com/v4/users/me/pairedDevices";
 const MIN_GAP_MS = 250; // 4 req/s, under the documented 5 QPS per user
 const MAX_TRIES = 5; // per request, for 429, 5xx and network failures
 const BACKOFF_MS = 1000;
-const MAX_WAIT_MS = 5 * 60_000;
+// Longest Retry-After waited out inside a run. A longer one fails the job now; the next run (15 min) tries again,
+// so a quota hit can't hold one run for hours (5 tries x many requests x a long wait).
+const MAX_WAIT_MS = 60_000;
 const MAX_PAGES = 1000; // a nextPageToken that never advances must not loop forever
 
 // --- Local days ---------------------------------------------------------------------------------
@@ -192,6 +194,7 @@ export function createGoogleClient({
       }
       if ((status === 429 || (status >= 500 && !once)) && ++tries < MAX_TRIES) {
         const after = status === 429 ? retryAfterMs(res.headers.get("retry-after")) : undefined;
+        if (after !== undefined && after > MAX_WAIT_MS) throw new GoogleError(errorCode(parseJson(await res.text())) ?? "http_429", status, where);
         await res.body?.cancel();
         await sleep(Math.min(MAX_WAIT_MS, Math.max(0, after ?? BACKOFF_MS * 2 ** (tries - 1))));
         continue;

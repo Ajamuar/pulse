@@ -257,6 +257,12 @@ describe("retries and auth", () => {
     expect(apiCalls()).toHaveLength(2);
   });
 
+  it("429 asking to wait longer than a minute fails the job instead of stalling the run", async () => {
+    const { client, apiCalls } = setup(() => json({ error: { status: "RESOURCE_EXHAUSTED" } }, 429, { "retry-after": "3600" }));
+    await expect(client.list("weight", 0, 86_400)).rejects.toMatchObject({ code: "RESOURCE_EXHAUSTED", status: 429 });
+    expect(apiCalls()).toHaveLength(1);
+  });
+
   it("429 with an HTTP-date Retry-After waits until then", async () => {
     const at = new Date(NOW + 3000).toUTCString();
     const res = [json({}, 429, { "retry-after": at }), json({})];
