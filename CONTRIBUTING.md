@@ -77,7 +77,7 @@ that passes CI and gets a review, and it lands as one squashed commit.
 
 - Use demo data in issues, screenshots and test fixtures. Never commit or post real health data, OAuth
   tokens, `.env` files or databases.
-- Never commit third-party screenshots (the reference app, another app or others). Describe them in words or keep them in the
+- Never commit third-party screenshots (from any other app). Describe them in words or keep them in the
   gitignored `docs/design/reference/`.
 - Fixtures from the Google Health API must be synthetic or scrubbed of anything personal.
 

@@ -17,9 +17,10 @@ import type { StrainTarget } from "@/core/algorithms/strainTarget";
  * Bump on any scoring change; a mismatch at startup reruns both stages for every day.
  * 1: U5 scorers. 2: SRI consistency in sleep performance (U7), U10 pipeline. 3: one age helper
  * (healthspan and fitness age agree with whole years on birthdays). 4: local days open at the right instant
- * where DST starts at midnight (Santiago, Havana, Azores...), so the 23-hour day is the right one.
+ * where DST starts at midnight (Santiago, Havana, Azores...), so the 23-hour day is the right one. 5: Pulse Age's
+ * stored key is `pulseAge` (was a brand name), so stored healthspan rows rescore.
  */
-export const SCORING_VERSION = 4;
+export const SCORING_VERSION = 5;
 
 export type PipelineOptions = {
   timeZone: string;

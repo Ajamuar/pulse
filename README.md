@@ -1,6 +1,6 @@
 # Pulse
 
-A recovery-app-style personal health app for the Fitbit Air: one Next.js app (frontend, sync worker and scoring) on SQLite.
+A personal recovery, strain and sleep app for the Fitbit Air: one Next.js app (frontend, sync worker and scoring) on SQLite.
 See `docs/plans/` for the plan.
 
 ## Screenshots
@@ -55,7 +55,7 @@ Pulse runs as one Docker container with its database in a volume, behind a tunne
 
 ## Credits
 
-- Design inspiration: the interface follows the look and flow of the [The reference app](#) app. Pulse is an independent project, not affiliated with or endorsed by the reference app, Inc. The reference app is a trademark of the reference app, Inc.; Fitbit and Google Health are trademarks of Google LLC.
+- Design inspiration: the interface is inspired by the WHOOP app's look and flow. Pulse is a free, non-commercial community project by an independent developer. It is not affiliated with, endorsed by or competing with WHOOP, Inc., uses no WHOOP device, data, code or assets, and every score is computed from your own Google Health data. WHOOP is a trademark of WHOOP, Inc. If you represent WHOOP or any other company and have a concern, please email work.adityajindal@gmail.com and it will be changed or taken down.
 - [noop](https://github.com/ryanbr/noop): the recovery, strain, sleep and readiness scoring is ported from its analytics engine.
 - [Hælan](https://github.com/bardesss/haelan): its notes on how the Google Health API behaves saved a lot of trial and error.
 
