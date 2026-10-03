@@ -123,6 +123,7 @@ list of what's wrong.
 | `DATABASE_URL` | outside compose | Defaults to `postgres://pulse:pulse@localhost:5432/pulse` (compose.dev.yaml) |
 | `BETTER_AUTH_SECRET` | in production | Signs sessions; `openssl rand -base64 32` |
 | `DISABLE_SIGNUP` | no (false) | `true`: only existing accounts can sign in |
+| `SUPPORT_EMAIL` | no | Shown on the forgot-password page so people can ask you for a reset |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | with Google | The OAuth client from step 2 |
 | `APP_URL` | behind a proxy | The public URL |
 | `AVATAR_URL` | no | A default avatar photo; a user's Google photo or upload wins |
@@ -134,11 +135,29 @@ Each user's time zone is set in onboarding and Settings › Profile, not in the 
 - **Update:** `scripts/deploy.sh` dumps Postgres, resets the checkout to `origin/main`, rebuilds, waits for the
   health check and rolls back to the previous image if the new one never turns healthy (`COMPOSE_FILE=...` for
   another compose file, `--help` for options).
-- **Forgotten password:** there is no email server, so the server owner resets it:
-  `docker exec pulse node scripts/reset-password.mjs <email-or-username>` prints a temporary password and signs
-  that user out everywhere. They change it in Settings › Account.
+- **Forgotten password:** see [Reset a password](#reset-a-password).
 - **Delete an account:** the user does it in Settings › Account; every row of their data goes with it.
 - **Disconnect Google:** Settings › Data source › Disconnect removes Pulse's access in that Google account too.
+
+## Reset a password
+
+Pulse sends no email, so the person who runs the server resets forgotten passwords. The forgot-password page tells
+people to ask you; set `SUPPORT_EMAIL` in `.env` and it shows an "Email the admin" button with a prefilled request.
+
+When someone asks:
+
+1. Check it is really them (they wrote from the email on the account, or you know them).
+2. On the server, run the command with their username or email:
+
+   ```sh
+   docker exec pulse node scripts/reset-password.mjs <username-or-email>
+   ```
+
+   It prints a 16-character temporary password and signs that user out on every device.
+3. Send them the temporary password over a channel you trust, never in a public place.
+4. They sign in with it and choose a new password in Settings › Account.
+
+`No account with the email or username "..."` means nothing matched; usernames are lowercase.
 
 ## Backups
 

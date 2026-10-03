@@ -12,6 +12,8 @@ const Env = z
     DATABASE_URL: z.string().regex(/^postgres(ql)?:\/\//, "must be a postgres:// URL").optional(),
     /** Signs sessions and auth tokens (better-auth). Required in production: `openssl rand -base64 32`. */
     BETTER_AUTH_SECRET: z.string().min(32, "use at least 32 characters (openssl rand -base64 32)").optional(),
+    /** Who resets forgotten passwords (shown on /forgot as an email button). Unset: "ask whoever runs this server". */
+    SUPPORT_EMAIL: z.email("must be an email address").optional(),
     /** `true` closes sign-up: only existing accounts can sign in. */
     DISABLE_SIGNUP: z.stringbool().default(false),
     PORT: z.coerce.number().int().min(1).max(65535).default(3000),
@@ -45,6 +47,7 @@ export function parseConfig(env: Record<string, string | undefined>) {
     authSecret: e.BETTER_AUTH_SECRET ?? null,
     appUrl: e.APP_URL?.replace(/\/$/, "") ?? null,
     disableSignup: e.DISABLE_SIGNUP,
+    supportEmail: e.SUPPORT_EMAIL ?? null,
     port: e.PORT,
     avatarUrl: e.AVATAR_URL ?? null,
     google: e.GOOGLE_OAUTH_ENABLED

@@ -9,6 +9,9 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY . .
 RUN pnpm build
+# The password reset script runs outside the Next server, so it gets its own bundle with pg and better-auth inside.
+RUN pnpm exec esbuild scripts/reset-password.mjs --bundle --platform=node --format=esm --target=node24 --external:pg-native \
+  --banner:js="import{createRequire}from'module';const require=createRequire(import.meta.url);" --outfile=build-scripts/reset-password.mjs
 
 FROM node:24-slim
 LABEL app=pulse
@@ -23,7 +26,7 @@ COPY --from=build --chown=node:node /app/public ./public
 # Migrations run at boot from process.cwd()/drizzle.
 COPY --from=build --chown=node:node /app/drizzle ./drizzle
 # `docker exec pulse node scripts/reset-password.mjs <email-or-username>` (no email server for resets).
-COPY --from=build --chown=node:node /app/scripts/reset-password.mjs ./scripts/reset-password.mjs
+COPY --from=build --chown=node:node /app/build-scripts/reset-password.mjs ./scripts/reset-password.mjs
 USER node
 EXPOSE 3000
 # No curl in slim; node's fetch does it.
