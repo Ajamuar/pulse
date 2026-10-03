@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card"
 import { Skeleton, SkeletonText } from "@/components/ui/skeleton"
 
 /**
- * Journal (spec §7.11, §5.19): strip, then Check-in, Insights, History on phone; from 1280 px Check-in over History in
+ * Journal (spec §7.11, §5.19): strip, then Log, Check-in, Insights, History on phone; from 1280 px Log, Check-in and History in
  * the 7fr column and Insights beside them in the 5fr column, as the page lays them out. History shows a screenful of rows.
  */
 export default function Loading() {
@@ -17,6 +17,13 @@ export default function Loading() {
         <DayStripSkeleton indicator="journal" />
       </div>
       <div aria-hidden className="flex flex-col gap-8 xl:grid xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] xl:items-start xl:gap-x-6 xl:gap-y-10">
+        <SectionShell variant="section" title="Log" className="xl:col-start-1">
+          <div className="-mx-4 flex gap-2 overflow-hidden px-4 md:mx-0 md:grid md:grid-flow-col md:auto-cols-fr md:px-0">
+            {Array.from({ length: 5 }, (_, i) => (
+              <Skeleton key={i} className="h-23 w-[84px] shrink-0 rounded-2xl md:w-full" />
+            ))}
+          </div>
+        </SectionShell>
         <SectionShell variant="section" title="Check-in" className="xl:col-start-1">
           <SectionShell variant="card" title="Check-in">
             <div className="flex flex-col gap-4">
@@ -30,7 +37,7 @@ export default function Loading() {
         </SectionShell>
         <SectionShell variant="section" title="Insights"
           action={<span className="text-xs leading-4 font-bold tracking-[0.08em] text-foreground-secondary uppercase">See all</span>}
-          className="xl:col-start-2 xl:row-span-2 xl:row-start-1">
+          className="xl:col-start-2 xl:row-span-3 xl:row-start-1">
           <InsightCardSkeleton action />
         </SectionShell>
         <SectionShell variant="section" title="History" className="xl:col-start-1">

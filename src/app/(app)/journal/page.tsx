@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils"
 import { DAY, dayLabel, formatDay } from "@/lib/format"
 import { dayHref } from "@/lib/url"
 import { getJournal } from "@/server/queries/journal"
+import { getLog } from "@/server/queries/log"
 import { DayStrip } from "@/components/metrics/DayStrip"
 import { InsightCard } from "@/components/metrics/InsightCard"
 import { EmptyState } from "@/components/shells/EmptyState"
@@ -12,6 +13,7 @@ import { SectionShell } from "@/components/shells/SectionShell"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
 import { CheckIn, TAG_CLASS } from "./CheckIn"
+import { Log } from "./Log"
 import { pageDay, type SearchParams } from "../_lib/day"
 
 export const metadata = { title: "Journal" }
@@ -20,6 +22,7 @@ export const metadata = { title: "Journal" }
 export default async function JournalPage({ searchParams }: PageProps<"/journal">) {
   const { d, today } = await pageDay(searchParams as SearchParams, "/journal")
   const vm = getJournal(d)
+  const log = getLog()
   const date = formatDay(d, DAY.short)
 
   return (
@@ -34,6 +37,11 @@ export default async function JournalPage({ searchParams }: PageProps<"/journal"
           wide column and Insights rides beside it, pinned, at its own height: stretching it to the check-in's height left
           an empty bordered box. */}
       <div className="flex flex-col gap-8 xl:grid xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] xl:items-start xl:gap-x-6 xl:gap-y-10">
+        {/* Log first: a drink or a weigh-in is a two-tap job, the check-in an evening one (spec §11 LG1). */}
+        <SectionShell variant="section" title="Log" className="xl:col-start-1">
+          <Log vm={log} />
+        </SectionShell>
+
         <SectionShell variant="section" title="Check-in" className="xl:col-start-1">
           <CheckIn key={d} day={d} dayLabel={date} tags={vm.tags} checkIn={vm.checkIn} />
         </SectionShell>
@@ -42,7 +50,7 @@ export default async function JournalPage({ searchParams }: PageProps<"/journal"
           variant="section"
           title="Insights"
           action={{ label: "See all", href: "/journal/insights" }}
-          className="xl:sticky xl:top-24 xl:col-start-2 xl:row-span-2 xl:row-start-1"
+          className="xl:sticky xl:top-24 xl:col-start-2 xl:row-span-3 xl:row-start-1"
         >
           <InsightCard body={vm.teaser.text} action={vm.teaser.ready ? { label: "See all insights", href: "/journal/insights" } : undefined} />
         </SectionShell>

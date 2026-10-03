@@ -15,6 +15,8 @@ export type LogVM = {
   recent: LoggedEntry[];
   today: string;
   timeZone: string;
+  /** Demo mode: entries stay in Pulse. */
+  demo: boolean;
 };
 
 const RANK: Record<LogAccess, number> = { ok: 0, demo: 0, reconnect: 1, not_connected: 2 };
@@ -36,5 +38,6 @@ export function getLog(ctx: QueryCtx = defaultCtx()): LogVM {
     ),
     today,
     timeZone: ctx.timeZone,
+    demo: ctx.mode === "demo",
   };
 }

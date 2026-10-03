@@ -69,7 +69,7 @@ export const VALENCES = [
 ] as const
 export type Valence = (typeof VALENCES)[number][0]
 
-/** A short list from Google's 70-odd moods: the ones a daily log reaches for. */
+/** A short list from Google's 70-odd moods: the ones a daily log reaches for. No NEUTRAL: the valence row has it. */
 export const MOODS = [
   ["HAPPY", "Happy"],
   ["CALM", "Calm"],
@@ -77,7 +77,6 @@ export const MOODS = [
   ["CONTENT", "Content"],
   ["GRATEFUL", "Grateful"],
   ["EXCITED", "Excited"],
-  ["NEUTRAL", "Neutral"],
   ["FATIGUED", "Tired"],
   ["STRESSED", "Stressed"],
   ["ANXIOUS", "Anxious"],
