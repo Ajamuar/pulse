@@ -1,0 +1,17 @@
+# Cloudflare Pages response headers (copied to dist/ by the build). See docs/plans/2026-10-03-003-landing-and-programmatic-seo.md.
+
+# Hashed by Astro (CSS, JS, images, fonts): the file name changes with the content, so cache for a year.
+/_astro/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Not hashed: revalidate daily.
+/og.png
+  Cache-Control: public, max-age=86400
+/favicon.svg
+  Cache-Control: public, max-age=86400
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: DENY
+  Permissions-Policy: camera=(), microphone=(), geolocation=()

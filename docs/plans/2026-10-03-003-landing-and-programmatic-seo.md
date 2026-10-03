@@ -6,9 +6,9 @@ The app is private: every route is behind sign-in, and one owner runs one instan
 
 ## Goals
 
-- Fitbit Air owners who search for recovery, strain, subscriptions or the reference app alternatives find a page that answers their question first, then shows Pulse.
+- Fitbit Air owners who search for recovery, strain, subscriptions or subscription-free alternatives find a page that answers their question first, then shows Pulse.
 - Every score has a deep, honest page: inputs, weights, bands, limits and sources. "Pulse Age is an estimate" is said plainly, with the papers cited.
-- One static build, zero client JavaScript, fast on a phone.
+- One static build, fast on a phone. Script only where motion needs it (one small observer on the landing page); every page reads complete without it.
 - Adding a metric or a comparison adds a page, a sitemap entry and the internal links, with no template work.
 
 ## Non-goals
@@ -24,7 +24,7 @@ The app is private: every route is behind sign-in, and one owner runs one instan
 | Next.js static export | The React runtime and hydration on every page (about 100 KB) | Matches the app's stack, but pays for interactivity this site does not need. It would also share the app's Next config and tooling, which is what we want to keep apart. |
 | A hand-written Node script | None | No dependencies, but we would re-implement routing, HTML escaping and the image pipeline. |
 
-Astro is clearly better here: the same component model as a framework, and the output of a hand-written script. The measured result on the landing page: 0 bytes of JavaScript, 84 KB transferred on a phone, LCP about 250 ms locally, CLS 0.
+Astro is clearly better here: the same component model as a framework, and the output of a hand-written script. The first measured result on the landing page: 0 bytes of JavaScript, 84 KB transferred on a phone, LCP about 250 ms locally, CLS 0. The motion pass (below) adds one small bundled script and keeps CLS under 0.01.
 
 `site/` is its own pnpm workspace root (`site/pnpm-workspace.yaml`) with its own lockfile. The app's tooling skips it:
 
@@ -91,16 +91,16 @@ From the research (autocomplete and ranking pages; there are no volume numbers).
 | Cluster | Example queries | Page |
 |---|---|---|
 | Fitbit Air recovery and strain | fitbit air recovery score, does fitbit air track strain | `/compare/fitbit-air-recovery-and-strain/`, `/metrics/recovery/`, `/metrics/strain/` |
-| Fitbit Air subscription | fitbit air without subscription, premium vs free | `/compare/google-health-premium/`, `/compare/refapp-alternative-without-subscription/` |
-| Explaining the scores | how is recovery calculated, strain score meaning, refapp age calculator | `/metrics/recovery/`, `/metrics/strain/`, `/metrics/pulse-age/` |
+| Fitbit Air subscription | fitbit air without subscription, premium vs free | `/compare/google-health-premium/`, `/compare/recovery-tracking-without-subscription/` |
+| Explaining the scores | how is recovery calculated, strain score meaning, biological age calculator | `/metrics/recovery/`, `/metrics/strain/`, `/metrics/pulse-age/` |
 | Health terms | what is a good hrv, sleep regularity index, vo2 max percentile, acwr | `/metrics/hrv/`, `/metrics/sleep-consistency/`, `/metrics/fitness-level/`, `/metrics/training-balance/`, `/glossary/` |
-| Alternatives and open source | refapp alternative no subscription, open source refapp, self hosted fitness tracker | `/compare/refapp-alternative-without-subscription/`, `/compare/pulse-vs-refapp/`, `/` |
+| Alternatives and open source | recovery tracker no subscription, open source recovery app, self hosted fitness tracker | `/compare/recovery-tracking-without-subscription/`, `/compare/pulse-vs-subscription-wearables/`, `/` |
 
 Rules for titles and copy:
 
 - Titles stay under about 60 characters, and descriptions under about 155.
 - Comparison pages open with a direct answer in under 60 words.
-- Headlines say "recovery, strain and sleep scores for your Fitbit Air", never "the reference app for Fitbit Air". The reference app is named in body copy only, for factual comparison (see Risks).
+- Headlines say "recovery, strain and sleep scores for your Fitbit Air". Comparison pages describe subscription recovery wearables in general and name no competitor. The only place another wearable brand is named is the project notice (see Risks).
 
 ## Internal linking
 
@@ -128,26 +128,41 @@ Google retired FAQ rich results on 2026-05-07, and the SoftwareApplication rich 
 
 - `sitemap.xml` lists every page with `lastmod`: `CONTENT_UPDATED` in `src/config.ts` for our pages, `checked` for comparisons.
 - `robots.txt` allows everything, AI search crawlers included, and points to the sitemap. No `llms.txt`: Google says it does not use it.
-- Canonical URLs, `og:url` and the sitemap all come from `SITE_URL`, read in `site/astro.config.mjs`. **It is a placeholder (`https://pulse.example.com`) until the owner picks a domain.** It must not be the app's own hostname, because the app is private.
+- Canonical URLs, `og:url` and the sitemap all come from `SITE_URL`, read in `site/astro.config.mjs`. It defaults to `https://pulse.portlabs.in` and a `SITE_URL` build variable overrides it (for a fork or a preview). It must not be the app's own hostname, because the app is private.
 - `trailingSlash: "always"`, so each page has one URL.
-- One OG card (`site/public/og.png`, 1200 × 630), rendered from the brand and the home screenshot by `pnpm og` and committed. Per-page cards (for example, the metric name over its band scale) are deferred until the pages have traffic worth optimising.
+- One OG card (`site/public/og.png`, 1200 × 630), rendered from the brand and the phone home screenshot by `pnpm og` and committed. Per-page cards (for example, the metric name over its band scale) are deferred until the pages have traffic worth optimising.
 
 ## Design
 
 - Pulse's own dark world, not a new one: the app's tokens (`--background` #0f1113 under the #262e33 top gradient, Figtree, Barlow numerals), the wordmark and mark from `docs/design/brand.md`, and the app's data colours used only where they carry meaning (band scales, the metric index strips).
-- The one moment of motion: the wordmark's heartbeat drawn once across the hero on load, then still. Reduced motion skips it.
-- No eyebrows, no icon-card grids. The layouts differ per section: a split hero, a sticky intro beside the metric index, a screenshot strip, a connected five-step flow, a privacy panel, two code panels and a native `<details>` FAQ.
+- Screenshots come from `docs/screenshots/` (demo mode), framed with margin by `pnpm shots` (`site/scripts/shots.mjs`), so they never touch the edge of their box.
+- No eyebrows, no icon-card grids. The landing page sections, each a different layout: a split hero (laptop with the phone over its corner), the three morning dials, a phone strip, a sticky laptop that changes screen as its four steps scroll past, the metric grid, a connected five-step flow, a privacy panel, two code panels, About this project beside the credits, and the FAQ beside its heading. No column is left empty beside a short heading.
+- Motion, all of it off under `prefers-reduced-motion`:
+
+  | Moment | How |
+  |---|---|
+  | Devices rise into place on load | `@starting-style` transition on `translate` (no opacity, so LCP is not delayed) |
+  | Heartbeat line draws, then a pulse travels along it while the hero is on screen | SVG dash animation; an IntersectionObserver adds `live` so the loop stops off screen |
+  | Phone leaves faster than the laptop as the hero scrolls away | `animation-timeline: scroll(root)` |
+  | Dials draw in and their numbers count up | Observer adds `in`; CSS transitions `stroke-dashoffset`, a short `requestAnimationFrame` count. Without script the final values show |
+  | Phone strip drifts at two speeds | `animation-timeline: view()` |
+  | Laptop screen changes with the step in the middle of the viewport | Observer sets `data-active`; cross-fade with a short blur |
+  | Data path line draws across the five steps | `animation-timeline: view()` |
+  | FAQ answers slide open | `::details-content` with `interpolate-size` |
+  | Page to page | `@view-transition { navigation: auto }` |
+
+  Scroll-driven parts sit in `@supports (animation-timeline: scroll())`, so other browsers show the still layout.
 - Accessibility: a skip link, visible focus rings, 44 px targets in the nav, real headings, `aria-current` in the nav, and alt text that describes each screenshot.
 
 ## Hosting
 
 | Host | Fit | Notes |
 |---|---|---|
-| **Cloudflare (recommended)** | The owner's domains are already on Cloudflare: DNS, TLS and caching in one place, and free for static sites | Connect the repo to Pages (or Workers static assets). Build command `cd site && pnpm install --frozen-lockfile && pnpm build`, output `site/dist`, env `SITE_URL` (and the Umami variables). Custom domain in one click. |
+| **Cloudflare Pages (chosen)** | The owner's domains are already on Cloudflare: DNS, TLS and caching in one place, and free for static sites | See Deploy below. |
 | Vercel | Easy, good previews | Root directory `site`. The domain would need DNS records pointing out of Cloudflare. |
 | GitHub Pages | Free, next to the code | Needs a deploy workflow and a CNAME. No build-time environment UI, and fewer caching controls. |
 
-Recommendation: **Cloudflare**, deploying on pushes to `main` that touch `site/`, `docs/screenshots/` or `src/app/(app)/more/how-it-works/content.ts`. That last path matters: metric pages are built from the app's explainer.
+Cloudflare Pages deploys on pushes to `main` that touch `site/`, `docs/screenshots/` or `src/app/(app)/more/how-it-works/content.ts`. That last path matters: metric pages are built from the app's explainer.
 
 ```mermaid
 flowchart LR
@@ -156,6 +171,44 @@ flowchart LR
   D --> E[Cloudflare edge<br/>custom domain]
   E --> V[Visitors]
   V -.->|"page views, no cookies"| U[Self-hosted Umami]
+```
+
+## Deploy: Cloudflare Pages
+
+The site lives at `https://pulse.portlabs.in`. The private app moves to another hostname; the two never share one.
+
+One-time setup, in the Cloudflare dashboard:
+
+1. **Workers & Pages → Create → Pages → Connect to Git**, and pick `adityaongit/pulse`. Production branch: `main`.
+2. **Build settings.** Framework preset: None. Root directory: the repo root (leave it empty).
+   - Build command: `cd site && pnpm install --frozen-lockfile && pnpm build`
+   - Build output directory: `site/dist`
+3. **Environment variables (Production and Preview):**
+
+   | Variable | Value | Why |
+   |---|---|---|
+   | `NODE_VERSION` | `24` | Astro 7 needs a current Node |
+   | `PNPM_VERSION` | `11.17.0` (the root `package.json` `packageManager`) | The build image installs this pnpm |
+   | `SKIP_DEPENDENCY_INSTALL` | `1` | Stops Pages from installing the app's dependencies at the repo root; the build command installs only `site/` |
+   | `SITE_URL` | leave unset in Production (the default is `https://pulse.portlabs.in`); set it to the preview URL in Preview if canonical links there matter | Canonicals, sitemap, OG tags |
+   | `PUBLIC_UMAMI_SRC`, `PUBLIC_UMAMI_WEBSITE_ID` | optional | Analytics (see Analytics) |
+
+4. **Build watch paths** (Settings → Builds): include `site/*`, `docs/screenshots/*` and `src/app/(app)/more/how-it-works/content.ts`, so app-only changes do not rebuild the site.
+5. **Custom domain:** Custom domains → Set up a domain → `pulse.portlabs.in`. The zone is already on Cloudflare, so Pages adds the CNAME and the certificate itself. If an older DNS record for that name exists (for example, the app's), remove or rename it first.
+6. After the first deploy: open `/`, `/metrics/recovery/` and `/sitemap.xml` on the new domain, check that the canonical link and `og:url` use `pulse.portlabs.in`, then submit the sitemap in Search Console.
+
+What the repo already provides:
+
+- `site/public/_headers` (copied to `dist/`): a year of `immutable` caching for `/_astro/*` (Astro hashes every CSS, JS, image and font file name), a day for `og.png` and the favicon, and `nosniff`, `Referrer-Policy`, `X-Frame-Options` and `Permissions-Policy` on every response. HTML gets Cloudflare's default (revalidated), so a deploy shows at once.
+- `dist/404.html` from `src/pages/404.astro`, which Pages serves for unknown paths.
+- No `_redirects` and no `wrangler.toml`: the site has never been served from another URL, and the Git integration needs no config file. Add `_redirects` the first time a published slug changes.
+
+```mermaid
+flowchart LR
+  M[push to main] --> B["Pages build<br/>cd site; pnpm install; pnpm build"]
+  B --> D[site/dist + _headers]
+  D --> E[Cloudflare edge]
+  E --> P[pulse.portlabs.in]
 ```
 
 ## Analytics
@@ -171,7 +224,7 @@ Worth watching: landing page → setup guide clicks (outbound links), which metr
 
 ## Risks
 
-- **The reference app's IP enforcement.** the reference app sued another app in March 2026 over app look-and-feel trade dress, copyright, and patents on recovery and strain scores (reported; no ruling yet). The app openly follows the reference app's look, and the site shows the app. The site mitigates what it can: no the reference app name in titles or H1s outside comparison pages, no the reference app logos or imagery, Pulse's own metric names, dated and sourced comparisons, and a non-affiliation notice in every footer. The app's design itself is the owner's call.
+- **Trade dress and trademarks.** The app's interface takes design inspiration from apps the developer admires, and the site shows the app. The site mitigates what it can: no competitor names in titles, headings, slugs or comparison pages, no third-party logos or imagery, Pulse's own metric names, and dated, sourced comparisons. The one place a brand is named is the project notice (footer of every page, About this project on the landing page, and the FAQ): a free community project by an independent developer, not affiliated or competing, using no device, data, code or assets of any company, with a contact address and a promise to change or take down anything of concern. The app's design itself is the owner's call.
 - **Stale facts.** Prices and features of other products change. Each comparison has a `checked` date that is shown on the page and used as `dateModified`. Re-check on each content update.
 - **Drift from the app.** Mitigated by importing `content.ts` rather than copying it. If that file's types change, update `site/src/data/metrics.ts` and the metric template in the same pull request (the Astro build does not typecheck).
 
@@ -192,6 +245,7 @@ pnpm dev        # http://localhost:3316
 pnpm build      # static output in site/dist
 pnpm preview    # serves site/dist on :3316
 pnpm og         # re-render public/og.png (needs the repo root's pnpm install, for Playwright)
+pnpm shots      # retake docs/screenshots from the app running in demo mode on :3317 (see docs/screenshots.md)
 ```
 
 - **New metric:** add it to `SCORE_DOCS` in the app (it shows in the app too). Optionally add metadata in `site/src/data/metrics.ts`.
