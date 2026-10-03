@@ -1,6 +1,7 @@
 ---
 // Native <details>, so the answers open without any script and stay in the HTML for search engines.
 import type { Faq } from "../data/metrics"
+import Icon from "./Icon.astro"
 
 interface Props {
   items: Faq[]
@@ -20,7 +21,12 @@ const { items, heading = "Questions", aside } = Astro.props
     {
       items.map((f) => (
         <details>
-          <summary>{f.q}</summary>
+          <summary>
+            {f.q}
+            <span class="toggle">
+              <Icon name="plus" stroke={2} />
+            </span>
+          </summary>
           <p set:html={f.a} />
         </details>
       ))
@@ -74,21 +80,31 @@ const { items, heading = "Questions", aside } = Astro.props
   summary::-webkit-details-marker {
     display: none;
   }
-  summary::after {
-    content: "";
+  /* A plus that turns into a cross as the answer opens. */
+  .toggle {
+    display: grid;
     flex: none;
-    width: 10px;
-    height: 10px;
-    margin-right: 4px;
-    border-right: 2px solid var(--muted-foreground);
-    border-bottom: 2px solid var(--muted-foreground);
-    rotate: 45deg;
-    translate: 0 -3px;
-    transition: rotate 220ms var(--ease-standard), translate 220ms var(--ease-standard);
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.12);
+    color: var(--foreground-secondary);
+    transition-property: rotate, color, box-shadow, background-color;
+    transition-duration: 220ms;
+    transition-timing-function: var(--ease-standard);
   }
-  details[open] summary::after {
-    rotate: 225deg;
-    translate: 0 3px;
+  .toggle :global(.icon) {
+    width: 16px;
+    height: 16px;
+  }
+  summary:hover .toggle {
+    color: var(--optimal);
+    box-shadow: inset 0 0 0 1px rgb(0 241 159 / 0.4);
+  }
+  details[open] .toggle {
+    rotate: 45deg;
+    background-color: rgb(255 255 255 / 0.06);
   }
   details p {
     max-width: 68ch;

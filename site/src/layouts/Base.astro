@@ -2,6 +2,8 @@
 import "../styles/global.css"
 import Mark from "../components/Mark.astro"
 import Wordmark from "../components/Wordmark.astro"
+import Icon from "../components/Icon.astro"
+import GitHubMark from "../components/GitHubMark.astro"
 import { REPO, SETUP_GUIDE, LICENSE_URL, SITE_NAME, UMAMI, CONTACT_EMAIL } from "../config"
 import { METRICS, metricPath } from "../data/metrics"
 import { COMPARISONS } from "../data/compare"
@@ -91,7 +93,7 @@ const nav = [
               ))
             }
             <li>
-              <a class="gh" href={REPO}>GitHub</a>
+              <a class="gh" href={REPO} aria-label="GitHub"><GitHubMark class="gh-mark" /><span class="gh-text">GitHub</span></a>
             </li>
           </ul>
         </nav>
@@ -125,10 +127,10 @@ const nav = [
             <ul>{COMPARISONS.map((c) => <li><a href={`/compare/${c.slug}/`}>{c.nav}</a></li>)}</ul>
             <h2>Project</h2>
             <ul>
-              <li><a href={REPO}>Source on GitHub</a></li>
-              <li><a href={SETUP_GUIDE}>Setup guide</a></li>
-              <li><a href="/glossary/">Glossary</a></li>
-              <li><a href={`${REPO}/blob/main/SECURITY.md`}>Security policy</a></li>
+              <li><a class="with-icon" href={REPO}><GitHubMark class="l-icon" />Source on GitHub</a></li>
+              <li><a class="with-icon" href={SETUP_GUIDE}><Icon name="book-open" class="l-icon" />Setup guide</a></li>
+              <li><a class="with-icon" href="/glossary/"><Icon name="book-a" class="l-icon" />Glossary</a></li>
+              <li><a class="with-icon" href={`${REPO}/blob/main/SECURITY.md`}><Icon name="shield-check" class="l-icon" />Security policy</a></li>
             </ul>
           </nav>
         </div>
@@ -223,6 +225,7 @@ const nav = [
     color: var(--foreground);
   }
   .bar nav a.gh {
+    gap: 8px;
     margin-left: 6px;
     color: var(--foreground);
     box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.18);
@@ -230,12 +233,29 @@ const nav = [
   .bar nav a.gh:hover {
     box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.4);
   }
+  .bar :global(.gh-mark) {
+    width: 16px;
+    height: 16px;
+  }
   @media (max-width: 520px) {
     .wide {
       display: none;
     }
     .bar nav a {
       padding: 0 9px;
+    }
+    /* Phones: the mark alone, in a 44 px square (the link keeps its name). */
+    .bar nav a.gh {
+      justify-content: center;
+      width: 44px;
+      padding: 0;
+    }
+    .gh-text {
+      display: none;
+    }
+    .bar :global(.gh-mark) {
+      width: 18px;
+      height: 18px;
     }
   }
   /* The smallest phones: tighter links so the bar fits 320 px without a sideways scroll. */
@@ -255,7 +275,10 @@ const nav = [
   .site-footer {
     margin-top: 120px;
     padding: 64px 0 48px;
-    background: var(--sheet);
+    /* A darker floor, see-through so the grain runs on, with the brand's teal low on the left. */
+    background:
+      radial-gradient(40% 70% at 0% 100%, rgb(0 241 159 / 0.05), transparent 70%),
+      rgb(10 12 14 / 0.6);
     box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
     color: var(--muted-foreground);
     font-size: 0.9375rem;
@@ -298,6 +321,17 @@ const nav = [
   }
   .site-footer li a:hover {
     color: var(--foreground);
+  }
+  .site-footer li a.with-icon {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .site-footer :global(.l-icon) {
+    width: 16px;
+    height: 16px;
+    flex: none;
+    color: var(--muted-foreground);
   }
   .legal {
     margin-top: 56px;
