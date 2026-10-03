@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { activityHref } from "@/lib/url"
 import { cn } from "@/lib/utils"
 import { dayLabel, formatValue, hmm } from "@/lib/format"
 import { ActivityCard, type ActivityKind } from "@/components/metrics/ActivityCard"
@@ -138,7 +139,7 @@ function Day({ g, today, timeZone }: { g: ActivitiesVM["groups"][number]; today:
         // 6 px inset in a 16 px card around the rows' 10 px radius, as on Home (spec §2.4).
         <div className={cn(CARD_MATERIAL, "space-y-1.5 p-1.5")}>
           {g.items.map((a) => (
-            <ActivityCard key={a.id} name={a.name} kind={a.activityKind} strain={a.strain} start={a.start} end={a.end} distanceKm={a.distanceKm} paceS={a.paceS} href={`/activity/${a.id}`} timeZone={timeZone} />
+            <ActivityCard key={a.id} name={a.name} kind={a.activityKind} strain={a.strain} start={a.start} end={a.end} distanceKm={a.distanceKm} paceS={a.paceS} href={activityHref(a.id)} timeZone={timeZone} />
           ))}
         </div>
       ) : (

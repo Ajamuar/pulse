@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils"
 import { isDashboardKey } from "@/lib/dashboard"
 import { clock, DAY, formatDay, formatValue, MISSING, rangeLabel } from "@/lib/format"
 import { reasonCopy } from "@/lib/reasons"
-import { dayHref } from "@/lib/url"
+import { dayHref, activityHref } from "@/lib/url"
 import { Wordmark } from "@/components/brand/Wordmark"
 import { EnergyBankChart } from "@/components/charts/EnergyBankChart"
 import { StrainRecoveryChart } from "@/components/charts/StrainRecoveryChart"
@@ -197,7 +197,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
                   <div className="space-y-1.5">
                     {vm.activities.items.map((it) =>
                       it.kind === "activity" ? (
-                        <ActivityCard key={it.id} name={it.name} kind={it.activityKind} strain={it.strain} start={it.start} end={it.end} distanceKm={it.distanceKm} paceS={it.paceS} href={`/activity/${it.id}`} timeZone={timeZone} />
+                        <ActivityCard key={it.id} name={it.name} kind={it.activityKind} strain={it.strain} start={it.start} end={it.end} distanceKm={it.distanceKm} paceS={it.paceS} href={activityHref(it.id)} timeZone={timeZone} />
                       ) : (
                         <SleepCard key={it.id} kind={it.kind} minutes={it.minutes} start={it.start} end={it.end} href={at("/sleep")} timeZone={timeZone} />
                       ),

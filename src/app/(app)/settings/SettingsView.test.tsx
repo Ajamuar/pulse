@@ -7,7 +7,6 @@ import { SettingsView } from "./SettingsView"
 vi.mock("./actions", () => ({ disconnectGoogle: vi.fn() }))
 vi.mock("@/server/actions/profile", () => ({ saveProfileAction: vi.fn() }))
 vi.mock("@/server/actions/avatar", () => ({ uploadAvatar: vi.fn(), removeAvatar: vi.fn() }))
-vi.mock("@/server/actions/sync", () => ({ syncNow: vi.fn() }))
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }), usePathname: () => "/settings", useSearchParams: () => new URLSearchParams() }))
 
 const NOW = Date.parse("2026-10-02T10:00:00Z")

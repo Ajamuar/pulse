@@ -1,5 +1,6 @@
 // The per-metric sections of `/metric/[key]` (spec §11 MD1), one component per Section kind of the view model.
 import { clock, DAY, durationWords, formatDay, formatValue, hmm } from "@/lib/format"
+import { activityHref } from "@/lib/url"
 import type { Metric } from "@/lib/reasons"
 import { ColumnChart } from "@/components/charts/ColumnChart"
 import { KeyStatRow } from "@/components/metrics/KeyStatRow"
@@ -74,7 +75,7 @@ export function MetricSection({ s, ...c }: Ctx & { s: Section }) {
                     unit="kcal"
                     format="grouped"
                     direction="none"
-                    href={`/activity/${w.id}`}
+                    href={activityHref(w.id)}
                   />
                 )),
               )}

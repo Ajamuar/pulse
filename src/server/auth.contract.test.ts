@@ -70,11 +70,11 @@ beforeEach(() => {
 describe("auth contract", () => {
   it("finds every Server Action and route handler, including the ones that had no signed-out test", () => {
     const names = actions.map((a) => a.name.split("#")[1]);
-    for (const n of ["saveProfileAction", "syncNow", "loadCalendarMonth", "uploadAvatar", "removeAvatar", "saveJournalEntry", "saveDashboard", "disconnectGoogle"]) {
+    for (const n of ["saveProfileAction", "loadCalendarMonth", "uploadAvatar", "removeAvatar", "saveJournalEntry", "saveDashboard", "disconnectGoogle"]) {
       expect(names).toContain(n);
     }
     const urls = routes.map((r) => r.url);
-    for (const u of ["/status", "/avatar", "/export/daily", "/export/backup", "/logout", "/login/demo", "/healthz"]) expect(urls).toContain(u);
+    for (const u of ["/status", "/sync", "/avatar", "/export/daily", "/export/backup", "/logout", "/login/demo", "/healthz"]) expect(urls).toContain(u);
   });
 
   it.each([

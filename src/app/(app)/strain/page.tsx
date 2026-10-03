@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils"
 import { formatValue } from "@/lib/format"
 import { DATA_COLORS } from "@/lib/bands"
 import { reasonCopy } from "@/lib/reasons"
-import { dayHref } from "@/lib/url"
+import { dayHref, activityHref } from "@/lib/url"
 import { IntradayHrChart } from "@/components/charts/IntradayHrChart"
 import { TrendChart, type TrendSeries } from "@/components/charts/TrendChart"
 import { ZoneBars } from "@/components/charts/ZoneBars"
@@ -89,7 +89,7 @@ export default async function StrainPage({ searchParams }: PageProps<"/strain">)
           {vm.activities.length ? (
             <div className="space-y-1.5">
               {vm.activities.map((a) => (
-                <ActivityCard key={a.id} name={a.name} kind={a.activityKind} strain={a.strain} start={a.start} end={a.end} distanceKm={a.distanceKm} paceS={a.paceS} href={`/activity/${a.id}`} timeZone={timeZone} />
+                <ActivityCard key={a.id} name={a.name} kind={a.activityKind} strain={a.strain} start={a.start} end={a.end} distanceKm={a.distanceKm} paceS={a.paceS} href={activityHref(a.id)} timeZone={timeZone} />
               ))}
             </div>
           ) : (

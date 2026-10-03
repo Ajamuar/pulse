@@ -75,6 +75,9 @@ export function dayHref(href: string, d: string, today: string) {
 /** A metric's own detail screen (Steps, Distance, Weight, …): `/metric/steps`. */
 export const metricHref = (key: string) => `/metric/${key}`;
 
+/** `/activity/[id]`. Google's ids are resource names with slashes (`users/…/dataPoints/…`), so the id is encoded. */
+export const activityHref = (id: string) => `/activity/${encodeURIComponent(id)}`;
+
 // --- Navigation structure (spec §4.2, §4.5) ---
 
 export type Tab = "home" | "health" | "journal" | "more";

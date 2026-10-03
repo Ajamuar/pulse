@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation"
 import { RefreshCw } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
-import { syncNow } from "@/server/actions/sync"
 import { startSyncing } from "@/lib/sync-activity"
 import { Button } from "@/components/ui/button"
 
@@ -15,17 +14,21 @@ import { Button } from "@/components/ui/button"
  */
 export function SyncNowButton({ className, size = "touch" }: { className?: string; size?: "touch" | "sm" }) {
   const router = useRouter()
-  const [pending, start] = React.useTransition()
-  const run = () =>
-    start(async () => {
-      const end = startSyncing()
-      const r = await syncNow()
-        .catch(() => ({ ok: false as const, error: "Couldn’t reach Pulse" }))
-        .finally(end)
-      router.refresh()
-      if (r.ok) toast.success("Synced", { id: "sync-now" })
-      else toast.error(r.error, { id: "sync-now" })
-    })
+  // Plain state and a plain fetch, never a Server Action or an async transition: either one holds every link
+  // navigation until the sync (20 s or more) returns.
+  const [pending, setPending] = React.useState(false)
+  const run = async () => {
+    setPending(true)
+    const end = startSyncing()
+    const r: { ok: boolean; error?: string } = await fetch("/sync", { method: "POST", cache: "no-store" })
+      .then((res) => res.json())
+      .catch(() => ({ ok: false, error: "Couldn’t reach Pulse" }))
+      .finally(end)
+    setPending(false)
+    router.refresh()
+    if (r.ok) toast.success("Synced", { id: "sync-now" })
+    else toast.error(r.error, { id: "sync-now" })
+  }
   return (
     <Button
       type="button"
