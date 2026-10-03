@@ -16,12 +16,12 @@ flowchart LR
   merge --> del[Branch auto-deleted]
 ```
 
-Nobody pushes to `main`, including the maintainer. Work on a branch, push it, and open the pull request from
-the link `git push` prints (or the repository page). The repository uses the `git` CLI only.
+Contributors never push to `main`: they work on a branch, push it, and open a pull request. The repository uses
+the `git` CLI only.
 
-As the only maintainer you can't approve your own pull request, so the ruleset lets repository admins bypass
-the review **only through a pull request**: you merge your own green PR yourself, but a direct push to `main`
-is still refused.
+The maintainer (repository admin) is on the ruleset's bypass list with **Always**, so they can push to `main`
+directly as well as merge their own pull requests without a second reviewer. Everyone else goes through a PR
+with green CI and a code owner review.
 
 ## One-time repository settings
 
@@ -37,7 +37,7 @@ is still refused.
 | Require linear history | Only squash merges, no merge commits |
 | Require a pull request | 1 approval, from a code owner (`.github/CODEOWNERS`); stale approvals are dismissed on new pushes; the last pusher can't approve; all review threads resolved |
 | Require status checks | `checks` and `e2e` from `.github/workflows/ci.yml`, on a branch up to date with `main` |
-| Bypass | Repository admins, through pull requests only |
+| Bypass | Repository admins, always (direct pushes and their own PRs) |
 
 The required checks only exist after CI has run once, so merge the pull request that adds the workflow first,
 or let one CI run finish before importing.
