@@ -8,7 +8,7 @@ This compares, one by one, the data types the Google Health API v4 returns ([`us
 - Pulse fetches **14** of them, plus `total-calories`, which only answers daily roll-ups and is not in that list.
 - **11** reach a screen. **2** (weight, body fat) feed only Pulse Age and are never displayed. **1** (`vo2-max`) is fetched only for the probe.
 - **28** are not fetched at all.
-- OAuth asks for scopes Pulse never uses: `ecg`, `irn`, `logged_symptoms`, `mindfulness`, `reproductive_health`, `location` and `nutrition.writeonly`. They were added so the probe could see everything; nothing reads them yet.
+- OAuth asks for scopes Pulse never uses: `ecg`, `irn`, `logged_symptoms`, `mindfulness`, `reproductive_health`, `location` and `nutrition.writeonly`. They were added so the probe could see everything; nothing reads them yet. (2026-10: the write scopes are now used by Journal › Log; see "Writing" below.)
 
 ```mermaid
 flowchart LR
@@ -36,8 +36,8 @@ Status: **Shown** means visible on a screen; **Used** means it feeds a score but
 | `daily-vo2-max` | Daily cardio fitness | **Shown** | Fitness, Pulse Age (half weight) |
 | `run-vo2-max` | VO2max from runs | **Shown** | Fitness, Pulse Age |
 | `exercise` | Workouts | **Shown** | Activities: type, name, time, calories, distance (rows and the activity screen) and pace for runs and walks. Splits are not stored |
-| `weight` | Weight | **Shown** | Health Monitor › Measurements (latest, date, vs. the 30 days before); Trends (Body) and the daily export; lean mass (FFMI) in Pulse Age |
-| `body-fat` | Body fat % | **Shown** | Same |
+| `weight` | Weight | **Shown**, **written** | Health Monitor › Measurements (latest, date, vs. the 30 days before); Trends (Body) and the daily export; lean mass (FFMI) in Pulse Age; logged from Journal › Log |
+| `body-fat` | Body fat % | **Shown**, **written** | Same; logged from Journal › Log |
 | `vo2-max` | Generic VO2max | **Stored** | Probe only |
 | `total-calories` (roll-up) | Daily total kcal | **Shown** | My Dashboard, Strain |
 | `distance` | Distance per interval | **Shown** | Daily total on Strain and Trends (Activity), export `distance_km` |
@@ -60,13 +60,13 @@ Status: **Shown** means visible on a screen; **Used** means it feeds a score but
 | `electrocardiogram` | ECG readings | **Shown** | Result and average bpm (`health_records`, never the waveform): Health Monitor › Heart rhythm, latest, history and a detail sheet |
 | `irregular-rhythm-notification` | AFib alerts | **Shown** | Count and latest date: Health Monitor › Heart rhythm |
 | `blood-glucose` | Glucose readings | **Shown** | Daily average (`daily_values.glucose`): Health Monitor › Measurements once ever recorded; Trends (Vitals) |
-| `hydration-log` | Water logged | **Shown** | Daily total in Trends (Nutrition) |
-| `nutrition-log` | Meals and nutrients | **Shown** | Daily kcal, protein, carbohydrates and fat in Trends (Nutrition) |
+| `hydration-log` | Water logged | **Shown**, **written** | Daily total in Trends (Nutrition); logged from Journal › Log |
+| `nutrition-log` | Meals and nutrients | **Shown**, **written** | Daily kcal, protein, carbohydrates and fat in Trends (Nutrition); logged from Journal › Log as anonymous food |
 | `food`, `food-measurement-unit` | Food database entries | No | |
-| `menstrual-period` | Cycle tracking | No | Scope requested |
-| `ovulation-test` | Ovulation test results | No | Scope requested |
-| `symptoms` | Logged symptoms | No | Scope requested |
-| `moods` | Logged moods | No | |
+| `menstrual-period` | Cycle tracking | **Written** | Write-only at Google. Journal › Log, female profiles only; mirrored in `logged_entries` |
+| `ovulation-test` | Ovulation test results | **Written** | Same |
+| `symptoms` | Logged symptoms | **Written** | Write-only at Google. Journal › Log; mirrored in `logged_entries` |
+| `moods` | Logged moods | **Written** | Same |
 
 ## What the Google Health app shows that Pulse doesn't
 
@@ -85,3 +85,45 @@ If none of 5–7 are planned, drop their scopes: a consent screen that asks for 
 ## Without a Fitbit device
 
 An account with no band still syncs phone data (steps, calories, workouts from Health Connect). Pulse stores it and shows steps and calories on My Dashboard and Strain. But Home's three rings, Health Monitor and Energy Bank all read "No data: band not worn", so the steps are easy to miss. Heart rate from `HEALTH_CONNECT` is dropped on purpose, so a phone or another watch never feeds Strain.
+
+## Writing (logging from Pulse, 2026-10)
+
+Pulse writes only what the owner logs in Journal › Log (spec §11 LG1). Shapes are from Google's reference and guides
+([dataPoints](https://developers.google.com/health/reference/rest/v4/users.dataTypes.dataPoints),
+[create](https://developers.google.com/health/reference/rest/v4/users.dataTypes.dataPoints/create),
+[Women's Health guide](https://developers.google.com/health/data-types/womens-health),
+[Nutrition guide](https://developers.google.com/health/data-types/nutrition)) and the API discovery document.
+
+| Type | Body (`POST users/me/dataTypes/{type}/dataPoints`) | Scope |
+|---|---|---|
+| `hydration-log` | `{ hydrationLog: { interval, amountConsumed: { milliliters, userProvidedUnit } } }` | `nutrition.writeonly` |
+| `nutrition-log` | `{ nutritionLog: { interval, foodDisplayName, mealType, energy: { kcal }, totalCarbohydrate: { grams }, totalFat: { grams }, nutrients: [{ nutrient: "PROTEIN", quantity: { grams } }] } }` | `nutrition.writeonly` |
+| `weight` | `{ weight: { sampleTime, weightGrams } }` | `health_metrics_and_measurements.writeonly` |
+| `body-fat` | `{ bodyFat: { sampleTime, percentage } }` | same |
+| `moods` | `{ moods: { sampleTime, moods: [Mood], valences: [UNPLEASANT \| BASELINE \| PLEASANT] } }` | `mindfulness.writeonly` |
+| `symptoms` | `{ symptoms: { sampleTime, symptoms: [SymptomValue] } }` | `logged_symptoms.writeonly` |
+| `menstrual-period` | `{ menstrualPeriod: { interval, notes } }` (no flow field: Pulse writes "Flow: medium" into `notes`) | `reproductive_health.writeonly` |
+| `ovulation-test` | `{ ovulationTest: { sampleTime, result } }` | same |
+
+`sampleTime` is `{ physicalTime, utcOffset }` and `interval` is `{ startTime, startUtcOffset, endTime, endUtcOffset }`; Pulse
+always sends the offset (`"19800s"`), else Google stores `0s` and the civil time is UTC's.
+
+```mermaid
+sequenceDiagram
+  participant S as Log sheet
+  participant A as logEntry action
+  participant G as Google Health
+  participant D as logged_entries
+  S->>A: kind + values (zod)
+  A->>A: session, profile sex (cycle), write scope in oauth_tokens.scope
+  A->>G: POST dataPoints (no retry on 5xx: it may have landed)
+  G-->>A: Operation { done: true, response: DataPoint { name } }
+  A->>D: row with google_name
+  A-->>S: ok (readable types: sync forced, it owns totals)
+```
+
+- **Response.** `create` returns an `Operation`. The guides show `{ done: true, response: { "@type": ".../DataPoint", name: "users/{id}/dataTypes/{type}/dataPoints/{id}", ... } }`. There is no `operations.get`, so an unfinished operation cannot be polled; Pulse stores the entry without a name and shows "in Pulse only".
+- **Delete.** `POST .../dataPoints:batchDelete` with `{ names }`; the response is an `Operation`. The parent is `users/me`, and names must share it, so Pulse rewrites `users/{id}/` to `users/me/` (the form the Nutrition guide's delete example uses). Unconfirmed until a real delete.
+- **Read back.** `dataPoints.get` accepts the write-only scopes, so a single logged mood can be fetched by name; `list` cannot. Pulse does not use `get`.
+- **Not confirmed until a real write:** the exact 403 code an older grant gets (`PERMISSION_DENIED` or `ACCESS_TOKEN_SCOPE_INSUFFICIENT`; Pulse keys on the status), whether an anonymous nutrition log needs `foodDisplayName` (Pulse sends "Quick calories" when none is given), and how soon a write shows in `dailyRollUp`.
+- **Old grants.** A grant made before 2026-10 has `nutrition.writeonly` only, so water and food write at once; the rest need a reconnect. `/oauth/start` sends such a grant through consent again so a fresh refresh token covers every scope.
