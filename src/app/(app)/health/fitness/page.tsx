@@ -1,7 +1,6 @@
 import { connection } from "next/server"
-import { format, parseISO } from "date-fns"
 import { cn } from "@/lib/utils"
-import { formatValue } from "@/lib/format"
+import { DAY, formatDay, formatValue } from "@/lib/format"
 import { getFitness } from "@/server/queries/health"
 import type { FitnessVM } from "@/server/queries/types"
 import { TrendChart } from "@/components/charts/TrendChart"
@@ -50,7 +49,7 @@ function Hero({ vo2 }: { vo2: FitnessVM["vo2"] }) {
         <span className={LABEL}>VO2 max</span>
         <span className={cn(LABEL, categoryTone(v.category))}>{categoryWord(v.category)}</span>
       </p>
-      <p className={CAPTION}>{v.source === "run" ? `From a run on ${format(parseISO(v.sourceDay), "MMM d")}` : "Daily estimate from Fitbit"}</p>
+      <p className={CAPTION}>{v.source === "run" ? `From a run on ${formatDay(v.sourceDay, DAY.monthDay)}` : "Daily estimate from Fitbit"}</p>
       {vo2.provisional && <MetricTags extra={["estimate"]} />}
     </div>
   )

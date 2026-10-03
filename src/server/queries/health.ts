@@ -3,6 +3,7 @@ import type { HealthspanContribution } from "@/core/algorithms/healthspan";
 import { minChronic } from "@/core/scoring/readiness";
 import { standardConfig } from "@/core/scoring/trainingLoad";
 import { acwrTone } from "@/lib/bands";
+import { formatDay } from "@/lib/format";
 import { weekOf } from "@/lib/url";
 import { addDays, daysBetween, fractionalYears, wall } from "../time";
 import { illnessRaised, VITAL_LABEL } from "./home";
@@ -39,8 +40,6 @@ import type {
   VitalKey,
 } from "./types";
 
-const WEEKDAY = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-const weekdayOf = (day: string) => new Date(`${day}T00:00:00Z`).getUTCDay();
 const lastStored = (ctx: QueryCtx, today: string) =>
   (ctx.db.$client.prepare("select max(day) from daily_scores where day <= ?").pluck().get(today) as string | null) ?? today;
 
@@ -75,7 +74,7 @@ export function getHealthHub(ctx: QueryCtx = defaultCtx()): HealthHubVM {
             {
               highMin: st.highMin,
               typicalHighMin: sameDays.length ? meanSd(sameDays).mean : null,
-              weekday: WEEKDAY[weekdayOf(today)],
+              weekday: formatDay(today, { weekday: "short" }),
               spark: minutePoints(loadSeries(ctx, today, "stress"), dayStartOf(ctx, today), 2),
             },
             st.provisional,
@@ -353,7 +352,7 @@ export function getStress(day: string, ctx: QueryCtx = defaultCtx()): StressVM {
             mediumMin: st.mediumMin,
             highMin: st.highMin,
             typicalDeltaMin: typical == null ? null : st.highMin - typical,
-            weekday: WEEKDAY[weekdayOf(day)],
+            weekday: formatDay(day, { weekday: "long" }),
             typical: sameStress.length ? { lowMin: typicalOf((x) => x.lowMin), mediumMin: typicalOf((x) => x.mediumMin), highMin: typical! } : null,
           },
           st.provisional,

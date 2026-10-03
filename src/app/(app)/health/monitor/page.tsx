@@ -16,7 +16,7 @@ const INFO = {
   title: "About Health Monitor",
   body: (
     <p>
-      Health Monitor compares last night&apos;s vitals with your personal normal range: your baseline plus or minus two standard deviations. Blood
+      Health Monitor compares last night’s vitals with your personal normal range: your baseline plus or minus two standard deviations. Blood
       oxygen also flags anything below 95%. A change in several vitals at once can be an early sign of illness. Pulse is not a medical device; if you
       feel unwell, talk to a doctor.
     </p>
@@ -37,8 +37,10 @@ function Count({ count }: { count: MonitorVM["count"] }) {
   const chip = v ? CHIP[v.status] : null
   return (
     <div className="flex flex-col items-center gap-3 py-4 text-center">
+      {/* aria-label on a <p> (generic role) is ignored by many screen readers: the sentence is sr-only text instead. */}
+      <p className="sr-only">{v ? `${v.inRange} of ${v.total} metrics within range` : `Metrics within range unavailable: ${reason!.long}`}</p>
       <p
-        aria-label={v ? `${v.inRange} of ${v.total} metrics within range` : `Metrics within range unavailable: ${reason!.long}`}
+        aria-hidden
         className={cn("font-numeric text-[64px] leading-none font-bold tracking-[-0.01em] tabular-nums md:text-[72px]", !v && "text-muted-foreground")}
       >
         {v ? v.inRange : "--"}
@@ -77,7 +79,7 @@ export default async function MonitorPage({ searchParams }: PageProps<"/health/m
         )
       }
       primary={
-        <SectionShell variant="section" title="Last night's readings">
+        <SectionShell variant="section" title="Last night’s readings">
           <VitalTiles vitals={vm.vitals} />
         </SectionShell>
       }

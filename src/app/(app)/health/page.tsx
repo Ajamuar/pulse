@@ -169,11 +169,11 @@ function Stress({ m }: { m: HealthHubVM["stress"] }) {
         return (
           <div className="grid grid-cols-[auto_minmax(0,1fr)] items-end gap-4">
             <div className="space-y-2">
-              <p className={LABEL}>Today&apos;s high stress</p>
+              <p className={LABEL}>Today’s high stress</p>
               <ValueUnit value={hmm(v.highMin)} unit="hrs" className={cn(TILE, "block")} />
               {dir && (
                 <StatusChip tone={tone} delta={dir}>
-                  vs. typical {v.weekday.slice(0, 3)}
+                  vs. typical {v.weekday}
                 </StatusChip>
               )}
             </div>

@@ -1,17 +1,19 @@
-import { formatValue } from "@/lib/format"
+import { formatValue, LOCALE } from "@/lib/format"
 
-/** 78 → "78th". */
+const ORDINAL = new Intl.PluralRules(LOCALE, { type: "ordinal" })
+const SUFFIX: Partial<Record<Intl.LDMLPluralRule, string>> = { one: "st", two: "nd", few: "rd" }
+
+/** 78 → "78th"; the plural category comes from Intl.PluralRules. */
 export const ordinal = (n: number) => {
   const r = Math.round(n)
-  const s = r % 100 >= 11 && r % 100 <= 13 ? "th" : ({ 1: "st", 2: "nd", 3: "rd" } as Record<number, string>)[r % 10] ?? "th"
-  return `${r}${s}`
+  return `${r}${SUFFIX[ORDINAL.select(r)] ?? "th"}`
 }
 
 /** "2.3 years younger" / "1.0 years older" / "Same as your age" (spec §6), with its tone class. */
 export function ageDelta(delta: number) {
   const v = formatValue("decimal1", Math.abs(delta))
   if (v === "0.0") return { text: "Same as your age", tone: "text-foreground-secondary" }
-  return delta < 0 ? { text: `${v} years younger`, tone: "text-optimal" } : { text: `${v} years older`, tone: "text-warning" }
+  return delta < 0 ? { text: `${v}\u00a0years younger`, tone: "text-optimal" } : { text: `${v}\u00a0years older`, tone: "text-warning" }
 }
 
 /** "excellent" (the core's key) → "Excellent". */

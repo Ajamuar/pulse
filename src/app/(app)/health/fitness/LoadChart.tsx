@@ -1,8 +1,7 @@
 "use client"
 
-import { format, parseISO } from "date-fns"
 import { Bar, CartesianGrid, Cell, ComposedChart, Line, ReferenceLine, XAxis, YAxis } from "recharts"
-import { formatValue } from "@/lib/format"
+import { DAY, formatDay, formatValue } from "@/lib/format"
 import type { FitnessVM } from "@/server/queries/types"
 import { ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { AXIS, ChartFigure, GRID, LINE_CURSOR, TOOLTIP_CLASS, useSeriesAnimation } from "@/components/charts/ChartFrame"
@@ -26,7 +25,7 @@ export function LoadChart({ load }: { load: FitnessVM["load"] }) {
     <ChartFigure summary={summary} config={CONFIG} className="h-[220px]">
       <ComposedChart data={load} accessibilityLayer margin={{ top: 8, right: 4, bottom: 0, left: 4 }}>
         <CartesianGrid {...GRID} />
-        <XAxis dataKey="day" {...AXIS} ticks={ticks} tickFormatter={(d: string) => format(parseISO(d), "MMM")} />
+        <XAxis dataKey="day" {...AXIS} ticks={ticks} tickFormatter={(d: string) => formatDay(d, { month: "short" })} />
         <YAxis {...AXIS} width={32} tickCount={4} tickFormatter={(v: number) => formatValue("int", v)} />
         <ReferenceLine y={0} stroke="var(--chart-cursor)" />
         <ChartTooltip
@@ -35,7 +34,7 @@ export function LoadChart({ load }: { load: FitnessVM["load"] }) {
             <ChartTooltipContent
               className={TOOLTIP_CLASS}
               indicator="line"
-              labelFormatter={(_, p) => format(parseISO(String(p?.[0]?.payload?.day ?? "")), "EEE, MMM d")}
+              labelFormatter={(_, p) => formatDay(String(p?.[0]?.payload?.day ?? ""), DAY.short)}
               formatter={(v, name) => (
                 <span className="flex w-full justify-between gap-3">
                   <span className="text-muted-foreground">{CONFIG[name as keyof typeof CONFIG]?.label}</span>

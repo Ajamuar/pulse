@@ -1,8 +1,9 @@
 "use client"
 
 import * as React from "react"
+import { useSheetParam } from "@/hooks/use-sheet-param"
 import { CircleGauge, Dumbbell, Footprints, Heart, Moon, Timer } from "lucide-react"
-import { formatValue, isSymbolUnit, type FormatKey } from "@/lib/format"
+import { formatValue, isSymbolUnit, NBSP, type FormatKey } from "@/lib/format"
 import type { HealthspanContributor } from "@/server/queries/types"
 import { ContributorRow } from "@/components/metrics/ContributorRow"
 import { ValueUnit } from "@/components/metrics/primitives"
@@ -33,19 +34,21 @@ const SHOW: Record<string, { format: FormatKey; unit?: string; scale?: number }>
   leanMass: { format: "decimal1", unit: "kg" },
 }
 
-const withUnit = (text: string, unit?: string) => (unit ? `${text}${isSymbolUnit(unit) ? "" : " "}${unit}` : text)
+const withUnit = (text: string, unit?: string) => (unit ? `${text}${isSymbolUnit(unit) ? "" : NBSP}${unit}` : text)
 
 function yearsLine(years: number | null) {
   if (years === null) return null
   const v = formatValue("decimal1", Math.abs(years))
-  return v === "0.0" ? "No change from your age" : `${v} years ${years < 0 ? "younger" : "older"} than your age`
+  return v === "0.0" ? "No change from your age" : `${v}\u00a0years ${years < 0 ? "younger" : "older"} than your age`
 }
 
 /** One Healthspan group card ("Sleep", "Strain", "Fitness"); each row opens its contributor sheet (journey 5). */
 export function ContributorCard({ title, items, className }: { title: string; items: HealthspanContributor[]; className?: string }) {
-  const [open, setOpen] = React.useState<string | null>(null)
+  // `?contributor=` deep-links the sheet (each group card opens only its own rows); Back closes it.
+  const [open, setOpen] = useSheetParam("contributor")
   const [last, setLast] = React.useState<HealthspanContributor | null>(null)
-  const item = items.find((c) => c.key === open) ?? last
+  const current = items.find((c) => c.key === open)
+  const item = current ?? last
   const show = item ? SHOW[item.key] ?? { format: "decimal1" as const } : null
   const scale = (v: number) => v * (show?.scale ?? 1)
 
@@ -82,7 +85,7 @@ export function ContributorCard({ title, items, className }: { title: string; it
           )
         })}
       </div>
-      <ResponsiveSheet open={!!open} onOpenChange={(o) => !o && setOpen(null)} title={item?.label ?? title}>
+      <ResponsiveSheet open={!!current} onOpenChange={(o) => !o && setOpen(null)} title={item?.label ?? title}>
         {item && show && (
           <div className="space-y-4">
             <ValueUnit

@@ -1,8 +1,9 @@
 "use client"
 
 import * as React from "react"
+import { useSheetParam } from "@/hooks/use-sheet-param"
 import { Activity, Droplet, Heart, Thermometer, Wind } from "lucide-react"
-import { formatValue, isSymbolUnit, type FormatKey } from "@/lib/format"
+import { formatValue, isSymbolUnit, NBSP, type FormatKey } from "@/lib/format"
 import type { Vital, VitalKey } from "@/server/queries/types"
 import { TrendChart } from "@/components/charts/TrendChart"
 import { KeyStatRow, KeyStatRowSkeleton } from "@/components/metrics/KeyStatRow"
@@ -21,13 +22,15 @@ const NOTE = "Your normal range is your baseline plus or minus two standard devi
 
 /** The five vital tiles, each opening its vital sheet (journey 6), plus the ranges note cell. */
 export function VitalTiles({ vitals }: { vitals: Vital[] }) {
-  const [open, setOpen] = React.useState<VitalKey | null>(null)
+  // `?vital=hrv` deep-links the sheet; Back closes it.
+  const [open, setOpen] = useSheetParam("vital")
   const [last, setLast] = React.useState<Vital | null>(null)
-  const v = vitals.find((x) => x.key === open) ?? last
+  const current = vitals.find((x) => x.key === open)
+  const v = current ?? last
   const fmt = v ? FORMAT[v.key] : "int"
   // Ranges always show one decimal, as the chips do, so a whole-number reading never looks equal to its bound.
   const rangeFmt = v?.key === "skinTempDev" ? "signed1" : "decimal1"
-  const unit = (u: string) => (isSymbolUnit(u) ? u : ` ${u}`)
+  const unit = (u: string) => (isSymbolUnit(u) ? u : `${NBSP}${u}`)
 
   return (
     <>
@@ -54,7 +57,7 @@ export function VitalTiles({ vitals }: { vitals: Vital[] }) {
       </div>
       <p className="mt-3 hidden text-xs leading-4 font-medium text-muted-foreground xl:block">{NOTE}</p>
 
-      <ResponsiveSheet open={!!open} onOpenChange={(o) => !o && setOpen(null)} title={v?.label ?? "Vital"}>
+      <ResponsiveSheet open={!!current} onOpenChange={(o) => !o && setOpen(null)} title={v?.label ?? "Vital"}>
         {v && (
           <div className="space-y-4">
             <div className="space-y-2">
