@@ -1,10 +1,11 @@
 import { Flame } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { formatValue } from "@/lib/format"
+import { DATA_COLORS } from "@/lib/bands"
 import { reasonCopy } from "@/lib/reasons"
 import { dayHref } from "@/lib/url"
 import { IntradayHrChart } from "@/components/charts/IntradayHrChart"
-import { TrendChart } from "@/components/charts/TrendChart"
+import { TrendChart, type TrendSeries } from "@/components/charts/TrendChart"
 import { ZoneBars } from "@/components/charts/ZoneBars"
 import { ActivityCard } from "@/components/metrics/ActivityCard"
 import { InsightCard } from "@/components/metrics/InsightCard"
@@ -19,10 +20,18 @@ import { Card } from "@/components/ui/card"
 import { getStrain } from "@/server/queries/strain"
 import type { StrainVM } from "@/server/queries/types"
 import { pageDay, type SearchParams } from "../_lib/day"
-import { STRAIN_INFO, STRAIN_TARGET_INFO } from "../_lib/info"
+import { CALORIES_INFO, STRAIN_INFO, STRAIN_TARGET_INFO } from "../_lib/info"
 import { CAPTION, hrSeries, LABEL, LEGEND, statProps, trendProps } from "../_lib/view"
 
-export const metadata = { title: "Strain", description: "Day Strain, your Strain Target, heart-rate zones and activities." }
+export const metadata = { title: "Strain", description: "Day Strain, your Strain Target, heart-rate zones, activities, calories burned and workout time." }
+
+/** Bottom first: resting under active, the day's base burn with movement on top. */
+const CALORIE_PARTS: readonly TrendSeries[] = [
+  { key: "resting", label: "Resting", color: DATA_COLORS["energy-resting"].css },
+  { key: "active", label: "Active", color: DATA_COLORS["energy-active"].css },
+]
+/** The new cards open on the week; the page's Strain trend keeps its month default. */
+const WEEK_MONTH = ["w", "m"] as const
 
 /** Strain `/strain?d=` (spec §7.3). */
 export default async function StrainPage({ searchParams }: PageProps<"/strain">) {
@@ -31,6 +40,7 @@ export default async function StrainPage({ searchParams }: PageProps<"/strain">)
   const s = vm.strain
   const t = vm.target.value
   const trend = trendProps(vm.trend)
+  const calories = vm.calories.map((p) => ({ date: p.day, value: p.value, provisional: p.provisional, parts: p.parts }))
 
   return (
     <DetailShell
@@ -88,6 +98,22 @@ export default async function StrainPage({ searchParams }: PageProps<"/strain">)
         </SectionShell>,
         <SectionShell key="trend" variant="card" title={weekly ? "Weekly trends" : "Strain trend"} level={2}>
           <TrendChart label="Strain" format="decimal1" colorBy="strain" {...trend} />
+        </SectionShell>,
+        <SectionShell key="calories" variant="card" title="Calories burned" info={CALORIES_INFO} level={2}>
+          <TrendChart
+            label="Calories burned"
+            unit="kcal"
+            format="grouped"
+            colorBy="single"
+            stack={CALORIE_PARTS}
+            headline="day"
+            ranges={WEEK_MONTH}
+            defaultRange="w"
+            data={{ value: calories, reason: null, provisional: false }}
+          />
+        </SectionShell>,
+        <SectionShell key="workouts" variant="card" title="Workout duration" level={2}>
+          <TrendChart label="Workout duration" format="duration" colorBy="strain" ranges={WEEK_MONTH} defaultRange="w" {...trendProps(vm.workouts)} />
         </SectionShell>,
       ]}
     />

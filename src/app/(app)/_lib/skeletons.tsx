@@ -281,6 +281,12 @@ export function StrainSkeleton() {
         <CardSkeleton key="trend" title="Strain trend">
           <TrendChartSkeleton chip caption />
         </CardSkeleton>,
+        <CardSkeleton key="calories" title="Calories burned">
+          <TrendChartSkeleton ranges={["w", "m"]} day legend />
+        </CardSkeleton>,
+        <CardSkeleton key="workouts" title="Workout duration">
+          <TrendChartSkeleton ranges={["w", "m"]} chip />
+        </CardSkeleton>,
       ]}
     />
   )
