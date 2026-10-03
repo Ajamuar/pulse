@@ -72,7 +72,7 @@ describe("ShellStatusProvider polling", () => {
       return null
     }
     render(
-      <ShellStatusProvider value={{ ...base, sync: { state: "syncing", lastSuccessAt: 1 }, connection: "importing", importProgress: { done: 10, total: 90 } }}>
+      <ShellStatusProvider live value={{ ...base, sync: { state: "syncing", lastSuccessAt: 1 }, connection: "importing", importProgress: { done: 10, total: 90 } }}>
         <Probe />
       </ShellStatusProvider>
     )
@@ -85,11 +85,20 @@ describe("ShellStatusProvider polling", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
+  it("never polls without live, even while a fixture says it is syncing", async () => {
+    vi.useFakeTimers()
+    const fetchMock = vi.fn()
+    vi.stubGlobal("fetch", fetchMock)
+    render(<ShellStatusProvider value={{ ...base, sync: { state: "syncing", lastSuccessAt: 1 } }}>{null}</ShellStatusProvider>)
+    await act(() => vi.advanceTimersByTimeAsync(STATUS_POLL_MS * 3))
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
   it("does not poll when idle", async () => {
     vi.useFakeTimers()
     const fetchMock = vi.fn()
     vi.stubGlobal("fetch", fetchMock)
-    render(<ShellStatusProvider value={base}>{null}</ShellStatusProvider>)
+    render(<ShellStatusProvider live value={base}>{null}</ShellStatusProvider>)
     await act(() => vi.advanceTimersByTimeAsync(STATUS_POLL_MS * 3))
     expect(fetchMock).not.toHaveBeenCalled()
   })

@@ -1,15 +1,20 @@
 import { AppNav } from "./AppNav"
 import { ShellStatusProvider, type ShellStatus } from "./ShellStatus"
 
-export type AppShellProps = { status: ShellStatus; children: React.ReactNode }
+export type AppShellProps = {
+  status: ShellStatus
+  /** The real app's status: poll `/status` while a sync runs. Off for fixtures (the dev kit), which would loop. */
+  live?: boolean
+  children: React.ReactNode
+}
 
 /**
  * The app frame (spec §4.2): skip link, the floating glass nav (tab bar, rail or sidebar) and the
  * round action, and the ShellStatus context. Page shells render their header inside <main> (D2).
  */
-export function AppShell({ status, children }: AppShellProps) {
+export function AppShell({ status, live = false, children }: AppShellProps) {
   return (
-    <ShellStatusProvider value={status}>
+    <ShellStatusProvider value={status} live={live}>
       <a
         href="#main"
         className="sr-only rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50"

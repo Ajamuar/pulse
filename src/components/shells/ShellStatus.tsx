@@ -40,12 +40,13 @@ const busy = (s: ShellStatus) => s.sync.state === "syncing" || s.connection === 
  * The server renders the status once per navigation, so while a sync or import runs the provider polls `/status`
  * for the sync ring and import progress, and refreshes the page once the run ends to bring in the new scores.
  */
-export function ShellStatusProvider({ value, children }: { value: ShellStatus; children: React.ReactNode }) {
+export function ShellStatusProvider({ value, live = false, children }: { value: ShellStatus; live?: boolean; children: React.ReactNode }) {
   const router = useRouter()
   const [polled, setPolled] = React.useState<{ from: ShellStatus; status: ShellStatus } | null>(null)
   // A new server render (navigation, refresh) supersedes what polling saw. Avatar only comes from the layout.
   const current = polled?.from === value ? { ...polled.status, avatar: value.avatar } : value
-  const running = busy(current)
+  // Only the real app polls: a fixture that says "syncing" would poll, refresh and say "syncing" again, forever.
+  const running = live && busy(current)
   React.useEffect(() => {
     if (!running) return
     let live = true

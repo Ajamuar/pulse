@@ -14,5 +14,5 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   await connection()
   // Fire and forget: the worker throttles itself; the page renders from what is already stored.
   requestSync()
-  return <AppShell status={{ ...getShellStatus(), avatar: avatarSrc(getDb()) }}>{children}</AppShell>
+  return <AppShell live status={{ ...getShellStatus(), avatar: avatarSrc(getDb()) }}>{children}</AppShell>
 }
