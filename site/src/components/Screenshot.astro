@@ -1,19 +1,20 @@
 ---
+// A framed app screenshot (device or window frame and margin are in the image, see site/scripts/shots.mjs).
 import { Picture } from "astro:assets"
-import { SHOTS, isPhone } from "../lib/shots"
+import { shot as getShot, isPhone } from "../lib/shots"
 import type { Shot } from "../data/metrics"
 
 interface Props {
   shot: Shot
   class?: string
-  /** The hero image: load eagerly with high priority. */
+  /** Above the fold: load eagerly with high priority. */
   priority?: boolean
   sizes?: string
 }
 const { shot, class: className, priority = false, sizes } = Astro.props
-const { src, alt } = SHOTS[shot]
+const { src, alt } = getShot(shot)
 const phone = isPhone(shot)
-const widths = phone ? [320, 480, 720] : [640, 960, 1440]
+const widths = phone ? [280, 420, 640, 960] : [640, 960, 1440, 2000]
 ---
 
 <Picture
@@ -27,9 +28,3 @@ const widths = phone ? [320, 480, 720] : [640, 960, 1440]
   decoding="async"
   class:list={["shot", phone ? "phone" : "laptop", className]}
 />
-
-<style>
-  .phone {
-    border-radius: 28px;
-  }
-</style>

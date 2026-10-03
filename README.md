@@ -5,7 +5,15 @@ See `docs/plans/` for the plan.
 
 ## Screenshots
 
-See [docs/screenshots.md](docs/screenshots.md) (demo mode, seeded data).
+<p>
+  <img src="docs/screenshots/phone-home.png" alt="Pulse on a phone: sleep, recovery and strain dials" width="32%">
+  <img src="docs/screenshots/phone-health-monitor.png" alt="Pulse on a phone: the Health Monitor with heart rhythm and measurements" width="32%">
+  <img src="docs/screenshots/phone-journal.png" alt="Pulse on a phone: the Journal with the Log" width="32%">
+</p>
+
+![Pulse on a laptop: the home screen](docs/screenshots/laptop-home.png)
+
+Every screen, on a phone and a laptop: [docs/screenshots.md](docs/screenshots.md) (demo mode, seeded data).
 
 ## Run in demo mode
 

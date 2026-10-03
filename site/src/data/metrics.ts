@@ -4,10 +4,10 @@
 // sources and related links. A new entry in SCORE_DOCS gets a page with sensible defaults and no edit here.
 import { SCORE_DOCS, type ScoreDoc } from "../../../src/app/(app)/more/how-it-works/content"
 
-export type Source = { label: string; url: string }
+export type Source = { label: string; url?: string }
 export type Band = { from: number; to: number; label: string; color: string }
 export type Scale = { min: number; max: number; unit?: string; bands: Band[] }
-export type Shot = "mobile-home" | "mobile-sleep" | "mobile-healthspan" | "desktop-strain" | "desktop-health"
+export type Shot = `${"phone" | "laptop"}-${"home" | "recovery" | "strain" | "sleep" | "health" | "health-monitor" | "journal" | "trends" | "dashboard-editor"}`
 export type Faq = { q: string; a: string }
 
 type Meta = {
@@ -98,17 +98,16 @@ const S = {
     url: "https://doi.org/10.1503/cmaj.150535",
   },
   googleHealthApi: { label: "Google Health API reference: data points and field definitions", url: "https://developers.google.com/health/reference/rest/v4/users.dataTypes.dataPoints" },
-  refapp101: { label: "the reference app developer docs, the reference app 101 (recovery colour bands)", url: "#" },
 }
 
 const META: Record<string, Meta> = {
   recovery: {
     title: "Recovery score for Fitbit Air: how Pulse works it out",
     description: "Pulse turns Fitbit Air HRV, resting heart rate, sleep, breathing and skin temperature into a 0-100% Recovery score. The inputs, weights and limits.",
-    keywords: ["fitbit air recovery score", "refapp recovery score explained", "how is recovery score calculated", "hrv recovery score"],
+    keywords: ["fitbit air recovery score", "recovery score explained", "how is recovery score calculated", "hrv recovery score"],
     scale: recoveryScale,
-    shot: "mobile-home",
-    sources: [S.noop, S.plews2013, S.buchheit2014, S.altini2021, S.refapp101],
+    shot: "phone-recovery",
+    sources: [S.noop, S.plews2013, S.buchheit2014, S.altini2021],
     related: ["hrv", "resting-heart-rate", "sleep", "recovery-forecast", "strain-target"],
     faq: [
       {
@@ -128,7 +127,7 @@ const META: Record<string, Meta> = {
   strain: {
     title: "Strain score from heart rate: the 0-21 scale explained",
     description: "How Pulse scores a day's cardiovascular load on a 0-21 Strain scale from Fitbit Air heart rate, heart-rate reserve zones and a log curve.",
-    keywords: ["strain score explained", "refapp strain 0-21", "fitbit air strain", "cardio load score"],
+    keywords: ["strain score explained", "strain 0-21 scale", "fitbit air strain", "cardio load score"],
     scale: {
       min: 0,
       max: 21,
@@ -139,13 +138,13 @@ const META: Record<string, Meta> = {
         { from: 18, to: 21, label: "All out", color: "#8fd0ff" },
       ],
     },
-    shot: "desktop-strain",
+    shot: "laptop-strain",
     sources: [S.noop, S.edwards],
     related: ["strain-target", "training-balance", "training-load", "energy-bank"],
     faq: [
       {
         q: "Why is Strain on a 0-21 scale?",
-        a: "Pulse uses the same 0-21 range as the reference app so the numbers feel familiar. The day's heart-rate points go on a log curve, so each extra point of Strain takes more effort than the last.",
+        a: "Pulse uses the familiar 0-21 range, so the numbers read naturally. The day's heart-rate points go on a log curve, so each extra point of Strain takes more effort than the last.",
       },
       {
         q: "Why does weightlifting give me low Strain?",
@@ -157,7 +156,7 @@ const META: Record<string, Meta> = {
     title: "Strain Target: a daily training range from your Recovery",
     description: "Pulse sets today's Strain range from your Recovery band and 28-day load, then caps fast ramp-ups with the acute:chronic workload ratio.",
     keywords: ["how much should i train today", "strain target", "strain coach alternative"],
-    shot: "desktop-strain",
+    shot: "phone-strain",
     sources: [S.gabbett2016, S.noop],
     related: ["strain", "recovery", "training-balance"],
   },
@@ -176,7 +175,7 @@ const META: Record<string, Meta> = {
         { from: 85, to: 100, label: "Optimal", color: "#a6c3d7" },
       ],
     },
-    shot: "mobile-sleep",
+    shot: "phone-sleep",
     sources: [S.noop, S.phillips2017],
     related: ["sleep-planner", "sleep-consistency", "recovery"],
   },
@@ -184,15 +183,15 @@ const META: Record<string, Meta> = {
     title: "Sleep Planner: tonight's sleep need and bedtime",
     description: "Pulse works out tonight's sleep need from your history, today's Strain, sleep debt and naps, then counts back from your usual wake time.",
     keywords: ["what time should i go to bed", "sleep need calculator", "sleep debt"],
-    shot: "mobile-sleep",
+    shot: "laptop-sleep",
     sources: [S.noop],
     related: ["sleep", "sleep-consistency", "strain"],
   },
   "pulse-age": {
     title: "Pulse Age: a biological age estimate from your wearable",
     description: "Pulse Age estimates how old your body behaves from nine habits and vitals, using published mortality studies. How it works, and what it cannot tell you.",
-    keywords: ["biological age from wearable", "refapp age alternative", "pace of aging", "fitbit biological age"],
-    shot: "mobile-healthspan",
+    keywords: ["biological age from wearable", "biological age without a subscription", "pace of aging", "fitbit biological age"],
+    shot: "phone-health",
     sources: [
       {
         label: "Kodama S, et al. Cardiorespiratory fitness as a quantitative predictor of all-cause mortality. JAMA 2009;301(19):2024-35",
@@ -227,7 +226,7 @@ const META: Record<string, Meta> = {
     slug: "stress-monitor",
     title: "Stress Monitor: a 0-3 stress score from heart rate",
     description: "Pulse scores each still, awake minute from 0 to 3 by how far your heart rate sits above your calm daytime level. Inputs, curve and limits.",
-    keywords: ["stress score from heart rate", "refapp stress monitor alternative", "fitbit air stress"],
+    keywords: ["stress score from heart rate", "stress monitor without a subscription", "fitbit air stress"],
     scale: {
       min: 0,
       max: 3,
@@ -237,7 +236,7 @@ const META: Record<string, Meta> = {
         { from: 2, to: 3, label: "High", color: C.stressHigh },
       ],
     },
-    shot: "mobile-home",
+    shot: "phone-home",
     sources: [S.noop],
     related: ["energy-bank", "resting-heart-rate", "health-monitor"],
   },
@@ -246,7 +245,7 @@ const META: Record<string, Meta> = {
     description: "Pulse's Energy Bank starts from Recovery and sleep, then spends and recharges minute by minute from heart-rate load, stress and naps.",
     keywords: ["body battery for fitbit", "energy bank", "body battery alternative"],
     scale: recoveryScale,
-    shot: "mobile-home",
+    shot: "laptop-home",
     sources: [S.edwards],
     related: ["recovery", "stress", "strain"],
   },
@@ -254,7 +253,7 @@ const META: Record<string, Meta> = {
     title: "Health Monitor: nightly vitals against your normal range",
     description: "Pulse checks last night's resting heart rate, HRV, respiratory rate, SpO2 and skin temperature against your own ranges, and flags an illness pattern.",
     keywords: ["fitbit air health metrics", "spo2 skin temperature fitbit", "illness detection wearable"],
-    shot: "desktop-health",
+    shot: "laptop-health-monitor",
     sources: [
       S.noop,
       { label: "Mishra T, et al. Pre-symptomatic detection of COVID-19 from smartwatch data. Nat Biomed Eng 2020;4:1208-20", url: "https://doi.org/10.1038/s41551-020-00640-6" },
@@ -279,7 +278,7 @@ const META: Record<string, Meta> = {
         { from: 80, to: 100, label: "Superior", color: C.optimal },
       ],
     },
-    shot: "desktop-health",
+    shot: "laptop-health",
     sources: [
       S.kaminsky2015,
       { label: "Kaminsky LA, et al. Updated reference standards for cardiorespiratory fitness (FRIEND). Mayo Clin Proc 2022;97(2):285-93", url: "https://doi.org/10.1016/j.mayocp.2021.08.020" },
@@ -290,7 +289,7 @@ const META: Record<string, Meta> = {
     title: "Training balance: acute:chronic workload ratio (ACWR)",
     description: "Pulse compares your last 7 days of Strain with your last 28 to show whether your load is balanced, rising fast or dropping off.",
     keywords: ["acute chronic workload ratio", "acwr calculator", "am i overtraining"],
-    shot: "desktop-health",
+    shot: "laptop-trends",
     scale: {
       min: 0,
       max: 2,
@@ -308,7 +307,8 @@ const META: Record<string, Meta> = {
     slug: "behaviour-insights",
     title: "Behaviour insights: how habits go with next-day scores",
     description: "Pulse compares days you logged a behaviour with days you did not, and shows the difference in next-day Recovery, HRV and sleep with a bootstrap interval.",
-    keywords: ["does alcohol affect hrv", "refapp journal alternative", "habit tracking recovery"],
+    keywords: ["does alcohol affect hrv", "habit journal for recovery", "habit tracking recovery"],
+    shot: "phone-journal",
     sources: [{ label: "Efron B, Tibshirani RJ. An Introduction to the Bootstrap. Chapman & Hall, 1993", url: "https://doi.org/10.1201/9780429246593" }],
     related: ["recovery", "hrv", "sleep"],
   },
@@ -326,7 +326,7 @@ const META: Record<string, Meta> = {
         { from: 80, to: 100, label: "Optimal", color: "#a6c3d7" },
       ],
     },
-    shot: "mobile-sleep",
+    shot: "laptop-sleep",
     sources: [S.phillips2017, S.windred2024],
     related: ["sleep", "sleep-planner", "pulse-age"],
   },
@@ -380,7 +380,7 @@ const EXTRA_DOCS: (ScoreDoc & Meta)[] = [
     title: "HRV on the Fitbit Air: what it is and how Pulse uses it",
     description: "Where Pulse gets your Fitbit Air HRV, why it compares HRV only with your own baseline, and how it drives Recovery and the Health Monitor.",
     keywords: ["fitbit air hrv", "what is a good hrv", "hrv baseline", "rmssd"],
-    shot: "desktop-health",
+    shot: "phone-health-monitor",
     sources: [S.googleHealthApi, S.plews2013, S.buchheit2014, S.altini2021],
     related: ["recovery", "resting-heart-rate", "health-monitor", "journal-impact"],
     sections: [
@@ -421,7 +421,7 @@ const EXTRA_DOCS: (ScoreDoc & Meta)[] = [
     title: "Resting heart rate on the Fitbit Air: how Pulse measures it",
     description: "How Pulse takes resting heart rate from Fitbit Air sleep data, and how it feeds Recovery, Strain, the Health Monitor and Pulse Age.",
     keywords: ["fitbit air resting heart rate", "sleeping heart rate", "what is a good resting heart rate"],
-    shot: "desktop-health",
+    shot: "laptop-health-monitor",
     sources: [S.zhang2016, S.altini2021, S.noop],
     related: ["hrv", "recovery", "pulse-age", "strain"],
     sections: [

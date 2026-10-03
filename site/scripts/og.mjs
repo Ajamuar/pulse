@@ -12,7 +12,7 @@ const { chromium } = require("@playwright/test")
 const file = (p) => new URL(p, import.meta.url)
 const b64 = (p) => readFileSync(file(p)).toString("base64")
 const font = b64("../node_modules/@fontsource-variable/figtree/files/figtree-latin-wght-normal.woff2")
-const phone = b64("../../docs/screenshots/mobile-home.png")
+const phone = b64("../../docs/screenshots/phone-home.png")
 const wm = GLYPHS.bold
 
 const html = `<!doctype html><html><head><style>
@@ -25,7 +25,7 @@ body { width: 1200px; height: 630px; overflow: hidden; font-family: Figtree; col
 .brand svg.wm { height: 28px; width: auto; }
 h1 { margin-top: 56px; font-size: 64px; line-height: 1.02; font-weight: 650; letter-spacing: -0.04em; }
 p { margin-top: 28px; font-size: 26px; color: #babac0; }
-img { position: absolute; right: 70px; top: 54px; width: 330px; border-radius: 34px; box-shadow: 0 30px 80px rgb(0 0 0 / .6); outline: 1px solid rgb(255 255 255 / .1); }
+img { position: absolute; right: 56px; top: 36px; width: 360px; }
 .beat { position: absolute; left: 0; top: 430px; width: 1200px; height: 120px; }
 </style></head><body>
 <svg class="beat" viewBox="0 0 1200 120" preserveAspectRatio="none"><path d="M0 70H690L714 18L738 82L750 70H1200" fill="none" stroke="#00f19f" stroke-opacity=".45" stroke-width="2"/></svg>
