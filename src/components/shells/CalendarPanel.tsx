@@ -186,7 +186,7 @@ function MonthPanel({
             type="button"
             aria-label="Back to today"
             onClick={() => onSelect(today)}
-            className="relative -ml-1 h-8 touch-manipulation rounded-full bg-white/[0.08] px-3.5 text-[11px] leading-4 font-bold tracking-[0.1em] uppercase transition-[background-color,scale] duration-150 ease-standard outline-none after:absolute after:inset-x-0 after:-inset-y-1.5 hover:bg-white/[0.12] focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96]"
+            className="relative h-8 touch-manipulation rounded-full bg-white/[0.08] px-3.5 text-[11px] leading-4 font-bold tracking-[0.1em] uppercase transition-[background-color,scale] duration-150 ease-standard outline-none after:absolute after:inset-x-0 after:-inset-y-1.5 hover:bg-white/[0.12] focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96]"
           >
             Today
           </button>
