@@ -36,6 +36,13 @@
       "when": 1791021595858,
       "tag": "0004_dashboard_metrics",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1791022142501,
+      "tag": "0005_raw_payloads_retention",
+      "breakpoints": true
     }
   ]
 }

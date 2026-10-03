@@ -109,6 +109,18 @@ export function parsePairedDevices(body: string): DeviceCheck {
   return Object.keys(rest).length ? "unknown" : "none";
 }
 
+/**
+ * Raw pages are evidence for schema drift and the input for re-mapping recent data, not a backup:
+ * 30 days covers the 3-day re-fetch overlap many times over and any recent mapper fix, and bounds
+ * the table at roughly a month of fetches. Freed pages are reused by later inserts; the WAL is
+ * checkpointed by SQLite's default auto-checkpoint, so no VACUUM is needed.
+ */
+export const RAW_RETENTION_DAYS = 30;
+
+/** Deletes archived pages fetched more than RAW_RETENTION_DAYS before `nowS` (unix seconds). Returns the count. */
+export const pruneRawPayloads = (db: Db, nowS: number): number =>
+  db.$client.prepare("DELETE FROM raw_payloads WHERE fetched_at < ?").run(nowS - RAW_RETENTION_DAYS * 86_400).changes;
+
 // --- Client -------------------------------------------------------------------------------------
 
 export type ClientDeps = {

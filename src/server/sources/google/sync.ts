@@ -15,7 +15,7 @@ import { dailyMetrics, exercises, oauthTokens, sleepSessions, syncState } from "
 import type { Source } from "../types";
 import { DATA_TYPES, type DataTypeId } from "./catalogue";
 import { addDays, localDay, localMidnight } from "../../time";
-import { type ClientDeps, createGoogleClient, localWindows, type TimeWindow } from "./client";
+import { type ClientDeps, createGoogleClient, localWindows, pruneRawPayloads, type TimeWindow } from "./client";
 import {
   DAILY_TYPES,
   type DailyRow,
@@ -94,6 +94,7 @@ export function createGoogleSource(deps: SyncDeps): Source {
           log.error(err instanceof GoogleError ? safe : `[sync] ${job.key} failed: ${(err as Error)?.stack ?? err}`);
         }
       }
+      pruneRawPayloads(db, nowS()); // every run, so the archive stays bounded (client.ts)
       return { changed: run.changed };
 
       async function syncJob(job: Job) {

@@ -9,11 +9,13 @@ import {
   hrSamples,
   intradayDirty,
   oauthTokens,
+  rawPayloads,
   sleepSegments,
   sleepSessions,
   stepsMinutes,
   syncState,
 } from "../../db/schema";
+import { RAW_RETENTION_DAYS } from "./client";
 import { BACKFILL_DAYS, createGoogleSource, DEVICES_KEY, NO_DEVICE_ERROR } from "./sync";
 
 const TZ = "Asia/Kolkata"; // fixed +05:30, which the stub's civil-time filter relies on
@@ -256,6 +258,16 @@ describe("google sync", () => {
     devices = () => json({ pairedDevices: [{ name: "users/me/pairedDevices/1" }] });
     await source.pull();
     expect(state(DEVICES_KEY)?.lastError).toBeNull();
+  });
+
+  it("each pull prunes raw pages older than the retention window", async () => {
+    const { source } = setup();
+    const old = NOW / 1000 - (RAW_RETENTION_DAYS + 1) * 86_400;
+    db.insert(rawPayloads).values({ type: "sleep", rangeStart: 0, rangeEnd: 1, bodyHash: "x", gzBody: Buffer.from(""), fetchedAt: old }).run();
+    await source.pull();
+    const kept = db.select().from(rawPayloads).all();
+    expect(kept.length).toBeGreaterThan(0); // this pull's pages
+    expect(kept.every((r) => r.fetchedAt > old)).toBe(true);
   });
 
   it("a failed backfill resumes from its last committed chunk", async () => {

@@ -36,7 +36,7 @@ export const syncState = sqliteTable("sync_state", {
   lastError: text("last_error"),
 });
 
-/** Gzipped raw Google pages; insert with ON CONFLICT DO NOTHING so an unchanged re-fetch is free. */
+/** Gzipped raw Google pages; insert with ON CONFLICT DO NOTHING so an unchanged re-fetch is free. Pruned by fetched_at (RAW_RETENTION_DAYS). */
 export const rawPayloads = sqliteTable(
   "raw_payloads",
   {
@@ -48,7 +48,7 @@ export const rawPayloads = sqliteTable(
     gzBody: blob("gz_body", { mode: "buffer" }).notNull(),
     fetchedAt: integer("fetched_at").notNull(),
   },
-  (t) => [unique("raw_payloads_dedupe").on(t.type, t.rangeStart, t.rangeEnd, t.bodyHash)],
+  (t) => [unique("raw_payloads_dedupe").on(t.type, t.rangeStart, t.rangeEnd, t.bodyHash), index("raw_payloads_fetched_at").on(t.fetchedAt)],
 );
 
 // ponytail: one row per HR sample (~13.6M rows/year at Fitbit's 2 s cadence); add a per-minute rollup if reads get slow.

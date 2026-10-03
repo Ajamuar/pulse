@@ -5,7 +5,7 @@ import { openDb, type Db } from "../../db";
 import { oauthTokens, rawPayloads } from "../../db/schema";
 import { DATA_TYPE_IDS, DATA_TYPES } from "./catalogue";
 import { localDay, localMidnight } from "../../time";
-import { archivePage, buildFilter, createGoogleClient, localWindows, parsePairedDevices } from "./client";
+import { archivePage, buildFilter, createGoogleClient, localWindows, parsePairedDevices, pruneRawPayloads, RAW_RETENTION_DAYS } from "./client";
 import { GoogleError } from "./oauth";
 
 const TZ = "Asia/Kolkata"; // UTC+5:30, so a UTC date and the local date differ before 05:30
@@ -231,6 +231,18 @@ describe("raw archive", () => {
     expect(gunzipSync(r.gzBody).toString()).toBe('{"a":1}');
     expect(r.bodyHash).toBe(createHash("sha256").update('{"a":1}').digest("hex"));
     expect(r.fetchedAt).toBe(3);
+  });
+
+  it("prunes pages fetched more than RAW_RETENTION_DAYS ago and keeps the rest", () => {
+    const now = 100 * 86_400;
+    const edge = now - RAW_RETENTION_DAYS * 86_400;
+    archivePage(db, { ...page, body: "old", fetchedAt: edge - 1 });
+    archivePage(db, { ...page, body: "edge", fetchedAt: edge });
+    archivePage(db, { ...page, body: "new", fetchedAt: now });
+    expect(pruneRawPayloads(db, now)).toBe(1);
+    expect(db.select().from(rawPayloads).all().map((r) => gunzipSync(r.gzBody).toString())).toEqual(["edge", "new"]);
+    // A pruned page fetched again is archived again.
+    expect(archivePage(db, { ...page, body: "old", fetchedAt: now })).toBe(true);
   });
 });
 

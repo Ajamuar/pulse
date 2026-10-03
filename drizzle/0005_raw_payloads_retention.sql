@@ -1,0 +1,1 @@
+CREATE INDEX `raw_payloads_fetched_at` ON `raw_payloads` (`fetched_at`);
