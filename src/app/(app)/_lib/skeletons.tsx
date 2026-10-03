@@ -300,9 +300,9 @@ export function SleepSkeleton() {
         </>
       }
       primary={
-        <CardSkeleton title="Sleep stages">
+        <SectionShell variant="card" title="Last night's sleep" aside="vs. prior 30 days" level={2}>
           <SleepStagesSkeleton />
-        </CardSkeleton>
+        </SectionShell>
       }
       secondary={[
         <CardSkeleton key="need" title="Hours vs. need">

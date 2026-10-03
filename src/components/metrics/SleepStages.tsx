@@ -2,14 +2,15 @@
 
 import * as React from "react"
 import { cn } from "@/lib/utils"
-import { clock, hmm } from "@/lib/format"
+import { deltaTone, GOOD_DIRECTION } from "@/lib/bands"
+import { durationWords, hmm, statSentence } from "@/lib/format"
 import type { Metric } from "@/lib/reasons"
 import { Skeleton, SkeletonText } from "@/components/ui/skeleton"
 import { EmptyState } from "@/components/shells/EmptyState"
 import { MetricState } from "@/components/shells/MetricState"
-import { useOptionalShellCalendar } from "@/components/shells/ShellStatus"
+import { SleepHrChart, SleepHrChartSkeleton, type SleepHr } from "@/components/charts/SleepHrChart"
 import { ReasonPlaceholder } from "./ReasonPlaceholder"
-import { CAPTION, LABEL } from "./primitives"
+import { CAPTION, DeltaMark, LABEL } from "./primitives"
 
 type Stage = "awake" | "rem" | "light" | "deep"
 export type SleepStagesNight = {
@@ -18,28 +19,56 @@ export type SleepStagesNight = {
   segments: { stage: Stage; start: number; end: number }[]
   rows: { stage: Stage; label: string; pct: number; minutes: number; typical: [number, number] }[]
 }
+/** Time asleep in the main sleep and the prior 30 nights' mean, minutes. */
+export type SleepHours = { asleepMin: number; average: number | null; sd?: number }
+
+export type SleepStagesProps = {
+  /** The hero: no value means no night, and the whole card shows the reason. */
+  hours: Metric<SleepHours> | undefined
+  hr: Metric<SleepHr> | undefined
+  /** null: a night Fitbit did not stage. */
+  data: Metric<SleepStagesNight> | null | undefined
+}
 
 // the reference app's order, top to bottom [latest-sleep-stages-1].
 const ORDER: Stage[] = ["awake", "light", "deep", "rem"]
 const EMPTY = "No stage data for this night. Fitbit only stages sleeps longer than about 3 hours."
+const HERO = "font-numeric text-[32px] leading-9 font-bold tracking-[-0.01em]"
 
-function Rows({ night }: { night: SleepStagesNight }) {
-  const tz = useOptionalShellCalendar()?.timeZone
+/** the reference app's "Hours of sleep" [latest-sleep-stages-1]: time asleep, the arrow against the prior 30 nights and their mean under it. */
+function HoursHero({ h }: { h: SleepHours }) {
+  const t = h.average === null ? undefined : deltaTone(GOOD_DIRECTION.hours, h.asleepMin, h.average, h.sd)
+  const sentence = statSentence({
+    label: "Hours of sleep",
+    valueText: durationWords(h.asleepMin),
+    averageText: h.average === null ? undefined : durationWords(h.average),
+    dir: t?.dir,
+    tone: t?.tone,
+  })
+  return (
+    <div>
+      <p className={cn(LABEL, "text-foreground-secondary")}>Hours of sleep</p>
+      <p className="sr-only">{sentence}</p>
+      <div aria-hidden className="mt-1.5 grid w-fit grid-cols-[auto_8px] items-center gap-x-2">
+        <span className={cn(HERO, "tabular-nums")}>{hmm(h.asleepMin)}</span>
+        {t ? <DeltaMark dir={t.dir} tone={t.tone} /> : <span />}
+        {h.average !== null && <span className="font-numeric text-[13px] leading-4 font-medium text-muted-foreground tabular-nums">{hmm(h.average)}</span>}
+      </div>
+    </div>
+  )
+}
+
+function Rows({ night, selected, onSelect }: { night: SleepStagesNight; selected: Stage; onSelect: (s: Stage) => void }) {
   const name = React.useId()
-  const [selected, setSelected] = React.useState<Stage>("awake")
   const span = Math.max(1, night.wake - night.bed)
   const rows = ORDER.map((s) => night.rows.find((r) => r.stage === s)).filter((r) => !!r)
 
   return (
     <div className="space-y-4">
-      <div className={cn(CAPTION, "flex items-baseline justify-between gap-3 tabular-nums")}>
-        <span>
-          {clock(night.bed, tz)} to {clock(night.wake, tz)}
-        </span>
-        <span className="flex items-baseline gap-2">
-          <span className={cn(LABEL, "text-muted-foreground")}>Duration</span>
-          <span className="font-numeric text-[17px] leading-5 font-bold text-foreground">{hmm(span / 60_000)}</span>
-        </span>
+      {/* Bed and wake times sit on the heart-rate chart's axis above, as in the reference app. */}
+      <div className={cn(CAPTION, "flex items-baseline justify-end gap-2 tabular-nums")}>
+        <span className={cn(LABEL, "text-muted-foreground")}>Duration</span>
+        <span className="font-numeric text-[17px] leading-5 font-bold text-foreground">{hmm(span / 60_000)}</span>
       </div>
       <div role="radiogroup" aria-label="Highlight a sleep stage" className="space-y-4">
         {rows.map((r) => {
@@ -53,7 +82,7 @@ function Rows({ night }: { night: SleepStagesNight }) {
                   name={name}
                   value={r.stage}
                   checked={on}
-                  onChange={() => setSelected(r.stage)}
+                  onChange={() => onSelect(r.stage)}
                   aria-label={`${r.label}, ${Math.round(r.pct)} percent, ${hmm(r.minutes)}. Typical ${r.typical[0]} to ${r.typical[1]} percent`}
                   className="peer sr-only"
                 />
@@ -99,30 +128,48 @@ function Rows({ night }: { night: SleepStagesNight }) {
   )
 }
 
-/** Last night's stages as the reference app's radio rows with hatched tracks (spec §7.5, §11 V8). Replaces the Recharts hypnogram. */
-export function SleepStages({ data }: { data: Metric<SleepStagesNight> | null | undefined }) {
+/**
+ * the reference app's "Last night's sleep" card (spec §7.5, §11 V8, R9): the hours hero, the overnight heart rate, then the stage
+ * rows with hatched tracks. Choosing a stage lights its blocks on the tracks and its stretches on the heart-rate line.
+ */
+export function SleepStages({ hours, hr, data }: SleepStagesProps) {
+  const [selected, setSelected] = React.useState<Stage>("awake")
+  const segments = data?.value?.segments
+  const highlight = React.useMemo(() => (segments?.length ? segments.filter((g) => g.stage === selected) : undefined), [segments, selected])
   return (
     <MetricState
-      metric={data}
+      metric={hours}
       skeleton={<SleepStagesSkeleton />}
-      empty={<EmptyState body={EMPTY} />}
-      renderReason={(r) => (
+      renderReason={(r, meta) => (
         <div className="grid min-h-40 place-items-center">
-          <ReasonPlaceholder reason={r} size="md" />
+          <ReasonPlaceholder reason={r} nightsLeft={meta.nightsLeft} size="md" />
         </div>
       )}
     >
-      {(night) => (night.segments.length ? <Rows night={night} /> : <EmptyState body={EMPTY} />)}
+      {(h) => (
+        <div className="space-y-4">
+          <HoursHero h={h} />
+          <SleepHrChart data={hr} highlight={highlight} />
+          <div className="border-t border-border pt-4">
+            <MetricState
+              metric={data}
+              skeleton={<StageRowsSkeleton />}
+              empty={<EmptyState body={EMPTY} />}
+              renderReason={(r) => <ReasonPlaceholder reason={r} size="md" />}
+            >
+              {(night) => (night.segments.length ? <Rows night={night} selected={selected} onSelect={setSelected} /> : <EmptyState body={EMPTY} />)}
+            </MetricState>
+          </div>
+        </div>
+      )}
     </MetricState>
   )
 }
 
-/** Loading shape: the same rows with real stage names, bars for the numbers and the tracks. */
-export function SleepStagesSkeleton() {
+function StageRowsSkeleton() {
   return (
     <div aria-hidden className="space-y-4">
-      <div className="flex justify-between">
-        <SkeletonText className={cn(CAPTION, "w-24")} />
+      <div className="flex justify-end">
         <SkeletonText className="w-24 text-[17px] leading-5" />
       </div>
       {["Awake", "Light", "Deep", "REM"].map((l) => (
@@ -135,6 +182,23 @@ export function SleepStagesSkeleton() {
           <Skeleton className="h-3 rounded-full bg-muted/60" />
         </div>
       ))}
+    </div>
+  )
+}
+
+/** Loading shape: the hero's label and number, the chart box, then the rows with real stage names and their tracks. */
+export function SleepStagesSkeleton() {
+  return (
+    <div aria-hidden className="space-y-4">
+      <div>
+        <p className={cn(LABEL, "text-foreground-secondary")}>Hours of sleep</p>
+        <SkeletonText className={cn(HERO, "mt-1.5 w-[4ch]")} />
+        <SkeletonText className="w-[4ch] text-[13px] leading-4" />
+      </div>
+      <SleepHrChartSkeleton />
+      <div className="border-t border-border pt-4">
+        <StageRowsSkeleton />
+      </div>
     </div>
   )
 }

@@ -196,6 +196,10 @@ export type SleepVM = {
     segments: { stage: "awake" | "rem" | "light" | "deep"; start: number; end: number }[];
     rows: { stage: "awake" | "rem" | "light" | "deep"; label: string; pct: number; minutes: number; typical: [number, number] }[];
   }> | null;
+  /** Hours asleep in the main sleep, against the prior 30 nights' mean (spec §7.5, §11 R9). */
+  hours: Metric<{ asleepMin: number; average: number | null; sd?: number }>;
+  /** Heart rate per minute across the main sleep, padded 15 minutes each side; a null minute is a gap. */
+  nightHr: Metric<{ bed: number; wake: number; points: TimePoint[] }>;
   hoursVsNeed: Metric<{
     asleepMin: number;
     needMin: number;

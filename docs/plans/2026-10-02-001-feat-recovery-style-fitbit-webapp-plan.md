@@ -1394,7 +1394,7 @@ Agreed on 2026-10-03 to do later, not to drop:
 
 - The residual review findings in `docs/residual-review-findings.md` (pipeline refactor, raw-archive retention, deleted Fitbit records).
 - The 41 low web-guideline findings in `docs/design/guidelines-review.md`.
-- The Sleep card's hours hero and overnight HR chart (the view model has no data for them yet).
+- ~~The Sleep card's hours hero and overnight HR chart (the view model has no data for them yet).~~ Done 2026-10-03: `getSleep().hours` and `.nightHr`, `SleepHrChart`, spec §11 R19.
 - ~~A customizable My Dashboard (suggested on Reddit).~~ Done 2026-10-03: pencil on the section header, show/hide and reorder in a sheet, Reset to default (spec §11 CD1).
 - Height from Google: the API has a `height` data type, but its value field isn't in the reference docs. Confirm it with the first real probe, then sync it into the profile (Settings keeps the manual field). Google's profile itself only has `age`: no birth date, no sex.
 - Warn when the signed-in account has a Google Health profile but no Fitbit device or data (`users.pairedDevices.list` empty), instead of an empty import that reports success.

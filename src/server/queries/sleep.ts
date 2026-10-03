@@ -17,7 +17,7 @@ import {
   vitalReason,
   trendPoints,
 } from "./common";
-import type { KeyStat, Metric, SleepStatus, SleepVM } from "./types";
+import type { KeyStat, Metric, SleepStatus, SleepVM, TimePoint } from "./types";
 
 type Stage = "awake" | "rem" | "light" | "deep";
 const STAGE_ROWS: { stage: Stage; label: string; typical: [number, number] }[] = [
@@ -74,6 +74,11 @@ export function getSleep(day: string, ctx: QueryCtx = defaultCtx()): SleepVM {
         ? ok({ asleepMin: main.asleepMin, needMin: prevPlan.needMin, parts: prevPlan.parts, calibrating: false })
         : ok({ asleepMin: main.asleepMin, needMin: s.needHours * 60, parts: { baselineMin: s.needHours * 60, strainMin: 0, debtMin: 0, napMin: 0 }, calibrating: true });
 
+  const prior = priorStats(rows, day, (r) => r.sleep?.main?.asleepMin);
+  const hours: SleepVM["hours"] = main
+    ? ok({ asleepMin: main.asleepMin, average: prior.mean, ...(prior.sd !== undefined && { sd: prior.sd }) })
+    : fromReason(noNight, isToday);
+
   const details = [
     { ...stat("timeInBed", "Time in bed", (r) => r.sleep?.main?.inBedMin, "min"), direction: "neutral" as const },
     { ...stat("wakeEvents", "Wake events", (r) => r.sleep?.main?.wakeEvents, undefined), direction: "down" as const },
@@ -89,6 +94,8 @@ export function getSleep(day: string, ctx: QueryCtx = defaultCtx()): SleepVM {
     summary,
     insight: insightOf(rows, day, ctx.timeZone),
     stages: stagesOf(ctx, row, noNight),
+    hours,
+    nightHr: main ? nightHrOf(ctx, main.start, main.end) : fromReason(noNight, isToday),
     hoursVsNeed,
     details,
     debtTrend: {
@@ -117,6 +124,24 @@ function stagesOf(ctx: QueryCtx, row: DayRow | undefined, noNight: SleepVM["perf
     segments,
     rows: STAGE_ROWS.map((r) => ({ ...r, minutes: minutes[r.stage], pct: total > 0 ? (minutes[r.stage] / total) * 100 : 0 })),
   });
+}
+
+const HR_PAD_S = 15 * 60;
+
+/** Per-minute mean HR from `hr_samples` over the sleep [start, end) (unix seconds) plus 15 minutes each side; empty minutes are null. */
+export function nightHrOf(ctx: QueryCtx, start: number, end: number): SleepVM["nightHr"] {
+  const from = Math.floor((start - HR_PAD_S) / 60) * 60;
+  const to = end + HR_PAD_S;
+  const rows = ctx.db.$client
+    .prepare("select ts / 60 * 60 m, round(avg(bpm)) bpm from hr_samples where ts >= ? and ts < ? group by ts / 60")
+    .all(from, to) as { m: number; bpm: number }[];
+  const byMin = new Map(rows.map((r) => [r.m, r.bpm]));
+  const points: TimePoint[] = [];
+  for (let m = from; m < to; m += 60) points.push({ t: ms(m), v: byMin.get(m) ?? null });
+  // Under a third of the night's minutes is too thin to draw honestly.
+  const inNight = rows.filter((r) => r.m + 60 > start && r.m < end).length;
+  if (inNight < (end - start) / 180) return none("insufficient_hr_data");
+  return ok({ bed: ms(start), wake: ms(end), points });
 }
 
 /** Bedtime as minutes from midnight, evening negative. */

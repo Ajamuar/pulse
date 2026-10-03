@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Db } from "../db";
-import { cleanup, ctxFor, dayAt, seeded } from "../testing";
+import { cleanup, copyDb, ctxFor, dayAt, seeded } from "../testing";
 import { getSleep } from "./sleep";
 
 afterAll(cleanup);
@@ -52,6 +52,49 @@ describe("getSleep", () => {
     const morning = getSleep(dayAt(179), ctxFor(seeded([before]), before));
     expect(morning.performance.reason).toBe("awaiting_sleep_sync");
     expect(morning.stages).toMatchObject({ value: null, reason: "awaiting_sleep_sync" });
+  });
+
+  it("the hours hero is the main sleep's time asleep against the prior 30 nights", () => {
+    const vm = getSleep(dayAt(150), ctxFor(db));
+    const h = vm.hours.value!;
+    expect(h.asleepMin).toBe(vm.hoursVsNeed.value!.asleepMin);
+    const prior = Array.from({ length: 30 }, (_, k) => getSleep(dayAt(149 - k), ctxFor(db)).hours.value?.asleepMin).filter((x) => x != null);
+    expect(h.average).toBeCloseTo(prior.reduce((a, b) => a + b, 0) / prior.length, 6);
+    expect(h.sd).toBeGreaterThan(0);
+    // The first night has nothing to compare with.
+    expect(getSleep(dayAt(0), ctxFor(db)).hours.value?.average ?? null).toBeNull();
+  });
+
+  it("the overnight HR is per minute over the sleep window plus 15 minutes each side", () => {
+    const vm = getSleep(dayAt(150), ctxFor(db));
+    const { bed, wake, points } = vm.nightHr.value!;
+    const stages = vm.stages!.value!;
+    expect([bed, wake]).toEqual([stages.bed, stages.wake]);
+    expect(points[0].t).toBeLessThanOrEqual(bed - 15 * 60_000);
+    expect(points[0].t).toBeGreaterThan(bed - 16 * 60_000);
+    expect(points.at(-1)!.t).toBeLessThan(wake + 15 * 60_000);
+    expect(points.every((p, i) => i === 0 || p.t - points[i - 1].t === 60_000)).toBe(true);
+    const inNight = points.filter((p) => p.t >= bed && p.t < wake && p.v !== null).map((p) => p.v!);
+    expect(inNight.length).toBeGreaterThan((wake - bed) / 60_000 / 2);
+    expect(Math.min(...inNight)).toBeGreaterThan(30);
+    expect(Math.max(...inNight)).toBeLessThan(140);
+  });
+
+  it("no sleep: the hero and the HR chart carry the night's reason", () => {
+    const off = getSleep(dayAt(156), ctxFor(db));
+    expect(off.hours).toMatchObject({ value: null, reason: "band_not_worn" });
+    expect(off.nightHr).toMatchObject({ value: null, reason: "band_not_worn" });
+    const before = Date.parse("2026-10-02T05:00:00+05:30") / 1000;
+    const morning = getSleep(dayAt(179), ctxFor(seeded([before]), before));
+    expect(morning.hours.reason).toBe("awaiting_sleep_sync");
+    expect(morning.nightHr.reason).toBe("awaiting_sleep_sync");
+  });
+
+  it("a night with HR samples wiped reads 'not enough heart-rate data'", () => {
+    const copy = copyDb(db);
+    const { bed, wake } = getSleep(dayAt(150), ctxFor(copy)).nightHr.value!;
+    copy.$client.prepare("delete from hr_samples where ts >= ? and ts < ?").run(bed / 1000, wake / 1000);
+    expect(getSleep(dayAt(150), ctxFor(copy)).nightHr).toMatchObject({ value: null, reason: "insufficient_hr_data" });
   });
 
   it("the short-sleep streak builds sleep debt", () => {
