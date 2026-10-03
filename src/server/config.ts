@@ -29,6 +29,10 @@ const Env = z
     };
     if (e.GOOGLE_OAUTH_ENABLED) {
       need(["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"], "when GOOGLE_OAUTH_ENABLED=true");
+      // Real accounts: sessions must be signed with a secret of your own. Not checked at build time (no .env there).
+      if (process.env.NODE_ENV === "production" && process.env.NEXT_PHASE !== "phase-production-build") {
+        need(["BETTER_AUTH_SECRET"], "in production when GOOGLE_OAUTH_ENABLED=true (openssl rand -base64 32)");
+      }
     }
   });
 

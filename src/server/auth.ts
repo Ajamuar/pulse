@@ -20,7 +20,9 @@ function createAuth(db: Db) {
   const cfg = getConfig();
   return betterAuth({
     database: drizzleAdapter(db, { provider: "pg", schema }),
-    ...(cfg.authSecret && { secret: cfg.authSecret }),
+    // A demo instance holds only generated data, so a fixed secret is fine there; a real one must set its own
+    // (config.ts refuses to start in production without it).
+    secret: cfg.authSecret ?? (cfg.googleOAuthEnabled ? undefined : DEMO_SECRET),
     ...(cfg.appUrl && { baseURL: cfg.appUrl, trustedOrigins: [cfg.appUrl] }),
     emailAndPassword: {
       enabled: true,
@@ -78,7 +80,11 @@ function toUser(s: Awaited<ReturnType<Auth["api"]["getSession"]>>): SessionUser 
 }
 
 /** The signed-in user for a Server Component or Server Action, or null. Once per request (layout and page share it). */
-export const currentUser = cache(async (): Promise<SessionUser | null> => toUser(await getAuth().api.getSession({ headers: await headers() })));
+export const currentUser = cache(async (): Promise<SessionUser | null> => {
+  // Headers first: during `next build` this throws (the page is dynamic) before better-auth is ever created.
+  const h = await headers();
+  return toUser(await getAuth().api.getSession({ headers: h }));
+});
 
 /** The signed-in user for a route handler, from the request's own headers. */
 export async function requestUser(req: Request): Promise<SessionUser | null> {
@@ -90,6 +96,7 @@ export const SIGNED_OUT = { ok: false as const, error: "Signed out. Sign in agai
 // ── Demo instance ────────────────────────────────────────────────────────────
 
 export const DEMO_EMAIL = "demo@pulse.local";
+const DEMO_SECRET = "pulse-demo-instance-generated-data-only";
 // The demo user's data is generated, so its password protects nothing; it only lets "Continue with demo data"
 // sign in through the normal path.
 export const DEMO_PASSWORD = "pulse-demo-generated-data";
