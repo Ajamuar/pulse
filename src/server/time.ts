@@ -43,6 +43,16 @@ export function localMidnight(day: string, tz: string): number {
   return utc - offset(utc - offset(utc));
 }
 
+/** The instant a local wall time (`YYYY-MM-DDTHH:mm[:ss]`) names in `tz`; in a DST gap, the same offset trick as localMidnight. */
+export function fromWall(civil: string, tz: string): number {
+  const utc = Date.parse(`${civil.length === 16 ? `${civil}:00` : civil}Z`) / 1000;
+  const offset = (s: number) => wall(s, tz).asUtc - Math.floor(s);
+  return utc - offset(utc - offset(utc));
+}
+
+/** Seconds `tz` is ahead of UTC at instant `s`. */
+export const utcOffsetS = (s: number, tz: string) => wall(s, tz).asUtc - Math.floor(s);
+
 /** Minutes after local midnight of instant `s`. */
 export const localMinutes = (s: number, tz: string) => Math.round((s - localMidnight(localDay(s, tz), tz)) / 60);
 

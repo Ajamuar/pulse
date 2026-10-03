@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { openDb, type Db } from "../../db";
 import { oauthTokens } from "../../db/schema";
-import { authUrl, consumeState, createState, exchangeCode, getAccessToken, GoogleError, LOGIN_SCOPES, revokeGrant, SCOPES } from "./oauth";
+import { authUrl, consumeState, createState, exchangeCode, getAccessToken, GoogleError, LOGIN_SCOPES, missingScopes, revokeGrant, SCOPES } from "./oauth";
 
 const google = { clientId: "cid", clientSecret: "csecret" };
 const NOW = Date.parse("2026-10-02T06:00:00Z");
@@ -256,5 +256,16 @@ describe("getAccessToken", () => {
 
   it("without a grant throws not_connected", async () => {
     await expectGoogleError(get(tokenStub()), "not_connected");
+  });
+});
+
+describe("missingScopes", () => {
+  it("lists the scopes an older grant lacks, nothing for a full grant or no grant", () => {
+    expect(missingScopes(db)).toEqual([]);
+    const old = SCOPES.filter((s) => !s.endsWith(".writeonly") || s.includes(".nutrition."));
+    seed({ scope: ["openid", ...old].join(" ") });
+    expect(missingScopes(db)).toEqual(SCOPES.filter((s) => s.endsWith(".writeonly") && !s.includes(".nutrition.")));
+    db.update(oauthTokens).set({ scope: SCOPES.join(" ") }).run();
+    expect(missingScopes(db)).toEqual([]);
   });
 });

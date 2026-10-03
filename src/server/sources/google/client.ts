@@ -156,8 +156,8 @@ export function createGoogleClient({
     return Number.isNaN(ms) ? undefined : ms;
   }
 
-  /** The 200 body. One forced refresh on 401, then `auth_revoked`; 429 waits Retry-After; 5xx backs off. */
-  async function request(url: string, where: string, body?: string): Promise<string> {
+  /** The 200 body. One forced refresh on 401, then `auth_revoked`; 429 waits Retry-After; 5xx backs off. `once`: a write that is not safe to repeat, so only 429 (never processed) is retried. */
+  async function request(url: string, where: string, body?: string, once = false): Promise<string> {
     let tries = 0; // failed attempts that may be retried: 429, 5xx, network
     let refreshed = false;
     let force = false; // set for the one attempt right after a 401
@@ -176,7 +176,7 @@ export function createGoogleClient({
         // Inside the try: a body cut off mid-read is a network failure too.
         if (res.ok) return await res.text();
       } catch {
-        if (++tries >= MAX_TRIES) throw new GoogleError("network", undefined, where);
+        if (once || ++tries >= MAX_TRIES) throw new GoogleError("network", undefined, where);
         await sleep(BACKOFF_MS * 2 ** (tries - 1));
         continue;
       }
@@ -190,7 +190,7 @@ export function createGoogleClient({
         refreshed = force = true;
         continue;
       }
-      if ((status === 429 || status >= 500) && ++tries < MAX_TRIES) {
+      if ((status === 429 || (status >= 500 && !once)) && ++tries < MAX_TRIES) {
         const after = status === 429 ? retryAfterMs(res.headers.get("retry-after")) : undefined;
         await res.body?.cancel();
         await sleep(Math.min(MAX_WAIT_MS, Math.max(0, after ?? BACKOFF_MS * 2 ** (tries - 1))));
@@ -210,6 +210,19 @@ export function createGoogleClient({
   }
 
   const fetchedAt = () => Math.floor(now() / 1000);
+
+  /**
+   * A write's `Operation`. Google answers create and batchDelete with `{ done: true, response: DataPoint }`
+   * (docs/research/google-health-coverage.md). There is no operations.get to poll, so an unfinished one is
+   * returned as is. A failed one throws its error code.
+   */
+  function readOperation(body: string, where: string): { done: boolean; response?: Record<string, unknown> } {
+    const op = parseJson(body);
+    if (typeof op !== "object" || op === null) throw new GoogleError("bad_response", 200, where);
+    const { done, error, response } = op as Record<string, unknown>;
+    if (error) throw new GoogleError(errorCode({ error }) ?? "operation_failed", 200, where);
+    return { done: done === true, response: typeof response === "object" && response !== null ? (response as Record<string, unknown>) : undefined };
+  }
 
   return {
     /** Whether the account has a paired device (`users.pairedDevices.list`, one page). Not archived: it is not health data. */
@@ -245,6 +258,28 @@ export function createGoogleClient({
         } while (pageToken);
       }
       return out;
+    },
+
+    /**
+     * `dataPoints.create`: writes one data point (`{ moods: {...} }`, `{ hydrationLog: {...} }`, ...) and returns its
+     * name (`users/{id}/dataTypes/{type}/dataPoints/{id}`), or null when Google has not finished the write.
+     * Needs the type's write scope; an older grant answers 403.
+     */
+    async create(type: string, point: Record<string, unknown>): Promise<string | null> {
+      const where = `${type} create`;
+      const op = readOperation(await request(`${API}/${type}/dataPoints`, where, JSON.stringify(point), true), where);
+      const name = op.response?.name;
+      return op.done && typeof name === "string" && name ? name : null;
+    },
+
+    /**
+     * `dataPoints.batchDelete` for names `create` returned. The parent is `users/me`, and a name must share the
+     * parent, so the user id Google put in it is swapped for `me` (the form Google's own delete example uses).
+     */
+    async batchDelete(type: string, names: string[]): Promise<void> {
+      const where = `${type} batchDelete`;
+      const body = JSON.stringify({ names: names.map((n) => n.replace(/^users\/[^/]+\//, "users/me/")) });
+      readOperation(await request(`${API}/${type}/dataPoints:batchDelete`, where, body), where);
     },
 
     /**

@@ -381,6 +381,55 @@ describe("dailyRollUp", () => {
   });
 });
 
+describe("writes", () => {
+  const NAME = "users/12345/dataTypes/moods/dataPoints/abc-1";
+  const done = (response: unknown) => json({ done: true, response });
+  const point = { moods: { sampleTime: { physicalTime: "2026-10-02T06:00:00Z", utcOffset: "19800s" }, moods: ["CALM"] } };
+
+  it("create POSTs the data point as JSON to the type's dataPoints and returns the name from the finished operation", async () => {
+    const { client, apiCalls } = setup(() => done({ "@type": "type.googleapis.com/google.devicesandservices.health.v4.DataPoint", name: NAME, ...point }));
+    expect(await client.create("moods", point)).toBe(NAME);
+    const [c] = apiCalls();
+    expect(c.url.href).toBe("https://health.googleapis.com/v4/users/me/dataTypes/moods/dataPoints");
+    expect(c.init.method).toBe("POST");
+    expect((c.init.headers as Record<string, string>)["content-type"]).toBe("application/json");
+    expect(JSON.parse(String(c.init.body))).toEqual(point);
+    expect(auth(c)).toBe("Bearer at-1");
+    expect(db.select().from(rawPayloads).all()).toHaveLength(0); // writes are not archived
+  });
+
+  it("an unfinished operation has no name yet; a failed one throws its code", async () => {
+    expect(await setup(() => json({ name: "operations/1", done: false })).client.create("moods", point)).toBeNull();
+    const failed = setup(() => json({ done: true, error: { code: 3, status: "INVALID_ARGUMENT", message: "bad" } }));
+    expect((await caught(failed.client.create("moods", point))).code).toBe("INVALID_ARGUMENT");
+  });
+
+  it("a grant without the write scope is a 403, not retried", async () => {
+    const { client, apiCalls } = setup(() => json({ error: { code: 403, status: "PERMISSION_DENIED" } }, 403));
+    const e = await caught(client.create("moods", point));
+    expect([e.code, e.status]).toEqual(["PERMISSION_DENIED", 403]);
+    expect(apiCalls()).toHaveLength(1);
+  });
+
+  it("create never repeats on a 5xx or a network failure (it may have landed), but does after a 429", async () => {
+    const five = setup(() => json({}, 503));
+    expect((await caught(five.client.create("moods", point))).status).toBe(503);
+    expect(five.apiCalls()).toHaveLength(1);
+    const pages = [json({}, 429, { "retry-after": "1" }), done({ name: NAME })];
+    const busy = setup(() => pages.shift()!);
+    expect(await busy.client.create("moods", point)).toBe(NAME);
+    expect(busy.apiCalls()).toHaveLength(2);
+  });
+
+  it("batchDelete POSTs the names under users/me to :batchDelete", async () => {
+    const { client, apiCalls } = setup(() => json({ done: true, response: {} }));
+    await client.batchDelete("moods", [NAME]);
+    const [c] = apiCalls();
+    expect(c.url.href).toBe("https://health.googleapis.com/v4/users/me/dataTypes/moods/dataPoints:batchDelete");
+    expect(JSON.parse(String(c.init.body))).toEqual({ names: ["users/me/dataTypes/moods/dataPoints/abc-1"] });
+  });
+});
+
 describe("parsePairedDevices", () => {
   it("says none only for the documented empty list, and unknown for any other shape", () => {
     expect(parsePairedDevices(JSON.stringify({ pairedDevices: [{ name: "users/me/pairedDevices/1" }] }))).toBe("some");

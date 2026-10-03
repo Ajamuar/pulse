@@ -20,7 +20,7 @@ export const FETCH_TIMEOUT_MS = 30_000;
 
 // Every read scope the API has, so one consent covers all data. Nutrition has no read-only scope:
 // `nutrition.writeonly` is the only one that lets dataPoints.list return food and hydration logs.
-// Pulse never calls create, patch or batchDelete.
+// Writes (create, batchDelete) happen only for what the owner logs in Pulse (src/server/actions/log.ts).
 export const SCOPES = [
   "activity_and_fitness.readonly",
   "health_metrics_and_measurements.readonly",
@@ -158,6 +158,17 @@ async function tokenRequest(fetchFn: typeof fetch, params: Record<string, string
 export function hasGrant(db: Db): boolean {
   const row = db.select({ revokedAt: oauthTokens.revokedAt }).from(oauthTokens).get();
   return !!row && row.revokedAt === null;
+}
+
+/**
+ * The scopes in SCOPES the stored grant lacks (empty with no grant: that is "not connected", not "missing").
+ * A grant made before a scope was added keeps working for the rest; only a new consent adds it.
+ */
+export function missingScopes(db: Db): string[] {
+  const row = db.select({ scope: oauthTokens.scope }).from(oauthTokens).get();
+  if (!row) return [];
+  const granted = new Set(row.scope.split(/\s+/));
+  return SCOPES.filter((s) => !granted.has(s));
 }
 
 /**
