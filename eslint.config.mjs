@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Agent worktrees are full checkouts of other branches.
     ".claude/**",
+    // The marketing site (site/) is a separate Astro project with its own tooling.
+    "site/**",
   ]),
 ]);
 

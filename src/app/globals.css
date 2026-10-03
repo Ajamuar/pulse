@@ -4,6 +4,8 @@
 
 /* The design spec quotes class names; keep it out of the class scan. */
 @source not "../../docs";
+/* The marketing site is a separate project; keep its markup out of the app's CSS. */
+@source not "../../site";
 
 /* Theme tokens only. Values are sampled from docs/design/reference (see docs/design/spec.md §2).
    Dark only: the `dark` class on <html> stays so shadcn's dark: variants apply. */

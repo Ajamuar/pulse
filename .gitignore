@@ -46,3 +46,8 @@ npm-debug.log*
 
 # Session hand-off notes: local working notes, not published
 /docs/handoff/
+
+# marketing site build output (site/ is its own project)
+/site/node_modules/
+/site/dist/
+/site/.astro/
