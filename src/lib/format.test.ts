@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { agoShort, dayLabel, dialAriaLabel, durationWords, formatValue, rangeLabel } from "./format";
+import { agoShort, DAY, dayLabel, dialAriaLabel, durationWords, formatDay, formatValue, rangeLabel } from "./format";
 
 describe("format", () => {
   it("shortens sync ages for the header", () => {
@@ -21,13 +21,17 @@ describe("format", () => {
     expect(formatValue("grouped", 12459)).toBe("12,459");
     expect(formatValue("int", null)).toBe("--");
     expect(formatValue("int", Number.NaN)).toBe("--");
-    expect(durationWords(72)).toBe("1 hour 12 minutes");
+    expect(durationWords(72)).toBe("1\u00a0hour 12\u00a0minutes");
   });
   it("labels days and ranges", () => {
     expect(dayLabel("2026-10-02", "2026-10-02")).toBe("Today");
     expect(dayLabel("2026-10-01", "2026-10-02")).toBe("Yesterday");
     expect(dayLabel("2026-09-28", "2026-10-02")).toBe("Mon, Sep 28");
     expect(rangeLabel("2026-09-22", "2026-09-28")).toBe("Sep 22 - Sep 28");
+    expect(dayLabel("2026-03-01", "2026-03-02")).toBe("Yesterday");
+    expect(formatDay("2026-09-28", DAY.long)).toBe("Monday, September 28");
+    expect(formatDay("2026-09", DAY.monthYear)).toBe("September 2026");
+    expect(formatDay("1990-01-05", DAY.full)).toBe("Jan 5, 1990");
   });
   it("builds dial labels", () => {
     expect(dialAriaLabel({ variant: "recovery", label: "Recovery", value: 72, valueText: "72", unit: "%", bandWord: "Green" })).toBe(

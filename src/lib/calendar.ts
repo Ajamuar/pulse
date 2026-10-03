@@ -1,4 +1,5 @@
-import { format, parseISO } from "date-fns"
+import { parseISO } from "date-fns"
+import { DAY, formatDay } from "./format"
 import { BAND_COLOR, DATA_COLORS, recoveryBand } from "./bands"
 import { addDays } from "./url"
 
@@ -55,8 +56,8 @@ export function monthGrid(month: string, weekStartsOn: 0 | 1 = WEEK_STARTS_ON): 
 export function weekdayLabels(weekStartsOn: 0 | 1 = WEEK_STARTS_ON) {
   // 2026-06-07 is a Sunday.
   return Array.from({ length: 7 }, (_, i) => {
-    const date = parseISO(addDays("2026-06-07", i + weekStartsOn))
-    return { short: format(date, "EEE"), long: format(date, "EEEE") }
+    const day = addDays("2026-06-07", i + weekStartsOn)
+    return { short: formatDay(day, { weekday: "short" }), long: formatDay(day, { weekday: "long" }) }
   })
 }
 
@@ -69,8 +70,7 @@ export function monthNav(month: string, today: string, firstDay?: string) {
 
 /** "May", or "May 2025" outside the current year (CAL2, inferred). */
 export function monthLabel(month: string, today: string) {
-  const date = parseISO(`${month}-01`)
-  return format(date, month.slice(0, 4) === today.slice(0, 4) ? "MMMM" : "MMMM yyyy")
+  return formatDay(month, month.slice(0, 4) === today.slice(0, 4) ? { month: "long" } : DAY.monthYear)
 }
 
 const STEP: Record<string, number> = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 }

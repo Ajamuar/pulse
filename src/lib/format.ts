@@ -1,4 +1,3 @@
-import { format as fmtDate, parseISO } from "date-fns";
 import type { DeltaDir, Tone } from "./bands";
 
 // Number, date and spoken-label formatting (spec §3.3, §6). Formatters are referenced by key so a
@@ -9,7 +8,15 @@ export const AGE_LABEL = "Pulse Age";
 export const MISSING = "--";
 const MINUS = "−";
 
-const grouped = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
+/**
+ * The one locale every Intl formatter uses (spec §6). The copy is English only, so the locale is fixed rather than
+ * read from Accept-Language: server and client then render the same strings (no hydration mismatch).
+ */
+export const LOCALE = "en-US";
+/** Joins a number to its unit or word so the pair never wraps apart: `10${NBSP}MB`. */
+export const NBSP = " ";
+
+const grouped = new Intl.NumberFormat(LOCALE, { maximumFractionDigits: 0 });
 const minus = (s: string) => s.replace("-", MINUS);
 // "-0.0" collapses to "0.0"; the hyphen becomes a real minus sign.
 const fixed = (v: number, d: number) => {
@@ -52,18 +59,43 @@ export const isSymbolUnit = (unit: string) => unit === "%" || unit === "x";
 
 // --- Dates and clock times ---
 
+const dates = new Map<string, Intl.DateTimeFormat>();
+/**
+ * A calendar day ("2026-09-28", or a month "2026-09") through Intl.DateTimeFormat in LOCALE: formatDay(day, DAY.short)
+ * → "Mon, Sep 28". Read and formatted in UTC, so the runtime's zone never shifts the day.
+ */
+export function formatDay(day: string, opts: Intl.DateTimeFormatOptions) {
+  const key = JSON.stringify(opts);
+  let f = dates.get(key);
+  if (!f) dates.set(key, (f = new Intl.DateTimeFormat(LOCALE, { ...opts, timeZone: "UTC" })));
+  return f.format(new Date(`${day.length === 7 ? `${day}-01` : day}T00:00:00Z`));
+}
+
+/** The app's date shapes (spec §6) as Intl options for formatDay. */
+export const DAY = {
+  /** "Mon, Sep 28" */
+  short: { weekday: "short", month: "short", day: "numeric" },
+  /** "Monday, September 28", for spoken labels */
+  long: { weekday: "long", month: "long", day: "numeric" },
+  /** "Sep 28" */
+  monthDay: { month: "short", day: "numeric" },
+  /** "Sep 28, 1990" */
+  full: { month: "short", day: "numeric", year: "numeric" },
+  /** "September 2026" */
+  monthYear: { month: "long", year: "numeric" },
+} satisfies Record<string, Intl.DateTimeFormatOptions>;
+
 /** "Today", "Yesterday", else "Mon, Sep 28". Dates are YYYY-MM-DD in the user's zone. */
 export function dayLabel(date: string, today: string) {
   if (date === today) return "Today";
-  const y = parseISO(today);
-  y.setDate(y.getDate() - 1);
-  if (date === fmtDate(y, "yyyy-MM-dd")) return "Yesterday";
-  return fmtDate(parseISO(date), "EEE, MMM d");
+  const y = new Date(`${today}T00:00:00Z`);
+  y.setUTCDate(y.getUTCDate() - 1);
+  if (date === y.toISOString().slice(0, 10)) return "Yesterday";
+  return formatDay(date, DAY.short);
 }
 
 /** "Sep 22 - Sep 28". */
-export const rangeLabel = (from: string, to: string) =>
-  `${fmtDate(parseISO(from), "MMM d")} - ${fmtDate(parseISO(to), "MMM d")}`;
+export const rangeLabel = (from: string, to: string) => `${formatDay(from, DAY.monthDay)} - ${formatDay(to, DAY.monthDay)}`;
 
 const clocks = new Map<string, Intl.DateTimeFormat>();
 /** Epoch ms → 24-hour "HH:mm" in `timeZone` (default: the runtime zone). */
@@ -71,7 +103,7 @@ export function clock(ms: number, timeZone?: string) {
   const key = timeZone ?? "";
   let f = clocks.get(key);
   if (!f) {
-    f = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone });
+    f = new Intl.DateTimeFormat(LOCALE, { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone });
     clocks.set(key, f);
   }
   return f.format(ms);
@@ -82,7 +114,7 @@ export function durationWords(minutes: number) {
   const m = Math.max(0, Math.round(minutes));
   const h = Math.floor(m / 60);
   const r = m % 60;
-  const part = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
+  const part = (n: number, w: string) => `${n}${NBSP}${w}${n === 1 ? "" : "s"}`;
   if (!h) return part(r, "minute");
   return r ? `${part(h, "hour")} ${part(r, "minute")}` : part(h, "hour");
 }
@@ -91,11 +123,11 @@ export function durationWords(minutes: number) {
 export function ago(ms: number, now: number) {
   const min = Math.max(0, Math.round((now - ms) / 60000));
   if (min < 1) return "just now";
-  if (min < 60) return `${min} ${min === 1 ? "minute" : "minutes"} ago`;
+  if (min < 60) return `${min}${NBSP}${min === 1 ? "minute" : "minutes"} ago`;
   const h = Math.round(min / 60);
-  if (h < 48) return `${h} ${h === 1 ? "hour" : "hours"} ago`;
+  if (h < 48) return `${h}${NBSP}${h === 1 ? "hour" : "hours"} ago`;
   const d = Math.round(h / 24);
-  return `${d} days ago`;
+  return `${d}${NBSP}days ago`;
 }
 
 /** Header sync age, the reference app's battery slot (spec §4.3.2): "Now", "12m", "3h", "2d". */
