@@ -125,7 +125,7 @@ with a list of what's wrong.
 
 ## Keeping it running
 
-- **Update:** `git pull && docker compose up -d --build`. Migrations run at boot.
+- **Update:** `scripts/deploy.sh` resets the checkout to `origin/main`, rebuilds, waits for the health check and rolls back to the previous image if the new one never turns healthy (`COMPOSE_FILE=...` for another compose file, `--help` for options). Or by hand: `git pull && docker compose up -d --build`. Migrations run at boot.
 - **Back up** the database with SQLite's online backup, never by copying the file while it runs (see below).
 - **Sign everyone out:** delete the row in the `instance` table; a new session secret is created on the next request.
 - **Disconnect Google:** Settings › Data source › Disconnect removes Pulse's access in your Google account too.
