@@ -46,6 +46,13 @@ describe("Settings view", () => {
     expect(within(source()).getByRole("link", { name: "Reconnect Google" })).toHaveAttribute("href", "/oauth/start")
   })
 
+  it("a grant from before the write scopes asks for new permissions with Reconnect Google, and keeps syncing", () => {
+    render(<SettingsView vm={{ ...base, source: { label: "Google Health", status: "connected", needsPermissions: true } }} now={NOW} account={account} />)
+    const note = within(source()).getByRole("note", { name: "Pulse needs new permissions" })
+    expect(within(note).getByRole("link", { name: "Reconnect Google" })).toHaveAttribute("href", "/oauth/start")
+    expect(within(source()).getByRole("button", { name: "Sync now" })).toBeInTheDocument()
+  })
+
   it("no paired device explains how to pair, and keeps Sync now and Disconnect", () => {
     render(<SettingsView vm={{ ...base, source: { label: "Google Health", status: "no_device" } }} now={NOW} account={account} />)
     expect(within(source()).getByText("No Fitbit device")).toBeInTheDocument()

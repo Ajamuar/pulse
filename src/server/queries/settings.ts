@@ -1,5 +1,6 @@
 // More, Settings and the shell's status (spec §7.14, §4.2). Pages also call worker.requestSync() on load.
 import { SCORING_VERSION } from "../pipeline";
+import { missingScopes } from "../sources/google/oauth";
 import { addDays, wholeYears } from "../time";
 import { defaultCtx, firstDay, type QueryCtx, todayOf } from "./common";
 import { latestReport } from "./home";
@@ -117,7 +118,7 @@ export function getSettings(ctx: QueryCtx = defaultCtx()): SettingsVM {
     source:
       ctx.mode === "demo"
         ? { label: "Demo data", status: "demo" }
-        : { label: "Google Health", status: auth },
+        : { label: "Google Health", status: auth, needsPermissions: (auth === "connected" || auth === "no_device") && missingScopes(ctx.db).length > 0 },
     import: ctx.mode === "google" && auth === "connected" ? importProgress(rows) : null,
     sync,
     profile: {

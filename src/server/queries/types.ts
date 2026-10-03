@@ -413,7 +413,12 @@ export type ShellStatusVM = {
 
 export type SettingsVM = {
   mode: "demo" | "google";
-  source: { label: "Demo data" | "Google Health"; status: "demo" | "not_connected" | "not_linked" | "no_device" | "connected" | "revoked" };
+  source: {
+    label: "Demo data" | "Google Health";
+    status: "demo" | "not_connected" | "not_linked" | "no_device" | "connected" | "revoked";
+    /** The grant predates scopes Pulse now asks for (logging to Google, 2026-10): Settings offers a reconnect. */
+    needsPermissions?: boolean;
+  };
   import: { done: number; total: number } | null;
   sync: { key: string; label: string; lastSuccessAt: number | null; status: "ok" | "stale" | "error" | "never"; error: string | null }[];
   profile: { birthDate: string; age: number; sex: "male" | "female"; maxHr: number; maxHrSource: "set" | "estimated"; timeZone: string; heightCm: number | null };

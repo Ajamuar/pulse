@@ -56,7 +56,7 @@ const SOURCE: Record<SettingsVM["source"]["status"], { line?: string; tone?: str
     line: "180 days of generated data",
     body: "Every screen runs on realistic generated data. Set GOOGLE_OAUTH_ENABLED=true on the server to use your Fitbit data.",
   },
-  not_connected: { line: "Not connected", body: "Connect the Google account your Fitbit Air syncs to. Pulse only reads data." },
+  not_connected: { line: "Not connected", body: "Connect the Google account your Fitbit Air syncs to. Pulse reads your data and writes only what you log in Pulse." },
   not_linked: {
     line: "No Google Health profile",
     tone: "text-warning",
@@ -171,6 +171,20 @@ export function DataSource({ vm, now }: { vm: Pick<SettingsVM, "source" | "sync"
         </div>
       </div>
       {s.body && <p className={cn(BODY, "mt-3")}>{s.body}</p>}
+      {source.needsPermissions && (
+        <div role="note" aria-labelledby="permissions-title" className="mt-4 rounded-xl bg-white/[0.04] p-4">
+          <p id="permissions-title" className="flex items-center gap-2 text-[15px] leading-[22px] font-semibold">
+            <TriangleAlert aria-hidden className="size-4 shrink-0 text-warning" strokeWidth={2} />
+            Pulse needs new permissions
+          </p>
+          <p className={cn(BODY, "mt-1")}>
+            To save what you log (water, food, weight, mood, symptoms, cycle) to Google Health, reconnect Google and allow them. Sync keeps working until then.
+          </p>
+          <div className="mt-3">
+            <OAuthLink label="Reconnect Google" />
+          </div>
+        </div>
+      )}
       {vm.import && (
         <div className="mt-4 space-y-2" role="status" aria-live="polite">
           <p className="text-[15px] leading-[22px] tabular-nums">
