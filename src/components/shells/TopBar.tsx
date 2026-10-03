@@ -1,7 +1,8 @@
 "use client"
 
+import Link from "next/link"
 import * as React from "react"
-import { FlaskConical } from "lucide-react"
+import { FlaskConical, ChevronRight } from "lucide-react"
 import { BandIcon } from "@/components/brand/BandIcon"
 import { useSyncing } from "@/lib/sync-activity"
 import { cn } from "@/lib/utils"
@@ -110,7 +111,11 @@ export function SyncStatus({ variant = "header" }: { variant?: "header" | "icon"
         onOpenAutoFocus={(e) => e.preventDefault()}
         className="w-72 gap-0 p-0"
       >
-        <div className="flex items-center gap-3 p-4">
+        {/* The source row opens Settings › Data source, where each data type's status (and any failure) is listed. */}
+        <Link
+          href="/settings#source"
+          className="flex items-center gap-3 rounded-t-[inherit] p-4 outline-none transition-[background-color] duration-150 ease-standard hover:bg-white/[0.04] focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
+        >
           <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-xl bg-white/[0.06]">
             <BandIcon className="size-5" strokeWidth={1.4} />
           </span>
@@ -121,7 +126,8 @@ export function SyncStatus({ variant = "header" }: { variant?: "header" | "icon"
               {v.line}
             </p>
           </div>
-        </div>
+          <ChevronRight aria-hidden className="ml-auto size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
+        </Link>
         {s.mode === "demo" && <p className="-mt-2 px-4 pb-3 text-[13px] leading-[18px] text-muted-foreground">Generated data, refreshed every 15 minutes.</p>}
         {/* Settings is one tap away in the sidebar and in More; the popover only does the one thing. */}
         <div className="border-t border-white/[0.06] p-3">

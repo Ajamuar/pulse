@@ -32,6 +32,17 @@ describe("sync errors", () => {
     expect(vm.sync.every((r) => r.error === null)).toBe(true);
   });
 
+  it("a retired job's leftover error row and an optional type's failure never turn the sync dot red or hold the import", () => {
+    const { db, ctx } = google();
+    db.insert(syncState).values({ type: "heart-rate", backfillDaysDone: 180, backfillDaysTotal: 180, lastSuccessAt: ctx.now }).run();
+    db.insert(syncState).values({ type: "rhr-personal-range", backfillDaysDone: 0, backfillDaysTotal: 180, lastError: "[google] daily-resting-heart-rate dailyRollUp: UNSUPPORTED_DATA_TYPE_ACTION" }).run();
+    db.insert(syncState).values({ type: "electrocardiogram", backfillDaysDone: 0, backfillDaysTotal: 180, lastError: "[google] electrocardiogram: INVALID_DATA_POINT_FILTER" }).run();
+    const shell = getShellStatus(ctx);
+    expect(shell.sync.state).toBe("ok");
+    expect(shell.importProgress).toBeUndefined();
+    expect(getSettings(ctx).import).toBeNull();
+  });
+
   it("a Google Health account with no paired device is one problem: no_device, no import progress, no sync error", () => {
     const { db, ctx } = google();
     db.insert(syncState).values({ type: "heart-rate", backfillDaysDone: 30, backfillDaysTotal: 180, lastSuccessAt: ctx.now }).run();

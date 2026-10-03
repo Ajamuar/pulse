@@ -40,6 +40,9 @@ const GROUPS: { key: string; label: string; types: string[] }[] = [
  */
 const OPTIONAL_TYPES = new Set(GROUPS.filter((g) => ["zones", "activity", "nutrition", "vitals", "rhythm"].includes(g.key)).flatMap((g) => g.types).concat("height"));
 
+/** Types every Google account syncs: the shell's sync dot and the import banner follow these alone. */
+const CORE_TYPES = new Set(GROUPS.flatMap((g) => g.types).filter((t) => !OPTIONAL_TYPES.has(t)));
+
 type SyncRow = {
   type: string;
   lastSuccessAt: number | null;
@@ -88,8 +91,7 @@ export function syncErrorText(raw: string): string {
 
 /** The core types' backfill only: an optional type that keeps failing (or a retired job's leftover row) never holds it at 0. */
 function importProgress(all: SyncRow[]) {
-  const core = new Set(GROUPS.flatMap((g) => g.types).filter((t) => !OPTIONAL_TYPES.has(t)));
-  const rows = all.filter((r) => core.has(r.type));
+  const rows = all.filter((r) => CORE_TYPES.has(r.type));
   const pending = rows.filter((r) => r.backfillDaysTotal != null && (r.backfillDaysDone ?? 0) < r.backfillDaysTotal);
   if (!pending.length) return null;
   return { done: Math.min(...pending.map((r) => r.backfillDaysDone ?? 0)), total: Math.max(...pending.map((r) => r.backfillDaysTotal!)) };
@@ -206,7 +208,8 @@ const workerRunning = () => !!(globalThis as { __pulseWorker?: { state?: { runni
 export function getShellStatus(ctx: QueryCtx = defaultCtx()): ShellStatusVM {
   const all = syncRows(ctx);
   // The device check is account state (connection below), not a sync that succeeded or failed.
-  const rows = all.filter((r) => (ctx.mode === "demo" ? r.type === "seed" : r.type !== "seed" && r.type !== DEVICES_ROW && !OPTIONAL_TYPES.has(r.type)));
+  // Core types only: an optional type, or a retired job's leftover row (rhr/hrv personal ranges), never turns the dot red.
+  const rows = all.filter((r) => (ctx.mode === "demo" ? r.type === "seed" : CORE_TYPES.has(r.type)));
   const successes = rows.map((r) => r.lastSuccessAt).filter((s): s is number => s != null);
   const lastSuccessAt = successes.length ? Math.max(...successes) * 1000 : null;
   const stale = lastSuccessAt == null || ctx.now * 1000 - lastSuccessAt > STALE_MS;
