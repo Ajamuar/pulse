@@ -20,7 +20,7 @@ export function SyncNowButton({ className, size = "touch" }: { className?: strin
     start(async () => {
       const end = startSyncing()
       const r = await syncNow()
-        .catch(() => ({ ok: false as const, error: "Couldn't reach Pulse" }))
+        .catch(() => ({ ok: false as const, error: "Couldn’t reach Pulse" }))
         .finally(end)
       router.refresh()
       if (r.ok) toast.success("Synced", { id: "sync-now" })

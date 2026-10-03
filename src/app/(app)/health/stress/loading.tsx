@@ -14,7 +14,7 @@ const LABEL = "text-xs leading-4 font-bold tracking-[0.08em] uppercase"
  */
 export default function Loading() {
   return (
-    <DetailShell
+    <DetailShell loading
       title="Stress Monitor"
       dateSwitcher={{ mode: "day" }}
       hero={<ScoreDialSkeleton variant="gauge" size="lg" />}

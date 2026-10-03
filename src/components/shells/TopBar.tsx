@@ -33,7 +33,7 @@ function syncView(s: ShellStatus, nowMs: number | null): SyncView {
   const at = last ? clock(last, s.timeZone) : null
   if (s.connection === "auth_revoked" || s.sync.state === "error")
     return { dot: "bg-recovery-red", label: "Sync failed", line: at ? `Sync failed. Last success ${at}` : "Sync failed" }
-  if (s.sync.state === "syncing") return { dot: "bg-coach animate-pulse motion-reduce:animate-none", label: "Syncing", line: "Syncing now" }
+  if (s.sync.state === "syncing") return { dot: "bg-coach animate-pulse motion-reduce:animate-none", label: "Syncing…", line: "Syncing now…" }
   if (s.sync.state === "stale")
     return { dot: "bg-warning", label: rel ? `Last sync ${rel}` : "Sync is behind", line: at ? `Last sync ${at}` : "Sync is behind" }
   return { dot: "bg-optimal", label: rel ? `Synced ${rel}` : "Synced", line: at ? `Last sync ${at}` : "Synced" }
@@ -142,13 +142,13 @@ export function DemoChip() {
         <Badge
           variant="outline"
           tabIndex={0}
-          className="h-6 gap-1 rounded-full border-border px-2.5 text-[11px] font-bold tracking-[0.08em] text-foreground-secondary uppercase outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="h-6 gap-1 rounded-full border-border px-2.5 text-[11px] font-bold tracking-[0.08em] text-foreground-secondary uppercase outline-none hover:bg-white/8 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
         >
           <FlaskConical aria-hidden strokeWidth={1.75} className="size-3!" />
           Demo data
         </Badge>
       </TooltipTrigger>
-      <TooltipContent side="top">You&apos;re looking at generated demo data.</TooltipContent>
+      <TooltipContent side="top">You’re looking at generated demo data.</TooltipContent>
     </Tooltip>
   )
 }

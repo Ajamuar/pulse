@@ -23,7 +23,7 @@ const AVERAGES = ["Recovery", "Day strain", "Sleep performance", "Hours of sleep
  */
 export default function Loading() {
   return (
-    <DetailShell
+    <DetailShell loading
       title="Report"
       hero={
         <div aria-hidden className="flex flex-col items-center gap-5">

@@ -12,7 +12,7 @@ import { Skeleton, SkeletonText } from "@/components/ui/skeleton"
  */
 export default function Loading() {
   return (
-    <PageShell title="Journal" dateSwitcher={{ mode: "day" }}>
+    <PageShell loading title="Journal" dateSwitcher={{ mode: "day" }}>
       <div aria-busy className="-mx-4 md:-mx-1">
         <DayStripSkeleton indicator="journal" />
       </div>

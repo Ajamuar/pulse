@@ -29,7 +29,7 @@ function Contributors({ title, n, className }: { title: string; n: number; class
  */
 export default function Loading() {
   return (
-    <DetailShell
+    <DetailShell loading
       title="Healthspan"
       dateSwitcher={{ mode: "week" }}
       ground="healthspan"

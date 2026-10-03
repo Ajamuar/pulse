@@ -39,7 +39,7 @@ function Lens({ index, axis, className }: { index: number; axis: "x" | "y"; clas
       aria-hidden
       style={{ "--tab": index } as React.CSSProperties}
       className={cn(
-        "pointer-events-none absolute bg-radial-[ellipse_at_50%_115%] from-white/16 via-white/5 via-55% to-white/[0.02] transition-[translate,opacity] duration-150 ease-standard",
+        "pointer-events-none absolute bg-radial-[ellipse_at_50%_115%] from-white/16 via-white/5 via-55% to-white/[0.02] transition-[translate,opacity] duration-150 ease-standard motion-reduce:transition-none",
         axis === "x" ? "translate-x-[calc(var(--tab)*100%)]" : "translate-y-[calc(var(--tab)*(100%+4px))]",
         index < 0 && "opacity-0",
         className
@@ -75,7 +75,11 @@ function TabBar({ current }: { current: number }) {
 function Rail({ current }: { current: number }) {
   return (
     <nav aria-label="Primary" className={cn(GLASS, "fixed inset-y-3 left-3 z-30 hidden w-[88px] flex-col items-center rounded-[28px] py-4 md:flex xl:hidden")}>
-      <Link href="/" aria-label="Pulse home" className={cn(PRESS, "mb-5 grid size-10 place-items-center rounded-full")}>
+      <Link
+        href="/"
+        aria-label="Pulse home"
+        className="mb-5 grid size-10 place-items-center rounded-full transition-[background-color,scale] duration-150 ease-standard outline-none hover:bg-white/8 focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96]"
+      >
         <span aria-hidden>
           <Mark className="size-6" />
         </span>

@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { format, parseISO } from "date-fns"
+import { DAY, formatDay, formatValue } from "@/lib/format"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Dialog as DialogPrimitive } from "radix-ui"
 import { cn } from "@/lib/utils"
@@ -190,7 +190,7 @@ function ChevronButton({ dir, disabled, onClick }: { dir: "prev" | "next"; disab
       aria-label={dir === "prev" ? "Previous month" : "Next month"}
       disabled={disabled}
       onClick={onClick}
-      className="grid size-11 touch-manipulation place-items-center rounded-full text-foreground transition-[color,scale] duration-150 ease-standard outline-none focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96] disabled:text-foreground/50"
+      className="grid size-11 touch-manipulation place-items-center rounded-full text-foreground transition-[background-color,color,scale] duration-150 ease-standard outline-none enabled:hover:bg-white/8 focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96] disabled:text-foreground/50"
     >
       <Icon aria-hidden className="size-8" strokeWidth={1.5} />
     </button>
@@ -199,7 +199,7 @@ function ChevronButton({ dir, disabled, onClick }: { dir: "prev" | "next"; disab
 
 const VALUE_TEXT: Record<CalendarContext, (v: number) => string> = {
   recovery: (v) => `Recovery ${Math.round(v)}%`,
-  strain: (v) => `Strain ${v.toFixed(1)}`,
+  strain: (v) => `Strain ${formatValue("decimal1", v)}`,
   sleep: (v) => `Sleep ${Math.round(v)}%`,
 }
 
@@ -221,15 +221,14 @@ function Day({
   onSelect: (day: string) => void
 }) {
   const tone = disabled ? { text: NO_SCORE, dot: null } : dayTone(context, value)
-  const date = parseISO(day)
-  return (
+    return (
     <span role="gridcell" aria-selected={selected} className="grid">
       <button
         type="button"
         data-day={day}
         tabIndex={tabStop ? 0 : -1}
         disabled={disabled}
-        aria-label={`${format(date, "EEEE, MMMM d")}${value !== null && !disabled ? `, ${VALUE_TEXT[context](value)}` : ""}`}
+        aria-label={`${formatDay(day, DAY.long)}${value !== null && !disabled ? `, ${VALUE_TEXT[context](value)}` : ""}`}
         onClick={() => onSelect(day)}
         className="group grid h-12 w-full touch-manipulation place-items-center outline-none [-webkit-tap-highlight-color:transparent]"
       >
@@ -241,7 +240,7 @@ function Day({
             tone.text
           )}
         >
-          {date.getDate()}
+          {Number(day.slice(8))}
           {tone.dot && <span aria-hidden className={cn("absolute top-full left-1/2 size-1 -translate-x-1/2 rounded-full", tone.dot)} />}
         </span>
       </button>

@@ -138,6 +138,8 @@ function morphKeyframes(dials: El, header: El, ringRow: El, band: El, fill: El, 
   const y = window.scrollY
   const o = (p: number) => timelineOffset(p, start, end, max)
   const out: [El, Keyframe[]][] = []
+  // Style writes wait until every layout read is done, so the loop never forces a second layout.
+  const origins: [El, string][] = []
   // Piecewise linear in p, sampled at STOPS; `after` is what holds once docked (the hand-off).
   const add = (el: El, at: (p: number) => Keyframe, after?: Keyframe) => {
     const kf: Keyframe[] = [{ ...at(0), offset: 0 }, ...STOPS.map((p) => ({ ...at(p), offset: o(p) }))]
@@ -167,7 +169,7 @@ function morphKeyframes(dials: El, header: El, ringRow: El, band: El, fill: El, 
     const b = box(below)
     const l = box(label)
     const tl = box(toLabel)
-    below.style.transformOrigin = px(l.left - b.left, cy(l) - b.top)
+    origins.push([below, px(l.left - b.left, cy(l) - b.top)])
     const labelX = tl.left - l.left
     const labelY = cy(tl) - (cy(l) + y - start)
     const ks = parseFloat(getComputedStyle(toLabel).fontSize) / parseFloat(getComputedStyle(label).fontSize)
@@ -190,6 +192,7 @@ function morphKeyframes(dials: El, header: El, ringRow: El, band: El, fill: El, 
   ]
   out.push([band, bandKf(1)], [fill, bandKf(-1)])
   add(ringRow, () => ({ opacity: "0" }), { opacity: "1" })
+  for (const [el, origin] of origins) el.style.transformOrigin = origin
   return out
 }
 
@@ -333,7 +336,7 @@ export function HomeHeader({ rings }: { rings?: HeaderRings }) {
               <SyncStatus />
             </div>
           </div>
-          <nav ref={ringRow} inert aria-label="Today's scores" className={cn("absolute inset-x-0 top-full group-data-[state=rings]/hdr:pointer-events-auto", RING_ROW_MOTION)}>
+          <nav ref={ringRow} inert aria-label="Today’s scores" className={cn("absolute inset-x-0 top-full group-data-[state=rings]/hdr:pointer-events-auto", RING_ROW_MOTION)}>
             <ul className={cn("grid h-10 grid-cols-3 items-center", ROW_EDGES)}>
               {RING_ORDER.map(({ key, label }) => {
                 const ring = rings?.[key]

@@ -15,7 +15,7 @@ export default function Loading() {
     </div>
   )
   return (
-    <DetailShell
+    <DetailShell loading
       title="Your data"
       primary={
         <div aria-hidden className="mx-auto flex w-full max-w-[640px] flex-col gap-3 md:gap-4">

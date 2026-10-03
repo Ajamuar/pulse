@@ -6,7 +6,7 @@ const rows = (n: number) => Array.from({ length: n }, () => ({ label: "" }))
 /** Reports archive: the Weeks and Months groups with row boxes at their final size (spec §5.19). */
 export default function Loading() {
   return (
-    <DetailShell
+    <DetailShell loading
       title="Reports"
       primary={
         <div className={LIST_GRID}>

@@ -12,7 +12,7 @@ const GROUPS: [string, number][] = [
 /** Behaviours: the intro, each group's card with its rows' boxes, and Your behaviours with the add form (spec §5.19). */
 export default function Loading() {
   return (
-    <DetailShell
+    <DetailShell loading
       title="Behaviours"
       primary={
         <div aria-hidden className="mx-auto flex w-full max-w-[640px] flex-col gap-3 md:gap-4">

@@ -9,7 +9,7 @@ import { MetricPicker, PERIOD, TRENDS_GRID } from "./parts"
 /** Trends: the real picker, the chart card with its plot and toggle, the Averages rows with their labels (spec §5.19). */
 export default function Loading() {
   return (
-    <DetailShell
+    <DetailShell loading
       title="Trends"
       primary={
         <div aria-hidden className="flex flex-col gap-4 xl:gap-6">

@@ -11,7 +11,7 @@ import { Skeleton, SkeletonText } from "@/components/ui/skeleton"
  */
 export default function Loading() {
   return (
-    <DetailShell
+    <DetailShell loading
       title="Fitness"
       hero={
         <div aria-hidden className="flex flex-col items-center gap-2 py-4 text-center">

@@ -11,7 +11,7 @@ const BODY = "text-[15px] leading-[22px]"
  */
 export default function Loading() {
   return (
-    <DetailShell
+    <DetailShell loading
       title="Behaviour insights"
       hero={
         <div aria-hidden data-hero-align="start" className="w-full space-y-4 xl:w-[360px]">

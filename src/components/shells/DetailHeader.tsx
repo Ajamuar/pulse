@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { ChevronLeft, X } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -49,30 +50,33 @@ export function DetailHeaderRow({
   const pathname = usePathname()
   const { today } = useShellCalendar()
 
-  const back = () => {
+  // A real link to the parent, so Cmd/Ctrl-click and middle-click open it in a new tab; a plain click goes back.
+  const parent = backHref ?? parentHref(pathname)
+  const back = (e: React.MouseEvent) => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return
+    e.preventDefault()
     // The Navigation API lists only this origin's entries, so canGoBack means "an in-app page is behind this one".
     // document.referrer never changes on client navigation, so alone it sent Home → Recovery → Back to a pushed copy
     // of Home, and the browser's Back then looped to Recovery (U18 N-01). It stays as the fallback.
     const nav = (window as Window & { navigation?: { canGoBack: boolean } }).navigation
     const canGoBack = nav ? nav.canGoBack : window.history.length > 1 && document.referrer.startsWith(window.location.origin)
     if (canGoBack) return router.back()
-    if (backHref) return router.push(backHref)
-    const parent = parentHref(pathname)
     // Home details return to Home on the same day.
     const d = new URLSearchParams(window.location.search).get("d")
-    router.push(tabForPath(pathname) === "home" && d ? dayHref(parent, d, today) : parent)
+    router.push(!backHref && tabForPath(pathname) === "home" && d ? dayHref(parent, d, today) : parent)
   }
   const Icon = dismiss === "close" ? X : ChevronLeft
   const backButton = (
     <Button
+      asChild
       variant="ghost"
       size="icon-touch"
-      aria-label={dismiss === "close" ? "Close" : "Back"}
-      onClick={back}
       // Close dismisses a screen opened over the tabs (Settings); from 768 px the sidebar is the way out, so it hides but keeps its slot.
       className={cn("hover:bg-white/8", dismiss === "close" && "md:invisible")}
     >
-      <Icon aria-hidden strokeWidth={1.75} className={dismiss === "close" ? "size-6" : "size-[26px]"} />
+      <Link href={parent} aria-label={dismiss === "close" ? "Close" : "Back"} onClick={back}>
+        <Icon aria-hidden strokeWidth={1.75} className={dismiss === "close" ? "size-6" : "size-[26px]"} />
+      </Link>
     </Button>
   )
 

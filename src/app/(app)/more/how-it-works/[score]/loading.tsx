@@ -8,7 +8,7 @@ const SECTIONS = ["What goes in", "How it is weighted", "What the bands mean", "
 /** One explainer: the summary line, the four section cards with their real titles, text as bars (spec §5.19). */
 export default function Loading() {
   return (
-    <DetailShell
+    <DetailShell loading
       title={"\u00a0"}
       subtitle="How it works"
       primary={

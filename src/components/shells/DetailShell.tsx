@@ -6,7 +6,7 @@ import { COLLAPSE_HERO } from "@/lib/collapse"
 import { CollapsingHeader, type HeaderStats } from "./CollapsingHeader"
 import { DateSwitcher, type DateSwitcherProps } from "./DateSwitcher"
 import { DetailHeader, type DetailHeaderProps } from "./DetailHeader"
-import { CONTENT_COLUMN } from "./PageShell"
+import { CONTENT_COLUMN, LoadingStatus } from "./PageShell"
 
 export type DetailShellProps = {
   title: string
@@ -45,10 +45,12 @@ export type DetailShellProps = {
    */
   secondary?: React.ReactNode[]
   footer?: React.ReactNode
+  /** A route's loading.tsx: says "Loading…" to screen readers while the aria-hidden skeleton shows. */
+  loading?: boolean
 }
 
 /** Detail screens (spec §4.6): one dial, one number, then everything that explains it. */
-export function DetailShell({ title, subtitle, info, backHref, dateSwitcher, dismiss, align, titleIcon, ground, hero, stats, collapse, summary, notch, insight, primary, secondary, footer }: DetailShellProps) {
+export function DetailShell({ title, subtitle, info, backHref, dateSwitcher, dismiss, align, titleIcon, ground, hero, stats, collapse, summary, notch, insight, primary, secondary, footer, loading }: DetailShellProps) {
   // With no summary, the insight takes the hero's right column on laptop (spec §7.9).
   const side = summary ?? (hero ? insight : null)
   const inHeader = dateSwitcher?.placement === "header"
@@ -58,7 +60,8 @@ export function DetailShell({ title, subtitle, info, backHref, dateSwitcher, dis
   return (
     <div data-ground={ground === "healthspan" ? "healthspan" : undefined}>
       {compact ? <CollapsingHeader {...headerProps} compact={compact} stats={stats} /> : <DetailHeader {...headerProps} />}
-      <div className={CONTENT_COLUMN}>
+      <div className={CONTENT_COLUMN} aria-busy={loading || undefined}>
+        {loading && <LoadingStatus title={title} />}
         <ConnectionBanner className="mb-4 xl:mb-6" />
         {dateSwitcher && !inHeader && (
           // Bare chevrons and caps label, no pill: the reference app's "‹ MON, SEP 14 ›" and "‹ JUL 26 - AUG 1 ›" rows

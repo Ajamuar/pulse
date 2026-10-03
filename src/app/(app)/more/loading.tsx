@@ -10,7 +10,7 @@ import { About } from "./About"
 /** More: the same rows and About card in their final boxes; only the account and the captions are bars (spec §5.19). */
 export default function Loading() {
   return (
-    <PageShell title="More">
+    <PageShell loading title="More">
       <div aria-hidden className={`${CARD_MATERIAL} flex min-h-18 items-center gap-3 px-4 py-3 md:hidden`}>
         <Skeleton className="size-11 shrink-0 rounded-full" />
         <span className="min-w-0 flex-1">

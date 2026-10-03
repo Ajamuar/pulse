@@ -6,7 +6,7 @@ import { VitalTilesSkeleton } from "./VitalTiles"
 /** Health Monitor loading (spec §7.8, §5.19): the date row, the count hero, and the five vital tiles with the note. */
 export default function Loading() {
   return (
-    <DetailShell
+    <DetailShell loading
       title="Health Monitor"
       dateSwitcher={{ mode: "day" }}
       hero={
@@ -17,7 +17,7 @@ export default function Loading() {
         </div>
       }
       primary={
-        <SectionShell variant="section" title="Last night's readings">
+        <SectionShell variant="section" title="Last night’s readings">
           <VitalTilesSkeleton />
         </SectionShell>
       }

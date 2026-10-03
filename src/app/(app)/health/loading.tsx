@@ -14,7 +14,7 @@ const Chip = () => <Skeleton className="h-6 w-24 rounded-md" />
  */
 export default function Loading() {
   return (
-    <PageShell title="Health" ground="health">
+    <PageShell loading title="Health" ground="health">
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-2 xl:gap-4">
         <SectionShell variant="card" level={2} title="Healthspan" href="/health/healthspan" className="xl:col-span-2">
           <div aria-hidden className="flex flex-col gap-6 xl:grid xl:grid-cols-2 xl:items-center xl:gap-8">
@@ -53,7 +53,7 @@ export default function Loading() {
         <SectionShell variant="card" level={2} title="Stress Monitor" href="/health/stress">
           <div aria-hidden className="grid grid-cols-[auto_minmax(0,1fr)] items-end gap-4">
             <div className="space-y-2">
-              <p className={LABEL}>Today&apos;s high stress</p>
+              <p className={LABEL}>Today’s high stress</p>
               <SkeletonText className={`${TILE} w-[4ch]`} />
               <Chip />
             </div>

@@ -62,7 +62,7 @@ const BannerSkeleton = () => <Skeleton className="h-14 rounded-2xl" />
 /** `stats`: My Dashboard's chosen metrics (getHome's order), so the skeleton has as many rows as the page will. */
 export function HomeSkeleton({ stats = DASHBOARD_KEYS }: { stats?: DashboardKey[] }) {
   return (
-    <PageShell
+    <PageShell loading
       title="Home"
       layout="home"
       slots={{
@@ -110,7 +110,7 @@ export function HomeSkeleton({ stats = DASHBOARD_KEYS }: { stats?: DashboardKey[
           >
             <div className="flex flex-col gap-3 xl:flex-1 xl:gap-4">
               <BannerSkeleton />
-              <SectionShell variant="card" title="Today's activities" action={ICON_SLOT}>
+              <SectionShell variant="card" title="Today’s activities" action={ICON_SLOT}>
                 <TimelineSkeleton />
                 <Skeleton className="mt-3 h-12 rounded-xl" />
               </SectionShell>
@@ -140,7 +140,7 @@ export function HomeSkeleton({ stats = DASHBOARD_KEYS }: { stats?: DashboardKey[
                     <div className="space-y-1">{rows(3, () => <SkeletonText className={`${CAPTION} w-28`} />)}</div>
                   </div>
                 </SectionShell>
-                <SectionShell variant="card" title="Tonight's sleep" info={TONIGHT_INFO} action={ICON_SLOT} fill>
+                <SectionShell variant="card" title="Tonight’s sleep" info={TONIGHT_INFO} action={ICON_SLOT} fill>
                   <div className="flex flex-1 flex-col gap-4">
                     <Skeleton className="my-auto h-[60px] rounded-lg bg-muted/60" />
                     <Skeleton className="mt-auto h-11 rounded-lg" />
@@ -191,7 +191,7 @@ function DialDetail({
   secondary: React.ReactNode[]
 }) {
   return (
-    <DetailShell
+    <DetailShell loading
       title={title}
       dateSwitcher={{ mode: "day", placement: "header" }}
       notch
@@ -237,7 +237,7 @@ export function RecoverySkeleton() {
         <SectionShell key="drivers" variant="card" title="What shaped it" level={2}>
           <DriverListSkeleton variant="recovery" unit="pts" rows={5} />
         </SectionShell>,
-        <SectionShell key="forecast" variant="card" title="Tomorrow's forecast" level={2} fill>
+        <SectionShell key="forecast" variant="card" title="Tomorrow’s forecast" level={2} fill>
           <div aria-hidden className="my-auto flex items-center gap-4 xl:flex-col xl:gap-3">
             <ScoreDialSkeleton size="sm" label="Tomorrow" />
             <span className="min-w-0 flex-1 xl:w-full xl:max-w-[32ch] xl:flex-none">
@@ -300,7 +300,7 @@ export function SleepSkeleton() {
         </>
       }
       primary={
-        <SectionShell variant="card" title="Last night's sleep" aside="vs. prior 30 days" level={2}>
+        <SectionShell variant="card" title="Last night’s sleep" aside="vs. prior 30 days" level={2}>
           <SleepStagesSkeleton />
         </SectionShell>
       }
@@ -309,7 +309,7 @@ export function SleepSkeleton() {
           <div className="space-y-3">
             <SkeletonText className="w-40 font-numeric text-4xl leading-10 font-bold" />
             <dl className="space-y-1.5">
-              {["Baseline need", "Yesterday's strain", "Sleep debt", "Naps"].map((l) => (
+              {["Baseline need", "Yesterday’s strain", "Sleep debt", "Naps"].map((l) => (
                 <div key={l} className="flex items-baseline justify-between gap-3 text-xs leading-4 font-medium">
                   <dt className="text-muted-foreground">{l}</dt>
                   <SkeletonText className="w-[5ch]" />
@@ -324,7 +324,7 @@ export function SleepSkeleton() {
         <CardSkeleton key="debt" title="Sleep debt">
           <TrendChartSkeleton chip />
         </CardSkeleton>,
-        <SectionShell key="planner" variant="card" title="Tonight's sleep" info={TONIGHT_INFO} level={2}>
+        <SectionShell key="planner" variant="card" title="Tonight’s sleep" info={TONIGHT_INFO} level={2}>
           <div aria-hidden className="space-y-2">
             <div className="divide-y divide-border">
               {rows(4, () => (
@@ -347,7 +347,7 @@ export function SleepSkeleton() {
 
 export function ActivitySkeleton() {
   return (
-    <DetailShell
+    <DetailShell loading
       title="Activity"
       align="start"
       hero={

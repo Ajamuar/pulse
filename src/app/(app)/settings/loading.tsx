@@ -29,7 +29,7 @@ const Buttons = () => (
 /** Settings: SettingsView's one 640 px column of Account, Data source, Profile, with static labels (spec §7.14, §5.19). */
 export default function Loading() {
   return (
-    <DetailShell
+    <DetailShell loading
       title="Settings"
       dismiss="close"
       primary={
