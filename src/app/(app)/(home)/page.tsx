@@ -24,7 +24,7 @@ import { SectionShell } from "@/components/shells/SectionShell"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { CARD_MATERIAL } from "@/components/ui/card"
 import { getHome } from "@/server/queries/home"
-import type { HomeVM, StressLevel } from "@/server/queries/types"
+import type { HomeVM, KeyStat, StressLevel } from "@/server/queries/types"
 import { pageDay, type SearchParams } from "../_lib/day"
 import { EditDashboard } from "../_lib/EditDashboard"
 import { HomeInsight } from "../_lib/HomeInsight"
@@ -113,10 +113,22 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
                 {/* The sentinel above pulls the stack up to the labels; give the note its own 12 px back. */}
                 {dials.reason && (
                   <p className="pt-3 text-center md:pt-4">
-                    <ReasonPlaceholder reason={dials.reason.reason} nightsLeft={dials.reason.nightsLeft} size="sm" />
+                    <ReasonPlaceholder
+                      reason={dials.reason.reason}
+                      nightsLeft={dials.reason.nightsLeft}
+                      size="sm"
+                      // Phone data but no band: say what the dials need, not just that the band was off (§11 CD2).
+                      copy={vm.phone ? "No band data: Sleep, Recovery and Strain need your Fitbit" : undefined}
+                    />
                   </p>
                 )}
               </div>
+              {vm.phone && (
+                // Leads where the monitor cards sit: with no band they would only say "No readings" (§11 CD2).
+                <div className="xl:col-start-2 xl:row-start-1">
+                  <PhoneActivity stats={vm.phone} isToday={vm.isToday} link={{ d, today }} />
+                </div>
+              )}
               {vm.insights.length > 0 && (
                 <div className="xl:col-span-2 xl:row-start-2">
                   <HomeInsight items={vm.insights} />
@@ -127,10 +139,12 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
                   <MonitorAlert alert={vm.monitorAlert} href={at("/health/monitor")} />
                 </div>
               )}
-              <div className="grid grid-cols-2 gap-3 xl:col-start-2 xl:row-start-1 xl:grid-cols-1 xl:gap-4">
-                <MonitorCard vm={vm} href={at("/health/monitor")} />
-                <StressCard vm={vm} href={at("/health/stress")} timeZone={timeZone} />
-              </div>
+              {!vm.phone && (
+                <div className="grid grid-cols-2 gap-3 xl:col-start-2 xl:row-start-1 xl:grid-cols-1 xl:gap-4">
+                  <MonitorCard vm={vm} href={at("/health/monitor")} />
+                  <StressCard vm={vm} href={at("/health/stress")} timeZone={timeZone} />
+                </div>
+              )}
             </div>
           </div>
         ),
@@ -352,6 +366,25 @@ function MonitorAlert({ alert, href }: { alert: NonNullable<HomeVM["monitorAlert
         </Link>
       </AlertDescription>
     </Alert>
+  )
+}
+
+/**
+ * A day with no band but phone data (spec §11 CD2): the phone's own numbers as Health Monitor tiles, against their
+ * 30-day averages, so Home opens on what was recorded instead of three empty dials and "No readings" cards.
+ */
+function PhoneActivity({ stats, isToday, link }: { stats: KeyStat[]; isToday: boolean; link: { d: string; today: string } }) {
+  return (
+    <SectionShell variant="section" title={isToday ? "Today from your phone" : "From your phone"} aside="vs. 30-day average">
+      <ul className="grid grid-cols-2 gap-3 xl:gap-4">
+        {stats.map((s, i) => (
+          // An odd count lets the first tile (steps) span the row, so the grid never ends on a hole.
+          <li key={s.key} className={cn("grid", stats.length % 2 === 1 && i === 0 && "col-span-2")}>
+            <KeyStatRow variant="tile" {...statProps(s, link)} />
+          </li>
+        ))}
+      </ul>
+    </SectionShell>
   )
 }
 
