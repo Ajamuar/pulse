@@ -18,6 +18,8 @@ describe("format", () => {
   it("formats durations, groups and missing values", () => {
     expect(formatValue("duration", 389)).toBe("6:29");
     expect(formatValue("durationHMS", 1360)).toBe("0:22:40");
+    expect(formatValue("pace", 332.4)).toBe("5:32");
+    expect(formatValue("pace", 599.6)).toBe("10:00");
     expect(formatValue("grouped", 12459)).toBe("12,459");
     expect(formatValue("int", null)).toBe("--");
     expect(formatValue("int", Number.NaN)).toBe("--");

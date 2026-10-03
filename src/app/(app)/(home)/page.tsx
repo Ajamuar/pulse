@@ -182,7 +182,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
                   <div className="space-y-1.5">
                     {vm.activities.items.map((it) =>
                       it.kind === "activity" ? (
-                        <ActivityCard key={it.id} name={it.name} kind={it.activityKind} strain={it.strain} start={it.start} end={it.end} href={`/activity/${it.id}`} timeZone={timeZone} />
+                        <ActivityCard key={it.id} name={it.name} kind={it.activityKind} strain={it.strain} start={it.start} end={it.end} distanceKm={it.distanceKm} paceS={it.paceS} href={`/activity/${it.id}`} timeZone={timeZone} />
                       ) : (
                         <SleepCard key={it.id} kind={it.kind} minutes={it.minutes} start={it.start} end={it.end} href={at("/sleep")} timeZone={timeZone} />
                       ),

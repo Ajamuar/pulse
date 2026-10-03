@@ -239,11 +239,11 @@ export const ACTIVITY_NAME: Record<ActivityKind, string> = {
   workout: "Workout",
 };
 
-export type ExerciseRow = { id: string; day: string; startTs: number; endTs: number; type: string; name: string | null; calories: number | null };
+export type ExerciseRow = { id: string; day: string; startTs: number; endTs: number; type: string; name: string | null; calories: number | null; distanceM: number | null };
 
 export function exercisesBetween(ctx: QueryCtx, from: string, to: string): ExerciseRow[] {
   return ctx.db.$client
-    .prepare("select id, day, start_ts startTs, end_ts endTs, type, name, calories from exercises where day >= ? and day <= ? order by start_ts, id")
+    .prepare("select id, day, start_ts startTs, end_ts endTs, type, name, calories, distance_m distanceM from exercises where day >= ? and day <= ? order by start_ts, id")
     .all(from, to) as ExerciseRow[];
 }
 
@@ -251,7 +251,14 @@ export function activityItem(e: ExerciseRow, row: DayRow | undefined): Extract<T
   const kind = activityKind(e.type);
   const a = row?.activities.find((x) => x.id === e.id);
   const strain = a?.effort != null ? ok(toStrain(a.effort)) : none<number>(a && a.hrCount > 0 ? "insufficient_hr_data" : "band_not_worn");
-  return { kind: "activity", id: e.id, day: e.day, name: ACTIVITY_NAME[kind], activityKind: kind, strain, start: ms(e.startTs), end: ms(e.endTs) };
+  return { kind: "activity", id: e.id, day: e.day, name: ACTIVITY_NAME[kind], activityKind: kind, strain, start: ms(e.startTs), end: ms(e.endTs), ...distanceOf(e) };
+}
+
+/** Distance in km where the workout recorded one, and pace (seconds per km) for runs and walks. */
+export function distanceOf(e: ExerciseRow): { distanceKm: number | null; paceS: number | null } {
+  const km = finite(e.distanceM) && e.distanceM > 0 ? e.distanceM / 1000 : null;
+  const paced = km !== null && /^(run|walk)$/.test(activityKind(e.type));
+  return { distanceKm: km, paceS: paced ? (e.endTs - e.startTs) / km : null };
 }
 
 /** The day's timeline: main sleep, naps and workouts, in time order. */

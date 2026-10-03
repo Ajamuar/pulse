@@ -3,6 +3,7 @@ import {
   ACTIVITY_NAME,
   activityKind,
   defaultCtx,
+  distanceOf,
   exercisesBetween,
   type ExerciseRow,
   hrReason,
@@ -22,7 +23,7 @@ import type { ActivityVM, KeyStat } from "./types";
 /** Activity `/activity/[id]` (spec §7.4); null for an unknown id. */
 export function getActivity(id: string, ctx: QueryCtx = defaultCtx()): ActivityVM | null {
   const e = ctx.db.$client
-    .prepare("select id, day, start_ts startTs, end_ts endTs, type, name, calories from exercises where id = ?")
+    .prepare("select id, day, start_ts startTs, end_ts endTs, type, name, calories, distance_m distanceM from exercises where id = ?")
     .get(id) as ExerciseRow | undefined;
   if (!e) return null;
   const rows = loadDays(ctx, addDays(e.day, -30), e.day);
@@ -39,8 +40,18 @@ export function getActivity(id: string, ctx: QueryCtx = defaultCtx()): ActivityV
     return { key, label, metric: maybe(v, r), ...(unit && { unit }), average: mean, ...(sd !== undefined && { sd }), direction: "neutral" };
   };
   const durationMin = (x: ExerciseRow) => (x.endTs - x.startTs) / 60;
+  // Distance for the kinds that travel (pace for runs and walks), before the heart-rate tiles (spec §11 EX3).
+  const here = distanceOf(e);
+  const travels = kind === "run" || kind === "walk" || kind === "ride";
+  const distance = travels
+    ? [
+        { ...tile("distance", "Distance", here.distanceKm, "km", same.map((x) => distanceOf(x).distanceKm), "no_data"), format: "decimal2" as const },
+        ...(kind === "ride" ? [] : [{ ...tile("pace", "Pace", here.paceS, "/km", same.map((x) => distanceOf(x).paceS), "no_data"), format: "pace" as const }]),
+      ]
+    : [];
   const stats = [
     tile("duration", "Duration", durationMin(e), "min", same.map(durationMin), "no_data"),
+    ...distance,
     tile("avgHr", "Average heart rate", a?.avgHr, "bpm", same.map((x) => statOf(x)?.avgHr)),
     tile("maxHr", "Max heart rate", a?.maxHr, "bpm", same.map((x) => statOf(x)?.maxHr)),
     tile("calories", "Calories", e.calories, "kcal", same.map((x) => x.calories), "no_data"),

@@ -41,6 +41,11 @@ export const FORMATS = {
   signedInt: (v: number) => signed(v, 0),
   /** Minutes → h:mm. */
   duration: hmm,
+  /** Seconds (per km) → m:ss, the pace "5:32". */
+  pace: (s: number) => {
+    const t = Math.max(0, Math.round(s));
+    return `${Math.floor(t / 60)}:${pad(t % 60)}`;
+  },
   /** Seconds → h:mm:ss. */
   durationHMS: (s: number) => {
     const t = Math.max(0, Math.round(s));
@@ -152,6 +157,8 @@ const UNIT_WORDS: Record<string, string> = {
   x: "times",
   min: "minutes",
   h: "hours",
+  km: "kilometres",
+  "/km": "per kilometre",
 };
 
 /** "124 milliseconds", "−0.4 degrees" → reads the minus sign as "minus". */

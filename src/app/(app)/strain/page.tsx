@@ -79,7 +79,7 @@ export default async function StrainPage({ searchParams }: PageProps<"/strain">)
           {vm.activities.length ? (
             <div className="space-y-1.5">
               {vm.activities.map((a) => (
-                <ActivityCard key={a.id} name={a.name} kind={a.activityKind} strain={a.strain} start={a.start} end={a.end} href={`/activity/${a.id}`} timeZone={timeZone} />
+                <ActivityCard key={a.id} name={a.name} kind={a.activityKind} strain={a.strain} start={a.start} end={a.end} distanceKm={a.distanceKm} paceS={a.paceS} href={`/activity/${a.id}`} timeZone={timeZone} />
               ))}
             </div>
           ) : (

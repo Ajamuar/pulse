@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { Bike, Dumbbell, Footprints, PersonStanding, Timer, type LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { clock, formatValue } from "@/lib/format"
+import { clock, formatValue, spoken } from "@/lib/format"
 import type { Metric } from "@/lib/reasons"
 import { Skeleton, SkeletonText } from "@/components/ui/skeleton"
 
@@ -26,6 +26,16 @@ export type ActivityCardProps = {
   /** `/activity/[id]`. */
   href: string
   timeZone?: string
+  /** Recorded distance; the caption shows it (with pace) under the name. Omit or null for none. */
+  distanceKm?: number | null
+  /** Seconds per km (runs and walks). */
+  paceS?: number | null
+}
+
+/** "5.21 km at 5:32 /km", "18.40 km", or null with no distance. */
+export function distanceText(km: number | null | undefined, paceS?: number | null) {
+  if (km == null) return null
+  return paceS == null ? `${formatValue("decimal2", km)} km` : `${formatValue("decimal2", km)} km at ${formatValue("pace", paceS)} /km`
 }
 
 // Rows are 10 px inside a 16 px card with a 6 px inset; the chip is 8 px inside the row (concentric, spec §2.4).
@@ -75,11 +85,16 @@ export function TimelineRow({
   )
 }
 
-export function ActivityCard({ name, kind, strain, start, end, href, timeZone }: ActivityCardProps) {
+export function ActivityCard({ name, kind, strain, start, end, href, timeZone, distanceKm, paceS }: ActivityCardProps) {
   const Icon = ACTIVITY_ICON[kind]
   const s = clock(start, timeZone)
   const e = clock(end, timeZone)
   const value = formatValue("decimal1", strain.value)
+  const distance = distanceText(distanceKm, paceS)
+  const noStrain = strain.value === null
+  // The full reason when it is the only caption; beside a distance, the short form keeps the row on one line.
+  const caption = distance ? (noStrain ? `${distance} · No strain` : distance) : noStrain ? "No strain: not enough heart-rate data" : undefined
+  const spokenDistance = distanceKm == null ? "" : `, ${spoken(formatValue("decimal2", distanceKm), "km")}${paceS == null ? "" : ` at ${spoken(formatValue("pace", paceS), "/km")}`}`
   return (
     <TimelineRow
       href={href}
@@ -92,10 +107,10 @@ export function ActivityCard({ name, kind, strain, start, end, href, timeZone }:
         </>
       }
       name={name}
-      caption={strain.value === null ? "No strain: not enough heart-rate data" : undefined}
+      caption={caption}
       start={s}
       end={e}
-      label={`${name}, ${strain.value === null ? "no strain" : `strain ${value}`}, ${s} to ${e}`}
+      label={`${name}${spokenDistance}, ${noStrain ? "no strain" : `strain ${value}`}, ${s} to ${e}`}
     />
   )
 }

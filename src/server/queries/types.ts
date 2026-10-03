@@ -60,7 +60,20 @@ export type DriverItem = {
 
 export type TimelineItem =
   | { kind: "sleep" | "nap"; id: string; day: string; minutes: number; start: number; end: number }
-  | { kind: "activity"; id: string; day: string; name: string; activityKind: ActivityKind; strain: Metric<number>; start: number; end: number };
+  | {
+      kind: "activity";
+      id: string;
+      day: string;
+      name: string;
+      activityKind: ActivityKind;
+      strain: Metric<number>;
+      start: number;
+      end: number;
+      /** Recorded distance, or null when the workout has none (strength, a phone-less session). */
+      distanceKm: number | null;
+      /** Seconds per km, runs and walks with a distance only. */
+      paceS: number | null;
+    };
 
 export type SleepPlanVM = {
   needMin: number;

@@ -243,7 +243,7 @@ export const stress: StressSeries = {
 export const timeline = {
   sleep: { kind: "sleep" as const, minutes: 389, start: DAY0 + 51 * MIN, end: DAY0 + 7 * HOUR + 38 * MIN, href: "/sleep" },
   nap: { kind: "nap" as const, minutes: 26, start: DAY0 + 13 * HOUR + 5 * MIN, end: DAY0 + 13 * HOUR + 31 * MIN, href: "/sleep" },
-  run: { name: "Running", kind: "run" as const, strain: ok(10.3), start: DAY0 + 11 * HOUR + 16 * MIN, end: DAY0 + 12 * HOUR + 14 * MIN, href: "/activity/run-1" },
+  run: { name: "Running", kind: "run" as const, strain: ok(10.3), start: DAY0 + 11 * HOUR + 16 * MIN, end: DAY0 + 12 * HOUR + 14 * MIN, distanceKm: 10.47, paceS: 332, href: "/activity/run-1" },
   strength: { name: "Strength training", kind: "strength" as const, strain: why<number>("insufficient_hr_data"), start: DAY0 + 18 * HOUR, end: DAY0 + 18 * HOUR + 45 * MIN, href: "/activity/str-1" },
 }
 
