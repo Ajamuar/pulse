@@ -60,8 +60,9 @@ jobs:
       - run: pnpm exec playwright install-deps chromium
         if: steps.browsers.outputs.cache-hit == 'true'
       # Demo mode against a production build on its own port and throwaway database (playwright.config.ts);
-      # no secrets needed. CI runs the phone (361) and laptop (1440) widths; local `pnpm e2e` sweeps all five.
-      - run: pnpm e2e --project=setup --project=361 --project=1440
+      # no secrets needed. CI runs the phone (361) and laptop (1440) widths, plus the onboarding journey on its
+      # profile-less second server; local `pnpm e2e` sweeps all five.
+      - run: pnpm e2e --project=setup --project=361 --project=1440 --project=onboarding
         env:
           CI: "true"
           E2E_PROD: "1"

@@ -50,7 +50,7 @@ that passes CI and gets a review, and it lands as one squashed commit.
 
    ```sh
    pnpm typecheck && pnpm lint && pnpm test
-   pnpm e2e   # for UI changes; it runs its own server on :3300
+   pnpm e2e   # for UI changes; it runs its own servers on :3300 and :3301
    ```
 
 4. Open a pull request and fill in the template. CI must be green.

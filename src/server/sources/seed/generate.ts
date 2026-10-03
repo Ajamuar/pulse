@@ -515,10 +515,18 @@ export function seedPull(db: Db, { now, timeZone, maxHr }: SeedOptions): { chang
 /** The demo person: 36 in 2026, max HR estimated (183). Settings › Profile can change it like any profile. */
 export const DEMO_PROFILE = { birthDate: "1990-01-01", sex: "male", maxHr: null, heightCm: null } as const;
 
+/**
+ * False only on the e2e onboarding server (playwright.config.ts sets E2E_NO_DEMO_PROFILE=1), so its demo
+ * visitor lands on /onboarding like a first-run owner. Nothing else sets it; set by mistake, a demo just
+ * asks for a profile first, the same as a real first run. It never removes a profile.
+ */
+export const seedsDemoProfile = () => process.env.E2E_NO_DEMO_PROFILE !== "1";
+
 export const seedSource: Source = {
   pull: async () => {
     const db = getDb();
-    if (!getProfile(db)) saveProfile(db, DEMO_PROFILE);
-    return seedPull(db, { now: Math.floor(Date.now() / 1000), timeZone: getConfig().timeZone, maxHr: getProfile(db)!.maxHr });
+    if (!getProfile(db) && seedsDemoProfile()) saveProfile(db, DEMO_PROFILE);
+    // Before onboarding (e2e only), generate with DEMO_PROFILE's estimated max HR; scoring waits for the profile.
+    return seedPull(db, { now: Math.floor(Date.now() / 1000), timeZone: getConfig().timeZone, maxHr: getProfile(db)?.maxHr ?? 183 });
   },
 };

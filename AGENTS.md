@@ -10,7 +10,7 @@ Guide for coding agents (and humans) working on Pulse: a self-hosted Next.js app
 | `pnpm typecheck` | `next typegen` + `tsc --noEmit` |
 | `pnpm lint` | ESLint |
 | `pnpm test` | Vitest: `*.test.ts` in Node, `*.test.tsx` in happy-dom |
-| `pnpm e2e` | Playwright sweep and journeys on its own dev server (:3300, `.next/e2e`, throwaway DB) |
+| `pnpm e2e` | Playwright sweep and journeys on its own dev server (:3300, `.next/e2e`, throwaway DB), plus a profile-less one on :3301 for the onboarding journey |
 | `pnpm db:generate` | New drizzle migration from `src/server/db/schema.ts`. Migrations run at boot |
 
 Run `pnpm typecheck && pnpm lint && pnpm test` before every commit. Run `pnpm e2e` after UI changes.
