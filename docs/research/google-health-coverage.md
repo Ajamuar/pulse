@@ -50,7 +50,7 @@ Status: **Shown** means visible on a screen; **Used** means it feeds a score but
 | `activity-level` | Daily activity level | No | |
 | `sedentary-period` | Sedentary intervals | **Shown** | Daily total as Sedentary time (Trends) |
 | `active-energy-burned` | Active kcal | **Shown** | Strain, Trends (Activity) |
-| `basal-energy-burned` | BMR kcal | No | |
+| `basal-energy-burned` | BMR kcal | No | No daily roll-up (2026-10-03). Strain's Calories burned derives resting as `total-calories` − `active-energy-burned` |
 | `heart-rate-variability` | HRV samples | No | Only the nightly average is fetched |
 | `oxygen-saturation` | SpO2 samples | No | Only the nightly average is fetched |
 | `respiratory-rate-sleep-summary` | Breathing rate per sleep stage | No | |
