@@ -186,7 +186,7 @@ const R = 88
           <li>
             <figure>
               <div class="drift">
-                <Screenshot shot={s.shot} sizes="(max-width: 760px) 62vw, 230px" />
+                <Screenshot shot={s.shot} sizes="(max-width: 960px) min(62vw, 260px), 220px" />
               </div>
               <figcaption>
                 <strong>{s.name}</strong>
@@ -965,23 +965,23 @@ docker compose logs -f pulse</code></pre>
           translate: 0 var(--out);
         }
       }
-      /* The phones drift at two speeds as the strip passes. */
+      /* The phones drift in at two speeds and settle by the time the strip is half way up the screen. At rest
+         they sit at exactly 0: a fractional translate on a moving layer is drawn with cheaper image filtering,
+         which blurs the small UI text in the screenshots. */
       .drift {
         animation: drift linear both;
         animation-timeline: view();
+        animation-range: entry 0% cover 45%;
       }
       .strip li:nth-child(even) .drift {
-        --d: 36px;
+        --d: 72px;
       }
       .strip li:nth-child(odd) .drift {
-        --d: -20px;
+        --d: 32px;
       }
       @keyframes drift {
         from {
           translate: 0 var(--d);
-        }
-        to {
-          translate: 0 calc(var(--d) * -1);
         }
       }
       /* The data path draws from the band to the browser as it comes into view. */
