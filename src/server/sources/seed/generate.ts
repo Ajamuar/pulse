@@ -9,6 +9,7 @@
 // resting figure) are adapted from Hælan's packages/core/src/testing/seed.ts (AGPL-3.0).
 import { hash, mulberry32 } from "@/core/algorithms/journalImpact";
 import { eq, getTableColumns, min, sql } from "drizzle-orm";
+import type { ExtraKey } from "@/lib/extraMetrics";
 import { getConfig } from "../../config";
 import { type Db, getDb } from "../../db";
 import {
@@ -353,8 +354,17 @@ export function generateDay(ctx: Ctx, i: number) {
       steps[m] = 0;
     });
   }
+  // Fitbit-style activity level per awake, worn minute (1 sedentary, 2 light, 3 moderate or vigorous) and Active
+  // Zone Minutes (fat burn 1, cardio and peak 2), from the share of heart-rate reserve before sample noise.
+  const level = new Uint8Array(n);
+  const azm = new Uint8Array(n);
   for (let m = 0; m < n; m++) {
     if (!kcal[m]) kcal[m] = steps[m] * 0.04;
+    if (worn[m] && !asleep[m]) {
+      const a = (target[m] - rhr) / (ctx.maxHr - rhr);
+      level[m] = a >= 0.4 || steps[m] >= 100 ? 3 : steps[m] > 0 || a >= 0.3 ? 2 : 1;
+      azm[m] = a >= 0.6 ? 2 : a >= 0.4 ? 1 : 0;
+    }
     target[m] += (asleep[m] ? 0.7 : 1.5) * r.g();
   }
 
@@ -395,6 +405,8 @@ export function generateDay(ctx: Ctx, i: number) {
   const vo2 = 43 + 2.2 * progress(i) + (i > SCENARIO.trainingBlock.end ? 0.6 : 0);
   const run = exerciseRows.findLast((e) => e.type === "RUNNING");
   const weighAt = (lastNight?.wake ?? at(ctx, i, 7.5)) + 20 * 60;
+  // Its own stream, so these draws move nothing else.
+  const x = rng(day, "extras");
   return {
     day,
     start,
@@ -404,6 +416,10 @@ export function generateDay(ctx: Ctx, i: number) {
     /** Per minute from `start`. */
     steps,
     kcal,
+    level,
+    azm,
+    /** The day's floors, climbed in step with the steps. */
+    floors: Math.round(clamp((sev > 0 ? 2 : b.weekend ? 9 : 7) + 3 * x.g(), 0, 30)),
     worn: worn.includes(1),
     sleeps,
     exercises: exerciseRows,
@@ -449,6 +465,47 @@ function metricsAt(g: Day, now: number): typeof dailyMetrics.$inferInsert {
   };
 }
 
+/** Fitbit's daily roll-ups (src/lib/extraMetrics.ts) as of `now`; none on a day the band was off all day. */
+export function extrasAt(g: Day, now: number): [ExtraKey, number][] {
+  const done = Math.min(g.steps.length, Math.floor((now - g.start) / 60));
+  if (!g.worn || done <= 0) return [];
+  let steps = 0;
+  let total = 0;
+  let metres = 0;
+  let kcal = 0;
+  let azm = 0;
+  const minutes = [0, 0, 0, 0];
+  for (let m = 0; m < g.steps.length; m++) {
+    total += g.steps[m];
+    if (m >= done) continue;
+    steps += g.steps[m];
+    metres += g.steps[m] * (g.steps[m] >= 140 ? 1.1 : 0.75); // running stride, else walking
+    kcal += g.kcal[m];
+    azm += g.azm[m];
+    minutes[g.level[m]]++;
+  }
+  let beats = 0;
+  let samples = 0;
+  for (let s = 0; s < (done * 60) / HR_CADENCE_S; s++) {
+    if (g.bpm[s]) {
+      beats += g.bpm[s];
+      samples++;
+    }
+  }
+  const floors = Math.round((g.floors * steps) / Math.max(1, total));
+  return [
+    ["distance", round(metres / 1000, 2)],
+    ["floors", floors],
+    ["elevation", Math.round(floors * 3.05)],
+    ["active_minutes", minutes[3]],
+    ["light_minutes", minutes[2]],
+    ["sedentary_minutes", minutes[1]],
+    ["azm", azm],
+    ["active_calories", Math.round(kcal)],
+    ...(samples ? [["avg_hr", Math.round(beats / samples)] as [ExtraKey, number]] : []),
+  ];
+}
+
 const metricColumns = Object.entries(getTableColumns(dailyMetrics)).filter(([key]) => key !== "day");
 const excludedMetrics = Object.fromEntries(metricColumns.map(([key, c]) => [key, sql.raw(`excluded.${c.name}`)]));
 /** Update only when a value differs, so regenerating an unchanged day reports no change. */
@@ -476,6 +533,10 @@ function writeDay(db: Db, g: Day, now: number) {
   }
   const done = g.exercises.filter((e) => e.endTs <= now);
   if (done.length) other += db.insert(exercises).values(done).onConflictDoNothing().run().changes;
+  const upsertValue = db.$client.prepare(
+    "insert into daily_values (day, key, value) values (?, ?, ?) on conflict (day, key) do update set value = excluded.value where value is not excluded.value",
+  );
+  for (const [key, v] of extrasAt(g, now)) other += upsertValue.run(g.day, key, v).changes;
   other += db
     .insert(dailyMetrics)
     .values(metricsAt(g, now))

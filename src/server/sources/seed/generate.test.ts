@@ -244,6 +244,31 @@ describe("plausibility", () => {
     const full = [...metrics.entries()].filter(([i]) => i < TODAY_I && i !== 155 && i !== 156 && i !== 157);
     expect(full.filter(([, m]) => m.steps! < 1000 || m.steps! > 30_000).map(([i, m]) => [i, m.steps])).toEqual([]);
   });
+
+  it("daily extras: activity roll-ups every worn day in Fitbit-like ranges, no nutrition, none on the band-off day", () => {
+    const extras = new Map<string, Record<string, number>>();
+    for (const r of rows<{ day: string; key: string; value: number }>(db, "select day, key, value from daily_values")) extras.set(r.day, { ...extras.get(r.day), [r.key]: r.value });
+    expect(extras.has(dayAt(156))).toBe(false);
+    expect(value(db, "select count(*) from daily_values where key in ('water', 'calories_in', 'protein', 'glucose', 'core_temp')")).toBe(0);
+    for (const [i, m] of metrics) {
+      const x = extras.get(dayAt(i))!;
+      if (i === TODAY_I || (i >= 155 && i <= 157)) continue;
+      const day = dayAt(i);
+      // About 0.7-1.1 m a step, a Fitbit day's minutes add up to the waking day, and elevation follows floors.
+      expect(x.distance / m.steps!, day).toBeGreaterThan(0.0007);
+      expect(x.distance / m.steps!, day).toBeLessThan(0.0011);
+      expect(x.floors, day).toBeLessThanOrEqual(30);
+      expect(x.elevation, day).toBe(Math.round(x.floors * 3.05));
+      expect(x.active_minutes + x.light_minutes + x.sedentary_minutes, day).toBeLessThanOrEqual(24 * 60);
+      expect(x.sedentary_minutes, day).toBeGreaterThan(x.active_minutes);
+      expect(x.azm, day).toBeGreaterThanOrEqual(0);
+      expect(x.avg_hr, day).toBeGreaterThan(45);
+      expect(x.avg_hr, day).toBeLessThan(100);
+    }
+    // Workout days earn Active Zone Minutes; rest days a few at most.
+    const run = value<string>(db, "select day from exercises where type = 'RUNNING' limit 1");
+    expect(extras.get(run)!.azm).toBeGreaterThan(20);
+  });
 });
 
 describe("HRV spread", () => {
