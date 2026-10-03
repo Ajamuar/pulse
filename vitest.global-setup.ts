@@ -1,0 +1,32 @@
+// Builds the pinned 180-day demo database (seeded and recomputed) once, before any test file runs; seeded()
+// with default arguments copies it instead of seeding its own. The file is cached under node_modules/.cache,
+// keyed by every non-test source file and migration, so a rerun with unchanged sources builds nothing.
+import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
+import type { TestProject } from "vitest/node";
+
+declare module "vitest" {
+  export interface ProvidedContext {
+    seedDb: string;
+  }
+}
+
+export default async function setup(project: TestProject) {
+  const hash = crypto.createHash("sha256").update(process.version);
+  for (const f of fs.globSync("{src/**/*.ts,drizzle/**/*}").filter((f) => !f.endsWith(".test.ts")).sort()) {
+    if (fs.statSync(f).isFile()) hash.update(f).update(fs.readFileSync(f));
+  }
+  const dir = path.resolve("node_modules/.cache/pulse-test");
+  const file = path.join(dir, `seed-${hash.digest("hex").slice(0, 16)}.db`);
+  if (!fs.existsSync(file)) {
+    fs.rmSync(dir, { recursive: true, force: true }); // older builds
+    fs.mkdirSync(dir, { recursive: true });
+    const { buildSeeded, cleanup } = await import("./src/server/testing");
+    const tmp = `${file}.${process.pid}.tmp`;
+    buildSeeded(tmp).$client.close(); // closing checkpoints the WAL into the file
+    fs.renameSync(tmp, file);
+    cleanup();
+  }
+  project.provide("seedDb", file);
+}

@@ -53,6 +53,10 @@ that passes CI and gets a review, and it lands as one squashed commit.
    pnpm e2e   # for UI changes; it runs its own servers on :3300 and :3301
    ```
 
+   While iterating, `pnpm vitest related <file>` or `pnpm vitest --changed main` runs only the tests your
+   change can reach. The seeded 180-day test database is built once per run and cached in
+   `node_modules/.cache/pulse-test` until a source file changes.
+
 4. Open a pull request and fill in the template. CI must be green.
 
 ## The rules of the codebase

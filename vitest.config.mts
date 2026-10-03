@@ -12,7 +12,7 @@ export default defineConfig({
     hookTimeout: 60_000,
     projects: [
       // src/core, src/server and src/lib: plain Node.
-      { extends: true, test: { name: "node", environment: "node", include: ["src/**/*.test.ts"] } },
+      { extends: true, test: { name: "node", environment: "node", include: ["src/**/*.test.ts"], globalSetup: ["./vitest.global-setup.ts"] } },
       // Component tests.
       {
         extends: true,

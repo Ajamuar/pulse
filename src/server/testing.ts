@@ -2,6 +2,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { inject } from "vitest";
 import { type Db, openDb } from "./db";
 import { type PipelineOptions, recompute } from "./pipeline";
 import type { QueryCtx } from "./queries/common";
@@ -21,12 +22,24 @@ const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pulse-test-"));
 let n = 0;
 export const tempFile = () => path.join(dir, `${n++}.db`);
 
-/** A demo database seeded up to each of `nows` in turn (unix seconds), optionally recomputed. */
-export function seeded(nows: number[] = [NOW], { compute = true } = {}): Db {
-  const db = openDb(tempFile());
+/** A demo database at `file`, seeded up to each of `nows` in turn (unix seconds), optionally recomputed. */
+export function buildSeeded(file: string, nows: number[] = [NOW], { compute = true } = {}): Db {
+  const db = openDb(file);
   for (const now of nows) seedPull(db, { now, timeZone: TZ, maxHr: PROFILE.maxHr });
   if (compute) recompute(db, OPTS);
   return db;
+}
+
+/**
+ * A demo database seeded up to each of `nows` in turn, optionally recomputed. With the default arguments it is a
+ * copy of the one vitest.global-setup.ts builds once per run.
+ */
+export function seeded(nows: number[] = [NOW], { compute = true } = {}): Db {
+  const template = nows.length === 1 && nows[0] === NOW && compute ? inject("seedDb") : undefined;
+  if (!template) return buildSeeded(tempFile(), nows, { compute });
+  const to = tempFile();
+  fs.copyFileSync(template, to);
+  return openDb(to);
 }
 
 export const ctxFor = (db: Db, now = NOW): QueryCtx => ({ db, timeZone: TZ, profile: PROFILE, mode: "demo", now });

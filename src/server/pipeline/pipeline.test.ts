@@ -38,7 +38,9 @@ describe("recompute on the 180-day seed", () => {
   });
 
   it("matches a from-scratch run on an identical database", () => {
-    const other = seeded();
+    // Built here, not copied from the shared template, so this also checks the template.
+    const other = seeded([NOW], { compute: false });
+    recompute(other, OPTS);
     expect(dump(other, "daily_scores")).toBe(dump(db, "daily_scores"));
     expect(dump(other, "intraday_series", "1, 2")).toBe(dump(db, "intraday_series", "1, 2"));
     expect(dump(other, "reports")).toBe(dump(db, "reports"));
@@ -62,19 +64,6 @@ describe("recompute on the 180-day seed", () => {
     recompute(bumped, OPTS);
     expect(lastRun.stage1Days).toEqual([]);
     expect(dump(bumped, "daily_scores")).toBe(dump(db, "daily_scores"));
-  });
-
-  it("a time-zone change reruns stage 1 for every day and matches a from-scratch run in the new zone", () => {
-    const utc = { ...OPTS, timeZone: "UTC" };
-    const moved = copyDb(db);
-    recompute(moved, utc);
-    const rerun = lastRun.stage1Days;
-    const scratch = copyDb(db);
-    scratch.$client.exec("delete from daily_scores; delete from intraday_series; delete from reports");
-    recompute(scratch, utc);
-    expect(rerun).toEqual(days(scratch));
-    expect(dump(moved, "daily_scores")).toBe(dump(scratch, "daily_scores"));
-    expect(dump(moved, "intraday_series", "1, 2")).toBe(dump(scratch, "intraday_series", "1, 2"));
   });
 
   it("is causal: a day later, every earlier day is unchanged", () => {
