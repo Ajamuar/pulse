@@ -67,8 +67,10 @@ export const DATA_TYPES = {
   "core-body-temperature": rollup,
   "swim-lengths-data": rollup,
   // Heart-rhythm records and height: rare points, listed by time.
-  electrocardiogram: { member: "interval.start_time", maxDays: 90, pageSize: 25, dailyRollUp: false },
-  "irregular-rhythm-notification": { member: "interval.start_time", maxDays: 90, pageSize: 25, dailyRollUp: false },
+  // ECG filters on start time with `>=` only (buildFilter), so one window covers the whole range.
+  electrocardiogram: { member: "interval.start_time", maxDays: 3650, pageSize: 25, dailyRollUp: false },
+  // Sessions other than sleep and ECG filter on civil start time.
+  "irregular-rhythm-notification": { member: "interval.civil_start_time", maxDays: 90, pageSize: 25, dailyRollUp: false },
   height: sample,
 } as const satisfies Record<string, DataType>;
 

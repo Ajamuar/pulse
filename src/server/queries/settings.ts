@@ -21,7 +21,6 @@ const GROUPS: { key: string; label: string; types: string[] }[] = [
   { key: "resp", label: "Respiratory rate", types: ["daily-respiratory-rate"] },
   { key: "temp", label: "Skin temperature", types: ["daily-sleep-temperature-derivations"] },
   { key: "zones", label: "Heart rate zones", types: ["daily-heart-rate-zones", "time-in-heart-rate-zone"] },
-  { key: "ranges", label: "Personal ranges", types: ["rhr-personal-range", "hrv-personal-range"] },
   { key: "spo2", label: "Blood oxygen", types: ["daily-oxygen-saturation"] },
   { key: "exercise", label: "Exercise", types: ["exercise"] },
   { key: "vo2max", label: "VO2 max", types: ["daily-vo2-max", "run-vo2-max"] },
@@ -39,7 +38,7 @@ const GROUPS: { key: string; label: string; types: string[] }[] = [
  * the next sign-in, a type the account never has) shows in Settings, but never turns the sync dot red or holds the
  * import banner open.
  */
-const OPTIONAL_TYPES = new Set(GROUPS.filter((g) => ["zones", "ranges", "activity", "nutrition", "vitals", "rhythm"].includes(g.key)).flatMap((g) => g.types).concat("height"));
+const OPTIONAL_TYPES = new Set(GROUPS.filter((g) => ["zones", "activity", "nutrition", "vitals", "rhythm"].includes(g.key)).flatMap((g) => g.types).concat("height"));
 
 type SyncRow = {
   type: string;
@@ -87,7 +86,10 @@ export function syncErrorText(raw: string): string {
   return text[code] ?? (/^http_5\d\d$/.test(code) ? "Google is having trouble, retrying" : `Failed (${code})`);
 }
 
-function importProgress(rows: SyncRow[]) {
+/** The core types' backfill only: an optional type that keeps failing (or a retired job's leftover row) never holds it at 0. */
+function importProgress(all: SyncRow[]) {
+  const core = new Set(GROUPS.flatMap((g) => g.types).filter((t) => !OPTIONAL_TYPES.has(t)));
+  const rows = all.filter((r) => core.has(r.type));
   const pending = rows.filter((r) => r.backfillDaysTotal != null && (r.backfillDaysDone ?? 0) < r.backfillDaysTotal);
   if (!pending.length) return null;
   return { done: Math.min(...pending.map((r) => r.backfillDaysDone ?? 0)), total: Math.max(...pending.map((r) => r.backfillDaysTotal!)) };

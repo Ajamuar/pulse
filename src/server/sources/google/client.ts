@@ -64,6 +64,8 @@ export function buildFilter(type: DataTypeId, member: FilterMember, w: TimeWindo
             return `${day}T${time}`;
           })
         : [w.start, w.end].map((s) => new Date(s * 1000).toISOString());
+  // "Only filtering by start time is supported for ECG", and only with >= (dataPoints.list reference).
+  if (type === "electrocardiogram") return `${field} >= "${lo}"`;
   return `${field} >= "${lo}" AND ${field} < "${hi}"`;
 }
 

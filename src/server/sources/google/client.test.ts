@@ -449,3 +449,15 @@ describe("parsePairedDevices", () => {
     expect(parsePairedDevices("not json")).toBe("unknown");
   });
 });
+
+describe("buildFilter for sessions Google filters differently", () => {
+  const w = { start: 1767225600, end: 1767312000 };
+  it("ECG takes a start-time lower bound only", () => {
+    expect(buildFilter("electrocardiogram", "interval.start_time", w, "UTC")).toBe('electrocardiogram.interval.start_time >= "2026-01-01T00:00:00.000Z"');
+  });
+  it("irregular rhythm notifications filter on civil start time, both bounds", () => {
+    expect(buildFilter("irregular-rhythm-notification", "interval.civil_start_time", w, "UTC")).toBe(
+      'irregular_rhythm_notification.interval.civil_start_time >= "2026-01-01T00:00:00" AND irregular_rhythm_notification.interval.civil_start_time < "2026-01-02T00:00:00"',
+    );
+  });
+});

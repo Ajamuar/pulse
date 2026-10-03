@@ -185,10 +185,11 @@ describe("google sync", () => {
       vigorousPeakMin: 450.5 / 60,
       tempBaselineC: 34,
       tempSdC: 0.21,
-      rhrRangeLow: 52,
-      rhrRangeHigh: 61,
-      hrvRangeLow: 31.5,
-      hrvRangeHigh: 55.25,
+      // Not fetched: the API refuses roll-ups on the daily types (UNSUPPORTED_DATA_TYPE_ACTION).
+      rhrRangeLow: null,
+      rhrRangeHigh: null,
+      hrvRangeLow: null,
+      hrvRangeHigh: null,
       source: "google",
     });
     expect(counts()).toEqual({ dailyMetrics: 3, sleepSessions: 4, sleepSegments: 9, exercises: 1, hrSamples: 5, stepsMinutes: 5 });
