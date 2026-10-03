@@ -127,6 +127,7 @@ export function stage2(db: Db, data: Data, opts: PipelineOptions) {
     c.prepare(`delete from reports where period not in (${periods.map(() => "?").join(", ") || "''"})`).run(...periods);
     c.prepare("delete from daily_scores where day < ? or day > ?").run(data.first, data.last);
     c.prepare("delete from intraday_series where day < ? or day > ?").run(data.first, data.last);
+    c.prepare("delete from intraday_dirty").run(); // stage 1 has redone these days, and now stage 2 has too
   })();
 }
 

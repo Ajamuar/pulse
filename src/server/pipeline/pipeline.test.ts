@@ -1,6 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { type Db, openDb } from "../db";
 import { type JournalImpactRow, lastRun, needsRecompute, recompute, type RecoveryRow, SCORING_VERSION, type SleepRow, type StrainTargetRow } from ".";
+import { load } from "./data";
+import { stage1 } from "./stage1";
 import { seedPull } from "../sources/seed/generate";
 import { localMidnight } from "../time";
 import { cleanup, copyDb, DAY_S, dayAt, dump, NOW, OPTS, seeded, TZ, PROFILE, tempFile } from "../testing";
@@ -92,6 +94,31 @@ describe("needsRecompute", () => {
 
   it("is false on an empty database", () => {
     expect(needsRecompute(openDb(tempFile()))).toBe(false);
+  });
+
+  // Failure injection: stage 1 commits, then the process dies before stage 2 does.
+  const crashBetweenStages = (d: Db) => stage1(d, load(d, OPTS)!, OPTS);
+
+  it("stays true after a crash between the stages, and the next run catches up", () => {
+    const later = copyDb(db);
+    seedPull(later, { now: NOW + DAY_S, timeZone: TZ, maxHr: PROFILE.maxHr }); // new HR, a new day
+    const reference = copyDb(later);
+    recompute(reference, OPTS);
+
+    crashBetweenStages(later);
+    expect(needsRecompute(later)).toBe(true);
+    recompute(later, OPTS);
+    expect(needsRecompute(later)).toBe(false);
+    expect(dump(later, "daily_scores")).toBe(dump(reference, "daily_scores"));
+  });
+
+  it("a scoring-version change survives a crash between the stages", () => {
+    const bumped = copyDb(db);
+    bumped.$client.prepare("update daily_scores set scoring_version = ?").run(SCORING_VERSION - 1);
+    crashBetweenStages(bumped);
+    expect(needsRecompute(bumped)).toBe(true);
+    recompute(bumped, OPTS);
+    expect(dump(bumped, "daily_scores")).toBe(dump(db, "daily_scores"));
   });
 
   it("a check-in's dirty mark refreshes journal impact, causally and deterministically", () => {

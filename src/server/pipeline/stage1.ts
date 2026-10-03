@@ -51,9 +51,11 @@ export function stage1(db: Db, data: Data, opts: PipelineOptions): string[] {
 
   const readHr = c.prepare("select ts, bpm from hr_samples where ts >= ? and ts < ? order by ts");
   const readSteps = c.prepare("select ts, steps from steps_minutes where ts >= ? and ts < ?");
+  // Stage 1 never stamps scoring_version (a new row gets 0) and leaves intraday_dirty alone: stage 2 does
+  // both when it commits, so a crash between the stages still shows up in needsRecompute.
   const upsert = c.prepare(
-    `insert into daily_scores (day, scoring_version, strain, activities, session_rhr_bpm) values (?, ?, ?, ?, ?)
-     on conflict(day) do update set scoring_version = excluded.scoring_version, strain = excluded.strain,
+    `insert into daily_scores (day, scoring_version, strain, activities, session_rhr_bpm) values (?, 0, ?, ?, ?)
+     on conflict(day) do update set strain = excluded.strain,
        activities = excluded.activities, session_rhr_bpm = excluded.session_rhr_bpm`,
   );
   const series = c.prepare(SERIES_UPSERT);
@@ -72,12 +74,11 @@ export function stage1(db: Db, data: Data, opts: PipelineOptions): string[] {
 
   c.transaction(() => {
     for (const r of results) {
-      upsert.run(r.day, SCORING_VERSION, JSON.stringify(r.s1), JSON.stringify(r.activities), r.sessionRhr);
+      upsert.run(r.day, JSON.stringify(r.s1), JSON.stringify(r.activities), r.sessionRhr);
       series.run(r.day, "hr", JSON.stringify(r.hrSeries));
       series.run(r.day, "still_hr", JSON.stringify(r.still));
       series.run(r.day, "load", JSON.stringify(r.load));
     }
-    c.prepare("delete from intraday_dirty").run();
   })();
   return todo;
 }
