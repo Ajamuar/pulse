@@ -96,6 +96,10 @@ function Trend({ points, p }: { points: TrendPoint[]; p: TrendChartProps }) {
   // A single-hue 6M line (Pulse Age, VO2 max, vitals) fits its data; bars always start at zero.
   const domain: [number | "auto", number | "auto"] =
     p.colorBy === "band" ? [0, 100] : p.colorBy === "stress" ? [0, 3] : line && p.colorBy === "single" ? ["auto", "auto"] : [0, "auto"]
+  // Room for the widest tick ("15,000", "5:00"): about 7 px a character at 12 px, the tick margin, and one more
+  // character for a rounded-up top tick. Three characters fit the original 32 px.
+  const widest = formatValue(p.format, Math.max(0, ...rows.map((r) => r.value ?? 0))).length
+  const axisWidth = widest <= 3 ? 32 : 15 + 7 * widest
 
   const ticks =
     range === "w"
@@ -170,7 +174,7 @@ function Trend({ points, p }: { points: TrendPoint[]; p: TrendChartProps }) {
           >
             <CartesianGrid {...GRID} />
             <XAxis dataKey="date" {...AXIS} ticks={ticks} tickFormatter={tickFormat} interval={range === "w" ? 0 : "preserveStartEnd"} minTickGap={8} />
-            <YAxis hide={!line} {...AXIS} width={32} tickCount={3} domain={domain} tickFormatter={(v: number) => formatValue(p.format, v)} />
+            <YAxis hide={!line} {...AXIS} width={axisWidth} tickCount={3} domain={domain} tickFormatter={(v: number) => formatValue(p.format, v)} />
             {p.baseline && (
               <ReferenceArea y1={p.baseline.mean - p.baseline.sd} y2={p.baseline.mean + p.baseline.sd} fill="var(--chart-band)" fillOpacity={1} ifOverflow="extendDomain" />
             )}

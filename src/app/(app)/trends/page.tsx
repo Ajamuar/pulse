@@ -17,8 +17,10 @@ export default async function TrendsPage({ searchParams }: PageProps<"/trends">)
   const m = parseTrendMetric(sp.metric)
   const r = typeof sp.r === "string" && (RANGES as readonly string[]).includes(sp.r) ? sp.r : undefined
   const vm = getTrends(m.key)
+  // Rounded as the chip shows it, so 0.04 km reads "+0.04", not "0.00".
+  const k = m.format === "decimal2" ? 100 : 10
   const deltas = Object.fromEntries(
-    vm.periods.map((p) => [p.range, p.average.value === null || p.prior === null ? null : Math.round((p.average.value - p.prior) * 10) / 10])
+    vm.periods.map((p) => [p.range, p.average.value === null || p.prior === null ? null : Math.round((p.average.value - p.prior) * k) / k])
   ) as Record<TrendRange, number | null>
 
   return (

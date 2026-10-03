@@ -3,6 +3,7 @@ import Link from "next/link"
 import { cn } from "@/lib/utils"
 import type { TrendRange } from "@/lib/url"
 import { TREND_GROUPS, TREND_METRICS, type TrendMetricKey } from "@/server/queries/trends"
+import { PickerStrip } from "./PickerStrip"
 
 /** Chart card beside the Averages card from 1280 px. */
 export const TRENDS_GRID = "grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] xl:items-start xl:gap-4"
@@ -20,14 +21,15 @@ const FOCUS = "outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
 
 /**
  * The metric picker (spec §11 EX2): a segmented row of sections (Recovery & sleep, Activity, Body, Nutrition, Vitals),
- * then one pill per metric in the current section, wrapping from 768 px. A section opens its first metric. Links keep `?r=`.
+ * then one pill per metric in the current section, wrapping from 768 px. A section opens its first metric; on phone
+ * each strip scrolls its current item into view. Links keep `?r=`.
  */
 export function MetricPicker({ current, r }: { current?: TrendMetricKey; r?: string }) {
   const group = TREND_METRICS.find((m) => m.key === current)?.group ?? TREND_GROUPS[0]
   const href = (key: TrendMetricKey) => `/trends?metric=${key}${r ? `&r=${r}` : ""}`
   return (
     <div className="flex flex-col gap-3">
-      <nav aria-label="Metric section" className={STRIP}>
+      <PickerStrip label="Metric section" current={current} className={STRIP}>
         <ul className="inline-flex gap-0.5 rounded-lg bg-muted p-0.5">
           {TREND_GROUPS.map((g) => (
             <li key={g}>
@@ -47,9 +49,8 @@ export function MetricPicker({ current, r }: { current?: TrendMetricKey; r?: str
             </li>
           ))}
         </ul>
-      </nav>
-      {/* Keyed by section, so a new section's strip starts scrolled to its first metric. */}
-      <nav key={group} aria-label={`${group} metric`} className={STRIP}>
+      </PickerStrip>
+      <PickerStrip label={`${group} metric`} current={current} className={STRIP}>
         <ul className="flex gap-2 md:flex-wrap">
           {TREND_METRICS.filter((m) => m.group === group).map((m) => (
             <li key={m.key} className="shrink-0">
@@ -69,7 +70,7 @@ export function MetricPicker({ current, r }: { current?: TrendMetricKey; r?: str
             </li>
           ))}
         </ul>
-      </nav>
+      </PickerStrip>
     </div>
   )
 }
