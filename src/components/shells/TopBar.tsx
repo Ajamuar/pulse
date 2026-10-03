@@ -41,14 +41,15 @@ function syncView(s: ShellStatus, nowMs: number | null): SyncView {
 
 /**
  * The Fitbit Air band in the reference app's battery slot (spec §4.3.2): steady, a status dot; syncing, two blue arcs turning
- * around it in place of the dot (still under reduced motion, where the arcs alone say it).
+ * around it in place of the dot (still under reduced motion, where the arcs alone say it). The 4 px left margin
+ * keeps the ring clear of the "6m" beside it, and is there in both states so nothing shifts when it appears.
  */
 function Band({ dot, syncing }: { dot: string; syncing: boolean }) {
   return (
-    <span aria-hidden className="relative grid size-6 place-items-center">
+    <span aria-hidden className="relative ml-1 grid size-6 place-items-center">
       <BandIcon className="size-[22px]" />
       {syncing ? (
-        <svg viewBox="0 0 36 36" className="absolute -inset-1.5 size-9 text-strain-text motion-safe:animate-spin motion-safe:[animation-duration:1.4s]">
+        <svg viewBox="0 0 36 36" className="absolute -inset-1 size-8 text-strain-text motion-safe:animate-spin motion-safe:[animation-duration:1.4s]">
           <circle cx="18" cy="18" r="16" fill="none" stroke="currentColor" strokeOpacity=".18" strokeWidth="1.8" />
           {/* Two 25-unit arcs opposite each other on a 100.5-unit circumference. */}
           <circle cx="18" cy="18" r="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeDasharray="25 25.3" />
