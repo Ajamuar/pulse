@@ -9,7 +9,7 @@ export type HomeInsightItem = { key: string; title: string; body: string }
 
 /**
  * Home's coach card [latest-home-top-1], [latest-home-top-3]: an opaque card with a title and body (no link: the reference app,
- * another app and Baro keep the coach card text-only; U16 decision 2026-10-03),
+ * other apps keep the coach card text-only; U16 decision 2026-10-03),
  * and the reference app's check-over-count pill at the right. With several cards a second card peeks out underneath
  * and the pill cycles through them (the reference app swipes; tap to cycle is inferred, spec §12 I13). Every card sits
  * in the same grid cell, so the box keeps the tallest card's height and nothing below moves on a cycle.
