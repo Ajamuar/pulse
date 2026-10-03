@@ -2598,7 +2598,7 @@ Laptop, 1440 (Settings: two columns; More: the same lists at max 720 px, left-al
 
 ### 7.16 Reports archive `/reports` (U21)
 
-Shell: `DetailShell title="Reports"` (parent More). Two `LinkList` groups, "Weeks" and "Months", newest first: label "SEP 21 - SEP 27" / "SEPTEMBER 2026", caption "Partial week" / "Partial month" under it when the period is partial, the period's average Recovery as the 22 px `MiniRing` plus its value at the right, chevron. Side by side from 1280 px. Empty: "No reports yet. Your first weekly report appears once a week has data."
+Shell: `DetailShell title="Reports"` (parent More), in the 640 px `MORE_COLUMN`. A Weekly / Monthly switch (links, `?view=months`) shows one kind at a time, newest first. Weeks are grouped by month ("SEPTEMBER 2026", label "SEP 21 - SEP 27"); only the last 3 months show until "Show earlier weeks" (`?all=1`). Months are grouped by year (label "SEPTEMBER"). Caption "Partial week" / "Partial month" under a partial period; the period's average Recovery as the 22 px `MiniRing` plus its value at the right, chevron. Empty: "No reports yet. Your first weekly report appears once a week has data." (2026-10-03: replaces the two side-by-side Weeks and Months lists, which ran to 30+ rows.)
 
 ### 7.17 Trends `/trends?metric=&r=` (U21)
 
