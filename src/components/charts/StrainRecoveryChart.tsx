@@ -1,9 +1,8 @@
 "use client"
 
-import { format, parseISO } from "date-fns"
 import { Bar, CartesianGrid, ComposedChart, LabelList, Line, XAxis, YAxis } from "recharts"
 import { recoveryBand } from "@/lib/bands"
-import { formatValue } from "@/lib/format"
+import { DAY, formatDay, formatValue } from "@/lib/format"
 import { ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { Skeleton } from "@/components/ui/skeleton"
 import { AXIS, ChartFigure, GRID, TOOLTIP_CLASS, TooltipLine, useSeriesAnimation } from "./ChartFrame"
@@ -16,7 +15,7 @@ const BAND_FILL = { green: "var(--recovery-green)", yellow: "var(--recovery-yell
 const RIGHT_TICKS = [0, 33, 66, 100]
 const LEFT_TICKS = [0, 7, 14, 21]
 
-type Row = StrainRecoveryPoint & { label: string; date: string; today: boolean; hl: number | null }
+type Row = StrainRecoveryPoint & { weekday: string; dayOfMonth: string; date: string; today: boolean; hl: number | null }
 
 type TickProps = { x?: number; y?: number; payload?: { value: string | number; index?: number }; rows?: Row[] }
 type LabelProps = { x?: number | string; y?: number | string; value?: unknown }
@@ -25,14 +24,13 @@ type LabelProps = { x?: number | string; y?: number | string; value?: unknown }
 function XTick({ x = 0, y = 0, payload, rows = [] }: TickProps) {
   const row = rows[payload?.index ?? 0]
   if (!row) return null
-  const [wd, dd] = row.label.split(" ")
   return (
     <text x={x} y={y + 4} textAnchor="middle" fontSize={12} fill={row.today ? "var(--foreground)" : "var(--muted-foreground)"} fontWeight={row.today ? 700 : 500}>
       <tspan x={x} dy="0.71em">
-        {wd}
+        {row.weekday}
       </tspan>
       <tspan x={x} dy="1.35em">
-        {dd}
+        {row.dayOfMonth}
       </tspan>
     </text>
   )
@@ -81,8 +79,9 @@ export function StrainRecoveryChart({ points, today, grow }: { points: StrainRec
   const anim = useSeriesAnimation()
   const rows: Row[] = points.map((p) => ({
     ...p,
-    label: format(parseISO(p.day), "EEE d"),
-    date: format(parseISO(p.day), "EEE, MMM d"),
+    weekday: formatDay(p.day, { weekday: "short" }),
+    dayOfMonth: formatDay(p.day, { day: "numeric" }),
+    date: formatDay(p.day, DAY.short),
     today: p.day === today,
     hl: p.day === today ? 100 : null,
   }))
@@ -96,7 +95,7 @@ export function StrainRecoveryChart({ points, today, grow }: { points: StrainRec
     <ChartFigure summary={summary} config={{ strain: { label: "Strain" }, recovery: { label: "Recovery" } }} className={grow ? "h-[232px] xl:h-auto xl:min-h-[232px]" : "h-[232px]"} grow={grow}>
       <ComposedChart data={rows} accessibilityLayer margin={{ top: 20, right: 4, bottom: 0, left: 4 }} barCategoryGap="18%">
         <CartesianGrid {...GRID} yAxisId="s" />
-        <XAxis dataKey="label" interval={0} height={40} tick={<XTick rows={rows} />} {...AXIS} tickMargin={4} />
+        <XAxis dataKey="day" interval={0} height={40} tick={<XTick rows={rows} />} {...AXIS} tickMargin={4} />
         <YAxis yAxisId="s" domain={[0, 21]} ticks={LEFT_TICKS} width={24} tick={{ fill: "var(--strain-text)", fontSize: 12, fontWeight: 600 }} {...AXIS} />
         <YAxis yAxisId="r" orientation="right" domain={[0, 100]} ticks={RIGHT_TICKS} width={40} tick={<RightTick />} {...AXIS} />
         {/* Today's column: a light band behind both series, as the reference app lights the current day. */}

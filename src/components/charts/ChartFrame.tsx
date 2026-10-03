@@ -26,13 +26,13 @@ export function ChartFigure({
   return (
     <figure className={cn("min-w-0", grow && "flex flex-1 flex-col")}>
       <figcaption className="sr-only">{summary}</figcaption>
-      {/* Recharts' keyboard layer makes the plot a tab stop (arrows scrub the tooltip). No outline box on the plot:
-          Chrome treated a click as focus-visible and drew a box round the chart; keyboard focus already shows as the
-          tooltip and cursor appearing (user report, 2026-10-03). */}
+      {/* Recharts' keyboard layer makes the plot (its <svg>) a tab stop; arrows scrub the tooltip. The default outline
+          box is off: it showed on click (user report, 2026-10-03). The focus ring is the app's, on :focus-visible only,
+          so tabbing to a chart shows it and a click or tap does not. An outline, since box-shadow rings skip <svg>. */}
       <ChartContainer
         config={config}
         className={cn(
-          "aspect-auto w-full font-numeric text-xs font-medium [&_.recharts-surface]:rounded-md [&_.recharts-surface]:outline-none [&_.recharts-wrapper]:outline-none",
+          "aspect-auto w-full font-numeric text-xs font-medium [&_.recharts-surface]:rounded-md [&_.recharts-surface]:outline-none [&_.recharts-surface:focus-visible]:outline-3 [&_.recharts-surface:focus-visible]:outline-solid [&_.recharts-surface:focus-visible]:outline-ring/50 [&_.recharts-wrapper]:outline-none",
           className,
           grow && "xl:flex-1"
         )}

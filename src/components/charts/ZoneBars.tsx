@@ -41,7 +41,7 @@ function Rows({ zones, maxHr }: { zones: ZoneRow[]; maxHr?: number }) {
     <div className="flex flex-1 flex-col">
       <ul role="list" className="flex flex-1 flex-col gap-2">
         {sorted.map((z) => {
-          const range = z.max === null ? `${z.min}+ bpm` : `${z.min}-${z.max} bpm`
+          const range = z.max === null ? `${z.min}+\u00a0bpm` : `${z.min}-${z.max}\u00a0bpm`
           const sh = share(z.seconds, total)
           const t = Math.round(z.seconds)
           const minutes = Math.floor(t / 60)

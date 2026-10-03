@@ -2,11 +2,10 @@
 
 import * as React from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { format, parseISO } from "date-fns"
 import { Bar, CartesianGrid, ComposedChart, LabelList, Line, ReferenceArea, ReferenceLine, XAxis, YAxis } from "recharts"
 import { cn } from "@/lib/utils"
 import { DATA_COLORS, deltaTone, recoveryColor, STRESS_COLOR, stressLevel, type GoodDirection } from "@/lib/bands"
-import { dayLabel, formatValue, spoken, type FormatKey } from "@/lib/format"
+import { DAY, dayLabel, formatDay, formatValue, spoken, type FormatKey } from "@/lib/format"
 import type { Metric } from "@/lib/reasons"
 import { parseRange, RANGE_DAYS, withParam, type TrendRange } from "@/lib/url"
 import { ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
@@ -104,7 +103,7 @@ function Trend({ points, p }: { points: TrendPoint[]; p: TrendChartProps }) {
       : range === "m"
         ? rows.filter((_, i) => (rows.length - 1 - i) % 7 === 0).map((r) => r.date)
         : rows.filter((r, i) => i > 0 && r.date.slice(0, 7) !== rows[i - 1].date.slice(0, 7)).map((r) => r.date)
-  const tickFormat = (d: string) => format(parseISO(d), range === "w" ? "EEEEE" : range === "m" ? "MMM d" : "MMM")
+  const tickFormat = (d: string) => formatDay(d, range === "w" ? { weekday: "narrow" } : range === "m" ? DAY.monthDay : { month: "short" })
 
   const summary = values.length
     ? `${p.label} over the last ${RANGE_WORD[range]}: average ${spoken(formatValue(p.format, avg), p.unit)}, range ${formatValue(p.format, Math.min(...values))} to ${formatValue(p.format, Math.max(...values))}${rows.length - values.length ? `, ${rows.length - values.length} ${rows.length - values.length === 1 ? "day" : "days"} missing` : ""}.`
@@ -136,7 +135,7 @@ function Trend({ points, p }: { points: TrendPoint[]; p: TrendChartProps }) {
               className="mt-1"
             >
               {formatValue(p.format, Math.abs(delta))}
-              {p.unit === "%" ? "%" : p.unit ? ` ${p.unit}` : ""} {RANGE_PRIOR[range]}
+              {p.unit === "%" ? "%" : p.unit ? `\u00a0${p.unit}` : ""} {RANGE_PRIOR[range]}
             </StatusChip>
           )}
         </div>
@@ -209,7 +208,7 @@ function Trend({ points, p }: { points: TrendPoint[]; p: TrendChartProps }) {
                       <div className="grid gap-1">
                         <TooltipLine color={row.fill}>
                           {row.text}
-                          {p.unit ? (p.unit === "%" ? "%" : ` ${p.unit}`) : ""}
+                          {p.unit ? (p.unit === "%" ? "%" : `\u00a0${p.unit}`) : ""}
                         </TooltipLine>
                         {row.provisional && <span className="text-muted-foreground">Provisional</span>}
                       </div>
