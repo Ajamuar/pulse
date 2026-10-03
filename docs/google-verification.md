@@ -10,6 +10,7 @@ hosted instance is <https://pulsefit.portlabs.in>; the home page, privacy policy
 | Terms of service | https://pulse.portlabs.in/terms/ |
 | Authorized domain | portlabs.in (verified in Search Console with the meta tag from `PUBLIC_GOOGLE_SITE_VERIFICATION`) |
 | Branding | verified 2026-10-04 |
+| Data access | submitted for verification 2026-10-04 (13 scopes, demo video, reviewer test account on the hosted instance) |
 
 ```mermaid
 flowchart LR
