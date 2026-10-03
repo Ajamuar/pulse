@@ -65,9 +65,13 @@ const DAILY = {
     rhrMethod: str(at(o, "dailyRestingHeartRateMetadata.calculationMethod")),
   }),
   "daily-respiratory-rate": (o: Obj): DailyValues => ({ respBpm: num(o.breathsPerMinute) }),
-  // Raw nightly figure. The deviation is computed in the pipeline against our own causal baseline,
-  // not Google's baselineTemperatureCelsius (a 30-day window that may include the night itself).
-  "daily-sleep-temperature-derivations": (o: Obj): DailyValues => ({ nightlyTempC: num(o.nightlyTemperatureCelsius) }),
+  // The pipeline's deviation is nightly − Google's baseline (a 30-night median); its SD sets Health Monitor's range.
+  "daily-sleep-temperature-derivations": (o: Obj): DailyValues => ({
+    nightlyTempC: num(o.nightlyTemperatureCelsius),
+    tempBaselineC: num(o.baselineTemperatureCelsius),
+    tempSdC: num(o.relativeNightlyStddev30dCelsius),
+  }),
+  "daily-heart-rate-zones": (o: Obj): DailyValues => ({ hrZones: hrZones(o.heartRateZones) }),
   "daily-oxygen-saturation": (o: Obj): DailyValues => ({ spo2Pct: num(o.averagePercentage) }),
   "daily-vo2-max": (o: Obj): DailyValues => ({ vo2maxDaily: num(o.vo2Max) }),
   // Sample types: the latest reading of the local day.
@@ -75,6 +79,20 @@ const DAILY = {
   weight: (o: Obj): DailyValues => ({ weightKg: per(num(o.weightGrams), 1000) }),
   "body-fat": (o: Obj): DailyValues => ({ bodyFatPct: num(o.percentage) }),
 } satisfies Partial<Record<DataTypeId, (o: Obj) => DailyValues>>;
+
+/** Google's zone order; Pulse's zones 1-4 are these. */
+const ZONE_TYPES = ["LIGHT", "MODERATE", "VIGOROUS", "PEAK"];
+
+/**
+ * `heartRateZones[]` -> JSON `[light, moderate, vigorous, peak]` minimum bpm, then the peak maximum. Null unless all
+ * four zones are there with increasing minimums and a peak maximum above the peak minimum.
+ */
+function hrZones(v: unknown): string | null {
+  const zone = (type: string) => list(v).find((z) => at(z, "heartRateZoneType") === type);
+  const bounds = [...ZONE_TYPES.map((t) => int(at(zone(t), "minBeatsPerMinute"))), int(at(zone("PEAK"), "maxBeatsPerMinute"))];
+  if (bounds.some((b, i) => b === null || b <= 0 || (i > 0 && b <= bounds[i - 1]!))) return null;
+  return JSON.stringify(bounds);
+}
 
 export type DailyType = keyof typeof DAILY;
 export const DAILY_TYPES = Object.keys(DAILY) as DailyType[];
@@ -100,16 +118,42 @@ const ROLLUP = {
   // Value path unobserved (Hælan saw floors.countSum, an int64 string); confirm on Fitbit Air.
   steps: (o: Obj): DailyValues => ({ steps: int(o.countSum) }),
   "total-calories": (o: Obj): DailyValues => ({ calories: num(o.kcalSum) }),
+  // LIGHT + MODERATE and VIGOROUS + PEAK, Pulse Age's two activity terms. A zone the day lacks counts as 0;
+  // a point with no zones at all is skipped.
+  "time-in-heart-rate-zone": (o: Obj): DailyValues => {
+    const zones = list(o.timeInHeartRateZones);
+    const min = (...types: string[]) =>
+      zones.length ? per(sum(0, ...zones.filter((z) => types.includes(String(at(z, "heartRateZone")))).map((z) => durationS(at(z, "duration")))), 60) : null;
+    return { lightModerateMin: min("LIGHT", "MODERATE"), vigorousPeakMin: min("VIGOROUS", "PEAK") };
+  },
+  // Personal ranges: a dailyRollUp on the daily type answers with a differently named value (ROLLUP_KEY).
+  "daily-resting-heart-rate": (o: Obj): DailyValues => {
+    const [rhrRangeLow, rhrRangeHigh] = range(num(o.beatsPerMinuteMin), num(o.beatsPerMinuteMax));
+    return { rhrRangeLow, rhrRangeHigh };
+  },
+  "daily-heart-rate-variability": (o: Obj): DailyValues => {
+    const [hrvRangeLow, hrvRangeHigh] = range(num(o.averageHeartRateVariabilityMillisecondsMin), num(o.averageHeartRateVariabilityMillisecondsMax));
+    return { hrvRangeLow, hrvRangeHigh };
+  },
 } satisfies Partial<Record<DataTypeId, (o: Obj) => DailyValues>>;
 
+/** Both ends when both are there and low < high; else neither. */
+const range = (low: number | null, high: number | null) => (low !== null && high !== null && low < high ? [low, high] : [null, null]);
+
 export type RollupType = keyof typeof ROLLUP;
+
+/** The roll-up value's key where it is not the type's camelCase (the dailyRollUp reference's union field names). */
+const ROLLUP_KEY: Partial<Record<RollupType, string>> = {
+  "daily-resting-heart-rate": "restingHeartRatePersonalRange",
+  "daily-heart-rate-variability": "heartRateVariabilityPersonalRange",
+};
 
 /** Points whose value is missing are skipped, so a renamed value path writes nothing rather than nulls. */
 export function mapRollup(type: RollupType, points: unknown[]): DailyRow[] {
   const out: DailyRow[] = [];
   for (const p of points) {
     const day = civil(at(p, "civilStartTime.date"));
-    const o = at(p, bodyKey(type));
+    const o = at(p, ROLLUP_KEY[type] ?? bodyKey(type));
     if (!day || !isObj(o)) continue;
     const values = ROLLUP[type](o);
     if (Object.values(values).every((v) => v === null)) continue;

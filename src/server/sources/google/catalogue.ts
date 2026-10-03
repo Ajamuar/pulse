@@ -29,8 +29,12 @@ const sample = { member: "sample_time.physical_time", maxDays: 90, pageSize: PAG
 const rollup = { member: null, maxDays: 14, pageSize: PAGE, dailyRollUp: true } as const;
 
 export const DATA_TYPES = {
-  "daily-heart-rate-variability": daily,
-  "daily-resting-heart-rate": daily,
+  // list for the nightly value; dailyRollUp for Google's personal range (restingHeartRatePersonalRange,
+  // heartRateVariabilityPersonalRange), which the dailyRollUp reference returns "by default" for these types.
+  "daily-heart-rate-variability": { ...daily, dailyRollUp: true },
+  "daily-resting-heart-rate": { ...daily, dailyRollUp: true },
+  // The day's Karvonen zone bounds (LIGHT, MODERATE, VIGOROUS, PEAK).
+  "daily-heart-rate-zones": daily,
   "daily-respiratory-rate": daily,
   "daily-sleep-temperature-derivations": daily,
   "daily-oxygen-saturation": daily,
@@ -47,6 +51,8 @@ export const DATA_TYPES = {
   // dailyRollUp gives Google's merged, worn-only daily total; list gives per-minute counts for movement gating.
   steps: { member: "interval.start_time", maxDays: 14, pageSize: PAGE, dailyRollUp: true },
   "total-calories": { member: null, maxDays: 14, pageSize: PAGE, dailyRollUp: true },
+  // All-day time per zone (Pulse Age's activity terms).
+  "time-in-heart-rate-zone": rollup,
   // Shown as extra metrics (src/lib/extraMetrics.ts): daily roll-ups only, value paths from the RollupValue docs.
   distance: rollup,
   floors: rollup,

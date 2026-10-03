@@ -73,6 +73,10 @@ const JOBS: Job[] = [
   { key: "total-calories", kind: "rollup", type: "total-calories" },
   { key: "steps-daily", kind: "rollup", type: "steps" }, // daily totals; "steps" below is per minute
   { key: "steps", kind: "steps", type: "steps" },
+  // Score inputs from roll-ups (Pulse Age's zone minutes, Health Monitor's ranges); "rollup" sets `changed`.
+  { key: "time-in-heart-rate-zone", kind: "rollup", type: "time-in-heart-rate-zone" },
+  { key: "rhr-personal-range", kind: "rollup", type: "daily-resting-heart-rate" },
+  { key: "hrv-personal-range", kind: "rollup", type: "daily-heart-rate-variability" },
   { key: "heart-rate", kind: "hr", type: "heart-rate" },
   // Last, so the scored data lands first; each fails on its own (a scope granted later, a 400 on a new type).
   ...EXTRA_JOBS,

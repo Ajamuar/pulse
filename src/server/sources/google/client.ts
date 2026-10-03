@@ -20,6 +20,8 @@ const BACKOFF_MS = 1000;
 // so a quota hit can't hold one run for hours (5 tries x many requests x a long wait).
 const MAX_WAIT_MS = 60_000;
 const MAX_PAGES = 1000; // a nextPageToken that never advances must not loop forever
+/** Longest dailyRollUp range: every roll-up-only type uses 14 days (Hælan's probe); a daily type's 90-day list window is not assumed. */
+const ROLLUP_MAX_DAYS = 14;
 
 // --- Local days ---------------------------------------------------------------------------------
 
@@ -287,14 +289,15 @@ export function createGoogleClient({
 
     /**
      * `rollupDataPoints` for civil days [fromDay, toDay) (exclusive end), in ranges of at most the
-     * type's `maxDays`. One POST per range: rollups do not paginate. Days with no data are omitted.
+     * type's `maxDays` (and ROLLUP_MAX_DAYS). One POST per range: rollups do not paginate. Days with no data are omitted.
      */
     async dailyRollUp(type: DataTypeId, fromDay: string, toDay: string): Promise<unknown[]> {
       const t: DataType = DATA_TYPES[type];
       if (!t.dailyRollUp) throw new GoogleError("unsupported_action", undefined, `${type} dailyRollUp`);
       const out: unknown[] = [];
       for (let day = fromDay; day < toDay; ) {
-        const end = addDays(day, t.maxDays) < toDay ? addDays(day, t.maxDays) : toDay;
+        const step = Math.min(t.maxDays, ROLLUP_MAX_DAYS); // a daily type's list window is longer
+        const end = addDays(day, step) < toDay ? addDays(day, step) : toDay;
         const req = JSON.stringify({ range: { start: civilDate(day), end: civilDate(end) } });
         const body = await request(`${API}/${type}/dataPoints:dailyRollUp`, `${type} dailyRollUp`, req);
         archivePage(db, {

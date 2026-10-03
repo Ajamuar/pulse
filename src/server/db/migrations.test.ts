@@ -56,6 +56,9 @@ const MIGRATION_FIXTURES: string[] = [
   /* 0007_logged_entries */ `
   insert into logged_entries (id, type, ts, day, data, google_name, created_at)
     values ('log1', 'hydration-log', 1767250800, '2026-01-01', '{"ml":250}', 'users/me/dataTypes/hydration-log/dataPoints/1', 1767250800);`,
+  /* 0008_google_first_inputs */ `
+  update daily_metrics set hr_zones = '[98,118,137,157,186]', light_moderate_min = 42, vigorous_peak_min = 7.5, temp_baseline_c = 34.2,
+    temp_sd_c = 0.18, rhr_range_low = 50, rhr_range_high = 58, hrv_range_low = 38.5, hrv_range_high = 66 where day = '2026-01-01';`,
 ];
 
 type Conn = Database.Database;

@@ -79,6 +79,19 @@ export const dailyMetrics = sqliteTable("daily_metrics", {
   calories: real("calories"),
   weightKg: real("weight_kg"),
   bodyFatPct: real("body_fat_pct"),
+  /** Google's heart-rate zones for the day: JSON `[light, moderate, vigorous, peak]` minimum bpm, then the peak maximum. */
+  hrZones: text("hr_zones"),
+  /** Google's all-day time in heart-rate zones, minutes: LIGHT + MODERATE, and VIGOROUS + PEAK. */
+  lightModerateMin: real("light_moderate_min"),
+  vigorousPeakMin: real("vigorous_peak_min"),
+  /** Google's skin-temperature baseline (30-night median) and the 30-night SD of nightly − baseline, °C. */
+  tempBaselineC: real("temp_baseline_c"),
+  tempSdC: real("temp_sd_c"),
+  /** Google's personal ranges (daily roll-ups), when it gives them. */
+  rhrRangeLow: real("rhr_range_low"),
+  rhrRangeHigh: real("rhr_range_high"),
+  hrvRangeLow: real("hrv_range_low"),
+  hrvRangeHigh: real("hrv_range_high"),
   source: text("source").notNull(),
 });
 

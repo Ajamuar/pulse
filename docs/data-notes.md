@@ -63,8 +63,9 @@ flowchart LR
 
 | Type | Filter member | Max window | pageSize | list | dailyRollUp | Fitbit Air |
 |---|---|---|---|---|---|---|
-| `daily-heart-rate-variability` | `date` | 90 | 10,000 | yes | no | confirm on Fitbit Air |
-| `daily-resting-heart-rate` | `date` | 90 | 10,000 | yes | no | confirm on Fitbit Air |
+| `daily-heart-rate-variability` | `date` | 90 (roll-up 14) | 10,000 | yes | yes (personal range, unconfirmed) | confirm on Fitbit Air |
+| `daily-resting-heart-rate` | `date` | 90 (roll-up 14) | 10,000 | yes | yes (personal range, unconfirmed) | confirm on Fitbit Air |
+| `daily-heart-rate-zones` | `date` | 90 | 10,000 | yes | no | confirm on Fitbit Air (shape from the reference only) |
 | `daily-respiratory-rate` | `date` | 90 | 10,000 | yes | no | confirm on Fitbit Air |
 | `daily-sleep-temperature-derivations` | `date` | 90 | 10,000 | yes | no | confirm on Fitbit Air (not in Hælan's field map) |
 | `daily-oxygen-saturation` | `date` | 90 | 10,000 | yes | no | confirm on Fitbit Air |
@@ -78,6 +79,7 @@ flowchart LR
 | `heart-rate` | `sample_time.physical_time` | 14 | 10,000 | yes | not used | confirm on Fitbit Air |
 | `steps` | `interval.start_time` | 14 | 10,000 | yes | yes (daily totals) | confirm on Fitbit Air |
 | `total-calories` | none | 14 | n/a | **no** | yes | confirm on Fitbit Air |
+| `time-in-heart-rate-zone` | none | 14 | n/a | not used | yes | confirm on Fitbit Air (shape from the reference only) |
 
 Notes:
 - **`sleep` windows on the night's end.** A window defined on bed time drops the night that crosses it.
@@ -129,12 +131,25 @@ dailyOxygenSaturation.date.{year,month,day}          number
 **`daily-sleep-temperature-derivations`** has not been observed. These paths come from the plan and Hælan's catalogue:
 
 ```
-dailySleepTemperatureDerivations.nightlyTemperatureCelsius     number?
-dailySleepTemperatureDerivations.baselineTemperatureCelsius    number?
-dailySleepTemperatureDerivations.date.{year,month,day}         number?
+dailySleepTemperatureDerivations.nightlyTemperatureCelsius        number?
+dailySleepTemperatureDerivations.baselineTemperatureCelsius       number?
+dailySleepTemperatureDerivations.relativeNightlyStddev30dCelsius  number?
+dailySleepTemperatureDerivations.date.{year,month,day}            number?
 ```
 
-The skin temperature needs 3 nights before it appears. The pipeline computes the deviation against our own causal baseline, not Google's baseline.
+The skin temperature needs 3 nights before it appears. The pipeline computes the deviation against Google's baseline (the 30-night median) and falls back to its own causal baseline only on a night without one.
+
+**Heart-rate zones, time in zones and personal ranges** have not been observed. Paths from the v4 reference (`users.dataTypes.dataPoints`, `dailyRollUp`), read 2026-10-03:
+
+```
+dailyHeartRateZones.date.{year,month,day}                           number
+dailyHeartRateZones.heartRateZones[].heartRateZoneType              LIGHT | MODERATE | VIGOROUS | PEAK
+dailyHeartRateZones.heartRateZones[].{minBeatsPerMinute,maxBeatsPerMinute}   int64 string
+timeInHeartRateZone.timeInHeartRateZones[].heartRateZone            (dailyRollUp on time-in-heart-rate-zone)
+timeInHeartRateZone.timeInHeartRateZones[].duration                 Duration string ("3.5s")
+restingHeartRatePersonalRange.{beatsPerMinuteMin,beatsPerMinuteMax}  number (dailyRollUp on daily-resting-heart-rate)
+heartRateVariabilityPersonalRange.{averageHeartRateVariabilityMillisecondsMin,Max}  number (dailyRollUp on daily-heart-rate-variability)
+```
 
 **VO2max** has not been observed. These value paths come from Hælan's catalogue:
 
@@ -302,6 +317,7 @@ These are the plan's open data questions, plus the gaps in Hælan's findings. Ti
 - [ ] **Exercise types.** What `exerciseType` values do strength workouts and rides use? (Hælan saw only `CARDIO_WORKOUT` and `RUNNING`.)
 - [ ] **Platforms per type.** Which platforms appear for each type (`FITBIT` or `HEALTH_CONNECT`)? (This feeds U4's source handling, and the rule that `hr_samples` takes band data only.)
 - [ ] **Nightly vitals.** Are SpO2 and skin temperature present on the Air? Skin temperature appears after 3 nights. Is respiratory rate present on nights without HRV?
+- [ ] **Google-first inputs.** Does `daily-heart-rate-zones` arrive every day, and is PEAK's max the max HR Fitbit uses? Does `dailyRollUp` answer on `daily-resting-heart-rate` and `daily-heart-rate-variability` with the personal ranges (the data types table lists only `list` for them), and is a day's range computed from earlier days only? Does the `time-in-heart-rate-zone` roll-up omit a day with no zone time, or send an empty list?
 - [ ] **Retry-After.** Does a 429 carry a `Retry-After` header?
 - [ ] **Daily volume.** What is the raw volume per day, and the gzipped size in `raw_payloads`? (Use `select type, count(*), sum(length(gz_body)) from raw_payloads group by type`.)
 

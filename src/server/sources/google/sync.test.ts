@@ -38,6 +38,7 @@ const LIST_TYPES = [
   "daily-sleep-temperature-derivations",
   "daily-oxygen-saturation",
   "daily-vo2-max",
+  "daily-heart-rate-zones",
   "run-vo2-max",
   "weight",
   "body-fat",
@@ -69,6 +70,7 @@ beforeEach(() => {
   data = Object.fromEntries(LIST_TYPES.map((t) => [t, fixture(t)]));
   data["steps:rollup"] = fixture("steps.dailyRollUp");
   data["total-calories:rollup"] = fixture("total-calories.dailyRollUp");
+  for (const t of ["time-in-heart-rate-zone", "daily-resting-heart-rate", "daily-heart-rate-variability"]) data[`${t}:rollup`] = fixture(`${t}.dailyRollUp`);
 });
 
 /** A source over a stubbed Google that answers each request from the fixtures inside its window. */
@@ -178,6 +180,15 @@ describe("google sync", () => {
       calories: 2310.5,
       weightKg: null,
       bodyFatPct: null,
+      hrZones: "[98,118,137,157,186]",
+      lightModerateMin: 52,
+      vigorousPeakMin: 450.5 / 60,
+      tempBaselineC: 34,
+      tempSdC: 0.21,
+      rhrRangeLow: 52,
+      rhrRangeHigh: 61,
+      hrvRangeLow: 31.5,
+      hrvRangeHigh: 55.25,
       source: "google",
     });
     expect(counts()).toEqual({ dailyMetrics: 3, sleepSessions: 4, sleepSegments: 9, exercises: 1, hrSamples: 5, stepsMinutes: 5 });

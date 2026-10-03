@@ -21,9 +21,14 @@ describe("daily mappers", () => {
       rhrMethod: "WITH_SLEEP",
     });
     expect(mapDaily("daily-respiratory-rate", points("daily-respiratory-rate"), TZ)).toEqual([{ day: "2026-10-01", respBpm: 14.2 }]);
-    // Raw nightly temperature, not a deviation from Google's baseline.
+    // Raw nightly temperature, with Google's baseline and 30-night SD beside it.
     expect(mapDaily("daily-sleep-temperature-derivations", points("daily-sleep-temperature-derivations"), TZ)).toEqual([
-      { day: "2026-10-01", nightlyTempC: 34.12 },
+      { day: "2026-10-01", nightlyTempC: 34.12, tempBaselineC: 34, tempSdC: 0.21 },
+    ]);
+    // Zones in Google's order whatever the API's; a day missing a zone has none.
+    expect(mapDaily("daily-heart-rate-zones", points("daily-heart-rate-zones"), TZ)).toEqual([
+      { day: "2026-10-01", hrZones: "[98,118,137,157,186]" },
+      { day: "2026-09-30", hrZones: null },
     ]);
     expect(mapDaily("daily-oxygen-saturation", points("daily-oxygen-saturation"), TZ)).toEqual([{ day: "2026-10-01", spo2Pct: 96.4 }]);
     expect(mapDaily("daily-vo2-max", points("daily-vo2-max"), TZ)).toEqual([{ day: "2026-09-30", vo2maxDaily: 44.1 }]);
@@ -42,6 +47,21 @@ describe("daily mappers", () => {
       { day: "2026-10-01", steps: 8421 },
     ]);
     expect(mapRollup("total-calories", points("total-calories.dailyRollUp"))).toEqual([{ day: "2026-10-01", calories: 2310.5 }]);
+  });
+
+  it("time in zones: LIGHT + MODERATE and VIGOROUS + PEAK minutes; a point with no zones is skipped", () => {
+    expect(mapRollup("time-in-heart-rate-zone", points("time-in-heart-rate-zone.dailyRollUp"))).toEqual([
+      { day: "2026-10-01", lightModerateMin: 52, vigorousPeakMin: 450.5 / 60 },
+    ]);
+  });
+
+  it("personal ranges come from the differently named roll-up values; an inverted range is skipped", () => {
+    expect(mapRollup("daily-resting-heart-rate", points("daily-resting-heart-rate.dailyRollUp"))).toEqual([
+      { day: "2026-10-01", rhrRangeLow: 52, rhrRangeHigh: 61 },
+    ]);
+    expect(mapRollup("daily-heart-rate-variability", points("daily-heart-rate-variability.dailyRollUp"))).toEqual([
+      { day: "2026-10-01", hrvRangeLow: 31.5, hrvRangeHigh: 55.25 },
+    ]);
   });
 
   it("ignores points without the type's payload", () => {
