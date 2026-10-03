@@ -11,7 +11,7 @@ export async function uploadAvatar(form: FormData): Promise<ActionResult> {
   const file = form.get("photo");
   if (!(file instanceof File) || file.size === 0) return { ok: false, error: "Choose a photo" };
   if (!(AVATAR_TYPES as readonly string[]).includes(file.type)) return { ok: false, error: "Use a JPEG, PNG or WebP photo" };
-  if (file.size > AVATAR_MAX_BYTES) return { ok: false, error: "Use a photo under 2 MB" };
+  if (file.size > AVATAR_MAX_BYTES) return { ok: false, error: "Use a photo under 1 MB" };
   setAvatar(getDb(), { bytes: Buffer.from(await file.arrayBuffer()), type: file.type });
   revalidatePath("/", "layout");
   return { ok: true, data: undefined };

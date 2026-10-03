@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { openDb, type Db } from "../db";
-import { avatarSrc, setOwnerPicture, uploadedAvatar } from "../avatar";
+import { avatarSrc, setAvatar, setOwnerPicture, uploadedAvatar } from "../avatar";
 import { removeAvatar, uploadAvatar } from "./avatar";
 
 const h = vi.hoisted(() => ({ db: undefined as unknown, session: { kind: "owner", email: "me@example.com" } as unknown }));
@@ -35,9 +35,12 @@ describe("avatar", () => {
 
   it("refuses other types, oversize files and signed-out callers", async () => {
     expect(await uploadAvatar(form(new File(["<svg/>"], "x.svg", { type: "image/svg+xml" })))).toMatchObject({ ok: false });
-    expect(await uploadAvatar(form(new File([new Uint8Array(2 * 1024 * 1024 + 1)], "big.jpg", { type: "image/jpeg" })))).toMatchObject({
+    expect(await uploadAvatar(new FormData())).toMatchObject({ ok: false, error: "Choose a photo" });
+    expect(await uploadAvatar(form(new File([new Uint8Array(1024 * 1024)], "max.webp", { type: "image/webp" })))).toMatchObject({ ok: true });
+    setAvatar(db, null);
+    expect(await uploadAvatar(form(new File([new Uint8Array(1024 * 1024 + 1)], "big.jpg", { type: "image/jpeg" })))).toMatchObject({
       ok: false,
-      error: "Use a photo under 2 MB",
+      error: "Use a photo under 1 MB",
     });
     h.session = null;
     expect(await uploadAvatar(form(new File([new Uint8Array([1])], "a.png", { type: "image/png" })))).toMatchObject({ ok: false });

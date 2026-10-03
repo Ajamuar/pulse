@@ -7,7 +7,9 @@ import type { Db } from "./db";
 import { instance } from "./db/schema";
 
 export const AVATAR_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
-export const AVATAR_MAX_BYTES = 2 * 1024 * 1024;
+// Settings crops and re-encodes to a 512 px WebP (~50–150 KB) in the browser, so 1 MB is ample and stays under
+// the Server Action body limit (next.config.ts).
+export const AVATAR_MAX_BYTES = 1024 * 1024;
 
 export function setOwnerPicture(db: Db, picture: string | null) {
   if (picture) db.update(instance).set({ ownerPicture: picture }).run();
