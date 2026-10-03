@@ -1,0 +1,115 @@
+// Shared by `pnpm shots` and `pnpm screens`: the demo app's screens, the two device sizes, a demo session, and the
+// in-page helpers that end a phone screen on a clean row. Both scripts drive a running demo-mode app:
+//   GOOGLE_OAUTH_ENABLED=false TZ=Asia/Kolkata pnpm dev -p 3317   (repo root, in another terminal)
+import { createRequire } from "node:module"
+
+const require = createRequire(new URL("../../package.json", import.meta.url))
+export const { chromium } = require("@playwright/test")
+
+export const APP = process.env.APP_URL ?? "http://localhost:3317"
+
+export const SCREENS = [
+  ["home", "/"],
+  ["recovery", "/recovery"],
+  ["strain", "/strain"],
+  ["sleep", "/sleep"],
+  ["health", "/health"],
+  // On the phone, scroll to Heart rhythm and Measurements, the newer half of the screen. What scrolled up under the
+  // header is hidden, so no half-row shows through it.
+  ["health-monitor", "/health/monitor", (page, kind) => kind === "phone" &&
+    page.getByRole("heading", { name: "Heart rhythm" }).evaluate((h) => {
+      scrollBy(0, h.getBoundingClientRect().top - 96) // just under the header, so the Measurements card fits below
+      const top = h.getBoundingClientRect().top
+      hideWhere((r) => r.bottom <= top)
+    })],
+  ["journal", "/journal"],
+  ["trends", "/trends"],
+  ["dashboard-editor", "/", (page) => page.getByRole("button", { name: "Edit My Dashboard" }).click()],
+]
+
+// The phone's status bar is drawn by the frame, so the page gets the rest of an 844 pt screen.
+export const STATUS = 50
+export const DEVICES = {
+  phone: { viewport: { width: 390, height: 844 - STATUS }, deviceScaleFactor: 3, isMobile: true, hasTouch: true },
+  laptop: { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 },
+}
+
+/** A demo session cookie from the running app. */
+export async function demoSession() {
+  const res = await fetch(`${APP}/login/demo`, { method: "POST", redirect: "manual" })
+  const token = /pulse_session=([^;]+)/.exec(res.headers.get("set-cookie") ?? "")?.[1]
+  if (!token) throw new Error(`No demo session from ${APP}/login/demo: is the app running in demo mode?`)
+  return token
+}
+
+// Hides the scrolling content (not the fixed or sticky header and bars) whose box matches `test`. Exposed to the page.
+export const HIDE = `window.hideWhere = (test) => {
+  const pinned = (e) => { for (; e; e = e.parentElement) if (/fixed|sticky/.test(getComputedStyle(e).position)) return true }
+  for (const e of document.querySelectorAll("main *")) {
+    const r = e.getBoundingClientRect()
+    if (r.height && test(r) && !pinned(e)) e.style.visibility = "hidden"
+  }
+}`
+
+// The phone's round check-in button floats over the bottom right of every screen (src/components/shells/AppNav.tsx).
+export const FLOAT = `a[aria-label^="Check in for"]`
+
+// Runs in the page. Picks the screen height so the capture ends on a row or card boundary rather than mid-row: the
+// lowest y that no row, chip, line of text or icon crosses. Containers taller than a few rows (a card of rows) may be
+// cut between their rows. Everything below the cut is hidden, so the screen ends on a gap of background (or of the
+// card being cut), and on tab roots the floating tab bar shows no half-row through its glass.
+export function cleanCut({ maxH, minH }) {
+  // A sheet (the dashboard editor) fills the screen and ends on its own buttons.
+  if (document.querySelector("[role=dialog]")) return maxH
+  const ROW = 240
+  const bar = [...document.querySelectorAll("body *")]
+    .filter((e) => getComputedStyle(e).position === "fixed" && e.getBoundingClientRect().height > 0 && e.getBoundingClientRect().bottom > maxH - 120)
+    .reduce((top, e) => Math.min(top, e.getBoundingClientRect().top), maxH)
+  const inset = maxH - bar // space the bottom bar takes, 0 without one
+  const boxes = [] // what a cut must not cross
+  const ends = new Set() // where a cut may fall: the bottom of any row, card or line
+  const solid = (c) => !/rgba\(0, 0, 0, 0\)|transparent/.test(c.backgroundColor) || c.backgroundImage !== "none" || c.boxShadow !== "none" || parseFloat(c.borderTopWidth) + parseFloat(c.borderBottomWidth) > 0
+  for (const e of document.querySelectorAll("main *")) {
+    const c = getComputedStyle(e)
+    if (c.visibility === "hidden" || c.display === "none" || c.position === "fixed" || c.position === "sticky") continue
+    const r = e.getBoundingClientRect()
+    if (!r.height || !r.width) continue
+    const ink = /^(svg|img|canvas|video|input|button)$/i.test(e.tagName)
+    if (ink || solid(c)) ends.add(Math.ceil(r.bottom))
+    // A row: a short box with a background or divider, or a short group of several parts (label, bar, caption).
+    if (ink || (r.height <= ROW && (solid(c) || e.children.length > 1))) boxes.push([r.top, r.bottom])
+    for (const n of e.childNodes) {
+      if (n.nodeType !== 3 || !n.textContent.trim()) continue
+      const range = document.createRange()
+      range.selectNodeContents(n)
+      for (const t of range.getClientRects()) boxes.push([t.top, t.bottom]), ends.add(Math.ceil(t.bottom))
+    }
+  }
+  const crosses = (y) => boxes.some(([t, b]) => t < y - 0.5 && b > y + 0.5)
+  // Below the cut: a gap of plain background, enough to clear the rounded corners of the screen, or the bar.
+  const gap = inset ? 16 : 28
+  const cut = [...ends].sort((a, b) => b - a).find((y) => y >= minH - inset - gap && y + gap + inset <= maxH && !crosses(y))
+  if (!cut) throw new Error(`No clean cut on ${location.pathname}`)
+  hideWhere((r) => r.top >= cut)
+  return cut + gap + inset
+}
+
+/** Opens one screen at one device size, ready to capture; returns its height (a phone ends on a clean row). */
+export async function openScreen(page, kind, [, path, act]) {
+  const opts = DEVICES[kind]
+  await page.setViewportSize(opts.viewport)
+  await page.goto(APP + path, { waitUntil: "networkidle" })
+  await page.evaluate(HIDE)
+  // Not part of the screen: the dev-mode indicator, and on the phone the floating check-in button over the content.
+  await page.addStyleTag({ content: `nextjs-portal { display: none !important; }${kind === "phone" ? `${FLOAT} { display: none !important; }` : ""}` })
+  if (act) await act(page, kind)
+  await page.evaluate(() => document.fonts.ready)
+  await page.waitForTimeout(600)
+  let height = opts.viewport.height
+  if (kind === "phone") {
+    height = await page.evaluate(cleanCut, { maxH: height, minH: 600 })
+    await page.setViewportSize({ width: opts.viewport.width, height })
+    await page.waitForTimeout(300)
+  }
+  return height
+}
