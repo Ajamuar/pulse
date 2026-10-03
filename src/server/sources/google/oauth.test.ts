@@ -97,7 +97,7 @@ describe("exchangeCode", () => {
 
   it("posts the code, stores the grant in the single row and returns the lowercased email", async () => {
     const f = tokenStub(grant({ expires_in: 3599, scope: "a b" }));
-    expect(await exchange(f)).toEqual({ email: "me@example.com", picture: null });
+    expect(await exchange(f)).toEqual({ email: "me@example.com", picture: null, name: null });
     expect(sent(f)).toEqual({
       code: "c0de",
       client_id: "cid",
@@ -141,6 +141,7 @@ describe("exchangeCode", () => {
     const pic = "https://lh3.googleusercontent.com/a/x";
     expect((await exchange(tokenStub(grant({ id_token: idToken({ picture: pic }) })))).picture).toBe(pic);
     expect((await exchange(tokenStub(grant({ id_token: idToken({ picture: "javascript:alert(1)" }) })))).picture).toBeNull();
+    expect((await exchange(tokenStub(grant({ id_token: idToken({ name: "  Ada Lovelace " }) })))).name).toBe("Ada Lovelace");
   });
 
   it("an account allow() refuses stores nothing and throws not_owner", async () => {

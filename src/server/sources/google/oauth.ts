@@ -175,7 +175,7 @@ export function missingScopes(db: Db): string[] {
  * The verified email in an ID token. The token came straight from Google's token endpoint over TLS,
  * so per OpenID Connect Core 3.1.3.7 its signature needn't be checked; audience still is.
  */
-function verifiedAccount(idToken: string | undefined, clientId: string): { email: string; picture: string | null } {
+function verifiedAccount(idToken: string | undefined, clientId: string): { email: string; picture: string | null; name: string | null } {
   let claims: ReturnType<typeof decodeJwt>;
   try {
     claims = decodeJwt(idToken ?? "");
@@ -186,7 +186,8 @@ function verifiedAccount(idToken: string | undefined, clientId: string): { email
   if (!aud.includes(clientId) || typeof claims.email !== "string") throw new GoogleError("no_id_token");
   if (claims.email_verified !== true) throw new GoogleError("email_unverified");
   const picture = typeof claims.picture === "string" && claims.picture.startsWith("https://") ? claims.picture : null;
-  return { email: claims.email.toLowerCase(), picture };
+  const name = typeof claims.name === "string" && claims.name.trim() ? claims.name.trim().slice(0, 100) : null;
+  return { email: claims.email.toLowerCase(), picture, name };
 }
 
 /**
@@ -200,7 +201,7 @@ function verifiedAccount(idToken: string | undefined, clientId: string): { email
 export async function exchangeCode(
   db: Db,
   o: { google: Google; redirectUri: string; code: string; allow: (email: string) => boolean } & Deps,
-): Promise<{ email: string; picture: string | null }> {
+): Promise<{ email: string; picture: string | null; name: string | null }> {
   const { fetch: fetchFn = fetch, now = Date.now } = o;
   const r = await tokenRequest(
     fetchFn,

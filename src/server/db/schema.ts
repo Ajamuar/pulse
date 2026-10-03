@@ -254,6 +254,8 @@ export const instance = sqliteTable(
     ownerEmail: text("owner_email"),
     /** The owner's Google profile photo URL, from the ID token at each sign-in. */
     ownerPicture: text("owner_picture"),
+    /** The owner's Google display name (ID token `name`), shown above the email. */
+    ownerName: text("owner_name"),
     /** A photo uploaded in Settings; it wins over the Google one. */
     avatar: blob("avatar", { mode: "buffer" }),
     avatarType: text("avatar_type"),

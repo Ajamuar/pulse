@@ -58,6 +58,7 @@ function TabBar({ current }: { current: number }) {
           <li key={tab} className="min-w-0">
             <Link
               href={TAB_ROOT[tab]}
+              prefetch // full prefetch: the tabs open from the client cache, no skeleton flash
               aria-current={i === current ? "page" : undefined}
               className={cn(PRESS, ITEM_TONE(i === current), "flex h-full flex-col items-center justify-center gap-0.5 rounded-[18px] focus-visible:ring-inset")}
             >
@@ -90,6 +91,7 @@ function Rail({ current }: { current: number }) {
           <li key={tab} className="relative">
             <Link
               href={TAB_ROOT[tab]}
+              prefetch // full prefetch: the tabs open from the client cache, no skeleton flash
               aria-current={i === current ? "page" : undefined}
               className={cn(PRESS, ITEM_TONE(i === current), "flex h-16 w-[72px] flex-col items-center justify-center gap-1 rounded-[20px]")}
             >
@@ -119,6 +121,7 @@ function Sidebar({ current, pathname }: { current: number; pathname: string }) {
     <li key={label} className="relative">
       <Link
         href={href}
+        prefetch
         aria-current={active ? "page" : undefined}
         className={cn(PRESS, ITEM_TONE(active), "flex h-12 items-center gap-3 rounded-full px-4 text-[15px] leading-5 font-semibold", lit && "bg-glass-lens")}
       >

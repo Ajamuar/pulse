@@ -13,6 +13,13 @@ export function setOwnerPicture(db: Db, picture: string | null) {
   if (picture) db.update(instance).set({ ownerPicture: picture }).run();
 }
 
+/** The owner's Google display name, kept from the last sign-in. */
+export function setOwnerName(db: Db, name: string | null) {
+  if (name) db.update(instance).set({ ownerName: name }).run();
+}
+
+export const ownerName = (db: Db): string | null => db.select({ name: instance.ownerName }).from(instance).get()?.name ?? null;
+
 export function avatarSrc(db: Db): string | null {
   const row = db.select({ at: instance.avatarAt, google: instance.ownerPicture }).from(instance).get();
   if (row?.at) return `/avatar?v=${row.at}`;

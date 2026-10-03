@@ -3,7 +3,7 @@ import { connection } from "next/server"
 import { Archive, BookOpen, CalendarDays, CalendarRange, ChartLine, ChevronRight, Database, ListChecks } from "lucide-react"
 import { formatDay, rangeLabel } from "@/lib/format"
 import { currentSession } from "@/server/auth"
-import { avatarSrc } from "@/server/avatar"
+import { avatarSrc, ownerName } from "@/server/avatar"
 import { getDb } from "@/server/db"
 import { getMore } from "@/server/queries/settings"
 import { LinkList, MORE_COLUMN, type LinkListRow } from "@/components/shells/LinkList"
@@ -29,7 +29,7 @@ async function AccountRow() {
         <UserAvatar src={avatarSrc(getDb())} />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[15px] leading-[22px] font-semibold">{owner ? session.email : "Demo"}</span>
+        <span className="block truncate text-[15px] leading-[22px] font-semibold">{owner ? (ownerName(getDb()) ?? session.email) : "Demo"}</span>
         <span className="block text-[13px] leading-[18px] text-muted-foreground">Account, data source, profile</span>
       </span>
       <span className="sr-only">Settings</span>

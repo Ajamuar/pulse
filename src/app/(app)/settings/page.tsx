@@ -1,6 +1,6 @@
 import { connection } from "next/server"
 import { currentSession } from "@/server/auth"
-import { avatarSrc } from "@/server/avatar"
+import { avatarSrc, ownerName } from "@/server/avatar"
 import { getDb } from "@/server/db"
 import { getSettings } from "@/server/queries/settings"
 import { DetailShell } from "@/components/shells/DetailShell"
@@ -30,6 +30,7 @@ export default async function SettingsPage() {
             now={requestTime()}
             account={{
               email: session?.kind === "owner" ? session.email : null,
+              name: session?.kind === "owner" ? ownerName(getDb()) : null,
               avatar,
               customPhoto: avatar?.startsWith("/avatar?") ?? false,
             }}

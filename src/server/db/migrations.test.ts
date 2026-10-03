@@ -59,6 +59,8 @@ const MIGRATION_FIXTURES: string[] = [
   /* 0008_google_first_inputs */ `
   update daily_metrics set hr_zones = '[98,118,137,157,186]', light_moderate_min = 42, vigorous_peak_min = 7.5, temp_baseline_c = 34.2,
     temp_sd_c = 0.18, rhr_range_low = 50, rhr_range_high = 58, hrv_range_low = 38.5, hrv_range_high = 66 where day = '2026-01-01';`,
+  /* 0009_owner_name */ `
+  update instance set owner_name = 'Test Owner';`,
 ];
 
 type Conn = Database.Database;

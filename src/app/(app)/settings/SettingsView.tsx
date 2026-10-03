@@ -22,7 +22,7 @@ const ROW_VALUE = "truncate text-right text-[15px] leading-[22px] text-foregroun
 /** The logo tile beside a row's name (account photo, data source mark). */
 const TILE = "grid size-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-white/[0.06]"
 
-export type SettingsAccount = { email: string | null; avatar: string | null; customPhoto: boolean }
+export type SettingsAccount = { email: string | null; name?: string | null; avatar: string | null; customPhoto: boolean }
 
 /** Who is signed in: photo, account, change photo, sign out (U20). Sign out is a plain form post, so it works before hydration. */
 export function Account({ account }: { account: SettingsAccount }) {
@@ -34,8 +34,10 @@ export function Account({ account }: { account: SettingsAccount }) {
           <UserAvatar src={account.avatar} />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[15px] leading-[22px] font-semibold">{owner ? account.email : "Demo"}</p>
-          <p className="text-[13px] leading-[18px] text-muted-foreground">{owner ? "Google account" : "Signed in to the demo"}</p>
+          <p className="truncate text-[15px] leading-[22px] font-semibold">{owner ? (account.name ?? account.email) : "Demo"}</p>
+          <p className="truncate text-[13px] leading-[18px] text-muted-foreground">
+            {owner ? (account.name ? account.email : "Google account") : "Signed in to the demo"}
+          </p>
         </div>
       </div>
       <div className="mt-4 grid grid-cols-2 gap-2">

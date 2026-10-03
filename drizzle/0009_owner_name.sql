@@ -1,0 +1,1 @@
+ALTER TABLE `instance` ADD `owner_name` text;
