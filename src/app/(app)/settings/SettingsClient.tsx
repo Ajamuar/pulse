@@ -2,9 +2,9 @@
 
 import * as React from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { Camera, Pencil, X } from "lucide-react"
+import { Camera, KeyRound, Pencil } from "lucide-react"
 import { toast } from "sonner"
-import { removeAvatar, uploadAvatar } from "@/server/actions/avatar"
+import { uploadAvatar } from "@/server/actions/avatar"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ResponsiveSheet } from "@/components/shells/ResponsiveSheet"
@@ -93,7 +93,7 @@ export function SwitchGoogleButton({ current }: { current: string | null }) {
   const [open, setOpen] = React.useState(false)
   return (
     <>
-      <Button variant="secondary" size="touch" className="w-full" onClick={() => setOpen(true)}>
+      <Button variant="secondary" size="touch" className="w-full" aria-label="Change password" onClick={() => setOpen(true)}>
         Switch Google account
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
@@ -150,8 +150,9 @@ export function ChangePasswordButton() {
   }
   return (
     <>
-      <Button variant="secondary" size="touch" className="w-full" onClick={() => setOpen(true)}>
-        Change password
+      <Button variant="secondary" size="touch" className="w-full" aria-label="Change password" onClick={() => setOpen(true)}>
+        <KeyRound aria-hidden strokeWidth={2} />
+        Password
       </Button>
       <ResponsiveSheet
         open={open}
@@ -202,7 +203,11 @@ export function DeleteAccountButton() {
   }
   return (
     <>
-      <Button variant="ghost" size="touch" className="col-span-2 w-full text-recovery-red-text hover:text-recovery-red-text" onClick={() => setOpen(true)}>
+      <Button
+        variant="ghost"
+        className="h-10 rounded-full px-4 text-[13px] font-semibold text-muted-foreground hover:bg-white/[0.06] hover:text-recovery-red-text"
+        onClick={() => setOpen(true)}
+      >
         Delete account
       </Button>
       <Dialog
@@ -276,7 +281,7 @@ const UPLOAD_FAILED = "Couldn’t upload the photo. Check your connection and tr
  * Settings › Account: change the photo (pick, crop in a sheet, then upload a 512 px WebP) and, for an uploaded one,
  * remove it. The photo is shrunk in the browser so a phone photo never meets the Server Action body limit.
  */
-export function AvatarButtons({ customPhoto }: { customPhoto: boolean }) {
+export function AvatarButtons() {
   const router = useRouter()
   const input = React.useRef<HTMLInputElement>(null)
   const [pending, start] = React.useTransition()
@@ -324,28 +329,12 @@ export function AvatarButtons({ customPhoto }: { customPhoto: boolean }) {
     })
   }
   return (
-    <div className="flex gap-2">
+    <div className="flex">
       <input ref={input} type="file" accept="image/*" hidden onChange={(e) => pick(e.target.files?.[0])} />
       <Button variant="secondary" size="touch" className="flex-1" disabled={pending || opening} onClick={() => input.current?.click()}>
         <Camera aria-hidden strokeWidth={2} />
         {opening ? "Opening…" : pending && !cropping ? "Saving…" : "Photo"}
       </Button>
-      {customPhoto && (
-        <Button
-          variant="ghost"
-          size="icon-touch"
-          aria-label="Remove photo, use the Google one"
-          disabled={pending}
-          onClick={() =>
-            start(async () => {
-              done(await removeAvatar().catch(() => ({ ok: false as const, error: "Couldn’t remove the photo. Try again." })), "Photo removed")
-            })
-          }
-          className="rounded-xl text-muted-foreground hover:bg-white/[0.06] hover:text-foreground"
-        >
-          <X aria-hidden strokeWidth={2} />
-        </Button>
-      )}
       <AvatarCropSheet photo={photo} open={cropping} pending={pending} error={error} onCancel={() => setCropping(false)} onUse={use} />
     </div>
   )

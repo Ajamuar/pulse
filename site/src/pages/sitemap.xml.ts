@@ -12,7 +12,7 @@ export const GET: APIRoute = ({ site }) => {
     ["/compare/", CONTENT_UPDATED],
     ...COMPARISONS.map((c): [string, string] => [`/compare/${c.slug}/`, c.checked]),
     ["/glossary/", CONTENT_UPDATED],
-    ["/privacy/", "2026-10-03"],
+    ["/privacy/", "2026-10-04"],
     ["/terms/", "2026-10-03"],
   ]
   const body =

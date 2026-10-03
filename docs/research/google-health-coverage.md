@@ -8,7 +8,7 @@ This compares, one by one, the data types the Google Health API v4 returns ([`us
 - Pulse fetches **14** of them, plus `total-calories`, which only answers daily roll-ups and is not in that list.
 - **11** reach a screen. **2** (weight, body fat) feed only Pulse Age and are never displayed. **1** (`vo2-max`) is fetched only for the probe.
 - **28** are not fetched at all.
-- OAuth asks for scopes Pulse never uses: `ecg`, `irn`, `logged_symptoms`, `mindfulness`, `reproductive_health`, `location` and `nutrition.writeonly`. They were added so the probe could see everything; nothing reads them yet. (2026-10: the write scopes are now used by Journal › Log; see "Writing" below.)
+- OAuth asks only for the 13 scopes Pulse uses (2026-10-04, trimmed for Google verification): read `activity_and_fitness`, `health_metrics_and_measurements`, `sleep`, `ecg`, `irn`, `nutrition`, `profile` (age at onboarding), `settings` (`users.pairedDevices.list`, the no-device check); write `nutrition`, `health_metrics_and_measurements`, `mindfulness` (moods), `logged_symptoms`, `reproductive_health` (Journal › Log). `location` and the read side of mindfulness, logged symptoms and reproductive health were dropped: Pulse reads nothing there (the types it logs are write-only at Google).
 
 ```mermaid
 flowchart LR

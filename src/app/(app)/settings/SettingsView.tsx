@@ -52,14 +52,13 @@ export function Account({ account }: { account: SettingsAccount }) {
         </div>
       </div>
       <div className="mt-4 grid grid-cols-2 gap-2">
-        {own && <AvatarButtons customPhoto={account.customPhoto} />}
+        {own && <AvatarButtons />}
         {own && <ChangePasswordButton />}
         <form method="post" action="/logout" className="col-span-2">
           <Button type="submit" variant="outline" size="touch" className="w-full">
             Sign out
           </Button>
         </form>
-        {own && <DeleteAccountButton />}
       </div>
     </SectionShell>
   )
@@ -265,6 +264,12 @@ export function SettingsView({ vm, now, account }: { vm: SettingsVM; now: number
       <Account account={account} />
       <DataSource vm={vm} now={now} googleEmail={account.googleEmail} />
       <Profile profile={vm.profile} />
+      {/* Last and quiet: the one irreversible action sits below everything, away from the everyday controls. */}
+      {!account.demo && account.email !== null && (
+        <div className="flex justify-center pt-6 pb-2">
+          <DeleteAccountButton />
+        </div>
+      )}
     </div>
   )
 }

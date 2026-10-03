@@ -51,8 +51,8 @@ describe("authUrl", () => {
       state: "st",
     });
     expect(LOGIN_SCOPES).toEqual(["openid", "email", "profile"]);
-    expect(SCOPES).toHaveLength(19);
-    // Every Google Health scope, read and write: Pulse reads every type and logs the write-only ones.
+    expect(SCOPES).toHaveLength(13);
+    // The Google Health scopes Pulse uses: the read scopes behind every screen, and the write scopes Journal › Log needs.
     for (const s of SCOPES) expect(s).toMatch(/^https:\/\/www\.googleapis\.com\/auth\/googlehealth\.\w+\.(readonly|writeonly)$/);
   });
 });

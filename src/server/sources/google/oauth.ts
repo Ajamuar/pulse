@@ -22,24 +22,19 @@ export const FETCH_TIMEOUT_MS = 30_000;
 // `nutrition.writeonly` is the only one that lets dataPoints.list return food and hydration logs.
 // Writes (create, batchDelete) happen only for what the owner logs in Pulse (src/server/actions/log.ts).
 export const SCOPES = [
+  // Read: every screen and score. settings.readonly is what users.pairedDevices.list needs (the "no Fitbit device" check).
   "activity_and_fitness.readonly",
   "health_metrics_and_measurements.readonly",
   "sleep.readonly",
   "ecg.readonly",
   "irn.readonly",
-  "location.readonly",
-  "logged_symptoms.readonly",
-  "mindfulness.readonly",
-  "reproductive_health.readonly",
+  "nutrition.readonly",
   "profile.readonly",
   "settings.readonly",
+  // Write: Journal › Log. Moods, symptoms, menstrual periods and ovulation tests are write-only types at Google (no
+  // read exists for them), so Pulse keeps its own copy in logged_entries.
   "nutrition.writeonly",
-  "nutrition.readonly", // food, hydration and nutrition logs (added 2026-10); writeonly kept for grants made before
-  // Logging from Pulse (added 2026-10). Moods, symptoms, menstrual periods and ovulation tests are write-only types:
-  // Google offers no read for them, so Pulse is where they're logged.
-  "activity_and_fitness.writeonly",
   "health_metrics_and_measurements.writeonly",
-  "sleep.writeonly",
   "mindfulness.writeonly",
   "logged_symptoms.writeonly",
   "reproductive_health.writeonly",
