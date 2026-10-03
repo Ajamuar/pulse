@@ -66,18 +66,16 @@ function snapshot({ id, height, phone, part }) {
     if (c.display === "none" || (c.position !== "fixed" && r.top >= H) || (!scroll && (above || c.visibility === "hidden"))) drop.push(e)
   }
   for (const e of drop) if (e.isConnected) e.remove()
-  // The Pulse Age orb is an animated canvas: its still frame becomes an image (a soft glow, so raster is fine).
+  // The Pulse Age orb is an animated canvas: its still frame becomes an image (a soft glow, so raster is fine), at the
+  // canvas's own backing size (2x its box, the app's cap), which the site never exceeds once the frame scales it down.
+  // The image takes the canvas's box exactly: `max-width: none` because the preflight's `img { max-width: 100% }`
+  // (which never applies to a canvas) would clamp the orb's 130% width and leave its 130% height, an egg.
   for (const c of document.querySelectorAll("canvas")) {
     const img = document.createElement("img")
     const r = c.getBoundingClientRect()
-    // At 2x the screen's size, which the site never exceeds once the frame scales it down.
-    const small = document.createElement("canvas")
-    small.width = Math.round(r.width * 2)
-    small.height = Math.round(r.height * 2)
-    small.getContext("2d").drawImage(c, 0, 0, small.width, small.height)
-    img.src = small.toDataURL("image/webp", 0.8)
+    img.src = c.toDataURL("image/webp", 0.85)
     img.className = c.className
-    if (c.getAttribute("style")) img.setAttribute("style", c.getAttribute("style"))
+    img.setAttribute("style", [c.getAttribute("style"), "max-width:none"].filter(Boolean).join(";"))
     img.width = Math.round(r.width)
     img.height = Math.round(r.height)
     c.replaceWith(img)
