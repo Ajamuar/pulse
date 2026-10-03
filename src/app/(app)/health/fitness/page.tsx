@@ -1,6 +1,7 @@
 import { connection } from "next/server"
 import { cn } from "@/lib/utils"
 import { DAY, formatDay, formatValue } from "@/lib/format"
+import { userCtx } from "@/server/queries/common"
 import { getFitness } from "@/server/queries/health"
 import type { FitnessVM } from "@/server/queries/types"
 import { TrendChart } from "@/components/charts/TrendChart"
@@ -58,7 +59,7 @@ function Hero({ vo2 }: { vo2: FitnessVM["vo2"] }) {
 /** Fitness `/health/fitness` (spec §7.10): latest values, no date switcher. */
 export default async function FitnessPage() {
   await connection()
-  const vm = getFitness()
+  const vm = await getFitness(await userCtx())
   const v = vm.vo2.value
   const tl = vm.trainingLoad.value
 

@@ -2,7 +2,9 @@
 import { SCORING_VERSION } from "../pipeline";
 import { missingScopes } from "../sources/google/oauth";
 import { addDays, wholeYears } from "../time";
-import { defaultCtx, firstDay, type QueryCtx, todayOf } from "./common";
+import { and, count, desc, eq, lte, sql } from "drizzle-orm";
+import { dailyScores, journalEntries, journalTags, oauthTokens, reports, syncState } from "../db/schema";
+import { firstDay, type QueryCtx, todayOf } from "./common";
 import { latestReport } from "./home";
 import type { MoreVM, SettingsVM, ShellStatusVM, YourDataVM } from "./types";
 
@@ -51,10 +53,12 @@ type SyncRow = {
   backfillDaysTotal: number | null;
 };
 
-function syncRows(ctx: QueryCtx) {
-  return ctx.db.$client
-    .prepare("select type, last_success_at lastSuccessAt, last_error lastError, backfill_days_done backfillDaysDone, backfill_days_total backfillDaysTotal from sync_state")
-    .all() as SyncRow[];
+function syncRows(ctx: QueryCtx): Promise<SyncRow[]> {
+  const t = syncState;
+  return ctx.db
+    .select({ type: t.type, lastSuccessAt: t.lastSuccessAt, lastError: t.lastError, backfillDaysDone: t.backfillDaysDone, backfillDaysTotal: t.backfillDaysTotal })
+    .from(t)
+    .where(eq(t.userId, ctx.userId));
 }
 
 /** The sync worker's paired-device check (sources/google/sync.ts `DEVICES_KEY`): account state, not a data type. */
@@ -64,8 +68,8 @@ const DEVICES_ROW = "paired-devices";
  * "not_linked": the grant works but the Google account has no Google Health profile, so every type fails the same way.
  * "no_device": it has a profile but no paired Fitbit device, so every type imports nothing.
  */
-function authState(ctx: QueryCtx, rows: SyncRow[]): "not_connected" | "not_linked" | "no_device" | "connected" | "revoked" {
-  const t = ctx.db.$client.prepare("select revoked_at revokedAt from oauth_tokens where id = 1").get() as { revokedAt: number | null } | undefined;
+async function authState(ctx: QueryCtx, rows: SyncRow[]): Promise<"not_connected" | "not_linked" | "no_device" | "connected" | "revoked"> {
+  const [t] = await ctx.db.select({ revokedAt: oauthTokens.revokedAt }).from(oauthTokens).where(eq(oauthTokens.userId, ctx.userId));
   if (!t) return "not_connected";
   if (t.revokedAt != null) return "revoked";
   if (rows.some((r) => r.lastError?.includes("ACCOUNT_NOT_LINKED"))) return "not_linked";
@@ -98,12 +102,13 @@ function importProgress(all: SyncRow[]) {
 }
 
 /** Settings `/settings`: data source, auth, per-type sync status, backfill progress and the read-only profile. */
-export function getSettings(ctx: QueryCtx = defaultCtx()): SettingsVM {
+export async function getSettings(ctx: QueryCtx): Promise<SettingsVM> {
   const nowMs = ctx.now * 1000;
-  const rows = syncRows(ctx);
+  const rows = await syncRows(ctx);
   const statusOf = (last: number | null, error: string | null) =>
     error ? "error" : last == null ? "never" : nowMs - last * 1000 > STALE_MS ? "stale" : "ok";
-  const auth = authState(ctx, rows);
+  const auth = await authState(ctx, rows);
+  const needsPermissions = ctx.mode === "google" && (auth === "connected" || auth === "no_device") && (await missingScopes(ctx.db, ctx.userId)).length > 0;
   // Not linked is one account-level problem, said once in Data source, not on every row.
   const rowError = (e: string | null) => (e && auth !== "not_linked" ? syncErrorText(e) : null);
   const sync: SettingsVM["sync"] =
@@ -125,7 +130,7 @@ export function getSettings(ctx: QueryCtx = defaultCtx()): SettingsVM {
     source:
       ctx.mode === "demo"
         ? { label: "Demo data", status: "demo" }
-        : { label: "Google Health", status: auth, needsPermissions: (auth === "connected" || auth === "no_device") && missingScopes(ctx.db).length > 0 },
+        : { label: "Google Health", status: auth, needsPermissions },
     import: ctx.mode === "google" && auth === "connected" ? importProgress(rows) : null,
     sync,
     profile: {
@@ -143,13 +148,23 @@ export function getSettings(ctx: QueryCtx = defaultCtx()): SettingsVM {
 }
 
 /** More `/more`. */
-export function getMore(ctx: QueryCtx = defaultCtx()): MoreVM {
-  const c = ctx.db.$client;
-  const tags = c.prepare("select count(*) total, coalesce(sum(hidden = 0), 0) shown from journal_tags").get() as { total: number; shown: number };
+export async function getMore(ctx: QueryCtx): Promise<MoreVM> {
+  const [[tags], latestWeek, latestMonth, [reportCount]] = await Promise.all([
+    ctx.db
+      .select({ total: count(), shown: sql<number>`count(*) filter (where not ${journalTags.hidden})` })
+      .from(journalTags)
+      .where(eq(journalTags.userId, ctx.userId)),
+    latestReport(ctx, "week"),
+    latestReport(ctx, "month"),
+    ctx.db
+      .select({ n: count() })
+      .from(reports)
+      .where(and(eq(reports.userId, ctx.userId), sql`(${reports.data}->>'days')::numeric > 0`)),
+  ]);
   return {
-    latestWeek: latestReport(ctx, "week"),
-    latestMonth: latestReport(ctx, "month"),
-    reportCount: c.prepare("select count(*) from reports where json_extract(data, '$.days') > 0").pluck().get() as number,
+    latestWeek,
+    latestMonth,
+    reportCount: reportCount.n,
     behaviours: { shown: tags.shown, total: tags.total },
     mode: ctx.mode,
     version: APP_VERSION,
@@ -158,14 +173,20 @@ export function getMore(ctx: QueryCtx = defaultCtx()): MoreVM {
 }
 
 /** Your data `/more/data`: what each export holds. */
-export function getYourData(ctx: QueryCtx = defaultCtx()): YourDataVM {
-  const c = ctx.db.$client;
-  const first = firstDay(ctx);
+export async function getYourData(ctx: QueryCtx): Promise<YourDataVM> {
   const today = todayOf(ctx);
+  const [first, [days], [answers]] = await Promise.all([
+    firstDay(ctx),
+    ctx.db
+      .select({ n: count() })
+      .from(dailyScores)
+      .where(and(eq(dailyScores.userId, ctx.userId), lte(dailyScores.day, today))),
+    ctx.db.select({ n: count() }).from(journalEntries).where(eq(journalEntries.userId, ctx.userId)),
+  ]);
   return {
     first,
-    days: first ? (c.prepare("select count(*) from daily_scores where day <= ?").pluck().get(today) as number) : 0,
-    answers: c.prepare("select count(*) from journal_entries").pluck().get() as number,
+    days: first ? days.n : 0,
+    answers: answers.n,
     mode: ctx.mode,
   };
 }
@@ -177,15 +198,19 @@ const STREAK_TODAY_MIN = 6 * 60;
  * Consecutive worn days (spec §4.3, I4): the reference app's "continuous data" streak. A day is worn when it has any
  * heart rate, the same rule that keeps `band_not_worn` off its Strain. Null when the streak is 0.
  */
-export function getWearStreak(ctx: QueryCtx = defaultCtx()): { days: number; asOf: string } | null {
+export async function getWearStreak(ctx: QueryCtx): Promise<{ days: number; asOf: string } | null> {
   const today = todayOf(ctx);
-  const rows = ctx.db.$client
-    .prepare(
-      `select day, coalesce(json_extract(strain, '$.hrCount'), 0) hr,
-         coalesce(json_extract(strain, '$.hrMinutesAm'), 0) + coalesce(json_extract(strain, '$.hrMinutesPm'), 0) minutes
-       from daily_scores where day <= ? order by day desc`,
-    )
-    .iterate(today) as Iterable<{ day: string; hr: number; minutes: number }>;
+  const s = dailyScores;
+  // ponytail: reads every scored day to find the first gap; page by a few hundred days if histories grow long.
+  const rows = await ctx.db
+    .select({
+      day: s.day,
+      hr: sql<number>`coalesce((${s.strain}->>'hrCount')::numeric, 0)`.mapWith(Number),
+      minutes: sql<number>`coalesce((${s.strain}->>'hrMinutesAm')::numeric, 0) + coalesce((${s.strain}->>'hrMinutesPm')::numeric, 0)`.mapWith(Number),
+    })
+    .from(s)
+    .where(and(eq(s.userId, ctx.userId), lte(s.day, today)))
+    .orderBy(desc(s.day));
   let expected = today;
   let asOf: string | null = null;
   let days = 0;
@@ -202,11 +227,11 @@ export function getWearStreak(ctx: QueryCtx = defaultCtx()): { days: number; asO
 }
 
 /** The AppShell's ShellStatus (top bar, sync dot, demo chip, ConnectionBanner). */
-/** True while the sync worker is mid-run (read off its global, so queries don't import the worker and its sources). */
-const workerRunning = () => !!(globalThis as { __pulseWorker?: { state?: { running?: boolean } } }).__pulseWorker?.state?.running
+/** True while the sync worker is mid-run for this user (read off its global, so queries don't import the worker and its sources). */
+const workerRunning = (userId: number) => !!(globalThis as { __pulseWorker?: { isRunning?(userId: number): boolean } }).__pulseWorker?.isRunning?.(userId);
 
-export function getShellStatus(ctx: QueryCtx = defaultCtx()): ShellStatusVM {
-  const all = syncRows(ctx);
+export async function getShellStatus(ctx: QueryCtx): Promise<ShellStatusVM> {
+  const [all, first, streak] = await Promise.all([syncRows(ctx), firstDay(ctx), getWearStreak(ctx)]);
   // The device check is account state (connection below), not a sync that succeeded or failed.
   // Core types only: an optional type, or a retired job's leftover row (rhr/hrv personal ranges), never turns the dot red.
   const rows = all.filter((r) => (ctx.mode === "demo" ? r.type === "seed" : CORE_TYPES.has(r.type)));
@@ -214,9 +239,8 @@ export function getShellStatus(ctx: QueryCtx = defaultCtx()): ShellStatusVM {
   const lastSuccessAt = successes.length ? Math.max(...successes) * 1000 : null;
   const stale = lastSuccessAt == null || ctx.now * 1000 - lastSuccessAt > STALE_MS;
   const error = rows.some((r) => r.lastError);
-  const auth = ctx.mode === "google" ? authState(ctx, all) : "connected";
+  const auth = ctx.mode === "google" ? await authState(ctx, all) : "connected";
   const progress = ctx.mode === "google" && auth === "connected" ? importProgress(rows) : null;
-  const first = firstDay(ctx);
   const connection: ShellStatusVM["connection"] =
     ctx.mode === "demo"
       ? "connected"
@@ -231,12 +255,12 @@ export function getShellStatus(ctx: QueryCtx = defaultCtx()): ShellStatusVM {
               : "connected";
   return {
     mode: ctx.mode,
-    sync: { state: workerRunning() ? "syncing" : error ? "error" : stale ? "stale" : "ok", lastSuccessAt },
+    sync: { state: workerRunning(ctx.userId) ? "syncing" : error ? "error" : stale ? "stale" : "ok", lastSuccessAt },
     connection,
     ...(progress && { importProgress: progress }),
     today: todayOf(ctx),
     ...(first && { firstDay: first }),
     timeZone: ctx.timeZone,
-    streak: getWearStreak(ctx),
+    streak,
   };
 }

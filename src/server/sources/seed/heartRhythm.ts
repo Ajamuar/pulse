@@ -14,14 +14,14 @@ const RECORDS = [
 ] as const;
 
 /** Inserts the records that have happened by `now` (unix seconds); returns the rows written. */
-export function seedHeartRhythm(db: Db, anchor: string, timeZone: string, now: number): number {
-  let n = 0;
-  for (const r of RECORDS) {
+export async function seedHeartRhythm(db: Db, userId: number, anchor: string, timeZone: string, now: number): Promise<number> {
+  const rows = RECORDS.flatMap((r) => {
     const ts = localMidnight(addDays(anchor, r.i), timeZone) + Math.round(r.h * 60) * 60;
-    if (ts > now) continue;
+    if (ts > now) return [];
     // A notification covers the windows it analysed: about two hours here.
     const data = r.kind === "irn" ? { ...r.data, endTs: ts + 2 * 3600 } : r.data;
-    n += db.insert(healthRecords).values({ id: `seed-${r.kind}-${ts}`, kind: r.kind, ts, day: localDay(ts, timeZone), data }).onConflictDoNothing().run().changes;
-  }
-  return n;
+    return [{ userId, id: `seed-${r.kind}-${ts}`, kind: r.kind, ts, day: localDay(ts, timeZone), data }];
+  });
+  if (!rows.length) return 0;
+  return (await db.insert(healthRecords).values(rows).onConflictDoNothing().returning({ id: healthRecords.id })).length;
 }

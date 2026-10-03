@@ -2,9 +2,10 @@ import Link from "next/link"
 import { connection } from "next/server"
 import { Archive, BookOpen, CalendarDays, CalendarRange, ChartLine, ChevronRight, Database, ListChecks } from "lucide-react"
 import { formatDay, rangeLabel } from "@/lib/format"
-import { currentSession } from "@/server/auth"
-import { avatarSrc, ownerName } from "@/server/avatar"
+import { currentUser, DEMO_EMAIL } from "@/server/auth"
+import { avatarSrc } from "@/server/avatar"
 import { getDb } from "@/server/db"
+import { userCtx } from "@/server/queries/common"
 import { getMore } from "@/server/queries/settings"
 import { LinkList, MORE_COLUMN, type LinkListRow } from "@/components/shells/LinkList"
 import { PageShell } from "@/components/shells/PageShell"
@@ -21,15 +22,17 @@ export const metadata = { title: "More" }
  * 768 px only; the rail and sidebar carry Settings from there).
  */
 async function AccountRow() {
-  const session = await currentSession()
-  const owner = session?.kind === "owner"
+  const user = await currentUser()
+  if (!user) return null
+  const avatar = await avatarSrc(getDb(), user.userId)
+  const demo = user.email === DEMO_EMAIL
   return (
     <Link href="/settings" className={cn(CARD_LINK, "flex min-h-18 items-center gap-3 px-4 py-3 md:hidden")}>
       <span className="size-11 shrink-0">
-        <UserAvatar src={avatarSrc(getDb())} />
+        <UserAvatar src={avatar} />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[15px] leading-[22px] font-semibold">{owner ? (ownerName(getDb()) ?? session.email) : "Demo"}</span>
+        <span className="block truncate text-[15px] leading-[22px] font-semibold">{demo ? "Demo" : user.name || user.username || user.email}</span>
         <span className="block text-[13px] leading-[18px] text-muted-foreground">Account, data source, profile</span>
       </span>
       <span className="sr-only">Settings</span>
@@ -41,7 +44,7 @@ async function AccountRow() {
 /** More `/more` (spec §7.14, U21): everything that isn't configuration. Settings stays Account, Data source, Profile. */
 export default async function MorePage() {
   await connection()
-  const vm = getMore()
+  const vm = await getMore(await userCtx())
   const reports: LinkListRow[] = [
     ...(vm.latestWeek
       ? [{ icon: CalendarRange, label: "Weekly report", aside: rangeLabel(vm.latestWeek.start, vm.latestWeek.end), href: `/reports/${vm.latestWeek.period}` }]
@@ -65,7 +68,7 @@ export default async function MorePage() {
           rows={[{ icon: ListChecks, label: "Behaviours", aside: `${vm.behaviours.shown} of ${vm.behaviours.total} shown`, href: "/more/behaviours" }]}
         />
         <LinkList title="Help" rows={[{ icon: BookOpen, label: "How Pulse works", aside: `${SCORE_DOCS.length} scores`, href: "/more/how-it-works" }]} />
-        <LinkList title="Your data" rows={[{ icon: Database, label: "Export and backup", aside: "CSV, JSON, SQLite", href: "/more/data" }]} />
+        <LinkList title="Your data" rows={[{ icon: Database, label: "Export", aside: "CSV, JSON", href: "/more/data" }]} />
         <About version={vm.version} scoringVersion={vm.scoringVersion} />
       </div>
     </PageShell>

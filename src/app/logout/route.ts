@@ -1,14 +1,15 @@
-import { NextResponse } from "next/server";
-import { sameOrigin, SESSION_COOKIE } from "@/server/session";
+import { getAuth } from "@/server/auth";
 
 /**
- * Sign out: drops the session cookie. The Google grant stays, so sync keeps running. The redirect is relative:
- * behind a tunnel request.url is the container's own address (http://0.0.0.0:3000), not the host the browser used.
+ * Sign out: ends the session and clears its cookie. The Google grant stays, so sync keeps running. A cross-site POST
+ * carries no session (the cookie is SameSite=Lax), so it signs out nobody. The redirect is relative: behind a tunnel
+ * request.url is the container's own address (http://0.0.0.0:3000), not the host the browser used.
  */
-export function POST(request: Request) {
-  // A cross-site page can't sign you out behind your back.
-  if (!sameOrigin(request)) return new Response("Cross-site request refused", { status: 403 });
-  const res = new NextResponse(null, { status: 303, headers: { Location: "/login" } });
-  res.cookies.delete(SESSION_COOKIE);
+export async function POST(request: Request) {
+  const out = await getAuth()
+    .api.signOut({ headers: request.headers, asResponse: true })
+    .catch(() => null);
+  const res = new Response(null, { status: 303, headers: { Location: "/login" } });
+  for (const c of out?.headers.getSetCookie() ?? []) res.headers.append("set-cookie", c);
   return res;
 }

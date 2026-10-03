@@ -1,11 +1,27 @@
 import type { Report } from "@/core/algorithms/reports";
-import { defaultCtx, finite, loadDays, none, ok, type QueryCtx, toStrain } from "./common";
+import { and, asc, desc, eq, gt, like, lt } from "drizzle-orm";
+import { journalTags, reports } from "../db/schema";
+import { finite, loadDays, none, ok, type QueryCtx, toStrain } from "./common";
 import { latestReport } from "./home";
 import type { DriverItem, KeyStat, Metric, ReportVM, StackedSegment } from "./types";
 
-const readReport = (ctx: QueryCtx, period: string) => {
-  const s = ctx.db.$client.prepare("select data from reports where period = ?").pluck().get(period) as string | undefined;
-  return s ? (JSON.parse(s) as Report) : null;
+const readReport = async (ctx: QueryCtx, period: string) => {
+  const [r] = await ctx.db
+    .select({ data: reports.data })
+    .from(reports)
+    .where(and(eq(reports.userId, ctx.userId), eq(reports.period, period)));
+  return r ? (r.data as Report) : null;
+};
+
+/** The nearest same-kind period before (`dir` -1) or after (+1) `period`, or null. */
+const neighbour = async (ctx: QueryCtx, pattern: string, period: string, dir: -1 | 1) => {
+  const [r] = await ctx.db
+    .select({ period: reports.period })
+    .from(reports)
+    .where(and(eq(reports.userId, ctx.userId), like(reports.period, pattern), dir < 0 ? lt(reports.period, period) : gt(reports.period, period)))
+    .orderBy(dir < 0 ? desc(reports.period) : asc(reports.period))
+    .limit(1);
+  return r?.period ?? null;
 };
 
 const BALANCE = {
@@ -16,16 +32,18 @@ const BALANCE = {
 } as const;
 
 /** Reports `/reports/[period]` (spec §7.13); null for a period with no data. */
-export function getReport(period: string, ctx: QueryCtx = defaultCtx()): ReportVM | null {
-  const r = readReport(ctx, period);
+export async function getReport(period: string, ctx: QueryCtx): Promise<ReportVM | null> {
+  const r = await readReport(ctx, period);
   if (!r || r.days === 0) return null;
   const kind = r.kind;
-  const like = kind === "week" ? "____-W__" : "____-__";
-  const c = ctx.db.$client;
-  const prev = (c.prepare("select period from reports where period like ? and period < ? order by period desc limit 1").pluck().get(like, period) as string | undefined) ?? null;
-  const next = (c.prepare("select period from reports where period like ? and period > ? order by period limit 1").pluck().get(like, period) as string | undefined) ?? null;
-  const prevReport = prev ? readReport(ctx, prev) : null;
-  const rows = loadDays(ctx, r.start, r.end);
+  const pattern = kind === "week" ? "____-W__" : "____-__";
+  const [prev, next, rows] = await Promise.all([neighbour(ctx, pattern, period, -1), neighbour(ctx, pattern, period, 1), loadDays(ctx, r.start, r.end)]);
+  const [prevReport, latestWeek, latestMonth, labels] = await Promise.all([
+    prev ? readReport(ctx, prev) : null,
+    latestReport(ctx, "week"),
+    latestReport(ctx, "month"),
+    tagLabels(ctx),
+  ]);
 
   const avg = (v: number | null): Metric<number> => (finite(v) ? ok(v) : none("no_data"));
   const word = kind === "week" ? "week" : "month";
@@ -65,7 +83,7 @@ export function getReport(period: string, ctx: QueryCtx = defaultCtx()): ReportV
 
   const impacts: DriverItem[] = r.topImpacts.map((t) => ({
     key: t.tag,
-    label: tagLabel(ctx, t.tag),
+    label: labels.get(t.tag) ?? t.tag,
     delta: t.effects.recovery.delta!,
     effect: t.effects.recovery.label === "positive" ? "positive" : "negative",
     yes: t.effects.recovery.nYes,
@@ -81,8 +99,8 @@ export function getReport(period: string, ctx: QueryCtx = defaultCtx()): ReportV
     partial: r.partial,
     prev,
     next,
-    latestWeek: latestReport(ctx, "week")?.period ?? null,
-    latestMonth: latestReport(ctx, "month")?.period ?? null,
+    latestWeek: latestWeek?.period ?? null,
+    latestMonth: latestMonth?.period ?? null,
     dials: [
       { key: "sleep", label: "Avg sleep", metric: avg(a.sleepPerf), delta: r.deltas.sleepPerf },
       { key: "recovery", label: "Avg recovery", metric: avg(a.recovery), delta: r.deltas.recovery },
@@ -111,8 +129,9 @@ export function getReport(period: string, ctx: QueryCtx = defaultCtx()): ReportV
   };
 }
 
-function tagLabel(ctx: QueryCtx, tag: string) {
-  return (ctx.db.$client.prepare("select label from journal_tags where tag = ?").pluck().get(tag) as string | undefined) ?? tag;
+async function tagLabels(ctx: QueryCtx) {
+  const rows = await ctx.db.select({ tag: journalTags.tag, label: journalTags.label }).from(journalTags).where(eq(journalTags.userId, ctx.userId));
+  return new Map(rows.map((r) => [r.tag, r.label]));
 }
 
 function insightOf(r: Report, word: string, inTarget: number, withTarget: number): string | null {
@@ -141,11 +160,15 @@ export type ReportListItem = {
 export type ReportArchiveVM = { weeks: ReportListItem[]; months: ReportListItem[] };
 
 /** Reports archive `/reports` (More): every week and month that has data, newest first. */
-export function getReportArchive(ctx: QueryCtx = defaultCtx()): ReportArchiveVM {
-  const rows = ctx.db.$client.prepare("select period, data from reports order by period desc").all() as { period: string; data: string }[];
+export async function getReportArchive(ctx: QueryCtx): Promise<ReportArchiveVM> {
+  const rows = await ctx.db
+    .select({ period: reports.period, data: reports.data })
+    .from(reports)
+    .where(eq(reports.userId, ctx.userId))
+    .orderBy(desc(reports.period));
   const out: ReportArchiveVM = { weeks: [], months: [] };
   for (const row of rows) {
-    const r = JSON.parse(row.data) as Report;
+    const r = row.data as Report;
     if (!r.days) continue;
     const a = r.averages;
     (r.kind === "week" ? out.weeks : out.months).push({

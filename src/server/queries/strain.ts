@@ -6,7 +6,6 @@ import {
   activityKind,
   type DayRow,
   dayStartOf,
-  defaultCtx,
   exercisesBetween,
   finite,
   hrReason,
@@ -17,7 +16,7 @@ import {
   minutePoints,
   ms,
   fromReason,
-  daySpans,
+  daySpansOf,
   none,
   ok,
   type QueryCtx,
@@ -36,10 +35,14 @@ export const STRAIN_EXTRAS = ["distance", "floors", "active_minutes", "azm", "ac
 const isStrength = (e: ExerciseRow) => activityKind(e.type) === "strength";
 
 /** Strain `/strain` for `day` (spec §7.3). */
-export function getStrain(day: string, ctx: QueryCtx = defaultCtx()): StrainVM {
+export async function getStrain(day: string, ctx: QueryCtx): Promise<StrainVM> {
   const today = todayOf(ctx);
   const isToday = day === today;
-  const rows = loadDays(ctx, addDays(day, -181), day);
+  const [rows, exs, hrSeries] = await Promise.all([
+    loadDays(ctx, addDays(day, -181), day),
+    exercisesBetween(ctx, addDays(day, -59), day),
+    loadSeries(ctx, day, "hr"),
+  ]);
   const row = rows.get(day);
   const strain = strainMetric(row);
   const t = row?.strainTarget;
@@ -50,7 +53,6 @@ export function getStrain(day: string, ctx: QueryCtx = defaultCtx()): StrainVM {
         ? fromReason(t.reason, isToday, t.nightsLeft)
         : ok({ low: t.low, high: t.high, estimate: t.coldStart, acwrRule: t.acwrRule });
 
-  const exs = exercisesBetween(ctx, addDays(day, -59), day);
   const strengthMin = (d: string) => exs.filter((e) => e.day === d && isStrength(e)).reduce((a, e) => a + (e.endTs - e.startTs) / 60, 0);
   // Google's all-day time in zones, as Pulse Age reads it; Pulse's own time-in-zone only on days without it.
   const zoneMin = (r: DayRow | undefined, google: number | null | undefined, from: number, to: number) =>
@@ -89,7 +91,7 @@ export function getStrain(day: string, ctx: QueryCtx = defaultCtx()): StrainVM {
     target,
     summary,
     coach: coach(strain, target.value, row),
-    hr: hrChart(ctx, row, day, isToday),
+    hr: hrChartOf(ctx, row, day, isToday, hrSeries, exs.filter((e) => e.day === day)),
     zones: zoneRows(row),
     maxHr: row?.s1?.maxHr ?? ctx.profile.maxHr,
     zoneNote: zoneNote(row, ctx),
@@ -147,16 +149,31 @@ export function zoneRows(row: DayRow | undefined, seconds = row?.s1?.zoneSeconds
 }
 
 /** Intraday HR for the day, or for [from, to) unix seconds (an activity window). */
-export function hrChart(ctx: QueryCtx, row: DayRow | undefined, day: string, isToday: boolean, from?: number, to?: number): Metric<HrChart> {
+export async function hrChart(ctx: QueryCtx, row: DayRow | undefined, day: string, isToday: boolean, from?: number, to?: number): Promise<Metric<HrChart>> {
+  if (!row?.s1 || row.s1.hrCount === 0) return none("band_not_worn");
+  const [series, exs] = await Promise.all([loadSeries(ctx, day, "hr"), exercisesBetween(ctx, day, day)]);
+  return hrChartOf(ctx, row, day, isToday, series, exs, from, to);
+}
+
+/** hrChart() with the day's "hr" series and exercises already loaded. */
+export function hrChartOf(
+  ctx: QueryCtx,
+  row: DayRow | undefined,
+  day: string,
+  isToday: boolean,
+  series: (number | null)[] | null,
+  dayExs: ExerciseRow[],
+  from?: number,
+  to?: number,
+): Metric<HrChart> {
   const s1 = row?.s1;
   if (!s1 || s1.hrCount === 0) return none("band_not_worn");
   const start = dayStartOf(ctx, day);
-  const series = loadSeries(ctx, day, "hr");
   const fromM = from == null ? 0 : Math.floor((from - start) / 60);
   const toM = to == null ? Infinity : Math.ceil((to - start) / 60);
   const points = minutePoints(series, start, from == null ? 2 : 1, fromM, toM);
   if (!points.some((p) => finite(p.v))) return none("insufficient_hr_data");
-  const spans = daySpans(ctx, row, day, start);
+  const spans = daySpansOf(row, start, dayExs);
   return ok({
     points,
     zones: zoneBounds(s1.zoneLower),

@@ -2,9 +2,6 @@ node_modules
 .next
 .git
 .env*
-data
-*.db
-*.db-*
 coverage
 test-results
 playwright-report

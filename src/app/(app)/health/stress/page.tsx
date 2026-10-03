@@ -102,8 +102,8 @@ function typicalLine(l: NonNullable<StressVM["levels"]["value"]>) {
 
 /** Stress Monitor `/health/stress?d=` (spec §7.9). */
 export default async function StressPage({ searchParams }: PageProps<"/health/stress">) {
-  const { d, today, timeZone } = await pageDay(searchParams as SearchParams, "/health/stress")
-  const vm = getStress(d)
+  const { d, today, timeZone, ctx } = await pageDay(searchParams as SearchParams, "/health/stress")
+  const vm = await getStress(d, ctx)
   const g = vm.gauge
 
   return (

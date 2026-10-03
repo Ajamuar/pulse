@@ -2,14 +2,15 @@ import { BODY_METRICS, DASHBOARD_DEFAULT, DASHBOARD_LABEL, DASHBOARD_METRICS, ty
 import { EXTRA_METRICS, type ExtraKey, type ExtraMetric } from "@/lib/extraMetrics";
 import { hmm } from "@/lib/format";
 import { metricHref } from "@/lib/url";
+import { and, desc, eq, gte, like, lte } from "drizzle-orm";
 import type { Db } from "../db";
+import { dashboardMetrics, hrDays, journalEntries, reports } from "../db/schema";
 import { addDays, localMinutes } from "../time";
 import { insightOf as recoveryInsight } from "./recovery";
 import { insightOf as sleepInsight } from "./sleep";
 import { coach } from "./strain";
 import {
   type DayRow,
-  defaultCtx,
   hrReason,
   loadDays,
   loadSeries,
@@ -26,7 +27,8 @@ import {
   sleepMetric,
   strainMetric,
   stressNow,
-  timeline,
+  exercisesBetween,
+  timelineOf,
   todayOf,
   vitalReason,
   dayStartOf,
@@ -45,11 +47,19 @@ export const VITAL_LABEL: Record<VitalKey, string> = {
 };
 
 /** Home `/` for `day` (spec §7.1). */
-export function getHome(day: string, ctx: QueryCtx = defaultCtx()): HomeVM {
+export async function getHome(day: string, ctx: QueryCtx): Promise<HomeVM> {
   const today = todayOf(ctx);
   const isToday = day === today;
   const stripStart = day < addDays(today, -29) ? day : addDays(today, -29);
-  const rows = loadDays(ctx, addDays(stripStart, -30), today);
+  const [rows, exs, keys, defaults, weeklyTeaser, journal, ebSeries] = await Promise.all([
+    loadDays(ctx, addDays(stripStart, -30), today),
+    exercisesBetween(ctx, day, day),
+    dashboardKeys(ctx.db, ctx.userId),
+    dashboardDefault(ctx.db, ctx.userId),
+    latestReport(ctx, "week"),
+    journalWeek(ctx, day),
+    loadSeries(ctx, day, "energy_bank"),
+  ]);
   const row = rows.get(day);
 
   const recovery = recoveryMetric(row, isToday);
@@ -77,16 +87,16 @@ export function getHome(day: string, ctx: QueryCtx = defaultCtx()): HomeVM {
     monitorAlert: monitorAlert(row),
     monitor: monitorSummary(row, isToday),
     stress: stressNow(row, isToday),
-    activities: { title: isToday ? "Today’s activities" : "Activities", items: timeline(ctx, row, day) },
-    energyBank: energyBankVM(ctx, row, day, isToday),
+    activities: { title: isToday ? "Today’s activities" : "Activities", items: timelineOf(row, day, exs) },
+    energyBank: energyBankVM(ctx, row, day, isToday, ebSeries),
     tonight: planVM(ctx, row, isToday),
-    keyStats: keyStats(rows, day, isToday, dashboardKeys(ctx.db)),
-    dashboard: { defaults: dashboardDefault(ctx.db), empty: emptyKeys(rows, day, isToday) },
+    keyStats: keyStats(rows, day, isToday, keys),
+    dashboard: { defaults, empty: emptyKeys(rows, day, isToday) },
     phone: phoneDay(rows, day, isToday),
-    weeklyTeaser: latestReport(ctx, "week"),
+    weeklyTeaser,
     outlook: outlookOf(ctx, row, { recovery, strain, target }, isToday),
     insights: isToday ? insightsOf(ctx, rows, row, day, { strain, target }) : [],
-    journalWeek: journalWeek(ctx, day),
+    journalWeek: journal,
     strainRecovery: Array.from({ length: 7 }, (_, k) => {
       const d = addDays(day, k - 6);
       const r = rows.get(d);
@@ -148,9 +158,15 @@ function insightsOf(ctx: QueryCtx, rows: Map<string, DayRow>, row: DayRow | unde
   return out;
 }
 
-function journalWeek(ctx: QueryCtx, day: string): HomeVM["journalWeek"] {
+async function journalWeek(ctx: QueryCtx, day: string): Promise<HomeVM["journalWeek"]> {
   const from = addDays(day, -6);
-  const done = new Set(ctx.db.$client.prepare("select distinct day from journal_entries where day >= ? and day <= ?").pluck().all(from, day) as string[]);
+  const j = journalEntries;
+  const done = new Set(
+    (await ctx.db
+      .selectDistinct({ day: j.day })
+      .from(j)
+      .where(and(eq(j.userId, ctx.userId), gte(j.day, from), lte(j.day, day)))).map((r) => r.day),
+  );
   return Array.from({ length: 7 }, (_, k) => {
     const d = addDays(from, k);
     return { day: d, done: done.has(d) };
@@ -177,14 +193,15 @@ function monitorSummary(row: DayRow | undefined, isToday: boolean): HomeVM["moni
   return ok({ inRange: hm.inRange, total: hm.vitals.length, flagged: hm.flagged });
 }
 
-export function energyBankVM(ctx: QueryCtx, row: DayRow | undefined, day: string, isToday: boolean): Metric<EnergyBankVM> {
+/** `series` is the day's stored energy_bank minute series (loadSeries), fetched by the caller alongside its other reads. */
+export function energyBankVM(ctx: QueryCtx, row: DayRow | undefined, day: string, isToday: boolean, series: (number | null)[] | null): Metric<EnergyBankVM> {
   const eb = row?.energyBank;
   if (!eb) return none(isToday ? "awaiting_sleep_sync" : "band_not_worn");
   if (eb.value == null) return none(nightReason(eb.reason, isToday), row?.recovery?.nightsLeft);
   const start = dayStartOf(ctx, day);
   const wakeM = Math.max(0, Math.floor((eb.wake - start) / 60));
   const untilM = Math.ceil((eb.until - start) / 60);
-  const curve = minutePoints(loadSeries(ctx, day, "energy_bank"), start, 5, wakeM, untilM).filter((p) => p.v != null);
+  const curve = minutePoints(series, start, 5, wakeM, untilM).filter((p) => p.v != null);
   return ok(
     {
       current: eb.value,
@@ -202,15 +219,17 @@ export function energyBankVM(ctx: QueryCtx, row: DayRow | undefined, day: string
 }
 
 /** True once any heart rate has synced: a phone-only account (no Fitbit band) has none. */
-const hasBand = (db: Db) => !!db.$client.prepare("select 1 from hr_samples limit 1").get();
+const hasBand = async (db: Db, userId: number) =>
+  (await db.select({ b: hrDays.bucket }).from(hrDays).where(eq(hrDays.userId, userId)).limit(1)).length > 0;
 
 /** My Dashboard's default list: the v1 rows, or the phone metrics for an account that has never synced heart rate (§11 CD2). */
-export const dashboardDefault = (db: Db): DashboardKey[] => (hasBand(db) ? DASHBOARD_DEFAULT : PHONE_DEFAULT);
+export const dashboardDefault = async (db: Db, userId: number): Promise<DashboardKey[]> => ((await hasBand(db, userId)) ? DASHBOARD_DEFAULT : PHONE_DEFAULT);
 
 /** My Dashboard's chosen metrics in order. Keys no longer in the catalogue are skipped; none chosen means the default list. */
-export function dashboardKeys(db: Db): DashboardKey[] {
-  const keys = (db.$client.prepare("select key from dashboard_metrics order by position").pluck().all() as string[]).filter(isDashboardKey);
-  return keys.length ? keys : dashboardDefault(db);
+export async function dashboardKeys(db: Db, userId: number): Promise<DashboardKey[]> {
+  const t = dashboardMetrics;
+  const keys = (await db.select({ key: t.key }).from(t).where(eq(t.userId, userId)).orderBy(t.position)).map((r) => r.key).filter(isDashboardKey);
+  return keys.length ? keys : dashboardDefault(db, userId);
 }
 
 type StatSpec = Omit<KeyStat, "key" | "label" | "average" | "sd"> & { pick: (r: DayRow) => number | null | undefined };
@@ -282,13 +301,16 @@ function phoneDay(rows: Map<string, DayRow>, day: string, isToday: boolean): Key
 }
 
 /** The latest complete week or month with a report. */
-export function latestReport(ctx: QueryCtx, kind: "week" | "month") {
-  const like = kind === "week" ? "____-W__" : "____-__";
-  const rows = ctx.db.$client
-    .prepare("select period, data from reports where period like ? order by period desc limit 3")
-    .all(like) as { period: string; data: string }[];
+export async function latestReport(ctx: QueryCtx, kind: "week" | "month") {
+  const pattern = kind === "week" ? "____-W__" : "____-__";
+  const rows = await ctx.db
+    .select({ period: reports.period, data: reports.data })
+    .from(reports)
+    .where(and(eq(reports.userId, ctx.userId), like(reports.period, pattern)))
+    .orderBy(desc(reports.period))
+    .limit(3);
   for (const r of rows) {
-    const d = JSON.parse(r.data) as { partial: boolean; start: string; end: string; days: number };
+    const d = r.data as { partial: boolean; start: string; end: string; days: number };
     if (!d.partial && d.days > 0) return { period: r.period, start: d.start, end: d.end };
   }
   return null;

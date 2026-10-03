@@ -3,7 +3,6 @@ import { sleepPerfCenter, sleepPerfScale } from "@/core/scoring/recovery";
 import { addDays } from "../time";
 import {
   type DayRow,
-  defaultCtx,
   finite,
   fromReason,
   loadDays,
@@ -61,10 +60,10 @@ export function driverItems(drivers: ChargeDriver[]): DriverItem[] {
 }
 
 /** Recovery `/recovery` for `day` (spec §7.2). */
-export function getRecovery(day: string, ctx: QueryCtx = defaultCtx()): RecoveryVM {
+export async function getRecovery(day: string, ctx: QueryCtx): Promise<RecoveryVM> {
   const today = todayOf(ctx);
   const isToday = day === today;
-  const rows = loadDays(ctx, addDays(day, -181), day);
+  const rows = await loadDays(ctx, addDays(day, -181), day);
   const row = rows.get(day);
   const recovery = recoveryMetric(row, isToday);
   const r = row?.recovery ?? null;

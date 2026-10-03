@@ -25,8 +25,8 @@ const FORMAT: Record<Contributor["key"], FormatKey> = { hrv: "int", rhr: "int", 
 
 /** Recovery `/recovery?d=` (spec §7.2). */
 export default async function RecoveryPage({ searchParams }: PageProps<"/recovery">) {
-  const { d, weekly } = await pageDay(searchParams as SearchParams, "/recovery")
-  const vm = getRecovery(d)
+  const { d, weekly, ctx } = await pageDay(searchParams as SearchParams, "/recovery")
+  const vm = await getRecovery(d, ctx)
   const r = vm.recovery
   const trend = trendProps(vm.trend)
 

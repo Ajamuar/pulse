@@ -1,7 +1,12 @@
 // Shared by the screen queries: the query context, batched day loaders and the Metric builders.
 import type { ExtraKey } from "@/lib/extraMetrics";
 import { getConfig } from "../config";
+import { and, eq, gte, lte, min } from "drizzle-orm";
 import { type Db, getDb } from "../db";
+import { dailyMetrics, dailyScores, dailyValues, exercises, intradaySeries } from "../db/schema";
+import { redirect } from "next/navigation";
+import { cache } from "react";
+import { currentUser } from "../auth";
 import { getProfile, type Profile } from "../profile";
 import type {
   EnergyBankRow,
@@ -25,6 +30,8 @@ import type { ActivityKind, DayPoint, Metric, MetricTag, ReasonCode, SleepPlanVM
 
 export type QueryCtx = {
   db: Db;
+  /** Whose data: every query filters on it. */
+  userId: number;
   timeZone: string;
   profile: Profile;
   mode: "demo" | "google";
@@ -32,13 +39,26 @@ export type QueryCtx = {
   now: number;
 };
 
-export function defaultCtx(): QueryCtx {
+/**
+ * The signed-in user's query context, for pages, actions and routes. A page without a user is sent to /login; the
+ * (app) layout sends a user without a profile to /onboarding before any screen query runs.
+ */
+export const userCtx = cache(async (userId?: number): Promise<QueryCtx> => {
+  const id = userId ?? (await currentUser())?.userId;
+  if (id === undefined) redirect("/login");
+  // Pages render alongside the (app) layout, so a page can get here before the layout's own onboarding redirect.
+  return ctxOf(getDb(), id).catch((e: unknown) => {
+    if (e instanceof Error && e.message === "profile_missing") redirect("/onboarding");
+    throw e;
+  });
+});
+
+/** The query context for a given user (the worker, tests). Throws `profile_missing` before onboarding. */
+export async function ctxOf(db: Db, userId: number): Promise<QueryCtx> {
   const cfg = getConfig();
-  const db = getDb();
-  const profile = getProfile(db);
-  // The proxy sends a signed-in visitor without a profile to /onboarding before any screen query runs.
+  const profile = await getProfile(db, userId);
   if (!profile) throw new Error("profile_missing");
-  return { db, timeZone: cfg.timeZone, profile, mode: cfg.googleOAuthEnabled ? "google" : "demo", now: Math.floor(Date.now() / 1000) };
+  return { db, userId, timeZone: profile.timeZone, profile, mode: cfg.googleOAuthEnabled ? "google" : "demo", now: Math.floor(Date.now() / 1000) };
 }
 
 export const todayOf = (ctx: QueryCtx) => localDay(ctx.now, ctx.timeZone);
@@ -83,57 +103,80 @@ export type DayRow = {
   extra: Partial<Record<ExtraKey, number>>;
 };
 
-const parse = <T>(s: string | null): T | null => (s == null ? null : (JSON.parse(s) as T));
-
-/** Every day in [from, to], one query per table; days without rows come back empty. */
-export function loadDays(ctx: QueryCtx, from: string, to: string): Map<string, DayRow> {
-  const c = ctx.db.$client;
-  type Raw = Record<string, string | null> & { day: string; session_rhr_bpm: number | null };
-  const scores = new Map(
-    (
-      c
-        .prepare(
-          `select day, strain, activities, session_rhr_bpm, recovery, sleep, training_load, strain_target, sleep_planner,
-             energy_bank, stress, health_monitor, healthspan, fitness
-           from daily_scores where day >= ? and day <= ?`,
-        )
-        .all(from, to) as Raw[]
-    ).map((r) => [r.day, r]),
-  );
-  const metrics = new Map(
-    (
-      c
-        .prepare(
-          `select day, hrv_ms hrvMs, rhr_bpm rhrBpm, resp_bpm respBpm, nightly_temp_c nightlyTempC, spo2_pct spo2Pct,
-             vo2max_daily vo2maxDaily, vo2max_run vo2maxRun, steps, calories, weight_kg weightKg, body_fat_pct bodyFatPct,
-             light_moderate_min lightModerateMin, vigorous_peak_min vigorousPeakMin, temp_sd_c tempSdC
-           from daily_metrics where day >= ? and day <= ?`,
-        )
-        .all(from, to) as MetricsRow[]
-    ).map((r) => [r.day, r]),
-  );
+/** Every day in [from, to], one query per table (in parallel); days without rows come back empty. */
+export async function loadDays(ctx: QueryCtx, from: string, to: string): Promise<Map<string, DayRow>> {
+  const { db, userId } = ctx;
+  const s = dailyScores;
+  const m = dailyMetrics;
+  const v = dailyValues;
+  const [scoreRows, metricRows, extraRows] = await Promise.all([
+    db
+      .select({
+        day: s.day,
+        strain: s.strain,
+        activities: s.activities,
+        sessionRhr: s.sessionRhrBpm,
+        recovery: s.recovery,
+        sleep: s.sleep,
+        trainingLoad: s.trainingLoad,
+        strainTarget: s.strainTarget,
+        sleepPlanner: s.sleepPlanner,
+        energyBank: s.energyBank,
+        stress: s.stress,
+        healthMonitor: s.healthMonitor,
+        healthspan: s.healthspan,
+        fitness: s.fitness,
+      })
+      .from(s)
+      .where(and(eq(s.userId, userId), gte(s.day, from), lte(s.day, to))),
+    db
+      .select({
+        day: m.day,
+        hrvMs: m.hrvMs,
+        rhrBpm: m.rhrBpm,
+        respBpm: m.respBpm,
+        nightlyTempC: m.nightlyTempC,
+        spo2Pct: m.spo2Pct,
+        vo2maxDaily: m.vo2maxDaily,
+        vo2maxRun: m.vo2maxRun,
+        steps: m.steps,
+        calories: m.calories,
+        weightKg: m.weightKg,
+        bodyFatPct: m.bodyFatPct,
+        lightModerateMin: m.lightModerateMin,
+        vigorousPeakMin: m.vigorousPeakMin,
+        tempSdC: m.tempSdC,
+      })
+      .from(m)
+      .where(and(eq(m.userId, userId), gte(m.day, from), lte(m.day, to))),
+    db
+      .select({ day: v.day, key: v.key, value: v.value })
+      .from(v)
+      .where(and(eq(v.userId, userId), gte(v.day, from), lte(v.day, to))),
+  ]);
+  const scores = new Map(scoreRows.map((r) => [r.day, r]));
+  const metrics = new Map<string, MetricsRow>(metricRows.map((r) => [r.day, r]));
   const extra = new Map<string, Partial<Record<ExtraKey, number>>>();
-  for (const r of c.prepare("select day, key, value from daily_values where day >= ? and day <= ?").all(from, to) as { day: string; key: ExtraKey; value: number }[]) {
-    extra.set(r.day, { ...extra.get(r.day), [r.key]: r.value });
-  }
+  // daily_values.day is text ('latest' sorts after every date, so the range already excludes it).
+  for (const r of extraRows) extra.set(r.day, { ...extra.get(r.day), [r.key as ExtraKey]: r.value });
   const out = new Map<string, DayRow>();
   for (let d = from; d <= to; d = addDays(d, 1)) {
     const r = scores.get(d);
     out.set(d, {
       day: d,
-      s1: parse(r?.strain ?? null),
-      activities: parse<Stage1Activity[]>(r?.activities ?? null) ?? [],
-      sessionRhr: r?.session_rhr_bpm ?? null,
-      recovery: parse(r?.recovery ?? null),
-      sleep: parse(r?.sleep ?? null),
-      trainingLoad: parse(r?.training_load ?? null),
-      strainTarget: parse(r?.strain_target ?? null),
-      sleepPlanner: parse(r?.sleep_planner ?? null),
-      energyBank: parse(r?.energy_bank ?? null),
-      stress: parse(r?.stress ?? null),
-      healthMonitor: parse(r?.health_monitor ?? null),
-      healthspan: parse(r?.healthspan ?? null),
-      fitness: parse(r?.fitness ?? null),
+      s1: (r?.strain as Stage1Day | null) ?? null,
+      activities: (r?.activities as Stage1Activity[] | null) ?? [],
+      sessionRhr: r?.sessionRhr ?? null,
+      recovery: (r?.recovery as RecoveryRow | null) ?? null,
+      sleep: (r?.sleep as SleepRow | null) ?? null,
+      trainingLoad: (r?.trainingLoad as TrainingLoadRow | null) ?? null,
+      strainTarget: (r?.strainTarget as StrainTargetRow | null) ?? null,
+      sleepPlanner: (r?.sleepPlanner as SleepPlannerRow | null) ?? null,
+      energyBank: (r?.energyBank as EnergyBankRow | null) ?? null,
+      stress: (r?.stress as StressRow | null) ?? null,
+      healthMonitor: (r?.healthMonitor as HealthMonitorRow | null) ?? null,
+      healthspan: (r?.healthspan as HealthspanRow | null) ?? null,
+      fitness: (r?.fitness as FitnessRow | null) ?? null,
       metrics: metrics.get(d) ?? null,
       extra: extra.get(d) ?? {},
     });
@@ -141,12 +184,19 @@ export function loadDays(ctx: QueryCtx, from: string, to: string): Map<string, D
   return out;
 }
 
-export function loadSeries(ctx: QueryCtx, day: string, kind: string): (number | null)[] | null {
-  const r = ctx.db.$client.prepare("select data from intraday_series where day = ? and kind = ?").pluck().get(day, kind) as string | undefined;
-  return r ? (JSON.parse(r) as (number | null)[]) : null;
+export async function loadSeries(ctx: QueryCtx, day: string, kind: string): Promise<(number | null)[] | null> {
+  const t = intradaySeries;
+  const [r] = await ctx.db
+    .select({ data: t.data })
+    .from(t)
+    .where(and(eq(t.userId, ctx.userId), eq(t.day, day), eq(t.kind, kind)));
+  return (r?.data as (number | null)[] | undefined) ?? null;
 }
 
-export const firstDay = (ctx: QueryCtx) => ctx.db.$client.prepare("select min(day) from daily_scores").pluck().get() as string | null;
+export async function firstDay(ctx: QueryCtx): Promise<string | null> {
+  const [r] = await ctx.db.select({ d: min(dailyScores.day) }).from(dailyScores).where(eq(dailyScores.userId, ctx.userId));
+  return r?.d ?? null;
+}
 
 // ── Metric builders ─────────────────────────────────────────────────────────
 
@@ -247,10 +297,13 @@ export const ACTIVITY_NAME: Record<ActivityKind, string> = {
 
 export type ExerciseRow = { id: string; day: string; startTs: number; endTs: number; type: string; name: string | null; calories: number | null; distanceM: number | null };
 
-export function exercisesBetween(ctx: QueryCtx, from: string, to: string): ExerciseRow[] {
-  return ctx.db.$client
-    .prepare("select id, day, start_ts startTs, end_ts endTs, type, name, calories, distance_m distanceM from exercises where day >= ? and day <= ? order by start_ts, id")
-    .all(from, to) as ExerciseRow[];
+export function exercisesBetween(ctx: QueryCtx, from: string, to: string): Promise<ExerciseRow[]> {
+  const e = exercises;
+  return ctx.db
+    .select({ id: e.id, day: e.day, startTs: e.startTs, endTs: e.endTs, type: e.type, name: e.name, calories: e.calories, distanceM: e.distanceM })
+    .from(e)
+    .where(and(eq(e.userId, ctx.userId), gte(e.day, from), lte(e.day, to)))
+    .orderBy(e.startTs, e.id);
 }
 
 export function activityItem(e: ExerciseRow, row: DayRow | undefined): Extract<TimelineItem, { kind: "activity" }> {
@@ -268,24 +321,34 @@ export function distanceOf(e: ExerciseRow): { distanceKm: number | null; paceS: 
 }
 
 /** The day's timeline: main sleep, naps and workouts, in time order. */
-export function timeline(ctx: QueryCtx, row: DayRow | undefined, day: string): TimelineItem[] {
+export async function timeline(ctx: QueryCtx, row: DayRow | undefined, day: string): Promise<TimelineItem[]> {
+  return timelineOf(row, day, await exercisesBetween(ctx, day, day));
+}
+
+/** timeline() with the day's exercises already loaded (lets callers fetch them alongside other reads). */
+export function timelineOf(row: DayRow | undefined, day: string, exs: ExerciseRow[]): TimelineItem[] {
   const items: TimelineItem[] = [];
   const s = row?.sleep;
   if (s?.main) items.push({ kind: "sleep", id: s.main.id, day, minutes: s.main.asleepMin, start: ms(s.main.start), end: ms(s.main.end) });
   for (const n of s?.naps ?? []) items.push({ kind: "nap", id: n.id, day, minutes: n.asleepMin, start: ms(n.start), end: ms(n.end) });
-  for (const e of exercisesBetween(ctx, day, day)) items.push(activityItem(e, row));
+  for (const e of exs) items.push(activityItem(e, row));
   return items.sort((a, b) => a.start - b.start);
 }
 
 const SPAN_LABEL: Record<ActivityKind, string> = { run: "Run", ride: "Ride", walk: "Walk", strength: "Strength", workout: "Workout" };
 
 /** Chart spans for the day: main sleep (clipped to `dayStart`), naps and workouts. */
-export function daySpans(ctx: QueryCtx, row: DayRow | undefined, day: string, dayStart: number): Span[] {
+export async function daySpans(ctx: QueryCtx, row: DayRow | undefined, day: string, dayStart: number): Promise<Span[]> {
+  return daySpansOf(row, dayStart, await exercisesBetween(ctx, day, day));
+}
+
+/** daySpans() with the day's exercises already loaded. */
+export function daySpansOf(row: DayRow | undefined, dayStart: number, exs: ExerciseRow[]): Span[] {
   const spans: Span[] = [];
   const s = row?.sleep;
   if (s?.main) spans.push({ kind: "sleep", label: "Sleep", start: ms(Math.max(s.main.start, dayStart)), end: ms(s.main.end) });
   for (const n of s?.naps ?? []) spans.push({ kind: "nap", label: "Nap", start: ms(n.start), end: ms(n.end) });
-  for (const e of exercisesBetween(ctx, day, day)) spans.push({ kind: "workout", label: SPAN_LABEL[activityKind(e.type)], start: ms(e.startTs), end: ms(e.endTs) });
+  for (const e of exs) spans.push({ kind: "workout", label: SPAN_LABEL[activityKind(e.type)], start: ms(e.startTs), end: ms(e.endTs) });
   return spans;
 }
 

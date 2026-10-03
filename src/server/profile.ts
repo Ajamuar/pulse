@@ -1,7 +1,9 @@
-// The person's profile (U19): one row in the database, written by onboarding and Settings › Profile.
+// The person's profile (U19): one row per user, written by onboarding and Settings › Profile.
 import { z } from "zod";
-import type { Db } from "./db";
-import { profile } from "./db/schema";
+import { isTimeZone } from "@/lib/timeZone";
+import { and, desc, eq, isNotNull } from "drizzle-orm";
+import { type Db, sql } from "./db";
+import { dailyMetrics, dailyValues, profile } from "./db/schema";
 import { wholeYears } from "./time";
 
 export type Profile = {
@@ -11,6 +13,8 @@ export type Profile = {
   /** "set": the user's own; "google": the top of Google's latest peak zone; "estimated": 208 − 0.7 × age. */
   maxHrSource: "set" | "google" | "estimated";
   heightCm: number | null;
+  /** IANA zone: the person's days start at local midnight there. */
+  timeZone: string;
 };
 
 /** What onboarding and Settings submit. Ages 13 to 100: under 13 Google accounts are restricted anyway. */
@@ -22,6 +26,7 @@ export const ProfileInput = z.object({
   sex: z.enum(["male", "female"], "Choose one"),
   maxHr: z.coerce.number().int().min(100, "Between 100 and 240").max(240, "Between 100 and 240").nullable(),
   heightCm: z.coerce.number().min(100, "Between 100 and 250 cm").max(250, "Between 100 and 250 cm").nullable(),
+  timeZone: z.string().refine(isTimeZone, "Choose a time zone"),
 });
 export type ProfileInput = z.infer<typeof ProfileInput>;
 
@@ -29,44 +34,61 @@ export type ProfileInput = z.infer<typeof ProfileInput>;
  * The stored profile with max HR resolved, or null before onboarding. Max HR: the user's own wins; else the top
  * of Google's latest PEAK zone (daily-heart-rate-zones); else Tanaka, 208 - 0.7 * age.
  */
-export function getProfile(db: Db, today = new Date().toISOString().slice(0, 10)): Profile | null {
-  const row = db.select().from(profile).get();
+export async function getProfile(db: Db, userId: number, today = new Date().toISOString().slice(0, 10)): Promise<Profile | null> {
+  const [row] = await db.select().from(profile).where(eq(profile.userId, userId));
   if (!row) return null;
-  const google = row.maxHr === null ? googleMaxHr(db) : null;
+  const [google, height] = await Promise.all([row.maxHr === null ? googleMaxHr(db, userId) : null, row.heightCm ?? googleHeight(db, userId)]);
   return {
     birthDate: row.birthDate,
     sex: row.sex,
     maxHr: row.maxHr ?? google ?? Math.round(208 - 0.7 * wholeYears(row.birthDate, today)),
     maxHrSource: row.maxHr !== null ? "set" : google !== null ? "google" : "estimated",
     // The user's own height wins; else the latest from Google (sync's `height` job).
-    heightCm: row.heightCm ?? googleHeight(db),
+    heightCm: height,
+    timeZone: row.timeZone,
   };
 }
 
 /** The peak maximum of the newest Google zones (daily_metrics.hr_zones' last number). */
-const googleMaxHr = (db: Db) => {
-  const z = db.$client.prepare("select hr_zones from daily_metrics where hr_zones is not null order by day desc limit 1").pluck().get() as string | undefined;
-  const top = z ? (JSON.parse(z) as number[])[4] : undefined;
+const googleMaxHr = async (db: Db, userId: number) => {
+  const [r] = await db
+    .select({ z: dailyMetrics.hrZones })
+    .from(dailyMetrics)
+    .where(and(eq(dailyMetrics.userId, userId), isNotNull(dailyMetrics.hrZones)))
+    .orderBy(desc(dailyMetrics.day))
+    .limit(1);
+  const top = r?.z?.[4];
   return top != null && top >= 100 && top <= 240 ? top : null; // the range Settings accepts
 };
 
-const googleHeight = (db: Db) =>
-  (db.$client.prepare("select value from daily_values where day = 'latest' and key = 'height_cm'").pluck().get() as number | undefined) ?? null;
+const googleHeight = async (db: Db, userId: number) => {
+  const [r] = await db
+    .select({ v: dailyValues.value })
+    .from(dailyValues)
+    .where(and(eq(dailyValues.userId, userId), eq(dailyValues.day, "latest"), eq(dailyValues.key, "height_cm")));
+  return r?.v ?? null;
+};
 
 /**
  * Saves the profile and marks every day for recompute: zones, Strain, Pulse Age and fitness level all
  * depend on age, sex and max HR. Returns true when anything changed.
  */
-export function saveProfile(db: Db, input: ProfileInput, now = Math.floor(Date.now() / 1000)): boolean {
+export async function saveProfile(db: Db, userId: number, input: ProfileInput, now = Math.floor(Date.now() / 1000)): Promise<boolean> {
   const row = { ...input, updatedAt: now };
-  const before = db.select().from(profile).get();
-  if (before && before.birthDate === row.birthDate && before.sex === row.sex && before.maxHr === row.maxHr && before.heightCm === row.heightCm) {
+  const [before] = await db.select().from(profile).where(eq(profile.userId, userId));
+  if (before && before.birthDate === row.birthDate && before.sex === row.sex && before.maxHr === row.maxHr && before.heightCm === row.heightCm && before.timeZone === row.timeZone) {
     return false;
   }
-  const c = db.$client;
-  c.transaction(() => {
-    db.insert(profile).values({ id: 1, ...row }).onConflictDoUpdate({ target: profile.id, set: row }).run();
-    c.prepare("insert or ignore into intraday_dirty (day) select distinct day from daily_metrics").run();
-  })();
+  await db.transaction(async (tx) => {
+    await tx.insert(profile).values({ userId, ...row }).onConflictDoUpdate({ target: profile.userId, set: row });
+    await tx.execute(sql`insert into intraday_dirty (user_id, day)
+      select distinct user_id, day from daily_metrics where user_id = ${userId} on conflict do nothing`);
+  });
   return true;
+}
+
+/** The user's time zone alone (one cheap read), or null before onboarding. */
+export async function userTimeZone(db: Db, userId: number): Promise<string | null> {
+  const [r] = await db.select({ tz: profile.timeZone }).from(profile).where(eq(profile.userId, userId));
+  return r?.tz ?? null;
 }

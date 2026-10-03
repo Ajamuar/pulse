@@ -1,7 +1,8 @@
 import { createHash } from "node:crypto";
 import { gunzipSync } from "node:zlib";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { openDb, type Db } from "../../db";
+import type { Db } from "../../db";
+import { freshDb, USER } from "../../testing";
 import { oauthTokens, rawPayloads } from "../../db/schema";
 import { DATA_TYPE_IDS, DATA_TYPES } from "./catalogue";
 import { localDay, localMidnight } from "../../time";
@@ -18,12 +19,12 @@ const json = (body: unknown, status = 200, headers?: HeadersInit) =>
   new Response(JSON.stringify(body), { status, headers });
 
 let db: Db;
-beforeEach(() => {
-  db = openDb(":memory:");
-  db.insert(oauthTokens)
-    .values({ id: 1, accessToken: "at-1", refreshToken: "rt-1", expiresAt: T + 3600, scope: "s", updatedAt: T })
-    .run();
+beforeEach(async () => {
+  db = await freshDb();
+  await db.insert(oauthTokens).values({ userId: USER, accessToken: "at-1", refreshToken: "rt-1", expiresAt: T + 3600, scope: "s", updatedAt: T });
 });
+const raws = () => db.select().from(rawPayloads).orderBy(rawPayloads.id);
+const token = async () => (await db.select().from(oauthTokens))[0];
 
 type Handler = (url: URL, init: RequestInit) => Response | Promise<Response>;
 
@@ -39,6 +40,7 @@ function setup(api: Handler, token: Handler = () => json({ access_token: "at-2",
   }) as unknown as typeof globalThis.fetch;
   const client = createGoogleClient({
     db,
+    userId: USER,
     google,
     timeZone: TZ,
     fetch,
@@ -161,7 +163,7 @@ describe("list", () => {
     const { client, apiCalls } = setup(() => pages.shift()!);
     expect(await client.list("heart-rate", lm("2026-09-10"), lm("2026-09-11"))).toEqual([{ n: 1 }, { n: 2 }, { n: 3 }]);
     expect(apiCalls().map((c) => c.url.searchParams.get("pageToken"))).toEqual([null, "p2"]);
-    expect(db.select().from(rawPayloads).all()).toHaveLength(2);
+    expect((await raws())).toHaveLength(2);
   });
 
   it("a 30-day heart-rate request is three windows, 14 + 14 + 2 days", async () => {
@@ -186,7 +188,7 @@ describe("list", () => {
     const { client } = setup(() => json({ dataPoints: [{ n: 1 }] }));
     await client.list("sleep", lm("2026-09-10"), lm("2026-09-10") + 3600);
     await client.list("sleep", lm("2026-09-10"), lm("2026-09-10") + 7200);
-    const rows = db.select().from(rawPayloads).all();
+    const rows = await raws();
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ type: "sleep", rangeStart: lm("2026-09-10"), rangeEnd: lm("2026-09-11") });
   });
@@ -207,7 +209,7 @@ describe("list", () => {
     const err = await caught(client.list("steps", lm("2026-09-10"), lm("2026-09-11")));
     expect(err.code).toBe("bad_response");
     expect(err.message).not.toContain("SECRET");
-    expect(db.select().from(rawPayloads).all()).toHaveLength(1);
+    expect((await raws())).toHaveLength(1);
 
     const { client: c2 } = setup(() => json({ dataPoints: { not: "an array" } }));
     expect((await caught(c2.list("steps", lm("2026-09-10"), lm("2026-09-11")))).code).toBe("bad_response");
@@ -217,32 +219,32 @@ describe("list", () => {
 describe("raw archive", () => {
   const page = { type: "sleep", rangeStart: 1, rangeEnd: 2, fetchedAt: 3 };
 
-  it("storing the same body twice inserts one row; a changed body for the same window inserts a second", () => {
-    expect(archivePage(db, { ...page, body: '{"a":1}' })).toBe(true);
-    expect(archivePage(db, { ...page, body: '{"a":1}', fetchedAt: 9 })).toBe(false);
-    expect(db.select().from(rawPayloads).all()).toHaveLength(1);
-    expect(archivePage(db, { ...page, body: '{"a":2}' })).toBe(true);
-    expect(db.select().from(rawPayloads).all()).toHaveLength(2);
+  it("storing the same body twice inserts one row; a changed body for the same window inserts a second", async () => {
+    expect(await archivePage(db, USER, { ...page, body: '{"a":1}' })).toBe(true);
+    expect(await archivePage(db, USER, { ...page, body: '{"a":1}', fetchedAt: 9 })).toBe(false);
+    expect((await raws())).toHaveLength(1);
+    expect(await archivePage(db, USER, { ...page, body: '{"a":2}' })).toBe(true);
+    expect((await raws())).toHaveLength(2);
   });
 
-  it("stores the body gzipped with its sha256", () => {
-    archivePage(db, { ...page, body: '{"a":1}' });
-    const [r] = db.select().from(rawPayloads).all();
+  it("stores the body gzipped with its sha256", async () => {
+    await archivePage(db, USER, { ...page, body: '{"a":1}' });
+    const [r] = await raws();
     expect(gunzipSync(r.gzBody).toString()).toBe('{"a":1}');
     expect(r.bodyHash).toBe(createHash("sha256").update('{"a":1}').digest("hex"));
     expect(r.fetchedAt).toBe(3);
   });
 
-  it("prunes pages fetched more than RAW_RETENTION_DAYS ago and keeps the rest", () => {
+  it("prunes pages fetched more than RAW_RETENTION_DAYS ago and keeps the rest", async () => {
     const now = 100 * 86_400;
     const edge = now - RAW_RETENTION_DAYS * 86_400;
-    archivePage(db, { ...page, body: "old", fetchedAt: edge - 1 });
-    archivePage(db, { ...page, body: "edge", fetchedAt: edge });
-    archivePage(db, { ...page, body: "new", fetchedAt: now });
-    expect(pruneRawPayloads(db, now)).toBe(1);
-    expect(db.select().from(rawPayloads).all().map((r) => gunzipSync(r.gzBody).toString())).toEqual(["edge", "new"]);
+    await archivePage(db, USER, { ...page, body: "old", fetchedAt: edge - 1 });
+    await archivePage(db, USER, { ...page, body: "edge", fetchedAt: edge });
+    await archivePage(db, USER, { ...page, body: "new", fetchedAt: now });
+    expect(await pruneRawPayloads(db, USER, now)).toBe(1);
+    expect((await raws()).map((r) => gunzipSync(r.gzBody).toString())).toEqual(["edge", "new"]);
     // A pruned page fetched again is archived again.
-    expect(archivePage(db, { ...page, body: "old", fetchedAt: now })).toBe(true);
+    expect(await archivePage(db, USER, { ...page, body: "old", fetchedAt: now })).toBe(true);
   });
 });
 
@@ -295,14 +297,14 @@ describe("retries and auth", () => {
     expect(await client.list("steps", ...range)).toEqual([{ n: 1 }]);
     expect(tokenCalls()).toHaveLength(1);
     expect(apiCalls().map(auth)).toEqual(["Bearer at-1", "Bearer at-2"]);
-    expect(db.select().from(oauthTokens).get()?.accessToken).toBe("at-2");
+    expect((await token())?.accessToken).toBe("at-2");
   });
 
   it("a second 401 gives auth_revoked, marks the token revoked, and stops further requests", async () => {
     const { client, apiCalls, tokenCalls } = setup(() => json({}, 401));
     expect(await caught(client.list("steps", ...range))).toMatchObject({ code: "auth_revoked", status: 401 });
     expect(tokenCalls()).toHaveLength(1);
-    expect(db.select().from(oauthTokens).get()?.revokedAt).toBe(T);
+    expect((await token())?.revokedAt).toBe(T);
     expect((await caught(client.list("steps", ...range))).code).toBe("auth_revoked");
     expect(apiCalls()).toHaveLength(2);
   });
@@ -313,11 +315,11 @@ describe("retries and auth", () => {
       () => json({ error: "invalid_grant" }, 400),
     );
     expect((await caught(client.list("steps", ...range))).code).toBe("auth_revoked");
-    expect(db.select().from(oauthTokens).get()?.revokedAt).toBe(T);
+    expect((await token())?.revokedAt).toBe(T);
   });
 
   it("an expired token is refreshed before the request", async () => {
-    db.update(oauthTokens).set({ expiresAt: T - 1 }).run();
+    await db.update(oauthTokens).set({ expiresAt: T - 1 });
     const { client, apiCalls } = setup(() => json({}));
     await client.list("steps", ...range);
     expect(apiCalls().map(auth)).toEqual(["Bearer at-2"]);
@@ -371,7 +373,7 @@ describe("dailyRollUp", () => {
       { start: d(15), end: d(29) },
       { start: d(29), end: d(1, 10) },
     ]);
-    const rows = db.select().from(rawPayloads).all();
+    const rows = await raws();
     expect(rows.map((r) => [r.rangeStart, r.rangeEnd])).toEqual([
       [lm("2026-09-01"), lm("2026-09-15")],
       [lm("2026-09-15"), lm("2026-09-29")],
@@ -401,7 +403,7 @@ describe("writes", () => {
     expect((c.init.headers as Record<string, string>)["content-type"]).toBe("application/json");
     expect(JSON.parse(String(c.init.body))).toEqual(point);
     expect(auth(c)).toBe("Bearer at-1");
-    expect(db.select().from(rawPayloads).all()).toHaveLength(0); // writes are not archived
+    expect((await raws())).toHaveLength(0); // writes are not archived
   });
 
   it("an unfinished operation has no name yet; a failed one throws its code", async () => {

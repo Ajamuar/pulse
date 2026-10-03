@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { openDb, type Db } from "../../db";
+import { eq } from "drizzle-orm";
+import type { Db } from "../../db";
 import { oauthTokens } from "../../db/schema";
-import { authUrl, consumeState, createState, exchangeCode, getAccessToken, GoogleError, LOGIN_SCOPES, missingScopes, revokeGrant, SCOPES } from "./oauth";
+import { addUser, freshDb, USER } from "../../testing";
+import { authUrl, consumeState, createState, exchangeCode, getAccessToken, GoogleError, hasGrant, LOGIN_SCOPES, missingScopes, revokeGrant, SCOPES } from "./oauth";
 
 const google = { clientId: "cid", clientSecret: "csecret" };
 const NOW = Date.parse("2026-10-02T06:00:00Z");
@@ -17,15 +19,12 @@ const sent = (f: { mock: { calls: unknown[][] } }, i = 0) =>
   Object.fromEntries(new URLSearchParams(String((f.mock.calls[i][1] as RequestInit).body)));
 
 let db: Db;
-const row = () => db.select().from(oauthTokens).get();
-const seed = (o: Partial<typeof oauthTokens.$inferInsert> = {}) =>
-  db
-    .insert(oauthTokens)
-    .values({ id: 1, accessToken: "at-old", refreshToken: "rt-old", expiresAt: T + 3600, scope: "s", updatedAt: T, ...o })
-    .run();
+const row = async (userId = USER) => (await db.select().from(oauthTokens).where(eq(oauthTokens.userId, userId)))[0];
+const seed = async (o: Partial<typeof oauthTokens.$inferInsert> = {}) =>
+  db.insert(oauthTokens).values({ userId: USER, accessToken: "at-old", refreshToken: "rt-old", expiresAt: T + 3600, scope: "s", updatedAt: T, ...o });
 
-beforeEach(() => {
-  db = openDb(":memory:");
+beforeEach(async () => {
+  db = await freshDb();
 });
 
 const expectGoogleError = async (p: Promise<unknown>, code: string) => {
@@ -60,31 +59,37 @@ describe("authUrl", () => {
 
 describe("state", () => {
   it("is random and valid exactly once", () => {
-    const s = createState(NOW);
+    const s = createState(1, NOW);
     expect(s).toMatch(/^[\w-]{43}$/);
-    expect(createState(NOW)).not.toBe(s);
-    expect(consumeState(s, NOW + 1000)).toBe(true);
-    expect(consumeState(s, NOW + 2000)).toBe(false);
+    expect(createState(1, NOW)).not.toBe(s);
+    expect(consumeState(s, 1, NOW + 1000)).toBe(true);
+    expect(consumeState(s, 1, NOW + 2000)).toBe(false);
+  });
+
+  it("is bound to the user who started the consent", () => {
+    const s = createState(1, NOW);
+    expect(consumeState(s, 2, NOW + 1000)).toBe(false);
+    expect(consumeState(s, 1, NOW + 1000)).toBe(false); // spent by the failed attempt
   });
 
   it("expires after 10 minutes", () => {
-    const fresh = createState(NOW);
-    const stale = createState(NOW);
-    expect(consumeState(fresh, NOW + 10 * 60_000 - 1)).toBe(true);
-    expect(consumeState(stale, NOW + 10 * 60_000)).toBe(false);
+    const fresh = createState(1, NOW);
+    const stale = createState(1, NOW);
+    expect(consumeState(fresh, 1, NOW + 10 * 60_000 - 1)).toBe(true);
+    expect(consumeState(stale, 1, NOW + 10 * 60_000)).toBe(false);
   });
 
   it("rejects missing, empty and unknown states", () => {
-    expect(consumeState(null)).toBe(false);
-    expect(consumeState("")).toBe(false);
-    expect(consumeState("forged")).toBe(false);
+    expect(consumeState(null, 1)).toBe(false);
+    expect(consumeState("", 1)).toBe(false);
+    expect(consumeState("forged", 1)).toBe(false);
   });
 });
 
 describe("exchangeCode", () => {
   /** `f` answers the token endpoint; the Google Health identity check answers `identity` (linked by default). */
   const exchange = (f: typeof globalThis.fetch, identity = () => json(200, { healthUserId: "u" })) =>
-    exchangeCode(db, {
+    exchangeCode(db, USER, {
       google,
       redirectUri: "https://p.example/oauth/callback",
       code: "c0de",
@@ -94,7 +99,7 @@ describe("exchangeCode", () => {
   const grant = (o: Record<string, unknown> = {}) =>
     json(200, { access_token: "at-1", refresh_token: "rt-1", expires_in: 3600, id_token: idToken(), ...o });
 
-  it("posts the code, stores the grant in the single row and returns the lowercased email", async () => {
+  it("posts the code, stores the grant in the user's row and returns the lowercased email", async () => {
     const f = tokenStub(grant({ expires_in: 3599, scope: "a b" }));
     expect(await exchange(f)).toEqual({ email: "me@example.com", picture: null, name: null });
     expect(sent(f)).toEqual({
@@ -104,36 +109,39 @@ describe("exchangeCode", () => {
       redirect_uri: "https://p.example/oauth/callback",
       grant_type: "authorization_code",
     });
-    expect(row()).toEqual({
-      id: 1,
+    expect(await row()).toEqual({
+      userId: USER,
       accessToken: "at-1",
       refreshToken: "rt-1",
       expiresAt: T + 3599,
       scope: "a b",
       revokedAt: null,
       updatedAt: T,
+      googleEmail: "me@example.com",
+      googleName: null,
+      googlePicture: null,
     });
   });
 
   it("reconnecting replaces the grant and clears a revocation", async () => {
-    seed({ revokedAt: T - 10 });
+    await seed({ revokedAt: T - 10 });
     await exchange(tokenStub(grant()));
-    expect(row()).toMatchObject({ accessToken: "at-1", refreshToken: "rt-1", revokedAt: null, scope: SCOPES.join(" ") });
-    expect(db.select().from(oauthTokens).all()).toHaveLength(1);
+    expect(await row()).toMatchObject({ accessToken: "at-1", refreshToken: "rt-1", revokedAt: null, scope: SCOPES.join(" ") });
+    expect(await db.select().from(oauthTokens)).toHaveLength(1);
   });
 
   it("without a refresh_token and no working grant stores nothing and surfaces auth_revoked", async () => {
-    seed({ revokedAt: T - 10 });
-    const before = row();
+    await seed({ revokedAt: T - 10 });
+    const before = await row();
     const err = await expectGoogleError(exchange(tokenStub(grant({ refresh_token: undefined }))), "auth_revoked");
     expect(err.message).not.toContain("at-1");
-    expect(row()).toEqual(before);
+    expect(await row()).toEqual(before);
   });
 
   it("without a refresh_token (sign-in, no consent screen) updates a working grant's access token only", async () => {
-    seed();
-    await exchange(tokenStub(grant({ refresh_token: undefined, expires_in: 100 })));
-    expect(row()).toMatchObject({ accessToken: "at-1", refreshToken: "rt-old", expiresAt: T + 100, revokedAt: null });
+    await seed();
+    await exchange(tokenStub(grant({ refresh_token: undefined, expires_in: 100, id_token: idToken({ name: "Ada" }) })));
+    expect(await row()).toMatchObject({ accessToken: "at-1", refreshToken: "rt-old", expiresAt: T + 100, revokedAt: null, googleEmail: "me@example.com", googleName: "Ada" });
   });
 
   it("returns the Google photo from the ID token, https only", async () => {
@@ -141,13 +149,14 @@ describe("exchangeCode", () => {
     expect((await exchange(tokenStub(grant({ id_token: idToken({ picture: pic }) })))).picture).toBe(pic);
     expect((await exchange(tokenStub(grant({ id_token: idToken({ picture: "javascript:alert(1)" }) })))).picture).toBeNull();
     expect((await exchange(tokenStub(grant({ id_token: idToken({ name: "  Ada Lovelace " }) })))).name).toBe("Ada Lovelace");
+    expect((await row())?.googleName).toBe("Ada Lovelace");
   });
 
   it("an account without a Google Health profile is refused, storing nothing", async () => {
     const notLinked = () =>
       json(400, { error: { status: "FAILED_PRECONDITION", details: [{ reason: "ACCOUNT_NOT_LINKED", metadata: { redirect_uri: "https://fitbit.google.com/auth/signup" } }] } });
     await expectGoogleError(exchange(tokenStub(grant()), notLinked), "account_not_linked");
-    expect(row()).toBeUndefined();
+    expect(await row()).toBeUndefined();
     // Any other identity failure (Google having a bad day) doesn't block connecting.
     expect((await exchange(tokenStub(grant()), () => json(503, {}))).email).toBe("me@example.com");
   });
@@ -156,7 +165,7 @@ describe("exchangeCode", () => {
     await expectGoogleError(exchange(tokenStub(grant({ id_token: idToken({ email_verified: false }) }))), "email_unverified");
     await expectGoogleError(exchange(tokenStub(grant({ id_token: undefined }))), "no_id_token");
     await expectGoogleError(exchange(tokenStub(grant({ id_token: idToken({ aud: "other" }) }))), "no_id_token");
-    expect(row()).toBeUndefined();
+    expect(await row()).toBeUndefined();
   });
 
   it("a rejected code surfaces Google's code but no body text, and stores nothing", async () => {
@@ -164,7 +173,7 @@ describe("exchangeCode", () => {
     const err = await expectGoogleError(exchange(tokenStub(json(400, body))), "invalid_grant");
     expect(err.status).toBe(400);
     expect(JSON.stringify(err) + err.message + err.stack).not.toContain("SECRET-DETAIL");
-    expect(row()).toBeUndefined();
+    expect(await row()).toBeUndefined();
   });
 
   it("a non-JSON error body falls back to the status", async () => {
@@ -175,72 +184,72 @@ describe("exchangeCode", () => {
 
 describe("revokeGrant", () => {
   it("revokes the refresh token at Google, then forgets the grant", async () => {
-    seed();
+    await seed();
     const f = tokenStub(new Response("", { status: 200 }));
-    await revokeGrant(db, { fetch: f });
+    await revokeGrant(db, USER, { fetch: f });
     expect(String(f.mock.calls[0][0])).toBe("https://oauth2.googleapis.com/revoke");
     expect(sent(f)).toEqual({ token: "rt-old" });
-    expect(row()).toBeUndefined();
+    expect(await row()).toBeUndefined();
   });
 
   it("an already-invalid token (400) still forgets the grant; a 5xx keeps it for a retry", async () => {
-    seed();
-    await expectGoogleError(revokeGrant(db, { fetch: tokenStub(new Response("", { status: 503 })) }), "http_503");
-    expect(row()).toBeDefined();
-    await revokeGrant(db, { fetch: tokenStub(new Response("", { status: 400 })) });
-    expect(row()).toBeUndefined();
+    await seed();
+    await expectGoogleError(revokeGrant(db, USER, { fetch: tokenStub(new Response("", { status: 503 })) }), "http_503");
+    expect(await row()).toBeDefined();
+    await revokeGrant(db, USER, { fetch: tokenStub(new Response("", { status: 400 })) });
+    expect(await row()).toBeUndefined();
   });
 });
 
 describe("getAccessToken", () => {
   const get = (f: typeof fetch, o: { force?: boolean; now?: number } = {}) =>
-    getAccessToken(db, google, { fetch: f, now: () => o.now ?? NOW, force: o.force });
+    getAccessToken(db, USER, google, { fetch: f, now: () => o.now ?? NOW, force: o.force });
 
   it("returns the stored token while valid, without a request", async () => {
-    seed();
+    await seed();
     const f = tokenStub();
     expect(await get(f)).toBe("at-old");
     expect(f.mock.calls).toHaveLength(0);
   });
 
   it("refreshes within a minute of expiry and stores the new token, keeping an unrotated refresh token", async () => {
-    seed({ expiresAt: T + 59 });
+    await seed({ expiresAt: T + 59 });
     const f = tokenStub(json(200, { access_token: "at-new", expires_in: 3600 }));
     expect(await get(f)).toBe("at-new");
     expect(sent(f)).toEqual({ client_id: "cid", client_secret: "csecret", refresh_token: "rt-old", grant_type: "refresh_token" });
-    expect(row()).toMatchObject({ accessToken: "at-new", refreshToken: "rt-old", expiresAt: T + 3600, revokedAt: null });
+    expect(await row()).toMatchObject({ accessToken: "at-new", refreshToken: "rt-old", expiresAt: T + 3600, revokedAt: null });
   });
 
   it("stores a rotated refresh token", async () => {
-    seed({ expiresAt: T - 1 });
+    await seed({ expiresAt: T - 1 });
     await get(tokenStub(json(200, { access_token: "at-new", refresh_token: "rt-new", expires_in: 3600 })));
-    expect(row()?.refreshToken).toBe("rt-new");
+    expect((await row())?.refreshToken).toBe("rt-new");
   });
 
   it("force refreshes a token that is still valid", async () => {
-    seed();
+    await seed();
     expect(await get(tokenStub(json(200, { access_token: "at-new", expires_in: 3600 })), { force: true })).toBe("at-new");
   });
 
   it("invalid_grant marks the token revoked, and later calls fail without a request", async () => {
-    seed({ expiresAt: T - 1 });
+    await seed({ expiresAt: T - 1 });
     await expectGoogleError(get(tokenStub(json(400, { error: "invalid_grant" }))), "auth_revoked");
-    expect(row()?.revokedAt).toBe(T);
+    expect((await row())?.revokedAt).toBe(T);
     const f = tokenStub();
     await expectGoogleError(get(f), "auth_revoked");
     expect(f.mock.calls).toHaveLength(0);
   });
 
   it("a 503 on refresh is not a revocation", async () => {
-    seed({ expiresAt: T - 1 });
+    await seed({ expiresAt: T - 1 });
     await expectGoogleError(get(tokenStub(json(503, {}))), "http_503");
-    expect(row()?.revokedAt).toBeNull();
+    expect((await row())?.revokedAt).toBeNull();
   });
 
   it("a malformed token response is an error, and the old token is kept", async () => {
-    seed({ expiresAt: T - 1 });
+    await seed({ expiresAt: T - 1 });
     await expectGoogleError(get(tokenStub(json(200, { access_token: "at-new" }))), "bad_token_response");
-    expect(row()?.accessToken).toBe("at-old");
+    expect((await row())?.accessToken).toBe("at-old");
   });
 
   it("without a grant throws not_connected", async () => {
@@ -249,12 +258,24 @@ describe("getAccessToken", () => {
 });
 
 describe("missingScopes", () => {
-  it("lists the scopes an older grant lacks, nothing for a full grant or no grant", () => {
-    expect(missingScopes(db)).toEqual([]);
+  it("lists the scopes an older grant lacks, nothing for a full grant or no grant", async () => {
+    expect(await missingScopes(db, USER)).toEqual([]);
     const old = SCOPES.filter((s) => !s.endsWith(".writeonly") || s.includes(".nutrition."));
-    seed({ scope: ["openid", ...old].join(" ") });
-    expect(missingScopes(db)).toEqual(SCOPES.filter((s) => s.endsWith(".writeonly") && !s.includes(".nutrition.")));
-    db.update(oauthTokens).set({ scope: SCOPES.join(" ") }).run();
-    expect(missingScopes(db)).toEqual([]);
+    await seed({ scope: ["openid", ...old].join(" ") });
+    expect(await missingScopes(db, USER)).toEqual(SCOPES.filter((s) => s.endsWith(".writeonly") && !s.includes(".nutrition.")));
+    await db.update(oauthTokens).set({ scope: SCOPES.join(" ") });
+    expect(await missingScopes(db, USER)).toEqual([]);
+  });
+});
+
+describe("per user", () => {
+  it("each user's grant is their own: reads, refresh and revoke never touch another's row", async () => {
+    const other = await addUser(db);
+    await seed();
+    expect(await hasGrant(db, USER)).toBe(true);
+    expect(await hasGrant(db, other)).toBe(false);
+    await expectGoogleError(getAccessToken(db, other, google, { fetch: tokenStub(), now: () => NOW }), "not_connected");
+    await revokeGrant(db, other, { fetch: tokenStub() });
+    expect(await row()).toBeDefined();
   });
 });

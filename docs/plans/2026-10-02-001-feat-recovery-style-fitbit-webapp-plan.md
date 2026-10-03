@@ -7,6 +7,8 @@ date: 2026-10-02
 
 # feat: Pulse, a recovery-app-style personal health app for Fitbit Air
 
+> **Superseded in part (2026-10-03):** SQLite (KTD14, U20 "SQLite stays") and one user per instance were replaced by Postgres, multi-user accounts and better-auth. See [2026-10-03-004-postgres-multi-user-migration.md](2026-10-03-004-postgres-multi-user-migration.md).
+
 **Target repo:** `pulse/` (new, inside `personal/`, kept private). All paths are relative to `pulse/`. "Pulse" is a working name.
 
 ## Summary

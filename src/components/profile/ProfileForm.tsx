@@ -5,8 +5,11 @@ import { cn } from "@/lib/utils"
 import { saveProfileAction, type ProfileFormState } from "@/server/actions/profile"
 import { Button } from "@/components/ui/button"
 import { BirthDatePicker } from "./BirthDatePicker"
+import { canonicalZone, TimeZoneCombobox } from "./TimeZoneCombobox"
 
-export type ProfileDefaults = { birthDate: string; sex: "male" | "female" | null; maxHr: number | null; heightCm: number | null }
+export type ProfileDefaults = { birthDate: string; sex: "male" | "female" | null; maxHr: number | null; heightCm: number | null; timeZone: string | null }
+
+const noSubscribe = () => () => {}
 
 const FIELD =
   "h-13 w-full min-w-0 rounded-xl bg-field px-4 text-[17px] leading-6 text-foreground tabular-nums outline-none transition-[box-shadow] duration-150 ease-standard placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-foreground/70 aria-invalid:ring-2 aria-invalid:ring-recovery-red-text [color-scheme:dark]"
@@ -60,6 +63,10 @@ export function ProfileForm({
   React.useEffect(() => {
     if (state?.ok) onSaved?.()
   }, [state, onSaved])
+  // No saved zone (onboarding): the browser's own. Empty on the server, so the first client render still matches it.
+  const browserZone = React.useSyncExternalStore(noSubscribe, () => canonicalZone(Intl.DateTimeFormat().resolvedOptions().timeZone), () => "")
+  const [edited, setTimeZone] = React.useState<string | null>(null)
+  const timeZone = edited ?? defaults.timeZone ?? browserZone
   const described = (id: keyof NonNullable<typeof f>) => ({ "aria-invalid": !!f?.[id] || undefined, "aria-describedby": `${id}-${f?.[id] ? "error" : "hint"}` })
 
   return (
@@ -96,6 +103,10 @@ export function ProfileForm({
           </p>
         )}
       </fieldset>
+
+      <Field id="timeZone" label="Time zone" hint="Where you live. Your days start at midnight here." error={f?.timeZone}>
+        <TimeZoneCombobox id="timeZone" name="timeZone" value={timeZone} onChange={setTimeZone} className={FIELD} {...described("timeZone")} />
+      </Field>
 
       {!onboarding && (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-4">

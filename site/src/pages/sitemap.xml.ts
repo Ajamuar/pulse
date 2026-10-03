@@ -12,6 +12,8 @@ export const GET: APIRoute = ({ site }) => {
     ["/compare/", CONTENT_UPDATED],
     ...COMPARISONS.map((c): [string, string] => [`/compare/${c.slug}/`, c.checked]),
     ["/glossary/", CONTENT_UPDATED],
+    ["/privacy/", "2026-10-03"],
+    ["/terms/", "2026-10-03"],
   ]
   const body =
     '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +

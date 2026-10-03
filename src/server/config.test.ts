@@ -1,58 +1,59 @@
-import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { ConfigError, parseConfig } from "./config";
 
-const base = { TZ: "Asia/Kolkata" };
 const google = { GOOGLE_CLIENT_ID: "id", GOOGLE_CLIENT_SECRET: "secret" };
 
 describe("parseConfig", () => {
-  it("demo mode is valid without Google variables and resolves data/demo.db", () => {
-    const c = parseConfig({ ...base, GOOGLE_OAUTH_ENABLED: "false" });
+  it("defaults: demo mode, port 3000, the local dev database, sign-up open", () => {
+    const c = parseConfig({});
     expect(c.googleOAuthEnabled).toBe(false);
     expect(c.google).toBeNull();
-    expect(c.databasePath).toBe(path.resolve("data/demo.db"));
-  });
-
-  it("defaults to demo mode on port 3000", () => {
-    const c = parseConfig(base);
-    expect(c.googleOAuthEnabled).toBe(false);
     expect(c.port).toBe(3000);
+    expect(c.databaseUrl).toBe("postgres://pulse:pulse@localhost:5432/pulse");
+    expect(c.disableSignup).toBe(false);
+    expect(c.authSecret).toBeNull();
   });
 
-  it("Google mode resolves data/pulse.db and exposes the client, with no APP_URL or owner by default", () => {
-    const c = parseConfig({ ...base, ...google, GOOGLE_OAUTH_ENABLED: "true" });
-    expect(c.databasePath).toBe(path.resolve("data/pulse.db"));
+  it("Google mode exposes the client, with no APP_URL by default", () => {
+    const c = parseConfig({ ...google, GOOGLE_OAUTH_ENABLED: "true" });
     expect(c.google).toEqual({ clientId: "id", clientSecret: "secret", appUrl: null });
   });
 
-  it("APP_URL drops its trailing slash", () => {
-    const c = parseConfig({ ...base, ...google, GOOGLE_OAUTH_ENABLED: "true", APP_URL: "https://pulse.example.com/" });
+  it("APP_URL drops its trailing slash; DATABASE_URL, BETTER_AUTH_SECRET and DISABLE_SIGNUP pass through", () => {
+    const c = parseConfig({
+      ...google,
+      GOOGLE_OAUTH_ENABLED: "true",
+      APP_URL: "https://pulse.example.com/",
+      DATABASE_URL: "postgres://u:p@db:5432/pulse",
+      BETTER_AUTH_SECRET: "x".repeat(32),
+      DISABLE_SIGNUP: "true",
+    });
     expect(c.google).toMatchObject({ appUrl: "https://pulse.example.com" });
-  });
-
-  it("DATABASE_PATH overrides the mode default", () => {
-    expect(parseConfig({ ...base, DATABASE_PATH: "/tmp/x.db" }).databasePath).toBe("/tmp/x.db");
+    expect(c.appUrl).toBe("https://pulse.example.com");
+    expect(c.databaseUrl).toBe("postgres://u:p@db:5432/pulse");
+    expect(c.authSecret).toBe("x".repeat(32));
+    expect(c.disableSignup).toBe(true);
   });
 
   it("Google mode without a client ID fails with a named error", () => {
-    const env = { ...base, ...google, GOOGLE_OAUTH_ENABLED: "true", GOOGLE_CLIENT_ID: undefined };
+    const env = { ...google, GOOGLE_OAUTH_ENABLED: "true", GOOGLE_CLIENT_ID: undefined };
     expect(() => parseConfig(env)).toThrow(ConfigError);
     expect(() => parseConfig(env)).toThrow(/GOOGLE_CLIENT_ID: required when GOOGLE_OAUTH_ENABLED=true/);
   });
 
   it("treats empty values as unset", () => {
-    expect(() => parseConfig({ ...base, ...google, GOOGLE_OAUTH_ENABLED: "true", GOOGLE_CLIENT_ID: "" })).toThrow(/GOOGLE_CLIENT_ID/);
+    expect(() => parseConfig({ ...google, GOOGLE_OAUTH_ENABLED: "true", GOOGLE_CLIENT_ID: "" })).toThrow(/GOOGLE_CLIENT_ID/);
   });
 
-  it("rejects a bad time zone, app URL or GOOGLE_OAUTH_ENABLED, naming each", () => {
+  it("rejects a bad database URL, short secret, app URL or GOOGLE_OAUTH_ENABLED, naming each", () => {
     const err = (() => {
       try {
-        parseConfig({ TZ: "Mars/Olympus", APP_URL: "nope", GOOGLE_OAUTH_ENABLED: "maybe" });
+        parseConfig({ DATABASE_URL: "mysql://x", BETTER_AUTH_SECRET: "short", APP_URL: "nope", GOOGLE_OAUTH_ENABLED: "maybe" });
       } catch (e) {
         return e as Error;
       }
     })();
     expect(err).toBeInstanceOf(ConfigError);
-    for (const key of ["TZ", "APP_URL", "GOOGLE_OAUTH_ENABLED"]) expect(err?.message).toContain(key);
+    for (const key of ["DATABASE_URL", "BETTER_AUTH_SECRET", "APP_URL", "GOOGLE_OAUTH_ENABLED"]) expect(err?.message).toContain(key);
   });
 });

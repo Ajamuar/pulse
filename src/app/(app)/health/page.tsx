@@ -3,6 +3,7 @@ import { Activity, Check, Droplet, Heart, Rabbit, Thermometer, TriangleAlert, Tu
 import { cn } from "@/lib/utils"
 import { formatValue, hmm } from "@/lib/format"
 import type { ChipTone } from "@/lib/bands"
+import { userCtx } from "@/server/queries/common"
 import { getHealthHub } from "@/server/queries/health"
 import type { HealthHubVM, VitalKey } from "@/server/queries/types"
 import { StressChart } from "@/components/charts/StressChart"
@@ -215,7 +216,7 @@ function Fitness({ m }: { m: HealthHubVM["fitness"] }) {
 /** Health hub `/health` (spec §7.6): today's values on the teal-glow ground; each card links to its detail screen. */
 export default async function HealthPage() {
   await connection()
-  const vm = getHealthHub()
+  const vm = await getHealthHub(await userCtx())
   return (
     <PageShell title="Health" ground="health">
       <HealthCards>

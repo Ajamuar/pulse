@@ -6,13 +6,14 @@ import { EXTRA_KEYS, type ExtraKey } from "@/lib/extraMetrics";
 import { clock, DAY, formatDay, type FormatKey } from "@/lib/format";
 import { RANGE_DAYS, RANGES, type TrendRange, weekOf } from "@/lib/url";
 import { type LoggedEntry, recentEntries } from "../log";
+import { readSamples } from "../samples";
 import { addDays, localMidnight } from "../time";
 import {
   ACTIVITY_NAME,
   activityKind,
   dayStartOf,
   type DayRow,
-  defaultCtx,
+  type ExerciseRow,
   exercisesBetween,
   finite,
   loadDays,
@@ -170,13 +171,14 @@ const DAY_TO = 22 * 60;
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 /** The metric's screen for `day`. */
-export function getMetricDetail(key: DetailKey, day: string, ctx: QueryCtx = defaultCtx()): MetricDetailVM {
+export async function getMetricDetail(key: DetailKey, day: string, ctx: QueryCtx): Promise<MetricDetailVM> {
   const m = defOf(key);
   const today = todayOf(ctx);
   const isToday = day === today;
   // Two years: the 1Y stats compare with the year before.
   const from = addDays(day, -(2 * SPAN - 1));
-  const rows = loadDays(ctx, from, day);
+  const needExs = m.stack === "distance" || m.sections.includes("workouts");
+  const [rows, exs] = await Promise.all([loadDays(ctx, from, day), needExs ? exercisesBetween(ctx, addDays(day, -(SPAN - 1)), day) : []]);
   const raw = (d: string) => {
     const r = rows.get(d);
     const v = r ? m.pick(r) : null;
@@ -191,13 +193,13 @@ export function getMetricDetail(key: DetailKey, day: string, ctx: QueryCtx = def
   const value = valueDay ? raw(valueDay) : null;
   const prior = valueDay ? priorStats(rows, valueDay, (r) => m.pick(r)) : { mean: null, sd: undefined };
 
-  const exs = m.stack === "distance" || m.sections.includes("workouts") ? exercisesBetween(ctx, addDays(day, -(SPAN - 1)), day) : [];
   const shown: Point[] = days.slice(-SPAN).map((d) => ({ day: d, value: val(d), ...(m.stack && { parts: partsOf(m.stack, rows.get(d), val(d), exs) }) }));
 
   const ranges = Object.fromEntries(RANGES.map((r) => [r, rangeStats(days.map(val), days, RANGE_DAYS[r], !!m.total)])) as Record<TrendRange, RangeStats>;
   const out = m.baseline ? outliers(days.slice(-90), val) : null;
 
   const s: SectionCtx = { ctx, rows, day, today, isToday, val, raw, exs };
+  const built = await Promise.all(m.sections.map((k) => (k === "outliers" ? out : BUILD[k](s, key))));
   return {
     key,
     label: m.label,
@@ -218,11 +220,7 @@ export function getMetricDetail(key: DetailKey, day: string, ctx: QueryCtx = def
     ranges,
     total: !!m.total,
     chart: { stack: m.stack, reference: m.reference, smooth: m.smooth, baseline: out && { mean: out.mean, sd: out.sd } },
-    sections: m.sections.flatMap((k): Section[] => {
-      if (k === "outliers") return out ? [out] : [];
-      const sec = BUILD[k](s, key);
-      return sec ? [sec] : [];
-    }),
+    sections: built.filter((sec): sec is Section => !!sec),
   };
 }
 
@@ -235,7 +233,7 @@ type SectionCtx = {
   /** The metric's value on a day (today's running total excluded) and its raw value (included). */
   val: (d: string) => number | null;
   raw: (d: string) => number | null;
-  exs: ReturnType<typeof exercisesBetween>;
+  exs: ExerciseRow[];
 };
 
 /**
@@ -292,7 +290,7 @@ const stat = (s: SectionCtx, key: string, label: string, pick: (r: DayRow) => nu
   return { key, label, metric: finite(v) ? ok(v) : none("no_data"), average: mean, ...(sd !== undefined && { sd }), direction, format: "duration", ...extra };
 };
 
-const BUILD: Record<Exclude<SectionKind, "outliers">, (s: SectionCtx, key: DetailKey) => Section | null> = {
+const BUILD: Record<Exclude<SectionKind, "outliers">, (s: SectionCtx, key: DetailKey) => Section | null | Promise<Section | null>> = {
   hourly: (s, key) => hourly(s, key === "sedentary_minutes"),
 
   goal: (s) => {
@@ -373,10 +371,10 @@ const BUILD: Record<Exclude<SectionKind, "outliers">, (s: SectionCtx, key: Detai
     return { kind: "workouts", active: finite(a) ? a : null, items };
   },
 
-  entries: (s, key) => {
+  entries: async (s, key) => {
     const type = key === "water" ? "hydration-log" : "nutrition-log";
     const start = localMidnight(s.day, s.ctx.timeZone);
-    return { kind: "entries", items: recentEntries(s.ctx.db, start).filter((e) => e.day === s.day && e.type === type).reverse() };
+    return { kind: "entries", items: (await recentEntries(s.ctx.db, s.ctx.userId, start)).filter((e) => e.day === s.day && e.type === type).reverse() };
   },
 
   balance: (s) => {
@@ -457,13 +455,13 @@ const BUILD: Record<Exclude<SectionKind, "outliers">, (s: SectionCtx, key: Detai
 };
 
 /**
- * Steps per hour of the day from `steps_minutes`; hours still to come today are gaps. `still` adds the longest
+ * Steps per hour of the day from the stored steps per minute; hours still to come today are gaps. `still` adds the longest
  * stretch without a step between 07:00 and 22:00 (or now, today), for Sedentary time.
  */
-function hourly(s: SectionCtx, still: boolean): Extract<Section, { kind: "hourly" }> {
+async function hourly(s: SectionCtx, still: boolean): Promise<Extract<Section, { kind: "hourly" }>> {
   const start = dayStartOf(s.ctx, s.day);
   const end = dayStartOf(s.ctx, addDays(s.day, 1));
-  const mins = s.ctx.db.$client.prepare("select ts, steps from steps_minutes where ts >= ? and ts < ? and steps > 0 order by ts").all(start, end) as { ts: number; steps: number }[];
+  const mins = (await readSamples(s.ctx.db, "steps", s.ctx.userId, start, end)).filter((x) => x.v > 0).map((x) => ({ ts: x.ts, steps: x.v }));
   if (!mins.length) return { kind: "hourly", hours: none("no_data"), still: null };
   const n = Math.round((end - start) / 3600);
   const now = s.isToday ? Math.floor((s.ctx.now - start) / 3600) : n;

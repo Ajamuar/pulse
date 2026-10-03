@@ -1,5 +1,6 @@
 // The Journal's default behaviours, shared by both data sources.
-import type { Db } from "./db";
+import { and, eq, inArray } from "drizzle-orm";
+import { type Db, sql } from "./db";
 import { journalTags } from "./db/schema";
 
 export const DEFAULT_JOURNAL_TAGS = [
@@ -14,13 +15,14 @@ export const DEFAULT_JOURNAL_TAGS = [
   { tag: "illness", label: "Illness" },
 ] as const;
 
-/** Inserts any missing default tag; existing rows (and custom tags) are left alone. Returns rows inserted. */
-export function ensureDefaultTags(db: Db): number {
-  return db
+/** Inserts any missing default tag for the user; existing rows (and custom tags) are left alone. Returns rows inserted. */
+export async function ensureDefaultTags(db: Db, userId: number): Promise<number> {
+  const added = await db
     .insert(journalTags)
-    .values(DEFAULT_JOURNAL_TAGS.map(({ tag, label }) => ({ tag, label, isDefault: true })))
+    .values(DEFAULT_JOURNAL_TAGS.map(({ tag, label }) => ({ userId, tag, label, isDefault: true })))
     .onConflictDoNothing()
-    .run().changes;
+    .returning({ tag: journalTags.tag });
+  return added.length;
 }
 
 /** A custom tag's key: the label as snake_case ("Cold plunge" → "cold_plunge"); "" when it has no letter or digit. */
@@ -31,28 +33,46 @@ export const tagKey = (label: string) =>
     .replace(/^_|_$/g, "");
 
 /** Adds a custom tag at the end of its group. False when the key already exists. */
-export function addTag(db: Db, tag: string, label: string): boolean {
-  return (
-    db.$client
-      .prepare("insert into journal_tags (tag, label, is_default, position) values (?, ?, 0, (select coalesce(max(position), 0) + 1 from journal_tags)) on conflict do nothing")
-      .run(tag, label).changes > 0
-  );
+export async function addTag(db: Db, userId: number, tag: string, label: string): Promise<boolean> {
+  const added = await db
+    .insert(journalTags)
+    .values({
+      userId,
+      tag,
+      label,
+      position: sql`(select coalesce(max(position), 0) + 1 from journal_tags where user_id = ${userId})`,
+    })
+    .onConflictDoNothing()
+    .returning({ tag: journalTags.tag });
+  return added.length > 0;
 }
 
 /** Hides a tag from the check-in sheet or shows it again. Its answers are untouched. False for an unknown tag. */
-export function setTagHidden(db: Db, tag: string, hidden: boolean): boolean {
-  return db.$client.prepare("update journal_tags set hidden = ? where tag = ?").run(hidden ? 1 : 0, tag).changes > 0;
+export async function setTagHidden(db: Db, userId: number, tag: string, hidden: boolean): Promise<boolean> {
+  const r = await db
+    .update(journalTags)
+    .set({ hidden })
+    .where(and(eq(journalTags.userId, userId), eq(journalTags.tag, tag)))
+    .returning({ tag: journalTags.tag });
+  return r.length > 0;
 }
 
 /**
  * Orders `tags` (one check-in group, in its new order) by writing their positions 0..n-1. Other groups keep
  * theirs: groups render apart, so only the order inside a group matters. False, writing nothing, if any tag is unknown.
  */
-export function reorderTags(db: Db, tags: string[]): boolean {
-  const c = db.$client;
-  const known = c.prepare("select 1 from journal_tags where tag = ?").pluck();
-  if (new Set(tags).size !== tags.length || tags.some((t) => !known.get(t))) return false;
-  const set = c.prepare("update journal_tags set position = ? where tag = ?");
-  c.transaction(() => tags.forEach((t, i) => set.run(i, t)))();
+export async function reorderTags(db: Db, userId: number, tags: string[]): Promise<boolean> {
+  if (new Set(tags).size !== tags.length) return false;
+  if (!tags.length) return true;
+  const known = await db
+    .select({ tag: journalTags.tag })
+    .from(journalTags)
+    .where(and(eq(journalTags.userId, userId), inArray(journalTags.tag, tags)));
+  if (known.length !== tags.length) return false;
+  await db.transaction(async (tx) => {
+    for (const [i, t] of tags.entries()) {
+      await tx.update(journalTags).set({ position: i }).where(and(eq(journalTags.userId, userId), eq(journalTags.tag, t)));
+    }
+  });
   return true;
 }

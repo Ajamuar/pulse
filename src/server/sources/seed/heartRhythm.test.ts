@@ -1,15 +1,14 @@
-import { afterAll, describe, expect, it } from "vitest";
-import { cleanup, DAY_S, dump, NOW, seeded } from "../../testing";
+import { describe, expect, it } from "vitest";
+import { type Db, rows, sql } from "../../db";
+import { DAY_S, dump, NOW, seeded } from "../../testing";
 
-afterAll(cleanup);
-
-const count = (db: ReturnType<typeof seeded>) => db.$client.prepare("select count(*) from health_records").pluck().get();
+const kinds = async (db: Db) => (await rows<{ kind: string }>(db, sql`select kind from health_records order by ts`)).map((r) => r.kind);
 
 describe("seedHeartRhythm", () => {
-  it("is deterministic, and a later pull adds no duplicates", () => {
-    const a = seeded([NOW], { compute: false });
-    expect(dump(a, "health_records")).toBe(dump(seeded([NOW], { compute: false }), "health_records"));
-    expect(a.$client.prepare("select kind from health_records order by ts").pluck().all()).toEqual(["ecg", "irn", "ecg", "ecg"]);
-    expect(count(seeded([NOW - 40 * DAY_S, NOW], { compute: false }))).toBe(4);
+  it("is deterministic, and a later pull adds no duplicates", async () => {
+    const a = await seeded([NOW], { compute: false });
+    expect(await dump(a, "health_records")).toBe(await dump(await seeded([NOW], { compute: false }), "health_records"));
+    expect(await kinds(a)).toEqual(["ecg", "irn", "ecg", "ecg"]);
+    expect(await kinds(await seeded([NOW - 40 * DAY_S, NOW], { compute: false }))).toHaveLength(4);
   });
 });

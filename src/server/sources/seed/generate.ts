@@ -3,24 +3,30 @@
 // Every day is a pure function of (anchor day, day index, time zone, max HR). Randomness comes from
 // mulberry32 keyed by the date and a stream name, so any day regenerates identically. Each pull
 // regenerates the days from the last sync to "now" and inserts only what has happened by then, with
-// insert-or-ignore, so a later tick adds rows and never changes earlier ones.
+// insert-or-ignore, so a later tick adds rows and never changes earlier ones. Everything is per user: the
+// demo instance seeds its one demo user (ensureDemoUser), tests seed theirs.
 //
 // mulberry32 and the shaping (HR follows steps, a workout lifts both, sleep HR sits under the day's
 // resting figure) are adapted from Hælan's packages/core/src/testing/seed.ts (AGPL-3.0).
 import { hash, mulberry32 } from "@/core/algorithms/journalImpact";
-import { eq, getTableColumns, min, sql } from "drizzle-orm";
+import { and, eq, getTableColumns, inArray, min, sql } from "drizzle-orm";
+import { hashPassword } from "better-auth/crypto";
 import type { ExtraKey } from "@/lib/extraMetrics";
-import { getConfig } from "../../config";
+import { DEMO_EMAIL, DEMO_PASSWORD } from "../../auth";
 import { type Db, getDb } from "../../db";
 import {
+  account,
   dailyMetrics,
+  dailyValues,
   exercises,
   intradayDirty,
   journalEntries,
   sleepSegments,
   sleepSessions,
   syncState,
+  user,
 } from "../../db/schema";
+import { writeSamples } from "../../samples";
 import { ensureDefaultTags } from "../../journalTags";
 import { getProfile, saveProfile } from "../../profile";
 import { addDays, daysBetween, localDay, localMidnight } from "../../time";
@@ -247,7 +253,7 @@ function googleDerived(ctx: Ctx, i: number, rhr: number) {
   const [rhrRangeLow, rhrRangeHigh] = range(nights.map((m) => m.rhrBpm));
   const [hrvRangeLow, hrvRangeHigh] = range(nights.flatMap((m) => (m.hrvMs == null ? [] : [m.hrvMs])));
   return {
-    hrZones: JSON.stringify([...ZONE_HRR.map((p) => Math.round(rhr + p * (ctx.maxHr - rhr))), ctx.maxHr]),
+    hrZones: [...ZONE_HRR.map((p) => Math.round(rhr + p * (ctx.maxHr - rhr))), ctx.maxHr] as number[] | null,
     tempBaselineC: recent >= 4 ? round(median!, 2) : null,
     tempSdC: recent >= 4 ? round(sd(temps.map((t) => t - median!)), 2) : null,
     rhrRangeLow,
@@ -292,7 +298,7 @@ const NO_NIGHT = {
   nightlyTempC: null,
   spo2Pct: null,
   vo2maxDaily: null,
-  hrZones: null,
+  hrZones: null as number[] | null,
   tempBaselineC: null,
   tempSdC: null,
   rhrRangeLow: null,
@@ -498,7 +504,7 @@ type Day = ReturnType<typeof generateDay>;
 // Writing
 
 /** The day's daily_metrics row as of `now`: today's steps and calories are running totals. */
-function metricsAt(g: Day, now: number): typeof dailyMetrics.$inferInsert {
+function metricsAt(g: Day, now: number): Omit<typeof dailyMetrics.$inferInsert, "userId"> {
   const minutesDone = Math.min(g.steps.length, Math.floor((now - g.start) / 60));
   let steps = 0;
   let kcal = 0;
@@ -525,9 +531,9 @@ function metricsAt(g: Day, now: number): typeof dailyMetrics.$inferInsert {
 }
 
 /** Google's all-day time in zones as of `now`, from the day's samples and its zones; none without zones. */
-function timeInZones(g: Day, zones: string | null, now: number) {
+function timeInZones(g: Day, zones: number[] | null, now: number) {
   if (!zones) return { lightModerateMin: null, vigorousPeakMin: null };
-  const [light, , vigorous] = JSON.parse(zones) as number[];
+  const [light, , vigorous] = zones;
   let lm = 0;
   let vp = 0;
   for (let s = 0; s < g.bpm.length && g.start + (s + 1) * HR_CADENCE_S <= now; s++) {
@@ -580,77 +586,158 @@ export function extrasAt(g: Day, now: number): [ExtraKey, number][] {
   ];
 }
 
-const metricColumns = Object.entries(getTableColumns(dailyMetrics)).filter(([key]) => key !== "day");
-const excludedMetrics = Object.fromEntries(metricColumns.map(([key, c]) => [key, sql.raw(`excluded.${c.name}`)]));
+const metricColumns = Object.entries(getTableColumns(dailyMetrics)).filter(([key]) => key !== "day" && key !== "userId");
+const excludedMetrics = Object.fromEntries(metricColumns.map(([key, c]) => [key, sql.raw(`excluded."${c.name}"`)]));
 /** Update only when a value differs, so regenerating an unchanged day reports no change. */
 const metricsDiffer = sql.raw(
-  `(${metricColumns.map(([, c]) => c.name)}) is not (${metricColumns.map(([, c]) => `excluded.${c.name}`)})`,
+  `(${metricColumns.map(([, c]) => `"daily_metrics"."${c.name}"`)}) is distinct from (${metricColumns.map(([, c]) => `excluded."${c.name}"`)})`,
 );
 
-/** Inserts what has happened on day g by `now`. Returns the number of rows written. */
-function writeDay(db: Db, g: Day, now: number) {
-  const insertHr = db.$client.prepare("insert or ignore into hr_samples (ts, bpm) values (?, ?)");
-  const insertSteps = db.$client.prepare("insert or ignore into steps_minutes (ts, steps) values (?, ?)");
-  let intraday = 0;
-  for (let s = 0; s < g.bpm.length && g.start + s * HR_CADENCE_S < now; s++) {
-    if (g.bpm[s]) intraday += insertHr.run(g.start + s * HR_CADENCE_S, g.bpm[s]).changes;
-  }
-  for (let m = 0; m < g.steps.length && g.start + (m + 1) * 60 <= now; m++) {
-    if (g.steps[m]) intraday += insertSteps.run(g.start + m * 60, g.steps[m]).changes;
-  }
-  if (intraday) db.insert(intradayDirty).values({ day: g.day }).onConflictDoNothing().run();
-
-  let other = 0;
-  for (const s of g.sleeps.filter((s) => s.availableAt <= now)) {
-    other += db.insert(sleepSessions).values(s.row).onConflictDoNothing().run().changes;
-    if (s.segments.length) other += db.insert(sleepSegments).values(s.segments).onConflictDoNothing().run().changes;
-  }
-  const done = g.exercises.filter((e) => e.endTs <= now);
-  if (done.length) other += db.insert(exercises).values(done).onConflictDoNothing().run().changes;
-  const upsertValue = db.$client.prepare(
-    "insert into daily_values (day, key, value) values (?, ?, ?) on conflict (day, key) do update set value = excluded.value where value is not excluded.value",
-  );
-  for (const [key, v] of extrasAt(g, now)) other += upsertValue.run(g.day, key, v).changes;
-  other += db
-    .insert(dailyMetrics)
-    .values(metricsAt(g, now))
-    .onConflictDoUpdate({ target: dailyMetrics.day, set: excludedMetrics, setWhere: metricsDiffer })
-    .run().changes;
-  // Never touch a day the user already checked in for.
-  if (g.journal && now >= g.end && !db.select().from(journalEntries).where(eq(journalEntries.day, g.day)).get()) {
-    const rows = Object.entries(g.journal).map(([tag, yes]) => ({ day: g.day, tag, value: Number(yes) }));
-    other += db.insert(journalEntries).values(rows).run().changes;
-  }
-  return intraday + other;
+const CHUNK = 1000;
+/** Runs `fn` over `xs` in slices (Postgres caps a statement at 65,535 parameters) and sums what it returns. */
+async function inChunks<T>(xs: T[], fn: (part: T[]) => Promise<number>): Promise<number> {
+  let n = 0;
+  for (let i = 0; i < xs.length; i += CHUNK) n += await fn(xs.slice(i, i + CHUNK));
+  return n;
 }
 
-export type SeedOptions = { /** Unix seconds. */ now: number; timeZone: string; maxHr: number };
+/**
+ * Inserts what has happened on days `gs` by `now`, in batches. `synced` (the previous pull's now) says which
+ * samples the last pull already wrote, so only newer ones are sent and counted. Returns the number of rows written.
+ */
+async function writeDays(db: Db, userId: number, gs: Day[], now: number, synced: number | null) {
+  const after = synced ?? -Infinity;
+  const hr: { ts: number; v: number }[] = [];
+  const steps: { ts: number; v: number }[] = [];
+  const dirty: { userId: number; day: string }[] = [];
+  for (const g of gs) {
+    const before = hr.length + steps.length;
+    for (let s = 0; s < g.bpm.length && g.start + s * HR_CADENCE_S < now; s++) {
+      const ts = g.start + s * HR_CADENCE_S;
+      if (g.bpm[s] && ts >= after) hr.push({ ts, v: g.bpm[s] });
+    }
+    for (let m = 0; m < g.steps.length && g.start + (m + 1) * 60 <= now; m++) {
+      if (g.steps[m] && g.start + (m + 1) * 60 > after) steps.push({ ts: g.start + m * 60, v: g.steps[m] });
+    }
+    if (hr.length + steps.length > before) dirty.push({ userId, day: g.day });
+  }
+  if (hr.length) await writeSamples(db, "hr", userId, hr);
+  if (steps.length) await writeSamples(db, "steps", userId, steps);
+  if (dirty.length) await db.insert(intradayDirty).values(dirty).onConflictDoNothing();
+  let n = hr.length + steps.length;
+
+  const sleeps = gs.flatMap((g) => g.sleeps.filter((s) => s.availableAt <= now));
+  n += await inChunks(sleeps.map((s) => ({ userId, ...s.row })), async (rows) =>
+    (await db.insert(sleepSessions).values(rows).onConflictDoNothing().returning({ id: sleepSessions.id })).length);
+  n += await inChunks(sleeps.flatMap((s) => s.segments.map((g) => ({ userId, ...g }))), async (rows) =>
+    (await db.insert(sleepSegments).values(rows).onConflictDoNothing().returning({ id: sleepSegments.sessionId })).length);
+  n += await inChunks(gs.flatMap((g) => g.exercises.filter((e) => e.endTs <= now).map((e) => ({ userId, ...e }))), async (rows) =>
+    (await db.insert(exercises).values(rows).onConflictDoNothing().returning({ id: exercises.id })).length);
+  n += await inChunks(gs.flatMap((g) => extrasAt(g, now).map(([key, value]) => ({ userId, day: g.day, key, value }))), async (rows) =>
+    (
+      await db
+        .insert(dailyValues)
+        .values(rows)
+        .onConflictDoUpdate({
+          target: [dailyValues.userId, dailyValues.day, dailyValues.key],
+          set: { value: sql.raw(`excluded."value"`) },
+          setWhere: sql`${dailyValues.value} is distinct from excluded."value"`,
+        })
+        .returning({ day: dailyValues.day })
+    ).length);
+  n += await inChunks(gs.map((g) => ({ userId, ...metricsAt(g, now) })), async (rows) =>
+    (
+      await db
+        .insert(dailyMetrics)
+        .values(rows)
+        .onConflictDoUpdate({ target: [dailyMetrics.userId, dailyMetrics.day], set: excludedMetrics, setWhere: metricsDiffer })
+        .returning({ day: dailyMetrics.day })
+    ).length);
+
+  // Never touch a day the user already checked in for.
+  const over = gs.filter((g) => g.journal && now >= g.end);
+  if (over.length) {
+    const checkedIn = new Set(
+      (
+        await db
+          .selectDistinct({ day: journalEntries.day })
+          .from(journalEntries)
+          .where(and(eq(journalEntries.userId, userId), inArray(journalEntries.day, over.map((g) => g.day))))
+      ).map((r) => r.day),
+    );
+    const rows = over
+      .filter((g) => !checkedIn.has(g.day))
+      .flatMap((g) => Object.entries(g.journal!).map(([tag, yes]) => ({ userId, day: g.day, tag, value: Number(yes) })));
+    n += await inChunks(rows, async (part) => (await db.insert(journalEntries).values(part).returning({ day: journalEntries.day })).length);
+  }
+  return n;
+}
+
+export type SeedOptions = { userId: number; /** Unix seconds. */ now?: number; timeZone: string; maxHr: number };
+
+/** Days generated and written per batch: bounds memory (a day holds ~5,760 HR samples) on a fresh seed. */
+const BATCH_DAYS = 30;
 
 /**
- * Fills the demo database up to `now`: a fresh database gets SEED_DAYS days ending today, later
- * pulls regenerate from the last sync's day onwards. Marks days with new HR or steps intraday_dirty.
+ * Fills the user's demo data up to `now`: no data yet gets SEED_DAYS days ending today, later pulls regenerate
+ * from the last sync's day onwards. Marks days with new HR or steps intraday_dirty.
  */
-export function seedPull(db: Db, { now, timeZone, maxHr }: SeedOptions): { changed: boolean } {
-  return db.$client.transaction(() => {
-    const synced = db.select().from(syncState).where(eq(syncState.type, "seed")).get()?.syncedThrough ?? null;
+export async function seedPull(db: Db, { userId, now = Math.floor(Date.now() / 1000), timeZone, maxHr }: SeedOptions): Promise<{ changed: boolean }> {
+  return db.transaction(async (tx) => {
+    const [st] = await tx
+      .select({ syncedThrough: syncState.syncedThrough })
+      .from(syncState)
+      .where(and(eq(syncState.userId, userId), eq(syncState.type, "seed")));
+    const synced = st?.syncedThrough ?? null;
     if (synced !== null && now <= synced) return { changed: false };
     const today = localDay(now, timeZone);
-    const first = db.select({ day: min(dailyMetrics.day) }).from(dailyMetrics).where(eq(dailyMetrics.source, "seed")).get()?.day;
-    const ctx: Ctx = { anchor: first ?? addDays(today, 1 - SEED_DAYS), timeZone, maxHr };
+    const [first] = await tx
+      .select({ day: min(dailyMetrics.day) })
+      .from(dailyMetrics)
+      .where(and(eq(dailyMetrics.userId, userId), eq(dailyMetrics.source, "seed")));
+    const ctx: Ctx = { anchor: first?.day ?? addDays(today, 1 - SEED_DAYS), timeZone, maxHr };
 
-    let changes = ensureDefaultTags(db);
+    let changes = await ensureDefaultTags(tx, userId);
     const from = synced === null ? 0 : Math.max(0, daysBetween(ctx.anchor, localDay(synced, timeZone)));
-    for (let i = from; i <= daysBetween(ctx.anchor, today); i++) changes += writeDay(db, generateDay(ctx, i), now);
-    changes += seedHeartRhythm(db, ctx.anchor, timeZone, now);
+    const last = daysBetween(ctx.anchor, today);
+    for (let i = from; i <= last; i += BATCH_DAYS) {
+      const days = Array.from({ length: Math.min(BATCH_DAYS, last - i + 1) }, (_, k) => generateDay(ctx, i + k));
+      changes += await writeDays(tx, userId, days, now, synced);
+    }
+    changes += await seedHeartRhythm(tx, userId, ctx.anchor, timeZone, now);
 
     const state = { syncedThrough: now, lastAttemptAt: now, lastSuccessAt: now, lastError: null };
-    db.insert(syncState).values({ type: "seed", ...state }).onConflictDoUpdate({ target: syncState.type, set: state }).run();
+    await tx
+      .insert(syncState)
+      .values({ userId, type: "seed", ...state })
+      .onConflictDoUpdate({ target: [syncState.userId, syncState.type], set: state });
     return { changed: changes > 0 };
-  })();
+  });
+}
+
+/**
+ * The demo instance's one user (DEMO_EMAIL, username "demo"), created once with a credential account whose
+ * password is DEMO_PASSWORD hashed the way better-auth checks it, so "Continue with demo data" signs in through
+ * the normal path. Returns its id.
+ */
+export async function ensureDemoUser(db: Db): Promise<number> {
+  const find = async () => (await db.select({ id: user.id }).from(user).where(eq(user.email, DEMO_EMAIL)))[0]?.id;
+  const found = await find();
+  if (found !== undefined) return found;
+  const password = await hashPassword(DEMO_PASSWORD);
+  await db.transaction(async (tx) => {
+    const [u] = await tx
+      .insert(user)
+      .values({ name: "Demo", email: DEMO_EMAIL, emailVerified: true, username: "demo", displayUsername: "demo" })
+      .onConflictDoNothing()
+      .returning({ id: user.id });
+    if (u) await tx.insert(account).values({ providerId: "credential", accountId: String(u.id), userId: u.id, password });
+  });
+  return (await find())!; // another process may have won the insert
 }
 
 /** The demo person: 36 in 2026, max HR estimated (183). Settings › Profile can change it like any profile. */
-export const DEMO_PROFILE = { birthDate: "1990-01-01", sex: "male", maxHr: null, heightCm: null } as const;
+export const DEMO_PROFILE = { birthDate: "1990-01-01", sex: "male", maxHr: null, heightCm: null, timeZone: "Asia/Kolkata" } as const;
 
 /**
  * False only on the e2e onboarding server (playwright.config.ts sets E2E_NO_DEMO_PROFILE=1), so its demo
@@ -660,10 +747,11 @@ export const DEMO_PROFILE = { birthDate: "1990-01-01", sex: "male", maxHr: null,
 export const seedsDemoProfile = () => process.env.E2E_NO_DEMO_PROFILE !== "1";
 
 export const seedSource: Source = {
-  pull: async () => {
+  pull: async (userId) => {
     const db = getDb();
-    if (!getProfile(db) && seedsDemoProfile()) saveProfile(db, DEMO_PROFILE);
-    // Before onboarding (e2e only), generate with DEMO_PROFILE's estimated max HR; scoring waits for the profile.
-    return seedPull(db, { now: Math.floor(Date.now() / 1000), timeZone: getConfig().timeZone, maxHr: getProfile(db)?.maxHr ?? 183 });
+    if (!(await getProfile(db, userId)) && seedsDemoProfile()) await saveProfile(db, userId, DEMO_PROFILE);
+    // Before onboarding (e2e only), generate with DEMO_PROFILE's zone and estimated max HR; scoring waits for the profile.
+    const p = await getProfile(db, userId);
+    return seedPull(db, { userId, timeZone: p?.timeZone ?? DEMO_PROFILE.timeZone, maxHr: p?.maxHr ?? 183 });
   },
 };

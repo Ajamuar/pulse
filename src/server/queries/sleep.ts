@@ -1,7 +1,9 @@
+import { and, eq } from "drizzle-orm";
+import { sleepSegments } from "../db/schema";
+import { readHr } from "../samples";
 import { addDays, localMinutes } from "../time";
 import {
   type DayRow,
-  defaultCtx,
   finite,
   fromReason,
   loadDays,
@@ -41,10 +43,10 @@ const restorativePct = (r: DayRow) => {
 };
 
 /** Sleep `/sleep` for `day` (spec §7.5). */
-export function getSleep(day: string, ctx: QueryCtx = defaultCtx()): SleepVM {
+export async function getSleep(day: string, ctx: QueryCtx): Promise<SleepVM> {
   const today = todayOf(ctx);
   const isToday = day === today;
-  const rows = loadDays(ctx, addDays(day, -181), day);
+  const rows = await loadDays(ctx, addDays(day, -181), day);
   const row = rows.get(day);
   const s = row?.sleep ?? null;
   const main = s?.main ?? null;
@@ -87,15 +89,16 @@ export function getSleep(day: string, ctx: QueryCtx = defaultCtx()): SleepVM {
   ];
 
   const plan = planVM(ctx, row, isToday);
+  const [stages, nightHr] = await Promise.all([stagesOf(ctx, row, noNight), main ? nightHrOf(ctx, main.start, main.end) : fromReason<never>(noNight, isToday)]);
   return {
     day,
     isToday,
     performance,
     summary,
     insight: insightOf(rows, day, ctx.timeZone),
-    stages: stagesOf(ctx, row, noNight),
+    stages,
     hours,
-    nightHr: main ? nightHrOf(ctx, main.start, main.end) : fromReason(noNight, isToday),
+    nightHr,
     hoursVsNeed,
     details,
     debtTrend: {
@@ -105,16 +108,17 @@ export function getSleep(day: string, ctx: QueryCtx = defaultCtx()): SleepVM {
   };
 }
 
-function stagesOf(ctx: QueryCtx, row: DayRow | undefined, noNight: SleepVM["performance"]["reason"]): SleepVM["stages"] {
+async function stagesOf(ctx: QueryCtx, row: DayRow | undefined, noNight: SleepVM["performance"]["reason"]): Promise<SleepVM["stages"]> {
   const main = row?.sleep?.main;
   if (!main) return none(noNight ?? "no_data");
   if (!main.staged) return null;
+  const g = sleepSegments;
   const segments = (
-    ctx.db.$client.prepare("select stage, start_ts startTs, end_ts endTs from sleep_segments where session_id = ? order by start_ts").all(main.id) as {
-      stage: Stage;
-      startTs: number;
-      endTs: number;
-    }[]
+    await ctx.db
+      .select({ stage: g.stage, startTs: g.startTs, endTs: g.endTs })
+      .from(g)
+      .where(and(eq(g.userId, ctx.userId), eq(g.sessionId, main.id)))
+      .orderBy(g.startTs)
   ).map((g) => ({ stage: g.stage, start: ms(g.startTs), end: ms(g.endTs) }));
   const minutes: Record<Stage, number> = { awake: main.awakeMin, rem: main.remMin ?? 0, light: main.lightMin ?? 0, deep: main.deepMin ?? 0 };
   const total = minutes.awake + minutes.rem + minutes.light + minutes.deep;
@@ -128,13 +132,19 @@ function stagesOf(ctx: QueryCtx, row: DayRow | undefined, noNight: SleepVM["perf
 
 const HR_PAD_S = 15 * 60;
 
-/** Per-minute mean HR from `hr_samples` over the sleep [start, end) (unix seconds) plus 15 minutes each side; empty minutes are null. */
-export function nightHrOf(ctx: QueryCtx, start: number, end: number): SleepVM["nightHr"] {
+/** Per-minute mean HR over the sleep [start, end) (unix seconds) plus 15 minutes each side; empty minutes are null. */
+export async function nightHrOf(ctx: QueryCtx, start: number, end: number): Promise<SleepVM["nightHr"]> {
   const from = Math.floor((start - HR_PAD_S) / 60) * 60;
   const to = end + HR_PAD_S;
-  const rows = ctx.db.$client
-    .prepare("select ts / 60 * 60 m, round(avg(bpm)) bpm from hr_samples where ts >= ? and ts < ? group by ts / 60")
-    .all(from, to) as { m: number; bpm: number }[];
+  const sums = new Map<number, { sum: number; n: number }>();
+  for (const { ts, bpm } of await readHr(ctx.db, ctx.userId, from, to)) {
+    const m = Math.floor(ts / 60) * 60;
+    const a = sums.get(m) ?? { sum: 0, n: 0 };
+    a.sum += bpm;
+    a.n++;
+    sums.set(m, a);
+  }
+  const rows = [...sums].map(([m, a]) => ({ m, bpm: Math.round(a.sum / a.n) }));
   const byMin = new Map(rows.map((r) => [r.m, r.bpm]));
   const points: TimePoint[] = [];
   for (let m = from; m < to; m += 60) points.push({ t: ms(m), v: byMin.get(m) ?? null });

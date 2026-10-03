@@ -1,71 +1,73 @@
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import type { Config } from "../config";
-import { type Db, openDb } from "../db";
+import { and, asc, eq, inArray } from "drizzle-orm";
+import type { Db } from "../db";
 import { intradayDirty, journalEntries, journalTags } from "../db/schema";
 import { DEFAULT_JOURNAL_TAGS, ensureDefaultTags } from "../journalTags";
 import { needsRecompute } from "../pipeline";
 import { saveProfile } from "../profile";
+import { addUser, freshDb, USER } from "../testing";
 import { addCustomTag, loadCheckIn, reorderBehaviours, saveJournalEntry, setBehaviourHidden } from "./journal";
 
-const h = vi.hoisted(() => ({ db: undefined as unknown, revalidate: vi.fn(), requestSync: vi.fn(), session: { kind: "demo" } as unknown }));
+const h = vi.hoisted(() => ({ db: undefined as unknown, revalidate: vi.fn(), requestSync: vi.fn(), user: null as unknown }));
 vi.mock("../worker", () => ({ requestSync: h.requestSync }));
-vi.mock("../auth", async (orig) => ({ ...(await orig<object>()), currentSession: async () => h.session }));
+vi.mock("../auth", async (orig) => ({ ...(await orig<object>()), currentUser: async () => h.user }));
 vi.mock("next/cache", () => ({ revalidatePath: h.revalidate }));
-vi.mock("../config", async (orig) => ({ ...(await orig<object>()), getConfig: () => ({ timeZone: "Asia/Kolkata" }) as Config }));
 vi.mock("../db", async (orig) => ({ ...(await orig<object>()), getDb: () => h.db as Db }));
 
-let dir: string;
+const ME = { userId: USER, email: "me@example.com", name: "Me", username: "me", image: null };
 let db: Db;
-const entries = () => db.select().from(journalEntries).all();
+let other: number;
+const entries = async () =>
+  (await db.select().from(journalEntries).where(eq(journalEntries.userId, USER))).map(({ day, tag, value }) => ({ day, tag, value }));
+const allTags = () => db.select().from(journalTags).where(eq(journalTags.userId, USER));
+/** Tags in display order: position, then insertion (seq). */
+const order = async (where: ReturnType<typeof and>) =>
+  (await db.select({ tag: journalTags.tag }).from(journalTags).where(and(eq(journalTags.userId, USER), where)).orderBy(asc(journalTags.position), asc(journalTags.seq))).map((r) => r.tag);
 
-beforeAll(() => {
-  dir = fs.mkdtempSync(path.join(os.tmpdir(), "pulse-journal-"));
-  db = h.db = openDb(path.join(dir, "test.db")) as Db;
-  ensureDefaultTags(db);
-  saveProfile(db, { birthDate: "1990-01-01", sex: "male", maxHr: null, heightCm: null });
+beforeAll(async () => {
+  db = h.db = await freshDb();
+  other = await addUser(db);
+  await ensureDefaultTags(db, USER);
+  await ensureDefaultTags(db, other);
+  await saveProfile(db, USER, { birthDate: "1990-01-01", sex: "male", maxHr: null, heightCm: null, timeZone: "Asia/Kolkata" });
   // 20:00 UTC on Oct 2 is 01:30 on Oct 3 in Kolkata.
   vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-10-02T20:00:00Z") });
 });
 afterAll(() => {
   vi.useRealTimers();
-  db.$client.close();
-  fs.rmSync(dir, { recursive: true, force: true });
 });
-beforeEach(() => {
-  db.delete(journalEntries).run();
-  db.delete(intradayDirty).run();
+beforeEach(async () => {
+  await db.delete(journalEntries);
+  await db.delete(intradayDirty);
   h.revalidate.mockClear();
   h.requestSync.mockClear();
-  h.session = { kind: "demo" };
+  h.user = ME;
 });
 
 it("signed out, both writes are refused and nothing is stored", async () => {
-  h.session = null;
+  h.user = null;
   expect(await saveJournalEntry({ day: "2026-10-01", tag: "alcohol", value: true })).toEqual({ ok: false, error: "Signed out. Sign in again." });
   expect(await addCustomTag({ label: "Signed out tag" })).toMatchObject({ ok: false });
-  expect(entries()).toEqual([]);
-  expect(db.select().from(journalTags).all().some((t) => t.tag === "signed_out_tag")).toBe(false);
+  expect(await entries()).toEqual([]);
+  expect((await allTags()).some((t) => t.tag === "signed_out_tag")).toBe(false);
 });
 
 describe("ensureDefaultTags", () => {
   it("is idempotent and keeps custom tags", async () => {
-    expect(ensureDefaultTags(db)).toBe(0);
+    expect(await ensureDefaultTags(db, USER)).toBe(0);
     await addCustomTag({ label: "Cold plunge" });
-    expect(ensureDefaultTags(db)).toBe(0);
-    const tags = db.select().from(journalTags).all();
+    expect(await ensureDefaultTags(db, USER)).toBe(0);
+    const tags = await allTags();
     expect(tags.filter((t) => t.isDefault)).toHaveLength(DEFAULT_JOURNAL_TAGS.length);
     expect(tags.find((t) => t.tag === "cold_plunge")).toMatchObject({ tag: "cold_plunge", label: "Cold plunge", isDefault: false, hidden: false });
   });
 });
 
 describe("saveJournalEntry", () => {
-  it("saves today in the configured time zone, and past days", async () => {
+  it("saves today in the user's time zone, and past days", async () => {
     expect(await saveJournalEntry({ day: "2026-10-03", tag: "alcohol", value: true })).toEqual({ ok: true, data: undefined });
     expect(await saveJournalEntry({ day: "2026-09-01", tag: "alcohol", value: 2 })).toMatchObject({ ok: true });
-    expect(entries()).toEqual([
+    expect(await entries()).toEqual([
       { day: "2026-10-03", tag: "alcohol", value: 1 },
       { day: "2026-09-01", tag: "alcohol", value: 2 },
     ]);
@@ -73,17 +75,17 @@ describe("saveJournalEntry", () => {
   });
 
   it("marks a recompute needed and kicks the worker past its gate", async () => {
-    expect(needsRecompute(db)).toBe(false);
+    expect(await needsRecompute(db, USER)).toBe(false);
     await saveJournalEntry({ day: "2026-09-30", tag: "alcohol", value: true });
     await saveJournalEntry({ day: "2026-09-30", tag: "alcohol", value: null });
-    expect(db.select().from(intradayDirty).all()).toEqual([{ day: "2026-09-30" }]);
-    expect(needsRecompute(db)).toBe(true);
-    expect(h.requestSync.mock.calls).toEqual([[{ force: true }], [{ force: true }]]);
+    expect(await db.select().from(intradayDirty)).toEqual([{ userId: USER, day: "2026-09-30" }]);
+    expect(await needsRecompute(db, USER)).toBe(true);
+    expect(h.requestSync.mock.calls).toEqual([[{ userId: USER, force: true }], [{ userId: USER, force: true }]]);
   });
 
   it("rejects a future day", async () => {
     expect(await saveJournalEntry({ day: "2026-10-04", tag: "alcohol", value: true })).toEqual({ ok: false, error: "Can’t log a future day" });
-    expect(entries()).toEqual([]);
+    expect(await entries()).toEqual([]);
     expect(h.revalidate).not.toHaveBeenCalled();
     expect(h.requestSync).not.toHaveBeenCalled();
   });
@@ -93,16 +95,16 @@ describe("saveJournalEntry", () => {
     expect((await saveJournalEntry({ day: "2026-13-01", tag: "alcohol", value: true })).ok).toBe(false);
     expect((await saveJournalEntry({ day: "2026-10-01", tag: "alcohol", value: -1 })).ok).toBe(false);
     expect((await saveJournalEntry({ day: "2026-10-01", tag: "alcohol", value: 1.5 })).ok).toBe(false);
-    expect(entries()).toEqual([]);
+    expect(await entries()).toEqual([]);
   });
 
   it("a repeat submit is idempotent; a changed answer updates the row", async () => {
     const e = { day: "2026-10-01", tag: "meditation", value: true };
     await saveJournalEntry(e);
     await saveJournalEntry(e);
-    expect(entries()).toEqual([{ day: "2026-10-01", tag: "meditation", value: 1 }]);
+    expect(await entries()).toEqual([{ day: "2026-10-01", tag: "meditation", value: 1 }]);
     await saveJournalEntry({ ...e, value: false });
-    expect(entries()).toEqual([{ day: "2026-10-01", tag: "meditation", value: 0 }]);
+    expect(await entries()).toEqual([{ day: "2026-10-01", tag: "meditation", value: 0 }]);
   });
 
   it("null clears a saved answer back to unanswered, and is idempotent", async () => {
@@ -110,7 +112,7 @@ describe("saveJournalEntry", () => {
     await saveJournalEntry({ day: "2026-10-01", tag: "sauna", value: false });
     expect(await saveJournalEntry({ day: "2026-10-01", tag: "alcohol", value: null })).toEqual({ ok: true, data: undefined });
     expect(await saveJournalEntry({ day: "2026-10-01", tag: "alcohol", value: null })).toMatchObject({ ok: true });
-    expect(entries()).toEqual([{ day: "2026-10-01", tag: "sauna", value: 0 }]);
+    expect(await entries()).toEqual([{ day: "2026-10-01", tag: "sauna", value: 0 }]);
     expect(await saveJournalEntry({ day: "2026-10-04", tag: "alcohol", value: null })).toMatchObject({ ok: false });
   });
 });
@@ -123,7 +125,7 @@ describe("loadCheckIn", () => {
     expect(r.ok && r.data.tags.some((t) => t.tag === "alcohol")).toBe(true);
     expect(await loadCheckIn("2026-10-04")).toMatchObject({ ok: false });
     expect(await loadCheckIn("nope")).toMatchObject({ ok: false });
-    h.session = null;
+    h.user = null;
     expect(await loadCheckIn("2026-10-01")).toMatchObject({ ok: false });
   });
 });
@@ -142,42 +144,53 @@ describe("addCustomTag", () => {
   it("puts a new behaviour after every existing one", async () => {
     await reorderBehaviours({ tags: ["late_workout", "cold_plunge"] });
     await addCustomTag({ label: "Nap" });
-    const order = db.$client.prepare("select tag from journal_tags where is_default = 0 order by position, rowid").pluck().all();
-    expect(order).toEqual(["late_workout", "cold_plunge", "nap"]);
+    expect(await order(eq(journalTags.isDefault, false))).toEqual(["late_workout", "cold_plunge", "nap"]);
   });
 });
 
 describe("setBehaviourHidden and reorderBehaviours", () => {
-  const tag = (t: string) => db.select().from(journalTags).all().find((x) => x.tag === t)!;
+  const tag = async (t: string) => (await allTags()).find((x) => x.tag === t)!;
 
   it("signed out, both are refused and nothing changes", async () => {
-    h.session = null;
+    h.user = null;
     expect(await setBehaviourHidden({ tag: "sauna", hidden: true })).toEqual({ ok: false, error: "Signed out. Sign in again." });
     expect(await reorderBehaviours({ tags: ["sauna", "meditation"] })).toEqual({ ok: false, error: "Signed out. Sign in again." });
-    expect(tag("sauna")).toMatchObject({ hidden: false, position: 0 });
+    expect(await tag("sauna")).toMatchObject({ hidden: false, position: 0 });
   });
 
   it("hides and shows a behaviour without touching its answers", async () => {
     await saveJournalEntry({ day: "2026-10-01", tag: "sauna", value: true });
     expect(await setBehaviourHidden({ tag: "sauna", hidden: true })).toEqual({ ok: true, data: undefined });
-    expect(tag("sauna").hidden).toBe(true);
-    expect(entries()).toEqual([{ day: "2026-10-01", tag: "sauna", value: 1 }]);
+    expect((await tag("sauna")).hidden).toBe(true);
+    expect(await entries()).toEqual([{ day: "2026-10-01", tag: "sauna", value: 1 }]);
     // A hidden behaviour can still be answered (an old check-in edited) and is shown again on request.
     expect(await saveJournalEntry({ day: "2026-09-30", tag: "sauna", value: false })).toMatchObject({ ok: true });
     expect(await setBehaviourHidden({ tag: "sauna", hidden: false })).toMatchObject({ ok: true });
-    expect(tag("sauna").hidden).toBe(false);
+    expect((await tag("sauna")).hidden).toBe(false);
     expect(h.revalidate).toHaveBeenCalledWith("/more/behaviours");
     expect(await setBehaviourHidden({ tag: "nope", hidden: true })).toEqual({ ok: false, error: "Unknown tag: nope" });
   });
 
   it("writes one group's order and refuses unknown or repeated tags whole", async () => {
     expect(await reorderBehaviours({ tags: ["stretching", "sauna", "meditation"] })).toMatchObject({ ok: true });
-    const order = db.$client.prepare("select tag from journal_tags where tag in ('meditation','stretching','sauna') order by position, rowid").pluck().all();
-    expect(order).toEqual(["stretching", "sauna", "meditation"]);
+    expect(await order(inArray(journalTags.tag, ["meditation", "stretching", "sauna"]))).toEqual(["stretching", "sauna", "meditation"]);
     expect(await reorderBehaviours({ tags: ["sauna", "nope"] })).toMatchObject({ ok: false });
     expect(await reorderBehaviours({ tags: ["sauna", "sauna"] })).toMatchObject({ ok: false });
     expect(await reorderBehaviours({ tags: [] })).toMatchObject({ ok: false });
-    expect(tag("stretching").position).toBe(0);
-    expect(tag("sauna").position).toBe(1);
+    expect((await tag("stretching")).position).toBe(0);
+    expect((await tag("sauna")).position).toBe(1);
+  });
+});
+
+describe("per user", () => {
+  it("another user's behaviours and answers are untouched; their custom tag is unknown here", async () => {
+    await db.insert(journalTags).values({ userId: other, tag: "their_tag", label: "Their tag" });
+    expect(await saveJournalEntry({ day: "2026-10-01", tag: "their_tag", value: true })).toEqual({ ok: false, error: "Unknown tag: their_tag" });
+    await setBehaviourHidden({ tag: "alcohol", hidden: true });
+    const [theirs] = await db.select().from(journalTags).where(and(eq(journalTags.userId, other), eq(journalTags.tag, "alcohol")));
+    expect(theirs.hidden).toBe(false);
+    await setBehaviourHidden({ tag: "alcohol", hidden: false });
+    // Same key, two users: both can have it.
+    expect(await addCustomTag({ label: "Their tag" })).toEqual({ ok: true, data: { tag: "their_tag" } });
   });
 });

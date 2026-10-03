@@ -35,8 +35,8 @@ const WEEK_MONTH = ["w", "m"] as const
 
 /** Strain `/strain?d=` (spec §7.3). */
 export default async function StrainPage({ searchParams }: PageProps<"/strain">) {
-  const { d, today, timeZone, weekly } = await pageDay(searchParams as SearchParams, "/strain")
-  const vm = getStrain(d)
+  const { d, today, timeZone, weekly, ctx } = await pageDay(searchParams as SearchParams, "/strain")
+  const vm = await getStrain(d, ctx)
   const s = vm.strain
   const t = vm.target.value
   const trend = trendProps(vm.trend)

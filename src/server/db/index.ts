@@ -1,40 +1,62 @@
-import fs from "node:fs";
+// The Postgres connection: one `pg` pool per process (globalThis, so Next's separate bundles and dev reloads share
+// it). Tests swap in an in-process PGlite database with setDb(). Migrations run at boot (instrumentation.ts).
 import path from "node:path";
-import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
-import { migrate } from "drizzle-orm/better-sqlite3/migrator";
+import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
+import { sql, type SQL } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { migrate as pgMigrate } from "drizzle-orm/node-postgres/migrator";
+import pg from "pg";
 import { getConfig } from "../config";
 import * as schema from "./schema";
 
-/** Opens (creating the parent directory if needed) and migrates a database file. */
-export function openDb(file: string) {
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  const sqlite = new Database(file);
-  sqlite.pragma("busy_timeout = 5000");
-  sqlite.pragma("journal_mode = WAL");
-  sqlite.pragma("synchronous = NORMAL");
-  sqlite.pragma("foreign_keys = ON");
-  const db = drizzle(sqlite, { schema });
-  migrateDb(db);
-  return db;
-}
+export type Schema = typeof schema;
+/** Works for the node-postgres pool and for PGlite (tests), and for a transaction handle. */
+export type Db = PgDatabase<PgQueryResultHKT, Schema>;
 
-const migrateDb = (db: ReturnType<typeof drizzle<typeof schema>>) => migrate(db, { migrationsFolder: path.join(process.cwd(), "drizzle") });
+// count(*) and sums come back as int8 (string by default) and numeric (string): numbers fit every value Pulse stores.
+pg.types.setTypeParser(20, (v) => Number(v));
+pg.types.setTypeParser(1700, (v) => Number(v));
 
-export type Db = ReturnType<typeof openDb>;
+export const MIGRATIONS = path.join(process.cwd(), "drizzle");
 
-// globalThis, not module scope: Next loads instrumentation and routes as separate bundles, and dev reloads modules.
-const g = globalThis as typeof globalThis & { __pulseDb?: Db };
+const g = globalThis as typeof globalThis & { __pulseDb?: Db; __pulsePool?: pg.Pool };
 
-// Module scope, unlike the handle: a dev reload re-evaluates this module, so a migration added while the
-// server runs is applied on the next request instead of failing until a restart. Applied migrations are a no-op.
-let migrated = false;
-
-/** The app database at config.databasePath, opened and migrated on first use. */
+/** The app database: a pool on DATABASE_URL, created on first use. */
 export function getDb(): Db {
-  const fresh = !g.__pulseDb;
-  const db = (g.__pulseDb ??= openDb(getConfig().databasePath));
-  if (!migrated && !fresh) migrateDb(db);
-  migrated = true;
-  return db;
+  if (g.__pulseDb) return g.__pulseDb;
+  const pool = (g.__pulsePool ??= new pg.Pool({ connectionString: getConfig().databaseUrl, max: 10 }));
+  return (g.__pulseDb = drizzle(pool, { schema }) as unknown as Db);
 }
+
+/** Replaces the app database (tests: a PGlite instance). */
+export function setDb(db: Db | undefined) {
+  g.__pulseDb = db;
+}
+
+/** Applies pending migrations, retrying while Postgres starts (compose brings it up alongside the app). */
+export async function migrateDb(db = getDb(), { retries = 30, waitMs = 2000 } = {}) {
+  for (let i = 0; ; i++) {
+    try {
+      await pgMigrate(db as never, { migrationsFolder: MIGRATIONS });
+      return;
+    } catch (err) {
+      const code = (err as { code?: string }).code;
+      const notUp = code === "ECONNREFUSED" || code === "57P03" || code === "ENOTFOUND" || code === "EAI_AGAIN";
+      if (!notUp || i >= retries) throw err;
+      await new Promise((r) => setTimeout(r, waitMs));
+    }
+  }
+}
+
+/** Rows of a raw query, the same on node-postgres and PGlite. Use `sql` with parameters, never string-built SQL. */
+export async function rows<T>(db: Db, query: SQL): Promise<T[]> {
+  const r = (await db.execute(query)) as unknown as { rows: T[] };
+  return r.rows;
+}
+
+/** The first row of a raw query, or undefined. */
+export async function row<T>(db: Db, query: SQL): Promise<T | undefined> {
+  return (await rows<T>(db, query))[0];
+}
+
+export { sql };

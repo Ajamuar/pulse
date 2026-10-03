@@ -1,25 +1,20 @@
-import path from "node:path";
 import { z } from "zod";
 
 export class ConfigError extends Error {
   override name = "ConfigError";
 }
 
-function isTimeZone(tz: string) {
-  try {
-    new Intl.DateTimeFormat("en", { timeZone: tz });
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 const Env = z
   .object({
     GOOGLE_OAUTH_ENABLED: z.stringbool().default(false),
-    DATABASE_PATH: z.string().optional(),
+    /** Postgres. Unset: the local dev database from compose.dev.yaml. */
+    DATABASE_URL: z.string().regex(/^postgres(ql)?:\/\//, "must be a postgres:// URL").optional(),
+    /** Signs sessions and auth tokens (better-auth). Required in production: `openssl rand -base64 32`. */
+    BETTER_AUTH_SECRET: z.string().min(32, "use at least 32 characters (openssl rand -base64 32)").optional(),
+    /** `true` closes sign-up: only existing accounts can sign in. */
+    DISABLE_SIGNUP: z.stringbool().default(false),
     PORT: z.coerce.number().int().min(1).max(65535).default(3000),
-    TZ: z.string().refine(isTimeZone, "must be an IANA time zone"),
     GOOGLE_CLIENT_ID: z.string().optional(),
     GOOGLE_CLIENT_SECRET: z.string().optional(),
     APP_URL: z.url().optional(),
@@ -46,9 +41,11 @@ export function parseConfig(env: Record<string, string | undefined>) {
   const e = r.data;
   return {
     googleOAuthEnabled: e.GOOGLE_OAUTH_ENABLED,
-    databasePath: path.resolve(e.DATABASE_PATH ?? (e.GOOGLE_OAUTH_ENABLED ? "data/pulse.db" : "data/demo.db")),
+    databaseUrl: e.DATABASE_URL ?? "postgres://pulse:pulse@localhost:5432/pulse",
+    authSecret: e.BETTER_AUTH_SECRET ?? null,
+    appUrl: e.APP_URL?.replace(/\/$/, "") ?? null,
+    disableSignup: e.DISABLE_SIGNUP,
     port: e.PORT,
-    timeZone: e.TZ,
     avatarUrl: e.AVATAR_URL ?? null,
     google: e.GOOGLE_OAUTH_ENABLED
       ? {

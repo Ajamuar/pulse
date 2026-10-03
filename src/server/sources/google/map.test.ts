@@ -27,7 +27,7 @@ describe("daily mappers", () => {
     ]);
     // Zones in Google's order whatever the API's; a day missing a zone has none.
     expect(mapDaily("daily-heart-rate-zones", points("daily-heart-rate-zones"), TZ)).toEqual([
-      { day: "2026-10-01", hrZones: "[98,118,137,157,186]" },
+      { day: "2026-10-01", hrZones: [98, 118, 137, 157, 186] },
       { day: "2026-09-30", hrZones: null },
     ]);
     expect(mapDaily("daily-oxygen-saturation", points("daily-oxygen-saturation"), TZ)).toEqual([{ day: "2026-10-01", spo2Pct: 96.4 }]);

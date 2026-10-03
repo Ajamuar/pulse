@@ -6,7 +6,8 @@ Guide for coding agents (and humans) working on Pulse: a self-hosted Next.js app
 
 | Command | What it does |
 |---|---|
-| `pnpm dev` | Dev server on :3000. With `GOOGLE_OAUTH_ENABLED=false` it seeds 180 days of demo data into `data/demo.db` |
+| `docker compose -f compose.dev.yaml up -d` | Postgres on localhost:5432 for `pnpm dev` and e2e |
+| `pnpm dev` | Dev server on :3000. With `GOOGLE_OAUTH_ENABLED=false` it seeds 180 days of demo data for the demo user |
 | `pnpm typecheck` | `next typegen` + `tsc --noEmit` |
 | `pnpm lint` | ESLint |
 | `pnpm test` | Vitest: `*.test.ts` in Node, `*.test.tsx` in happy-dom |
@@ -37,7 +38,7 @@ Run `pnpm typecheck && pnpm lint && pnpm test` before every commit. Run `pnpm e2
 - **Causality.** A day's scores depend only on that day and earlier days. Baselines fold from earlier nights only. Never let a later night change history.
 - **Honest states.** Every nullable metric is `{ value, reason, provisional }`, using the reason codes in `src/lib/reasons.ts`. Never show a fabricated number.
 - **UI.** Build only from shells and kit components, using Tailwind utilities and the tokens in `globals.css`. No new CSS files, and no breakpoint logic inside feature components. Every metric renders its five states through `MetricState`. Spec decisions and deviations live in `docs/design/spec.md` §11.
-- **Auth.** One email and password account per instance (`src/server/account.ts`), created on `/setup` with a one-time code from the server log; Google is only the data source, connected from inside. `src/proxy.ts` gates every page on the session cookie (`src/server/session.ts`), sends a fresh instance to `/setup`, and sends signed-in visitors without a profile to `/onboarding`. Route handlers that change state check `sameOrigin()`. Every Server Action checks `currentSession()` itself (`src/server/auth.ts`); never rely on the proxy matcher alone. The profile lives in the database (`src/server/profile.ts`), never in `.env`.
+- **Auth.** better-auth (`src/server/auth.ts`, Drizzle adapter on Postgres): open sign-up with name, username and email; sign-in by username or email. `src/proxy.ts` only checks that a session cookie exists; the `(app)` layout looks the session up and sends users without a profile to `/onboarding`. Every Server Action calls `currentUser()` and every route handler `requestUser(req)` itself; never rely on the proxy alone. The profile, including the user's time zone, lives in the database (`src/server/profile.ts`), never in `.env`.
 - **Copy.** User-facing text says Pulse and Pulse Age.
 - **Tests.** Algorithms get golden-value or property tests beside the file. Queries get tests on a temp DB built with `src/server/testing.ts`.
 - **Design references.** `docs/design/reference/` is gitignored and holds third-party screenshots. Never commit or publish it.
@@ -46,7 +47,8 @@ Run `pnpm typecheck && pnpm lint && pnpm test` before every commit. Run `pnpm e2
   - Commit as the `adityaongit` identity.
   - Use conventional commit messages, signed off (`git commit -s`).
   - `main` is protected (`.github/rulesets/main.json`): work on a branch and land it through a pull request with green CI. See CONTRIBUTING.md and docs/maintainers.md.
-- **Secrets.** Never log tokens or API response bodies. `.env`, `data/` and `*.db` are gitignored.
+- **Secrets.** Never log tokens or API response bodies. `.env` and `backups/` are gitignored.
+- **Users.** Every per-user table has `user_id`; every query and write filters on it (`ctx.userId`). `src/server/queries/isolation.test.ts` checks no screen leaks another user's data.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

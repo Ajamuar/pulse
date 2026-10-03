@@ -1,10 +1,12 @@
 "use server";
 // Home's My Dashboard (spec §11 CD1): which metrics it shows, in which order.
+import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { isDashboardKey } from "@/lib/dashboard";
-import { currentSession, SIGNED_OUT } from "../auth";
+import { currentUser, SIGNED_OUT } from "../auth";
 import { getDb } from "../db";
+import { dashboardMetrics } from "../db/schema";
 import { dashboardDefault } from "../queries/home";
 import type { ActionResult } from "./journal";
 
@@ -17,18 +19,19 @@ const Dashboard = z.object({
 
 /** Saves the chosen metrics in order. The default list is stored as no rows, so a later default change reaches it. */
 export async function saveDashboard(input: z.input<typeof Dashboard>): Promise<ActionResult> {
-  if (!(await currentSession())) return SIGNED_OUT;
+  const user = await currentUser();
+  if (!user) return SIGNED_OUT;
   const r = Dashboard.safeParse(input);
   if (!r.success) return { ok: false, error: r.error.issues[0].message };
   const { keys } = r.data;
-  const c = getDb().$client;
-  const insert = c.prepare("insert into dashboard_metrics (key, position) values (?, ?)");
-  const def = dashboardDefault(getDb());
+  const { userId } = user;
+  const db = getDb();
+  const def = await dashboardDefault(db, userId);
   const isDefault = keys.length === def.length && keys.every((k, i) => k === def[i]);
-  c.transaction(() => {
-    c.prepare("delete from dashboard_metrics").run();
-    if (!isDefault) keys.forEach((k, i) => insert.run(k, i));
-  })();
+  await db.transaction(async (tx) => {
+    await tx.delete(dashboardMetrics).where(eq(dashboardMetrics.userId, userId));
+    if (!isDefault) await tx.insert(dashboardMetrics).values(keys.map((key, position) => ({ userId, key, position })));
+  });
   revalidatePath("/");
   return { ok: true, data: undefined };
 }

@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils"
 import { CARD_MATERIAL } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
+import { userCtx } from "@/server/queries/common"
 import { getJournalInsights } from "@/server/queries/journal"
 import type { ImpactMetricKey, JournalInsightsVM } from "@/server/queries/types"
 import { DetailShell } from "@/components/shells/DetailShell"
@@ -18,7 +19,7 @@ const parseMetric = (raw: string | string[] | undefined): ImpactMetricKey => {
 /** Journal Insights `/journal/insights?m=` (spec §7.12, journey 7). */
 export default async function JournalInsightsPage({ searchParams }: PageProps<"/journal/insights">) {
   const metric = parseMetric((await searchParams).m)
-  const vm = getJournalInsights(metric)
+  const vm = await getJournalInsights(metric, await userCtx())
 
   return (
     <DetailShell

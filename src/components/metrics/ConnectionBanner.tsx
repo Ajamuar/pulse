@@ -29,7 +29,7 @@ export function ConnectionBanner({ className }: { className?: string }) {
   const done = s.importProgress?.done ?? 0
   const connect = (label: string) => (
     <Button asChild size="touch" variant="default">
-      <Link href="/oauth/start">{label}</Link>
+      <a href="/oauth/start">{label}</a>
     </Button>
   )
 

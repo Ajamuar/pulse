@@ -1,110 +1,233 @@
-// Conventions: timestamps are integer unix seconds (`*_ts`, `*_at`), days are local `YYYY-MM-DD` text,
-// JSON is stored as text (drizzle `mode: "json"`).
+// PostgreSQL schema. Conventions: timestamps are unix seconds (`bigint`, `*_ts`, `*_at`), days are local
+// `YYYY-MM-DD` (`date`, string mode), JSON is `jsonb`, floats are `double precision` (Postgres `real` is 4-byte).
 //
-// drizzle-kit cannot express WITHOUT ROWID, so the initial migration adds it to `hr_samples` and
-// `steps_minutes` by hand. A future migration that recreates either table must keep it
-// (db/index.test.ts fails otherwise).
-import { sql } from "drizzle-orm";
-import { blob, check, index, integer, primaryKey, real, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
+// Auth tables come from better-auth (`npx auth@latest generate` for the Drizzle adapter, serial ids). Every other
+// table belongs to one user: `user_id` leads its key and cascades when the account is deleted.
+import { relations } from "drizzle-orm";
+import { bigint, boolean, customType, foreignKey, date, doublePrecision, index, integer, jsonb, pgTable, primaryKey, serial, smallint, text, timestamp, unique } from "drizzle-orm/pg-core";
 
-const bool = (name: string) => integer(name, { mode: "boolean" });
-const json = (name: string) => text(name, { mode: "json" });
+/** drizzle 0.45 has no bytea column; Buffers in and out. */
+const bytea = customType<{ data: Buffer; driverData: Buffer | Uint8Array }>({
+  dataType: () => "bytea",
+  fromDriver: (v) => (Buffer.isBuffer(v) ? v : Buffer.from(v)),
+});
 
-/** Single row (id = 1) holding the Google OAuth grant. */
-export const oauthTokens = sqliteTable(
-  "oauth_tokens",
+// ── better-auth ──────────────────────────────────────────────────────────────
+
+export const user = pgTable("user", {
+  id: integer("id").generatedByDefaultAsIdentity().primaryKey(),
+  name: text("name").notNull(),
+  email: text("email").notNull().unique(),
+  emailVerified: boolean("email_verified").default(false).notNull(),
+  image: text("image"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
+  username: text("username").unique(),
+  displayUsername: text("display_username"),
+});
+
+export const session = pgTable(
+  "session",
   {
-    id: integer("id").primaryKey(),
-    accessToken: text("access_token").notNull(),
-    refreshToken: text("refresh_token").notNull(),
-    expiresAt: integer("expires_at").notNull(),
-    scope: text("scope").notNull(),
-    revokedAt: integer("revoked_at"),
-    updatedAt: integer("updated_at").notNull(),
+    id: integer("id").generatedByDefaultAsIdentity().primaryKey(),
+    expiresAt: timestamp("expires_at").notNull(),
+    token: text("token").notNull().unique(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .$onUpdate(() => new Date())
+      .notNull(),
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
   },
-  (t) => [check("oauth_tokens_single_row", sql`${t.id} = 1`)],
+  (t) => [index("session_userId_idx").on(t.userId)],
 );
+
+export const account = pgTable(
+  "account",
+  {
+    id: integer("id").generatedByDefaultAsIdentity().primaryKey(),
+    accountId: text("account_id").notNull(),
+    providerId: text("provider_id").notNull(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    accessToken: text("access_token"),
+    refreshToken: text("refresh_token"),
+    idToken: text("id_token"),
+    accessTokenExpiresAt: timestamp("access_token_expires_at"),
+    refreshTokenExpiresAt: timestamp("refresh_token_expires_at"),
+    scope: text("scope"),
+    password: text("password"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (t) => [index("account_userId_idx").on(t.userId)],
+);
+
+export const verification = pgTable(
+  "verification",
+  {
+    id: integer("id").generatedByDefaultAsIdentity().primaryKey(),
+    identifier: text("identifier").notNull(),
+    value: text("value").notNull(),
+    expiresAt: timestamp("expires_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (t) => [index("verification_identifier_idx").on(t.identifier)],
+);
+
+export const rateLimit = pgTable("rate_limit", {
+  id: integer("id").generatedByDefaultAsIdentity().primaryKey(),
+  key: text("key").notNull().unique(),
+  count: integer("count").notNull(),
+  lastRequest: bigint("last_request", { mode: "number" }).notNull(),
+});
+
+export const userRelations = relations(user, ({ many }) => ({ sessions: many(session), accounts: many(account) }));
+export const sessionRelations = relations(session, ({ one }) => ({ user: one(user, { fields: [session.userId], references: [user.id] }) }));
+export const accountRelations = relations(account, ({ one }) => ({ user: one(user, { fields: [account.userId], references: [user.id] }) }));
+
+// ── Per user ─────────────────────────────────────────────────────────────────
+
+const userId = () =>
+  integer("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" });
+const ts = (name: string) => bigint(name, { mode: "number" });
+const day = (name: string) => date(name, { mode: "string" });
+const real = (name: string) => doublePrecision(name);
+
+/** The user's Google OAuth grant, and which Google account it is (from the ID token at each connect). */
+export const oauthTokens = pgTable("oauth_tokens", {
+  userId: userId().primaryKey(),
+  accessToken: text("access_token").notNull(),
+  refreshToken: text("refresh_token").notNull(),
+  expiresAt: ts("expires_at").notNull(),
+  scope: text("scope").notNull(),
+  revokedAt: ts("revoked_at"),
+  updatedAt: ts("updated_at").notNull(),
+  googleEmail: text("google_email"),
+  googleName: text("google_name"),
+  googlePicture: text("google_picture"),
+});
 
 /** Per data type (Google type name, or "seed"). `last_error` holds status and code only, never bodies or tokens. */
-export const syncState = sqliteTable("sync_state", {
-  type: text("type").primaryKey(),
-  syncedThrough: integer("synced_through"),
-  backfillDaysDone: integer("backfill_days_done"),
-  backfillDaysTotal: integer("backfill_days_total"),
-  lastAttemptAt: integer("last_attempt_at"),
-  lastSuccessAt: integer("last_success_at"),
-  lastError: text("last_error"),
-});
-
-/** Gzipped raw Google pages; insert with ON CONFLICT DO NOTHING so an unchanged re-fetch is free. Pruned by fetched_at (RAW_RETENTION_DAYS). */
-export const rawPayloads = sqliteTable(
-  "raw_payloads",
+export const syncState = pgTable(
+  "sync_state",
   {
-    id: integer("id").primaryKey(),
+    userId: userId(),
     type: text("type").notNull(),
-    rangeStart: integer("range_start").notNull(),
-    rangeEnd: integer("range_end").notNull(),
-    bodyHash: text("body_hash").notNull(),
-    gzBody: blob("gz_body", { mode: "buffer" }).notNull(),
-    fetchedAt: integer("fetched_at").notNull(),
+    syncedThrough: ts("synced_through"),
+    backfillDaysDone: integer("backfill_days_done"),
+    backfillDaysTotal: integer("backfill_days_total"),
+    lastAttemptAt: ts("last_attempt_at"),
+    lastSuccessAt: ts("last_success_at"),
+    lastError: text("last_error"),
   },
-  (t) => [unique("raw_payloads_dedupe").on(t.type, t.rangeStart, t.rangeEnd, t.bodyHash), index("raw_payloads_fetched_at").on(t.fetchedAt)],
+  (t) => [primaryKey({ columns: [t.userId, t.type] })],
 );
 
-// ponytail: one row per HR sample (~13.6M rows/year at Fitbit's 2 s cadence); add a per-minute rollup if reads get slow.
-/** WITHOUT ROWID (see top of file). Band HR only. */
-export const hrSamples = sqliteTable("hr_samples", {
-  ts: integer("ts").primaryKey(),
-  bpm: integer("bpm").notNull(),
-});
+/** Gzipped raw Google pages; insert with ON CONFLICT DO NOTHING so an unchanged re-fetch is free. Pruned by fetched_at. */
+export const rawPayloads = pgTable(
+  "raw_payloads",
+  {
+    id: serial("id").primaryKey(),
+    userId: userId(),
+    type: text("type").notNull(),
+    rangeStart: ts("range_start").notNull(),
+    rangeEnd: ts("range_end").notNull(),
+    bodyHash: text("body_hash").notNull(),
+    gzBody: bytea("gz_body").notNull(),
+    fetchedAt: ts("fetched_at").notNull(),
+  },
+  (t) => [unique("raw_payloads_dedupe").on(t.userId, t.type, t.rangeStart, t.rangeEnd, t.bodyHash), index("raw_payloads_fetched_at").on(t.fetchedAt)],
+);
 
-/** WITHOUT ROWID (see top of file). `ts` is the minute start; max across sources, used for movement gating. */
-export const stepsMinutes = sqliteTable("steps_minutes", {
-  ts: integer("ts").primaryKey(),
-  steps: integer("steps").notNull(),
-});
+/**
+ * Band heart rate, one row per user and UTC day (`bucket` = floor(ts / 86400)): second-of-day offsets and bpm, sorted
+ * by offset. UTC buckets, so a time-zone change never re-buckets stored samples. Read and merged by src/server/samples.ts.
+ */
+export const hrDays = pgTable(
+  "hr_days",
+  {
+    userId: userId(),
+    bucket: integer("bucket").notNull(),
+    offsets: integer("offsets").array().notNull(),
+    values: smallint("values").array().notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.bucket] })],
+);
 
-export const dailyMetrics = sqliteTable("daily_metrics", {
-  day: text("day").primaryKey(),
-  hrvMs: real("hrv_ms"),
-  hrvDeepMs: real("hrv_deep_ms"),
-  rhrBpm: real("rhr_bpm"),
-  rhrMethod: text("rhr_method"),
-  respBpm: real("resp_bpm"),
-  nightlyTempC: real("nightly_temp_c"),
-  spo2Pct: real("spo2_pct"),
-  vo2maxDaily: real("vo2max_daily"),
-  vo2maxRun: real("vo2max_run"),
-  steps: integer("steps"),
-  calories: real("calories"),
-  weightKg: real("weight_kg"),
-  bodyFatPct: real("body_fat_pct"),
-  /** Google's heart-rate zones for the day: JSON `[light, moderate, vigorous, peak]` minimum bpm, then the peak maximum. */
-  hrZones: text("hr_zones"),
-  /** Google's all-day time in heart-rate zones, minutes: LIGHT + MODERATE, and VIGOROUS + PEAK. */
-  lightModerateMin: real("light_moderate_min"),
-  vigorousPeakMin: real("vigorous_peak_min"),
-  /** Google's skin-temperature baseline (30-night median) and the 30-night SD of nightly − baseline, °C. */
-  tempBaselineC: real("temp_baseline_c"),
-  tempSdC: real("temp_sd_c"),
-  /** Google's personal ranges (daily roll-ups), when it gives them. */
-  rhrRangeLow: real("rhr_range_low"),
-  rhrRangeHigh: real("rhr_range_high"),
-  hrvRangeLow: real("hrv_range_low"),
-  hrvRangeHigh: real("hrv_range_high"),
-  source: text("source").notNull(),
-});
+/** Steps per minute (offset = the minute start's second-of-day), same layout as hr_days. Max across sources. */
+export const stepsDays = pgTable(
+  "steps_days",
+  {
+    userId: userId(),
+    bucket: integer("bucket").notNull(),
+    offsets: integer("offsets").array().notNull(),
+    values: integer("values").array().notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.bucket] })],
+);
+
+export const dailyMetrics = pgTable(
+  "daily_metrics",
+  {
+    userId: userId(),
+    day: day("day").notNull(),
+    hrvMs: real("hrv_ms"),
+    hrvDeepMs: real("hrv_deep_ms"),
+    rhrBpm: real("rhr_bpm"),
+    rhrMethod: text("rhr_method"),
+    respBpm: real("resp_bpm"),
+    nightlyTempC: real("nightly_temp_c"),
+    spo2Pct: real("spo2_pct"),
+    vo2maxDaily: real("vo2max_daily"),
+    vo2maxRun: real("vo2max_run"),
+    steps: integer("steps"),
+    calories: real("calories"),
+    weightKg: real("weight_kg"),
+    bodyFatPct: real("body_fat_pct"),
+    /** Google's heart-rate zones for the day: `[light, moderate, vigorous, peak]` minimum bpm, then the peak maximum. */
+    hrZones: jsonb("hr_zones").$type<number[]>(),
+    /** Google's all-day time in heart-rate zones, minutes: LIGHT + MODERATE, and VIGOROUS + PEAK. */
+    lightModerateMin: real("light_moderate_min"),
+    vigorousPeakMin: real("vigorous_peak_min"),
+    /** Google's skin-temperature baseline (30-night median) and the 30-night SD of nightly − baseline, °C. */
+    tempBaselineC: real("temp_baseline_c"),
+    tempSdC: real("temp_sd_c"),
+    rhrRangeLow: real("rhr_range_low"),
+    rhrRangeHigh: real("rhr_range_high"),
+    hrvRangeLow: real("hrv_range_low"),
+    hrvRangeHigh: real("hrv_range_high"),
+    source: text("source").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.day] })],
+);
 
 /** `day` is the local wake day. Summary minutes are kept even when stages are missing. */
-export const sleepSessions = sqliteTable(
+export const sleepSessions = pgTable(
   "sleep_sessions",
   {
-    id: text("id").primaryKey(),
-    day: text("day").notNull(),
-    startTs: integer("start_ts").notNull(),
-    endTs: integer("end_ts").notNull(),
-    isMain: bool("is_main").notNull(),
-    processed: bool("processed").notNull(),
+    userId: userId(),
+    id: text("id").notNull(),
+    day: day("day").notNull(),
+    startTs: ts("start_ts").notNull(),
+    endTs: ts("end_ts").notNull(),
+    isMain: boolean("is_main").notNull(),
+    processed: boolean("processed").notNull(),
     stagesStatus: text("stages_status"),
     asleepMin: integer("asleep_min"),
     awakeMin: integer("awake_min"),
@@ -113,192 +236,211 @@ export const sleepSessions = sqliteTable(
     remMin: integer("rem_min"),
     source: text("source").notNull(),
   },
-  (t) => [index("sleep_sessions_day").on(t.day)],
+  (t) => [primaryKey({ columns: [t.userId, t.id] }), index("sleep_sessions_day").on(t.userId, t.day)],
 );
 
-export const sleepSegments = sqliteTable(
+export const sleepSegments = pgTable(
   "sleep_segments",
   {
-    sessionId: text("session_id")
-      .notNull()
-      .references(() => sleepSessions.id, { onDelete: "cascade" }),
-    startTs: integer("start_ts").notNull(),
-    endTs: integer("end_ts").notNull(),
+    userId: userId(),
+    sessionId: text("session_id").notNull(),
+    startTs: ts("start_ts").notNull(),
+    endTs: ts("end_ts").notNull(),
     stage: text("stage", { enum: ["awake", "light", "deep", "rem"] }).notNull(),
   },
-  (t) => [primaryKey({ columns: [t.sessionId, t.startTs] })],
+  (t) => [
+    primaryKey({ columns: [t.userId, t.sessionId, t.startTs] }),
+    foreignKey({ columns: [t.userId, t.sessionId], foreignColumns: [sleepSessions.userId, sleepSessions.id] }).onDelete("cascade"),
+  ],
 );
 
 /** `day` is the local start day. `type` is the Google exercise type (e.g. RUNNING, STRENGTH_TRAINING). */
-export const exercises = sqliteTable(
+export const exercises = pgTable(
   "exercises",
   {
-    id: text("id").primaryKey(),
-    day: text("day").notNull(),
-    startTs: integer("start_ts").notNull(),
-    endTs: integer("end_ts").notNull(),
+    userId: userId(),
+    id: text("id").notNull(),
+    day: day("day").notNull(),
+    startTs: ts("start_ts").notNull(),
+    endTs: ts("end_ts").notNull(),
     type: text("type").notNull(),
     name: text("name"),
     calories: real("calories"),
     distanceM: real("distance_m"),
     source: text("source").notNull(),
   },
-  (t) => [index("exercises_day").on(t.day)],
+  (t) => [primaryKey({ columns: [t.userId, t.id] }), index("exercises_day").on(t.userId, t.day)],
 );
 
-export const journalTags = sqliteTable("journal_tags", {
-  tag: text("tag").primaryKey(),
-  label: text("label").notNull(),
-  isDefault: bool("is_default").notNull().default(false),
-  /** Hidden from the check-in sheet (More › Behaviours). Past answers stay and still count in insights. */
-  hidden: bool("hidden").notNull().default(false),
-  /** Order within the tag's check-in group; ties fall back to insertion order (rowid). */
-  position: integer("position").notNull().default(0),
-});
+export const journalTags = pgTable(
+  "journal_tags",
+  {
+    userId: userId(),
+    tag: text("tag").notNull(),
+    label: text("label").notNull(),
+    isDefault: boolean("is_default").notNull().default(false),
+    /** Hidden from the check-in sheet (More › Behaviours). Past answers stay and still count in insights. */
+    hidden: boolean("hidden").notNull().default(false),
+    /** Order within the tag's check-in group; ties fall back to `seq` (insertion order). */
+    position: integer("position").notNull().default(0),
+    seq: serial("seq").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.tag] })],
+);
 
-/** Home's My Dashboard as the owner chose it: the metric keys shown, in `position` order. No rows means the default list. */
-/**
- * Google's daily roll-ups beyond the scored metrics (distance, floors, active minutes, water, nutrition, ...),
- * one row per local day and metric key (`src/lib/extraMetrics.ts`). Shown, never scored.
- */
-export const dailyValues = sqliteTable(
+/** Google's daily roll-ups beyond the scored metrics, one row per local day and metric key. Shown, never scored. */
+export const dailyValues = pgTable(
   "daily_values",
   {
-    day: text("day").notNull(),
+    userId: userId(),
+    day: text("day").notNull(), // a date, or 'latest' for height_cm
     key: text("key").notNull(),
     value: real("value").notNull(),
   },
-  (t) => [primaryKey({ columns: [t.day, t.key] })],
+  // The key index serves "every reading of one measurement" (Health › measurements, metric trends).
+  (t) => [primaryKey({ columns: [t.userId, t.day, t.key] }), index("daily_values_key").on(t.userId, t.key, t.day)],
 );
 
 /** Heart-rhythm records (ECG readings, irregular rhythm notifications), one row per Google data point. */
-export const healthRecords = sqliteTable(
+export const healthRecords = pgTable(
   "health_records",
   {
-    id: text("id").primaryKey(),
+    userId: userId(),
+    id: text("id").notNull(),
     kind: text("kind", { enum: ["ecg", "irn"] }).notNull(),
-    ts: integer("ts").notNull(),
-    day: text("day").notNull(),
+    ts: ts("ts").notNull(),
+    day: day("day").notNull(),
     /** ECG: classification and average bpm. IRN: alert window count. Never the waveform. */
-    data: json("data").notNull(),
+    data: jsonb("data").notNull(),
   },
-  (t) => [index("health_records_ts").on(t.ts)],
+  (t) => [primaryKey({ columns: [t.userId, t.id] }), index("health_records_ts").on(t.userId, t.ts)],
 );
 
-export const dashboardMetrics = sqliteTable("dashboard_metrics", {
-  key: text("key").primaryKey(),
-  position: integer("position").notNull(),
-});
+/** Home's My Dashboard as the user chose it: the metric keys shown, in `position` order. No rows means the default list. */
+export const dashboardMetrics = pgTable(
+  "dashboard_metrics",
+  {
+    userId: userId(),
+    key: text("key").notNull(),
+    position: integer("position").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.key] })],
+);
 
-export const journalEntries = sqliteTable(
+export const journalEntries = pgTable(
   "journal_entries",
   {
-    day: text("day").notNull(),
+    userId: userId(),
+    day: day("day").notNull(),
     tag: text("tag").notNull(),
     value: integer("value").notNull(),
   },
-  (t) => [primaryKey({ columns: [t.day, t.tag] })],
+  (t) => [primaryKey({ columns: [t.userId, t.day, t.tag] })],
 );
 
 /** Days whose HR or steps changed; stage 1 of the pipeline recomputes them, then clears the row. */
-export const intradayDirty = sqliteTable("intraday_dirty", {
-  day: text("day").primaryKey(),
-});
+export const intradayDirty = pgTable(
+  "intraday_dirty",
+  {
+    userId: userId(),
+    day: day("day").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.day] })],
+);
 
 /** One row per day. Stage-1 columns (intraday) and stage-2 columns (folds) are written separately. */
-export const dailyScores = sqliteTable("daily_scores", {
-  day: text("day").primaryKey(),
-  scoringVersion: integer("scoring_version").notNull(),
-  // Stage 1
-  strain: json("strain"),
-  activities: json("activities"),
-  sessionRhrBpm: real("session_rhr_bpm"),
-  // Stage 2
-  recovery: json("recovery"),
-  sleep: json("sleep"),
-  trainingLoad: json("training_load"),
-  strainTarget: json("strain_target"),
-  sleepPlanner: json("sleep_planner"),
-  energyBank: json("energy_bank"),
-  stress: json("stress"),
-  healthMonitor: json("health_monitor"),
-  healthspan: json("healthspan"),
-  fitness: json("fitness"),
-  journalImpact: json("journal_impact"),
-});
+export const dailyScores = pgTable(
+  "daily_scores",
+  {
+    userId: userId(),
+    day: day("day").notNull(),
+    scoringVersion: integer("scoring_version").notNull(),
+    // Stage 1
+    strain: jsonb("strain"),
+    activities: jsonb("activities"),
+    sessionRhrBpm: real("session_rhr_bpm"),
+    // Stage 2
+    recovery: jsonb("recovery"),
+    sleep: jsonb("sleep"),
+    trainingLoad: jsonb("training_load"),
+    strainTarget: jsonb("strain_target"),
+    sleepPlanner: jsonb("sleep_planner"),
+    energyBank: jsonb("energy_bank"),
+    stress: jsonb("stress"),
+    healthMonitor: jsonb("health_monitor"),
+    healthspan: jsonb("healthspan"),
+    fitness: jsonb("fitness"),
+    journalImpact: jsonb("journal_impact"),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.day] })],
+);
 
 /** Per-minute series per day; `kind` e.g. "hr", "stress", "energy_bank", "load". */
-export const intradaySeries = sqliteTable(
+export const intradaySeries = pgTable(
   "intraday_series",
   {
-    day: text("day").notNull(),
+    userId: userId(),
+    day: day("day").notNull(),
     kind: text("kind").notNull(),
-    data: json("data").notNull(),
+    data: jsonb("data").notNull(),
   },
-  (t) => [primaryKey({ columns: [t.day, t.kind] })],
+  (t) => [primaryKey({ columns: [t.userId, t.day, t.kind] })],
 );
 
 /** `period` is an ISO week (`2026-W40`) or a month (`2026-10`). */
-export const reports = sqliteTable("reports", {
-  period: text("period").primaryKey(),
-  data: json("data").notNull(),
+export const reports = pgTable(
+  "reports",
+  {
+    userId: userId(),
+    period: text("period").notNull(),
+    data: jsonb("data").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.period] })],
+);
+
+/** What scoring needs about the person. Absent until onboarding (the demo user's is seeded). */
+export const profile = pgTable("profile", {
+  userId: userId().primaryKey(),
+  birthDate: date("birth_date", { mode: "string" }).notNull(),
+  sex: text("sex", { enum: ["male", "female"] }).notNull(),
+  /** Measured max HR; null means estimate it from age. */
+  maxHr: integer("max_hr"),
+  heightCm: real("height_cm"),
+  /** IANA zone the person lives in: their days start at local midnight there. Chosen at onboarding. */
+  timeZone: text("time_zone").notNull(),
+  updatedAt: ts("updated_at").notNull(),
 });
 
-/** Single row (id = 1): the session-signing secret, generated on first use, the Pulse account and the connected Google account. */
-export const instance = sqliteTable(
-  "instance",
-  {
-    id: integer("id").primaryKey(),
-    sessionSecret: text("session_secret").notNull(),
-    /** The Pulse account's lowercased email (sign-in), set on /setup; null until the account exists. */
-    ownerEmail: text("owner_email"),
-    /** `scrypt$salt$key` (src/server/account.ts); null until the account exists. */
-    passwordHash: text("password_hash"),
-    /** The Google account the data comes from, from the ID token at each connect; switching it clears synced data. */
-    googleEmail: text("google_email"),
-    /** The owner's Google profile photo URL, from the ID token at each sign-in. */
-    ownerPicture: text("owner_picture"),
-    /** The owner's Google display name (ID token `name`), shown above the email. */
-    ownerName: text("owner_name"),
-    /** A photo uploaded in Settings; it wins over the Google one. */
-    avatar: blob("avatar", { mode: "buffer" }),
-    avatarType: text("avatar_type"),
-    avatarAt: integer("avatar_at"),
-  },
-  (t) => [check("instance_single_row", sql`${t.id} = 1`)],
-);
-
-/** Single row (id = 1): what scoring needs about the person. Absent until onboarding (demo seeds it). */
-export const profile = sqliteTable(
-  "profile",
-  {
-    id: integer("id").primaryKey(),
-    birthDate: text("birth_date").notNull(),
-    sex: text("sex", { enum: ["male", "female"] }).notNull(),
-    /** Measured max HR; null means estimate it from age. */
-    maxHr: integer("max_hr"),
-    heightCm: real("height_cm"),
-    updatedAt: integer("updated_at").notNull(),
-  },
-  (t) => [check("profile_single_row", sql`${t.id} = 1`)],
-);
+/** A photo uploaded in Settings; it wins over the Google one. */
+export const avatars = pgTable("avatars", {
+  userId: userId().primaryKey(),
+  bytes: bytea("bytes").notNull(),
+  type: text("type").notNull(),
+  updatedAt: ts("updated_at").notNull(),
+});
 
 /**
- * What the owner logged in Pulse (water, food, weight, mood, symptoms, cycle), one row per Google data point.
- * Moods, symptoms, periods and ovulation tests are write-only at Google, so this is their only copy Pulse can read;
- * readable types come back through the sync, which owns their totals. `google_name` is the data point's name at
- * Google (null: kept locally only, as in demo mode). `data` is per type (`LogData` in src/lib/log.ts).
+ * What the user logged in Pulse (water, food, weight, mood, symptoms, cycle), one row per Google data point.
+ * `google_name` is the data point's name at Google (null: kept locally only, as in demo mode).
  */
-export const loggedEntries = sqliteTable(
+export const loggedEntries = pgTable(
   "logged_entries",
   {
-    id: text("id").primaryKey(),
+    userId: userId(),
+    id: text("id").notNull(),
     type: text("type").notNull(),
-    ts: integer("ts").notNull(),
-    day: text("day").notNull(),
-    data: json("data").notNull(),
+    ts: ts("ts").notNull(),
+    day: day("day").notNull(),
+    data: jsonb("data").notNull(),
     googleName: text("google_name"),
-    createdAt: integer("created_at").notNull(),
+    createdAt: ts("created_at").notNull(),
   },
-  (t) => [index("logged_entries_ts").on(t.ts), index("logged_entries_day_type").on(t.day, t.type)],
+  (t) => [primaryKey({ columns: [t.userId, t.id] }), index("logged_entries_ts").on(t.userId, t.ts), index("logged_entries_day_type").on(t.userId, t.day, t.type)],
 );
+
+/** Tables holding a user's synced Google data and what was computed from it (cleared on a Google account switch). */
+export const SYNCED_TABLES = [
+  syncState, rawPayloads, hrDays, stepsDays, dailyMetrics, sleepSegments, sleepSessions, exercises, dailyValues,
+  healthRecords, intradayDirty, dailyScores, intradaySeries, reports,
+] as const;
+

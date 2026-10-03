@@ -29,8 +29,8 @@ const signedHmm = (min: number, sign: "+" | "−") => `${sign}${hmm(Math.abs(min
 
 /** Sleep `/sleep?d=` (spec §7.5). */
 export default async function SleepPage({ searchParams }: PageProps<"/sleep">) {
-  const { d, timeZone } = await pageDay(searchParams as SearchParams, "/sleep")
-  const vm = getSleep(d)
+  const { d, timeZone, ctx } = await pageDay(searchParams as SearchParams, "/sleep")
+  const vm = await getSleep(d, ctx)
   const p = vm.performance
 
   return (

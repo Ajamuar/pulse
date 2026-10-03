@@ -2,10 +2,11 @@
 // field paths and JSON types, point counts, cadence, and the answers docs/data-notes.md asks for.
 //
 // Needs GOOGLE_OAUTH_ENABLED=true and a completed consent (/oauth/start). Stop the server first, or
-// the two processes share the 5 QPS per-user limit. From the repo root:
-//   pnpm tsx --env-file=.env src/server/sources/google/probe.ts
+// the two processes share the 5 QPS per-user limit. From the repo root, with the Pulse user id whose grant to use:
+//   pnpm tsx --env-file=.env src/server/sources/google/probe.ts <userId>
 import { getConfig } from "../../config";
 import { getDb } from "../../db";
+import { getProfile } from "../../profile";
 import { DATA_TYPE_IDS, DATA_TYPES, type DataTypeId } from "./catalogue";
 import { addDays, localDay, localMidnight } from "../../time";
 import { createGoogleClient, type GoogleClient } from "./client";
@@ -61,8 +62,11 @@ async function fetchType(client: GoogleClient, id: DataTypeId, from: string, to:
 async function main() {
   const cfg = getConfig();
   if (!cfg.google) throw new Error("set GOOGLE_OAUTH_ENABLED=true");
-  const tz = cfg.timeZone;
-  const client = createGoogleClient({ db: getDb(), google: cfg.google, timeZone: tz });
+  const userId = Number(process.argv[2]);
+  if (!Number.isInteger(userId) || userId <= 0) throw new Error("usage: probe.ts <userId>");
+  const db = getDb();
+  const tz = (await getProfile(db, userId))?.timeZone ?? "UTC";
+  const client = createGoogleClient({ db, userId, google: cfg.google, timeZone: tz });
   const to = addDays(localDay(Date.now() / 1000, tz), 1);
   const from = addDays(to, -7);
   const got: Partial<Record<DataTypeId, unknown[]>> = {};

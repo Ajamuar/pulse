@@ -11,12 +11,13 @@
 // Each type runs on its own: a failure records the GoogleError's safe message (status and code,
 // never a body or token) in its sync_state row and the next type carries on. A chunk's rows and its
 // cursor commit in one transaction, so an interrupted backfill resumes where it stopped.
-import type { Statement } from "better-sqlite3";
-import { eq, getTableColumns, getTableName } from "drizzle-orm";
-import type { SQLiteTable } from "drizzle-orm/sqlite-core";
+import { and, eq, getTableColumns, getTableName, gte, inArray, lt, sql } from "drizzle-orm";
+import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import { getConfig } from "../../config";
-import { type Db, getDb } from "../../db";
-import { dailyMetrics, exercises, healthRecords, oauthTokens, sleepSessions, syncState } from "../../db/schema";
+import { type Db, getDb, row } from "../../db";
+import { dailyMetrics, dailyValues, exercises, healthRecords, hrDays, intradayDirty, oauthTokens, sleepSegments, sleepSessions, stepsDays, syncState } from "../../db/schema";
+import { getProfile } from "../../profile";
+import { mergeSamples } from "../../samples";
 import type { Source } from "../types";
 import { DATA_TYPES, type DataTypeId } from "./catalogue";
 import { addDays, localDay, localMidnight } from "../../time";
@@ -82,21 +83,24 @@ const JOBS: Job[] = [
   ...EXTRA_JOBS,
 ];
 
-export type SyncDeps = ClientDeps & { log?: Pick<Console, "error"> };
+export type SyncDeps = Omit<ClientDeps, "userId"> & { log?: Pick<Console, "error"> };
 
 export function createGoogleSource(deps: SyncDeps): Source {
   const { db, timeZone: tz, now = Date.now, log = console } = deps;
   const nowS = () => Math.floor(now() / 1000);
 
-  const setState = (key: string, patch: Partial<typeof syncState.$inferInsert>) =>
-    db.insert(syncState).values({ type: key, ...patch }).onConflictDoUpdate({ target: syncState.type, set: patch }).run();
-
   return {
-    async pull() {
-      if (!db.select().from(oauthTokens).get()) return { changed: false }; // not connected yet
-      const client = createGoogleClient(deps); // one per run: it holds the rate limiter
-      const w = writer(db, tz);
+    async pull(userId: number) {
+      const [grant] = await db.select({ userId: oauthTokens.userId }).from(oauthTokens).where(eq(oauthTokens.userId, userId));
+      if (!grant) return { changed: false }; // not connected yet
+      const client = createGoogleClient({ ...deps, userId }); // one per run: it holds the rate limiter
+      const w = writer(tz, userId);
       const run = { changed: false };
+      const setState = (d: Db, key: string, patch: Partial<typeof syncState.$inferInsert>) =>
+        d
+          .insert(syncState)
+          .values({ userId, type: key, ...patch })
+          .onConflictDoUpdate({ target: [syncState.userId, syncState.type], set: patch });
 
       // A Google Health profile with no paired device imports 180 empty days; say so instead (Settings,
       // ConnectionBanner). Only a clear "none" sets it and a clear "some" clears it; an error or an unknown
@@ -104,28 +108,28 @@ export function createGoogleSource(deps: SyncDeps): Source {
       try {
         const devices = await client.pairedDevices();
         if (devices !== "unknown") {
-          setState(DEVICES_KEY, { lastAttemptAt: nowS(), lastSuccessAt: nowS(), lastError: devices === "none" ? NO_DEVICE_ERROR : null });
+          await setState(db, DEVICES_KEY, { lastAttemptAt: nowS(), lastSuccessAt: nowS(), lastError: devices === "none" ? NO_DEVICE_ERROR : null });
         }
       } catch (err) {
         log.error(err instanceof GoogleError ? err.message : "[sync] pairedDevices: internal error");
       }
 
       for (const job of JOBS) {
-        setState(job.key, { lastAttemptAt: nowS() });
+        await setState(db, job.key, { lastAttemptAt: nowS() });
         try {
           await syncJob(job);
-          setState(job.key, { lastSuccessAt: nowS(), lastError: null });
+          await setState(db, job.key, { lastSuccessAt: nowS(), lastError: null });
         } catch (err) {
           const safe = err instanceof GoogleError ? err.message : `[sync] ${job.key}: internal error`;
-          setState(job.key, { lastError: safe });
+          await setState(db, job.key, { lastError: safe });
           log.error(err instanceof GoogleError ? safe : `[sync] ${job.key} failed: ${(err as Error)?.stack ?? err}`);
         }
       }
-      pruneRawPayloads(db, nowS()); // every run, so the archive stays bounded (client.ts)
+      await pruneRawPayloads(db, userId, nowS()); // every run, so the archive stays bounded (client.ts)
       return { changed: run.changed };
 
       async function syncJob(job: Job) {
-        const st = db.select().from(syncState).where(eq(syncState.type, job.key)).get();
+        const [st] = await db.select().from(syncState).where(and(eq(syncState.userId, userId), eq(syncState.type, job.key)));
         const t = nowS();
         const today = localDay(t, tz);
         const fresh = st?.syncedThrough == null;
@@ -135,7 +139,7 @@ export function createGoogleSource(deps: SyncDeps): Source {
         let from: number;
         if (fresh) {
           from = localMidnight(addDays(today, 1 - BACKFILL_DAYS), tz); // today is day 180
-          setState(job.key, { backfillDaysDone: 0, backfillDaysTotal: BACKFILL_DAYS });
+          await setState(db, job.key, { backfillDaysDone: 0, backfillDaysTotal: BACKFILL_DAYS });
         } else if (backfilling) {
           from = st.syncedThrough!; // the last committed chunk's end
         } else {
@@ -145,7 +149,7 @@ export function createGoogleSource(deps: SyncDeps): Source {
             // From the last sample too, not just the cursor, so a band that uploads hours late is not
             // lost behind a 1-hour overlap.
             // ponytail: a band silent for more than OVERLAP_DAYS loses the older part; widen if seen.
-            const last = w.lastSample(job.kind) ?? Infinity;
+            const last = (await w.lastSample(db, job.kind)) ?? Infinity;
             from = Math.max(from, minute(Math.min(through, last + 1) - INTRADAY_OVERLAP_S));
           }
         }
@@ -157,24 +161,29 @@ export function createGoogleSource(deps: SyncDeps): Source {
             job.kind === "rollup" || job.kind === "extra"
               ? await client.dailyRollUp(job.type, localDay(win.start, tz), dayAfter(win.end, tz))
               : await client.list(job.type, win.start, win.end);
-          db.$client.transaction(() => {
-            if (w.write(job, points, win)) run.changed = true;
+          await db.transaction(async (tx) => {
+            if (await w.write(tx, job, points, win)) run.changed = true;
             if (backfilling) done = Math.min(BACKFILL_DAYS, done + daysIn(win, tz));
-            setState(job.key, { syncedThrough: win.end, ...(backfilling && { backfillDaysDone: done }) });
-          })();
+            await setState(tx, job.key, { syncedThrough: win.end, ...(backfilling && { backfillDaysDone: done }) });
+          });
         }
-        if (backfilling) setState(job.key, { syncedThrough: t, backfillDaysDone: BACKFILL_DAYS });
+        if (backfilling) await setState(db, job.key, { syncedThrough: t, backfillDaysDone: BACKFILL_DAYS });
       }
     },
   };
 }
 
-/** The app's source: config and database from the environment, one client per pull. */
+/**
+ * The app's source: config and database from the environment, one client per pull, windows in the user's zone.
+ * Before onboarding there is no zone yet: UTC, and saving the profile marks every day dirty for a rescore.
+ */
 export const googleSource: Source = {
-  pull() {
-    const cfg = getConfig();
-    if (!cfg.google) return Promise.resolve({ changed: false });
-    return createGoogleSource({ db: getDb(), google: cfg.google, timeZone: cfg.timeZone }).pull();
+  async pull(userId) {
+    const { google } = getConfig();
+    if (!google) return { changed: false };
+    const db = getDb();
+    const timeZone = (await getProfile(db, userId))?.timeZone ?? "UTC";
+    return createGoogleSource({ db, google, timeZone }).pull(userId);
   },
 };
 
@@ -190,11 +199,38 @@ const daysIn = (w: TimeWindow, tz: string) =>
 
 // --- Writes ---------------------------------------------------------------------------------------
 
-function writer(db: Db, tz: string) {
-  const c = db.$client;
-  const stmts = new Map<string, Statement>();
-  const prep = (q: string) => stmts.get(q) ?? stmts.set(q, c.prepare(q)).get(q)!;
+const CHUNK = 1000;
 
+/**
+ * Multi-row upsert of the user's rows on `key` (user_id leads it), updating a row only when a value differs
+ * (`IS DISTINCT FROM`, so an unchanged re-fetch writes nothing). Rows with the same key: the last wins. Returns the
+ * rows actually inserted or updated.
+ */
+async function upsert<T extends PgTable>(db: Db, table: T, key: string[], userId: number, input: Record<string, unknown>[]): Promise<Record<string, unknown>[]> {
+  if (!input.length) return [];
+  const cols = getTableColumns(table) as Record<string, PgColumn>;
+  const byKey = new Map(input.map((r) => [key.map((k) => String(r[k])).join("\u0000"), r]));
+  const rows = [...byKey.values()].map((r) => ({ ...r, userId }));
+  const names = [...new Set(rows.flatMap(Object.keys))].filter((k) => k !== "userId" && !key.includes(k));
+  // Column names come from the schema, never from input.
+  const q = (k: string) => `"${cols[k].name}"`;
+  const set = Object.fromEntries(names.map((k) => [k, sql.raw(`excluded.${q(k)}`)]));
+  const t = `"${getTableName(table)}"`;
+  const differs = sql.raw(`(${names.map((k) => `${t}.${q(k)}`)}) is distinct from (${names.map((k) => `excluded.${q(k)}`)})`);
+  const target = [cols.userId, ...key.map((k) => cols[k])];
+  const returned = Object.fromEntries(key.map((k) => [k, cols[k]]));
+  const out: Record<string, unknown>[] = [];
+  for (let i = 0; i < rows.length; i += CHUNK) {
+    const ins = db.insert(table).values(rows.slice(i, i + CHUNK) as never);
+    const res = names.length
+      ? await ins.onConflictDoUpdate({ target, set: set as never, setWhere: differs }).returning(returned)
+      : await ins.onConflictDoNothing().returning(returned);
+    out.push(...(res as Record<string, unknown>[]));
+  }
+  return out;
+}
+
+function writer(tz: string, userId: number) {
   // Local midnight sits on a UTC quarter hour in every zone, so one lookup per 15 minutes is exact.
   const days = new Map<number, string>();
   const dayOf = (ts: number) => {
@@ -202,115 +238,113 @@ function writer(db: Db, tz: string) {
     return days.get(q) ?? days.set(q, localDay(q * 900, tz)).get(q)!;
   };
 
-  /** Inserts a row, or updates it when any value differs. True when a row was written. */
-  function upsert(table: SQLiteTable, key: string, row: Record<string, unknown>): boolean {
-    const cols = getTableColumns(table);
-    const names = Object.keys(row).map((k) => `"${cols[k].name}"`);
-    const set = names.filter((n) => n !== `"${key}"`);
-    const q =
-      `INSERT INTO "${getTableName(table)}" (${names}) VALUES (${names.map(() => "?")}) ` +
-      `ON CONFLICT ("${key}") DO UPDATE SET ${set.map((n) => `${n} = excluded.${n}`)} ` +
-      `WHERE ${set.map((n) => `${n} IS NOT excluded.${n}`).join(" OR ")}`;
-    const values = Object.values(row).map((v) => (typeof v === "boolean" ? Number(v) : (v ?? null)));
-    return prep(q).run(values).changes > 0;
+  const dailyRows = async (db: Db, rows: DailyRow[]) =>
+    (await upsert(db, dailyMetrics, ["day"], userId, rows.map((r) => ({ ...r, source: "google" })))).length > 0;
+
+  /** Replaces each session's segments where they differ. Returns the sessions whose segments changed. */
+  async function segments(db: Db, sessionIds: string[], next: SegmentRow[]): Promise<Set<string>> {
+    const changed = new Set<string>();
+    if (!sessionIds.length) return changed;
+    const held = await db
+      .select({ sessionId: sleepSegments.sessionId, startTs: sleepSegments.startTs, endTs: sleepSegments.endTs, stage: sleepSegments.stage })
+      .from(sleepSegments)
+      .where(and(eq(sleepSegments.userId, userId), inArray(sleepSegments.sessionId, sessionIds)))
+      .orderBy(sleepSegments.sessionId, sleepSegments.startTs);
+    const key = (xs: SegmentRow[], id: string) =>
+      JSON.stringify(xs.filter((s) => s.sessionId === id).map((s) => [s.startTs, s.endTs, s.stage]).sort((a, b) => (a[0] as number) - (b[0] as number)));
+    for (const id of sessionIds) if (key(held, id) !== key(next, id)) changed.add(id);
+    if (!changed.size) return changed;
+    await db.delete(sleepSegments).where(and(eq(sleepSegments.userId, userId), inArray(sleepSegments.sessionId, [...changed])));
+    const rows = next.filter((s) => changed.has(s.sessionId)).map((s) => ({ userId, ...s }));
+    for (let i = 0; i < rows.length; i += CHUNK) await db.insert(sleepSegments).values(rows.slice(i, i + CHUNK));
+    return changed;
   }
 
-  const dailyRows = (rows: DailyRow[]) =>
-    rows.map((r) => upsert(dailyMetrics, "day", { ...r, source: "google" })).includes(true);
-
-  /** Replaces a session's segments when they differ. */
-  function segments(sessionId: string, next: SegmentRow[]): boolean {
-    const old = prep("SELECT start_ts, end_ts, stage FROM sleep_segments WHERE session_id = ? ORDER BY start_ts").all(sessionId);
-    const rows = next.map((s) => ({ start_ts: s.startTs, end_ts: s.endTs, stage: s.stage }));
-    if (JSON.stringify(old) === JSON.stringify(rows)) return false;
-    prep("DELETE FROM sleep_segments WHERE session_id = ?").run(sessionId);
-    const ins = prep("INSERT INTO sleep_segments (session_id, start_ts, end_ts, stage) VALUES (?, ?, ?, ?)");
-    for (const r of rows) ins.run(sessionId, r.start_ts, r.end_ts, r.stage);
-    return true;
-  }
-
-  /** Deletes the rows of `table` with `col` in the window whose id Google did not return. Returns their days. */
-  function prune(table: "sleep_sessions" | "exercises", col: "start_ts" | "end_ts", win: TimeWindow, returned: { id: string }[]) {
+  /** Deletes the user's rows of `table` with `col` in the window whose id Google did not return. Returns their days. */
+  async function prune(db: Db, table: typeof sleepSessions | typeof exercises, col: PgColumn, win: TimeWindow, returned: { id: string }[]) {
     const keep = new Set(returned.map((r) => r.id));
-    const held = prep(`SELECT id, day FROM ${table} WHERE ${col} >= ? AND ${col} < ?`).all(win.start, win.end) as { id: string; day: string }[];
-    const del = prep(`DELETE FROM ${table} WHERE id = ?`); // a session's segments cascade
-    return held.filter((r) => !keep.has(r.id)).map((r) => (del.run(r.id), r.day));
+    const held = await db
+      .select({ id: table.id, day: table.day })
+      .from(table)
+      .where(and(eq(table.userId, userId), gte(col, win.start), lt(col, win.end)));
+    const gone = held.filter((r) => !keep.has(r.id));
+    if (!gone.length) return [];
+    const ids = gone.map((r) => r.id);
+    await db.delete(table).where(and(eq(table.userId, userId), inArray(table.id, ids)));
+    if (table === sleepSessions) await db.delete(sleepSegments).where(and(eq(sleepSegments.userId, userId), inArray(sleepSegments.sessionId, ids)));
+    return gone.map((r) => r.day);
   }
 
   /** Writes a list window's points (or a rollup's) for a job; marks changed days dirty. True when anything changed. */
-  function write(job: Job, points: unknown[], win: TimeWindow): boolean {
+  async function write(db: Db, job: Job, points: unknown[], win: TimeWindow): Promise<boolean> {
     const dirty = new Set<string>();
     let changed = false;
     switch (job.kind) {
       case "daily":
-        changed = dailyRows(mapDaily(job.type, points, tz));
+        changed = await dailyRows(db, mapDaily(job.type, points, tz));
         break;
       case "rollup":
-        changed = dailyRows(mapRollup(job.type, points));
+        changed = await dailyRows(db, mapRollup(job.type, points));
         break;
       // Extras and records feed no score, so they never set `changed` (no recompute for them).
-      case "extra": {
-        const q = prep("INSERT INTO daily_values (day, key, value) VALUES (?, ?, ?) ON CONFLICT (day, key) DO UPDATE SET value = excluded.value WHERE value IS NOT excluded.value");
-        for (const v of mapExtra(job.type, points)) q.run(v.day, v.key, v.value);
+      case "extra":
+        await upsert(db, dailyValues, ["day", "key"], userId, mapExtra(job.type, points));
         break;
-      }
       case "records":
-        for (const r of mapRecords(job.type, points, tz)) upsert(healthRecords, "id", { ...r, data: JSON.stringify(r.data) });
+        await upsert(db, healthRecords, ["id"], userId, mapRecords(job.type, points, tz));
         break;
       case "height": {
         // Pulse Age's lean-mass term reads it when the profile has no height, so a new value rescores.
         const h = mapHeight(points);
-        if (h) changed = prep("INSERT INTO daily_values (day, key, value) VALUES ('latest', 'height_cm', ?) ON CONFLICT (day, key) DO UPDATE SET value = excluded.value WHERE value IS NOT excluded.value").run(h.cm).changes > 0;
+        if (h) changed = (await upsert(db, dailyValues, ["day", "key"], userId, [{ day: "latest", key: "height_cm", value: h.cm }])).length > 0;
         break;
       }
       case "hr": {
-        const q = prep("INSERT INTO hr_samples (ts, bpm) VALUES (?, ?) ON CONFLICT (ts) DO UPDATE SET bpm = excluded.bpm WHERE bpm IS NOT excluded.bpm");
         const hr = mapHeartRate(points);
-        for (const [ts, bpm] of hr) if (q.run(ts, bpm).changes) dirty.add(dayOf(ts));
         // ponytail: only when the window has band HR, so an empty or unreadable answer never wipes a day;
         // a whole window deleted upstream stays. Drop the guard if that is ever seen.
-        if (hr.size) {
-          const del = prep("DELETE FROM hr_samples WHERE ts = ?");
-          const held = prep("SELECT ts FROM hr_samples WHERE ts >= ? AND ts < ?").pluck().all(win.start, win.end) as number[];
-          for (const ts of held) if (!hr.has(ts) && del.run(ts).changes) dirty.add(dayOf(ts));
-        }
+        if (hr.size) for (const ts of await mergeSamples(db, "hr", userId, win, hr, "replace")) dirty.add(dayOf(ts));
         break;
       }
       case "steps": {
         // Max with the stored minute too: a multi-minute interval that starts before the re-fetch
         // window must not shrink the minutes it spills into.
-        const q = prep("INSERT INTO steps_minutes (ts, steps) VALUES (?, ?) ON CONFLICT (ts) DO UPDATE SET steps = excluded.steps WHERE excluded.steps > steps");
-        for (const [ts, n] of mapStepsMinutes(points)) if (q.run(ts, n).changes) dirty.add(dayOf(ts));
+        const steps = mapStepsMinutes(points);
+        if (steps.size) for (const ts of await mergeSamples(db, "steps", userId, win, steps, "max")) dirty.add(dayOf(ts));
         break;
       }
       // Sessions feed stage 1 too (session resting HR, per-activity strain), so a changed one marks its day.
       case "sleep": {
         const { sessions, segments: segs } = mapSleep(points, tz);
-        for (const s of sessions) {
-          const a = upsert(sleepSessions, "id", s);
-          const b = segments(s.id, segs.filter((g) => g.sessionId === s.id));
-          if (a || b) dirty.add(s.day);
-        }
+        const written = new Set((await upsert(db, sleepSessions, ["id"], userId, sessions)).map((r) => r.id as string));
+        const resegmented = await segments(db, sessions.map((s) => s.id), segs);
+        for (const s of sessions) if (written.has(s.id) || resegmented.has(s.id)) dirty.add(s.day);
         // Only when every point was readable: a shape change must not read as "all deleted".
-        if (sessions.length === points.length) for (const d of prune("sleep_sessions", "end_ts", win, sessions)) dirty.add(d);
+        if (sessions.length === points.length) for (const d of await prune(db, sleepSessions, sleepSessions.endTs, win, sessions)) dirty.add(d);
         break;
       }
       case "exercise": {
         const rows = mapExercises(points, tz);
-        for (const e of rows) if (upsert(exercises, "id", e)) dirty.add(e.day);
+        const written = new Set((await upsert(db, exercises, ["id"], userId, rows)).map((r) => r.id as string));
+        for (const e of rows) if (written.has(e.id)) dirty.add(e.day);
         // The filter is on civil start time, which is start_ts in this zone.
-        if (rows.length === points.length) for (const d of prune("exercises", "start_ts", win, rows)) dirty.add(d);
+        if (rows.length === points.length) for (const d of await prune(db, exercises, exercises.startTs, win, rows)) dirty.add(d);
         break;
       }
     }
-    const mark = prep("INSERT INTO intraday_dirty (day) VALUES (?) ON CONFLICT DO NOTHING");
-    for (const d of dirty) mark.run(d);
+    if (dirty.size) await db.insert(intradayDirty).values([...dirty].map((day) => ({ userId, day }))).onConflictDoNothing();
     return changed || dirty.size > 0;
   }
 
-  /** The newest stored intraday sample, unix seconds. */
-  const lastSample = (kind: "hr" | "steps") =>
-    (prep(`SELECT max(ts) AS t FROM ${kind === "hr" ? "hr_samples" : "steps_minutes"}`).get() as { t: number | null }).t;
+  /** The user's newest stored intraday sample, unix seconds: the last offset of the newest day row. */
+  async function lastSample(db: Db, kind: "hr" | "steps"): Promise<number | null> {
+    const t = kind === "hr" ? hrDays : stepsDays;
+    const r = await row<{ t: number | null }>(
+      db,
+      sql`select ${t.bucket} * 86400 + ${t.offsets}[array_length(${t.offsets}, 1)] as t from ${t} where ${t.userId} = ${userId} order by ${t.bucket} desc limit 1`,
+    );
+    return r?.t ?? null;
+  }
 
   return { write, lastSample };
 }

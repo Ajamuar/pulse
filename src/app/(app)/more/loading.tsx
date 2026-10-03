@@ -30,7 +30,7 @@ export default function Loading() {
         <LinkListSkeleton title="Trends" rows={[{ icon: ChartLine, label: "Trends" }]} />
         <LinkListSkeleton title="Journal" rows={[{ icon: ListChecks, label: "Behaviours" }]} />
         <LinkListSkeleton title="Help" rows={[{ icon: BookOpen, label: "How Pulse works" }]} />
-        <LinkListSkeleton title="Your data" rows={[{ icon: Database, label: "Export and backup" }]} />
+        <LinkListSkeleton title="Your data" rows={[{ icon: Database, label: "Export" }]} />
         <div aria-hidden className="contents">
           <About version={APP_VERSION} scoringVersion={SCORING_VERSION} />
         </div>

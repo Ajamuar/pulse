@@ -1,13 +1,15 @@
+import { and, eq } from "drizzle-orm";
+import { exercises } from "../db/schema";
 import { addDays } from "../time";
 import {
   ACTIVITY_NAME,
   activityKind,
-  defaultCtx,
   distanceOf,
   exercisesBetween,
   type ExerciseRow,
   hrReason,
   loadDays,
+  loadSeries,
   maybe,
   meanSd,
   ms,
@@ -17,23 +19,29 @@ import {
   todayOf,
   toStrain,
 } from "./common";
-import { hrChart, zoneNote, zoneRows } from "./strain";
+import { hrChartOf, zoneNote, zoneRows } from "./strain";
 import type { ActivityVM, KeyStat } from "./types";
 
 /** Activity `/activity/[id]` (spec §7.4); null for an unknown id. */
-export function getActivity(id: string, ctx: QueryCtx = defaultCtx()): ActivityVM | null {
-  const e = ctx.db.$client
-    .prepare("select id, day, start_ts startTs, end_ts endTs, type, name, calories, distance_m distanceM from exercises where id = ?")
-    .get(id) as ExerciseRow | undefined;
+export async function getActivity(id: string, ctx: QueryCtx): Promise<ActivityVM | null> {
+  const x = exercises;
+  const [e] = await ctx.db
+    .select({ id: x.id, day: x.day, startTs: x.startTs, endTs: x.endTs, type: x.type, name: x.name, calories: x.calories, distanceM: x.distanceM })
+    .from(x)
+    .where(and(eq(x.userId, ctx.userId), eq(x.id, id)));
   if (!e) return null;
-  const rows = loadDays(ctx, addDays(e.day, -30), e.day);
+  const [rows, recent, series] = await Promise.all([
+    loadDays(ctx, addDays(e.day, -30), e.day),
+    exercisesBetween(ctx, addDays(e.day, -30), e.day),
+    loadSeries(ctx, e.day, "hr"),
+  ]);
   const row = rows.get(e.day);
   const a = row?.activities.find((x) => x.id === id);
   const kind = activityKind(e.type);
   const reason = a && a.hrCount > 0 ? "insufficient_hr_data" : hrReason(row?.s1 ?? null);
 
   // 30-day averages over the same activity kind, before this one.
-  const same = exercisesBetween(ctx, addDays(e.day, -30), e.day).filter((x) => x.id !== id && x.startTs < e.startTs && activityKind(x.type) === kind);
+  const same = recent.filter((x) => x.id !== id && x.startTs < e.startTs && activityKind(x.type) === kind);
   const statOf = (x: ExerciseRow) => rows.get(x.day)?.activities.find((y) => y.id === x.id);
   const tile = (key: string, label: string, v: number | null | undefined, unit: string | undefined, prior: (number | null | undefined)[], r = reason): KeyStat => {
     const { mean, sd } = meanSd(prior);
@@ -74,7 +82,7 @@ export function getActivity(id: string, ctx: QueryCtx = defaultCtx()): ActivityV
     dayStrain: row?.s1?.effort != null ? toStrain(row.s1.effort) : null,
     stats,
     insight: a && a.hrCount > 0 ? zoneInsight(a.zoneSeconds) : null,
-    hr: hrChart(ctx, row, e.day, e.day === todayOf(ctx), e.startTs - 600, e.endTs + 600),
+    hr: hrChartOf(ctx, row, e.day, e.day === todayOf(ctx), series, recent.filter((y) => y.day === e.day), e.startTs - 600, e.endTs + 600),
     zones: a ? zoneRows(row, a.zoneSeconds) : none(reason),
     maxHr: row?.s1?.maxHr ?? ctx.profile.maxHr,
     zoneNote: zoneNote(row, ctx),

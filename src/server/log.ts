@@ -1,9 +1,9 @@
-// Logging from Pulse (spec §11 LG1): what the owner logs is written to Google Health and mirrored in
+// Logging from Pulse (spec §11 LG1): what the user logs is written to Google Health and mirrored in
 // `logged_entries`, the only copy Pulse can read of the write-only types. Demo mode keeps it local.
 import { randomUUID } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { and, desc, eq, gte } from "drizzle-orm";
 import { describeEntry, LOG_TYPES, READABLE, scopeUrl, type LogType } from "@/lib/log";
-import type { Db } from "./db";
+import { type Db, row, sql } from "./db";
 import { loggedEntries, oauthTokens } from "./db/schema";
 import type { GoogleClient } from "./sources/google/client";
 import { GoogleError } from "./sources/google/oauth";
@@ -13,8 +13,11 @@ import { localDay } from "./time";
 /** `demo`: kept in Pulse only. `reconnect`: the grant lacks this type's write scope (or was revoked). */
 export type LogAccess = "demo" | "ok" | "reconnect" | "not_connected";
 
-export function logAccess(db: Db, mode: "demo" | "google"): Record<LogType, LogAccess> {
-  const row = mode === "google" ? db.select({ scope: oauthTokens.scope, revokedAt: oauthTokens.revokedAt }).from(oauthTokens).get() : undefined;
+export async function logAccess(db: Db, userId: number, mode: "demo" | "google"): Promise<Record<LogType, LogAccess>> {
+  const [row] =
+    mode === "google"
+      ? await db.select({ scope: oauthTokens.scope, revokedAt: oauthTokens.revokedAt }).from(oauthTokens).where(eq(oauthTokens.userId, userId))
+      : [];
   const granted = new Set(row?.scope.split(/\s+/));
   const of = (t: LogType): LogAccess =>
     mode === "demo" ? "demo" : !row ? "not_connected" : row.revokedAt !== null || !granted.has(scopeUrl(t)) ? "reconnect" : "ok";
@@ -39,7 +42,7 @@ const failure = (e: unknown): LogResult => {
  * Writes each entry to Google (with `writer`; null keeps it local, as demo mode does), then stores it with the
  * name Google gave it. Entries go in order; one that fails stops the rest, and those already written stay.
  */
-export async function saveEntries(db: Db, entries: NewEntry[], o: { tz: string; writer: LogWriter | null; now: number }): Promise<LogResult> {
+export async function saveEntries(db: Db, userId: number, entries: NewEntry[], o: { tz: string; writer: LogWriter | null; now: number }): Promise<LogResult> {
   for (const e of entries) {
     let googleName: string | null = null;
     try {
@@ -47,16 +50,17 @@ export async function saveEntries(db: Db, entries: NewEntry[], o: { tz: string; 
     } catch (err) {
       return failure(err);
     }
-    db.insert(loggedEntries)
-      .values({ id: randomUUID(), type: e.type, ts: e.ts, day: localDay(e.ts, o.tz), data: e.data, googleName, createdAt: o.now })
-      .run();
+    await db
+      .insert(loggedEntries)
+      .values({ userId, id: randomUUID(), type: e.type, ts: e.ts, day: localDay(e.ts, o.tz), data: e.data, googleName, createdAt: o.now });
   }
   return { ok: true };
 }
 
 /** Deletes an entry at Google (when it was written there) and then here. Already gone at Google counts as deleted. */
-export async function deleteEntry(db: Db, id: string, writer: LogWriter | null): Promise<LogResult & { type?: LogType }> {
-  const row = db.select().from(loggedEntries).where(eq(loggedEntries.id, id)).get();
+export async function deleteEntry(db: Db, userId: number, id: string, writer: LogWriter | null): Promise<LogResult & { type?: LogType }> {
+  const mine = and(eq(loggedEntries.userId, userId), eq(loggedEntries.id, id));
+  const [row] = await db.select().from(loggedEntries).where(mine);
   if (!row) return { ok: true };
   if (row.googleName && writer) {
     try {
@@ -65,32 +69,44 @@ export async function deleteEntry(db: Db, id: string, writer: LogWriter | null):
       if (!(err instanceof GoogleError && (err.status === 404 || err.code === "NOT_FOUND"))) return failure(err);
     }
   }
-  db.delete(loggedEntries).where(eq(loggedEntries.id, id)).run();
+  await db.delete(loggedEntries).where(mine);
   return { ok: true, type: row.type as LogType };
 }
 
 export type LoggedEntry = { id: string; type: LogType; ts: number; day: string; title: string; detail: string; atGoogle: boolean };
 
 /** Entries logged at or after `fromTs`, newest first. */
-export function recentEntries(db: Db, fromTs: number, limit = 50): LoggedEntry[] {
-  const rows = db.$client
-    .prepare("select id, type, ts, day, data, google_name from logged_entries where ts >= ? order by ts desc, created_at desc limit ?")
-    .all(fromTs, limit) as { id: string; type: LogType; ts: number; day: string; data: string; google_name: string | null }[];
-  return rows.map((r) => ({ id: r.id, type: r.type, ts: r.ts, day: r.day, ...describeEntry(r.type, JSON.parse(r.data)), atGoogle: r.google_name !== null }));
+export async function recentEntries(db: Db, userId: number, fromTs: number, limit = 50): Promise<LoggedEntry[]> {
+  const rows = await db
+    .select()
+    .from(loggedEntries)
+    .where(and(eq(loggedEntries.userId, userId), gte(loggedEntries.ts, fromTs)))
+    .orderBy(desc(loggedEntries.ts), desc(loggedEntries.createdAt))
+    .limit(limit);
+  return rows.map((r) => ({
+    id: r.id,
+    type: r.type as LogType,
+    ts: r.ts,
+    day: r.day,
+    ...describeEntry(r.type as LogType, r.data),
+    atGoogle: r.googleName !== null,
+  }));
 }
 
 /**
  * Water drunk on `day`: Google's roll-up (the sync owns totals, from every app) plus what Pulse logged after the
  * last hydration sync, which that roll-up cannot hold yet. So an entry is counted once, before and after the sync.
  */
-export function waterOn(db: Db, day: string): number {
-  const synced = (db.$client.prepare("select value from daily_values where day = ? and key = 'water'").get(day) as { value: number } | undefined)?.value ?? 0;
-  const since =
-    (db.$client.prepare("select last_success_at t from sync_state where type = 'hydration-log'").get() as { t: number | null } | undefined)?.t ?? 0;
-  const pending = db.$client
-    .prepare("select data from logged_entries where type = 'hydration-log' and day = ? and created_at > ?")
-    .all(day, since) as { data: string }[];
-  return synced + pending.reduce((s, r) => s + (JSON.parse(r.data) as { ml: number }).ml, 0);
+export async function waterOn(db: Db, userId: number, day: string): Promise<number> {
+  const r = await row<{ synced: number; pending: number }>(
+    db,
+    sql`select
+      coalesce((select value from daily_values where user_id = ${userId} and day = ${day} and key = 'water'), 0) synced,
+      coalesce((select sum((data->>'ml')::numeric) from logged_entries
+        where user_id = ${userId} and type = 'hydration-log' and day = ${day}
+          and created_at > coalesce((select last_success_at from sync_state where user_id = ${userId} and type = 'hydration-log'), 0)), 0) pending`,
+  );
+  return Number(r?.synced ?? 0) + Number(r?.pending ?? 0);
 }
 
 export const isReadable = (t: LogType) => READABLE.has(t);

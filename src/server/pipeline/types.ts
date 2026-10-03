@@ -24,6 +24,8 @@ import type { StrainTarget } from "@/core/algorithms/strainTarget";
 export const SCORING_VERSION = 6;
 
 export type PipelineOptions = {
+  /** Whose data: every read and write is scoped to this user. */
+  userId: number;
   timeZone: string;
   profile: { birthDate: string; sex: "male" | "female"; maxHr: number; heightCm?: number | null };
 };

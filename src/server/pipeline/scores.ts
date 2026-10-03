@@ -46,7 +46,7 @@ export type Cached = { s1: Stage1Day; activities: Stage1Activity[]; sessionRhr: 
 /** What stage 2 reads once, besides `Data`. */
 export type Inputs = {
   cached: Map<string, Cached>;
-  /** Per-minute series, read one day at a time (only the day being scored is ever asked for). */
+  /** Per-minute series, loaded a batch of days at a time by stage 2 (only the day being scored is ever asked for). */
   stillHr: Pick<Map<string, (number | null)[]>, "get">;
   loadSeries: Pick<Map<string, (number | null)[]>, "get">;
   segments: Map<string, Segment[]>;

@@ -1,11 +1,13 @@
 // Stage 2: folds every day, oldest first, over the daily rows and stage 1's cached results, then
 // writes only the rows, series and reports whose JSON changed.
+import { and, eq, gt, gte, inArray, lt, lte, notInArray, or, sql } from "drizzle-orm";
 import type { Db } from "../db";
+import { dailyScores, intradayDirty, intradaySeries, journalEntries, reports, sleepSegments } from "../db/schema";
 import { addDays } from "../time";
 import { hrvCfg, respCfg, restingHRCfg, skinTempCfg, update } from "@/core/scoring/baselines";
 import { journalImpact, type JournalDay, type TagImpact } from "@/core/algorithms/journalImpact";
 import { buildReport, periodBounds, reportPeriods } from "@/core/algorithms/reports";
-import { BATCH_DAYS, type Data, groupBy, type Segment, SERIES_UPSERT, sha } from "./data";
+import { BATCH_DAYS, type Data, groupBy, type Segment, sha, upsertSeries } from "./data";
 import {
   type Cached,
   dayOf,
@@ -24,33 +26,64 @@ import {
   scoreStress,
   scoreTrainingLoad,
 } from "./scores";
-import { type JournalImpactRow, type PipelineOptions, SCORING_VERSION, STAGE2_COLUMNS, type Stage2Row } from "./types";
+import {
+  type JournalImpactRow,
+  type PipelineOptions,
+  type RecoveryRow,
+  SCORING_VERSION,
+  STAGE2_COLUMNS,
+  type Stage1Activity,
+  type Stage1Day,
+  type Stage2Row,
+} from "./types";
 
-export function stage2(db: Db, data: Data, opts: PipelineOptions) {
-  const c = db.$client;
-  const tz = opts.timeZone;
+export async function stage2(db: Db, data: Data, opts: PipelineOptions) {
+  const { userId, timeZone: tz } = opts;
   const { days } = data;
-  const { inputs, journal } = readInputs(db);
+  const { inputs, journal, storedImpact } = await readInputs(db, userId);
+  const stillHr = new Map<string, (number | null)[]>();
+  const loadSeries = new Map<string, (number | null)[]>();
+  Object.assign(inputs, { stillHr, loadSeries });
 
   const f = newFold();
   const out = new Map<string, Omit<Stage2Row, "journal_impact">>();
   // Stress and Energy Bank series go out in batches during the fold rather than all at the end, so memory
   // doesn't grow with history. They are idempotent upserts; a crash before the final commit leaves
   // intraday_dirty set, so the next run redoes everything.
-  const series = c.prepare(SERIES_UPSERT);
-  const dropEnergy = c.prepare("delete from intraday_series where day = ? and kind = 'energy_bank'");
   let pending: { day: string; stress: (number | null)[]; energy: (number | null)[] | null }[] = [];
-  const flush = c.transaction(() => {
-    for (const p of pending) {
-      series.run(p.day, "stress", JSON.stringify(p.stress));
-      if (p.energy) series.run(p.day, "energy_bank", JSON.stringify(p.energy));
-      else dropEnergy.run(p.day);
-    }
+  const flush = async () => {
+    const batch = pending;
     pending = [];
-  });
+    if (!batch.length) return;
+    const series = batch.flatMap((p) => [
+      { day: p.day, kind: "stress", data: p.stress },
+      ...(p.energy ? [{ day: p.day, kind: "energy_bank", data: p.energy }] : []),
+    ]);
+    const noEnergy = batch.filter((p) => !p.energy).map((p) => p.day);
+    const t = intradaySeries;
+    await db.transaction(async (tx) => {
+      await upsertSeries(tx, userId, series);
+      if (noEnergy.length) await tx.delete(t).where(and(eq(t.userId, userId), eq(t.kind, "energy_bank"), inArray(t.day, noEnergy)));
+    });
+  };
 
   // Order matters: each scorer reads the fold as earlier scorers left it for today.
-  for (const day of days) {
+  for (let i = 0; i < days.length; i++) {
+    const day = days[i];
+    if (i % BATCH_DAYS === 0) {
+      // The per-minute series the scorers read, a batch of days at a time: the scorers stay synchronous and memory
+      // stays flat in history length.
+      await flush();
+      const batch = days.slice(i, i + BATCH_DAYS);
+      stillHr.clear();
+      loadSeries.clear();
+      const t = intradaySeries;
+      const rows = await db
+        .select({ day: t.day, kind: t.kind, data: t.data })
+        .from(t)
+        .where(and(eq(t.userId, userId), inArray(t.kind, ["still_hr", "load"]), gte(t.day, batch[0]), lte(t.day, batch.at(-1)!)));
+      for (const r of rows) (r.kind === "still_hr" ? stillHr : loadSeries).set(r.day, r.data as (number | null)[]);
+    }
     const d = dayOf(data, inputs, day, opts);
     const sleep = scoreSleep(data, inputs, f, d, tz);
     const recovery = scoreRecovery(f, d, sleep);
@@ -61,7 +94,6 @@ export function stage2(db: Db, data: Data, opts: PipelineOptions) {
     const stress = scoreStress(f, d, inputs);
     const energy = scoreEnergyBank(data, inputs, d, recovery, sleep, stress.minutes);
     pending.push({ day, stress: stress.series, energy: energy.curve });
-    if (pending.length >= BATCH_DAYS) flush();
     const healthMonitor = scoreHealthMonitor(f, d, inputs, recovery);
     const healthspan = scoreHealthspan(data, f, d, sleep, opts);
     const fitness = scoreFitness(f, d, opts);
@@ -87,16 +119,10 @@ export function stage2(db: Db, data: Data, opts: PipelineOptions) {
     f.efforts.push(d.s1.effort);
     f.prevAcwr = trainingLoad.acwr;
   }
-  flush();
+  await flush();
 
   // ── Journal impact: as of each day, memoised on its inputs ────────────────
   const entries: JournalDay[] = [...journal].map(([day, es]) => ({ day, tags: Object.fromEntries(es.map((e) => [e.tag, e.value])) }));
-  const storedImpact = new Map(
-    (c.prepare("select day, journal_impact from daily_scores").all() as { day: string; journal_impact: string | null }[]).map((r) => [
-      r.day,
-      r.journal_impact ? (JSON.parse(r.journal_impact) as JournalImpactRow) : null,
-    ]),
-  );
   const rows = new Map<string, Stage2Row>();
   const impactsAsOf = new Map<string, TagImpact[]>();
   for (const day of days) {
@@ -111,78 +137,85 @@ export function stage2(db: Db, data: Data, opts: PipelineOptions) {
   }
 
   // ── Writes ────────────────────────────────────────────────────────────────
-  const cols = STAGE2_COLUMNS;
-  const write = c.prepare(
-    `update daily_scores set scoring_version = ?, ${cols.map((k) => `${k} = ?`).join(", ")}
-     where day = ? and (scoring_version, ${cols.join(", ")}) is not (?, ${cols.map(() => "?").join(", ")})`,
-  );
-  const report = c.prepare(
-    "insert into reports (period, data) values (?, ?) on conflict(period) do update set data = excluded.data where data is not excluded.data",
-  );
+  // Only rows whose version or JSON changed are updated (jsonb compares by value), so an unchanged run writes nothing.
+  const ds = dailyScores;
+  const cols = ["scoring_version", ...STAGE2_COLUMNS];
+  const set = Object.fromEntries(cols.map((k) => [camel(k), sql.raw(`excluded.${k}`)]));
+  const changed = sql.raw(`(${cols.map((k) => `daily_scores.${k}`)}) is distinct from (${cols.map((k) => `excluded.${k}`)})`);
+  const scoreRows = days.map((day) => {
+    const row = rows.get(day)!;
+    return { userId, day, scoringVersion: SCORING_VERSION, ...Object.fromEntries(STAGE2_COLUMNS.map((k) => [camel(k), row[k]])) };
+  });
   const periods = reportPeriods(f.reportRows);
-  c.transaction(() => {
-    for (const day of days) {
-      const row = rows.get(day)!;
-      const values = cols.map((k) => JSON.stringify(row[k]));
-      write.run(SCORING_VERSION, ...values, day, SCORING_VERSION, ...values);
+  const reportRows = periods.map((period) => {
+    const { end } = periodBounds(period);
+    const asOf = end < data.last ? end : data.last;
+    return { userId, period, data: buildReport(period, f.reportRows, impactsAsOf.get(asOf) ?? []) };
+  });
+  const rp = reports;
+  const is = intradaySeries;
+  await db.transaction(async (tx) => {
+    for (let i = 0; i < scoreRows.length; i += 200) {
+      await tx
+        .insert(ds)
+        .values(scoreRows.slice(i, i + 200))
+        .onConflictDoUpdate({ target: [ds.userId, ds.day], set, setWhere: changed });
     }
-    for (const period of periods) {
-      const { end } = periodBounds(period);
-      const asOf = end < data.last ? end : data.last;
-      report.run(period, JSON.stringify(buildReport(period, f.reportRows, impactsAsOf.get(asOf) ?? [])));
+    if (reportRows.length) {
+      await tx
+        .insert(rp)
+        .values(reportRows)
+        .onConflictDoUpdate({ target: [rp.userId, rp.period], set: { data: sql`excluded.data` }, setWhere: sql`reports.data is distinct from excluded.data` });
     }
-    c.prepare(`delete from reports where period not in (${periods.map(() => "?").join(", ") || "''"})`).run(...periods);
-    c.prepare("delete from daily_scores where day < ? or day > ?").run(data.first, data.last);
-    c.prepare("delete from intraday_series where day < ? or day > ?").run(data.first, data.last);
-    c.prepare("delete from intraday_dirty").run(); // stage 1 has redone these days, and now stage 2 has too
-  })();
+    await tx.delete(rp).where(and(eq(rp.userId, userId), periods.length ? notInArray(rp.period, periods) : undefined));
+    await tx.delete(ds).where(and(eq(ds.userId, userId), or(lt(ds.day, data.first), gt(ds.day, data.last))));
+    await tx.delete(is).where(and(eq(is.userId, userId), or(lt(is.day, data.first), gt(is.day, data.last))));
+    // Stage 1 has redone these days, and now stage 2 has too.
+    await tx.delete(intradayDirty).where(eq(intradayDirty.userId, userId));
+  });
 }
 
-/** Stage 1's cached rows, the per-minute series stage 2 folds, hypnograms and the journal. */
-function readInputs(db: Db) {
-  const c = db.$client;
+/** daily_scores column name to its schema key. */
+const camel = (k: string) => k.replace(/_(\w)/g, (_, c: string) => c.toUpperCase());
+
+/** Stage 1's cached rows, hypnograms, the journal and the stored journal impact. */
+async function readInputs(db: Db, userId: number) {
+  const ds = dailyScores;
+  const sg = sleepSegments;
+  const je = journalEntries;
+  const [scored, segments, entries] = await Promise.all([
+    db
+      .select({ day: ds.day, strain: ds.strain, activities: ds.activities, sessionRhr: ds.sessionRhrBpm, recovery: ds.recovery, impact: ds.journalImpact })
+      .from(ds)
+      .where(eq(ds.userId, userId)),
+    db
+      .select({ sessionId: sg.sessionId, startTs: sg.startTs, endTs: sg.endTs, stage: sg.stage })
+      .from(sg)
+      .where(eq(sg.userId, userId))
+      .orderBy(sg.startTs),
+    // Tags in byte order, as SQLite sorted them: their order is part of journal impact's memo key.
+    db.select({ day: je.day, tag: je.tag, value: je.value }).from(je).where(eq(je.userId, userId)).orderBy(je.day, sql`${je.tag} collate "C"`),
+  ]);
   const cached = new Map(
-    (
-      c.prepare("select day, strain, activities, session_rhr_bpm, recovery from daily_scores").all() as {
-        day: string;
-        strain: string | null;
-        activities: string | null;
-        session_rhr_bpm: number | null;
-        recovery: string | null;
-      }[]
-    ).map((r): [string, Cached] => [
+    scored.map((r): [string, Cached] => [
       r.day,
       {
-        s1: JSON.parse(r.strain!),
-        activities: JSON.parse(r.activities ?? "[]"),
-        sessionRhr: r.session_rhr_bpm,
-        recovery: r.recovery ? JSON.parse(r.recovery) : null,
+        s1: r.strain as Stage1Day,
+        activities: (r.activities ?? []) as Stage1Activity[],
+        sessionRhr: r.sessionRhr,
+        recovery: (r.recovery ?? null) as RecoveryRow | null,
       },
     ]),
   );
-  // Read per day on demand: loading every day's series up front made memory grow with history.
-  const seriesOf = (kind: string) => {
-    const read = c.prepare("select data from intraday_series where day = ? and kind = ?").pluck();
-    return {
-      get(day: string) {
-        const json = read.get(day, kind) as string | undefined;
-        return json === undefined ? undefined : (JSON.parse(json) as (number | null)[]);
-      },
-    };
-  };
-  const journal = groupBy(
-    c.prepare("select day, tag, value from journal_entries order by day, tag").all() as { day: string; tag: string; value: number }[],
-    (e) => e.day,
-  );
+  const storedImpact = new Map(scored.map((r) => [r.day, (r.impact ?? null) as JournalImpactRow | null]));
+  const journal = groupBy(entries, (e) => e.day);
   const inputs: Inputs = {
     cached,
-    stillHr: seriesOf("still_hr"),
-    loadSeries: seriesOf("load"),
-    segments: groupBy(
-      c.prepare("select session_id sessionId, start_ts startTs, end_ts endTs, stage from sleep_segments order by start_ts").all() as Segment[],
-      (s) => s.sessionId,
-    ),
+    // Filled a batch of days at a time by stage2.
+    stillHr: new Map(),
+    loadSeries: new Map(),
+    segments: groupBy(segments as Segment[], (s) => s.sessionId),
     tagOn: (day, tag) => (journal.get(day) ?? []).some((e) => e.tag === tag && e.value > 0),
   };
-  return { inputs, journal };
+  return { inputs, journal, storedImpact };
 }

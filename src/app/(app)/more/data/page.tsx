@@ -1,7 +1,7 @@
 import { connection } from "next/server"
 import { DAY, formatDay } from "@/lib/format"
 import { Download } from "lucide-react"
-import { currentSession } from "@/server/auth"
+import { userCtx } from "@/server/queries/common"
 import { getYourData } from "@/server/queries/settings"
 import { CAPTION } from "@/components/metrics/primitives"
 import { DetailShell } from "@/components/shells/DetailShell"
@@ -14,9 +14,9 @@ const BODY = "max-w-[65ch] text-[15px] leading-[22px] text-pretty text-foregroun
 const grouped = new Intl.NumberFormat("en")
 
 /** A plain download link styled as a button: the route answers with an attachment. */
-function DownloadLink({ href, label, variant = "secondary" }: { href: string; label: string; variant?: "secondary" | "default" }) {
+function DownloadLink({ href, label }: { href: string; label: string }) {
   return (
-    <Button asChild variant={variant} size="touch" className="w-full">
+    <Button asChild variant="secondary" size="touch" className="w-full">
       <a href={href} download>
         <Download aria-hidden />
         {label}
@@ -25,11 +25,10 @@ function DownloadLink({ href, label, variant = "secondary" }: { href: string; la
   )
 }
 
-/** Your data `/more/data` (U21): daily scores and journal answers as CSV or JSON, and an owner-only SQLite backup. */
+/** Your data `/more/data` (U21): your daily scores and journal answers as CSV or JSON. */
 export default async function YourDataPage() {
   await connection()
-  const vm = getYourData()
-  const owner = (await currentSession())?.kind === "owner"
+  const vm = await getYourData(await userCtx())
   const since = vm.first ? ` since ${formatDay(vm.first, DAY.full)}` : ""
 
   return (
@@ -53,26 +52,6 @@ export default async function YourDataPage() {
             <div className="mt-4 grid grid-cols-2 gap-2">
               <DownloadLink href="/export/journal?format=csv" label="CSV" />
               <DownloadLink href="/export/journal?format=json" label="JSON" />
-            </div>
-          </SectionShell>
-
-          <SectionShell variant="card" level={2} title="Backup">
-            <p className={BODY}>
-              Everything Pulse stores, as one SQLite file. Your Google access and the sign-in secret are removed from the copy, so a restored Pulse asks you to
-              sign in and connect Google again.
-            </p>
-            <div className="mt-4">
-              {owner ? (
-                <DownloadLink href="/export/backup" label="Download backup" variant="default" />
-              ) : (
-                <>
-                  <Button variant="secondary" size="touch" className="w-full" disabled>
-                    <Download aria-hidden />
-                    Download backup
-                  </Button>
-                  <p className={`${CAPTION} mt-2`}>Backups are for the owner’s Google account. Demo data is generated, so there is nothing to keep.</p>
-                </>
-              )}
             </div>
           </SectionShell>
 

@@ -20,7 +20,7 @@ export const GLOSSARY: Term[] = [
   { term: "Resting heart rate", id: "resting-heart-rate", metric: "resting-heart-rate", definition: "Your heart rate at rest. Pulse takes the lowest 5-minute average during your main sleep." },
   { term: "Restorative sleep", id: "restorative-sleep", metric: "sleep", definition: "Deep and REM sleep as a share of time asleep. Wrist devices estimate sleep stages only moderately well, so Pulse gives it a modest weight." },
   { term: "RMSSD", id: "rmssd", metric: "hrv", definition: "Root mean square of successive differences between heartbeats: the standard short-term HRV measure, and the one Google Health reports nightly." },
-  { term: "Self-hosting", id: "self-hosting", definition: "Running software on a computer you control instead of a company's servers. Pulse runs as one Docker container, and your data stays in its database volume." },
+  { term: "Self-hosting", id: "self-hosting", definition: "Running software on a computer you control instead of a company's servers. Pulse runs as two Docker containers, the app and its Postgres database, and your data stays in that database on your machine." },
   { term: "Sleep debt", id: "sleep-debt", metric: "sleep-planner", definition: "Sleep you owe from recent nights when you slept less than you needed. Part of it is added to tonight's sleep need." },
   { term: "Sleep efficiency", id: "sleep-efficiency", metric: "sleep", definition: "Time asleep as a share of time in bed." },
   { term: "Sleep need", id: "sleep-need", metric: "sleep-planner", definition: "How much sleep you need tonight: your usual need from the last 28 nights, plus extra for a hard day and for sleep debt, minus naps." },

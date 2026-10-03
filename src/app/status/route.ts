@@ -1,12 +1,15 @@
 import type { NextRequest } from "next/server";
-import { requestSession } from "@/server/auth";
+import { requestUser } from "@/server/auth";
+import { getDb } from "@/server/db";
+import { ctxOf } from "@/server/queries/common";
 import { getShellStatus } from "@/server/queries/settings";
 
 /**
- * The shell status as JSON, polled by ShellStatusProvider while a sync or import runs so the sync ring and import
- * progress move without a reload. Behind the sign-in proxy; the handler checks the session again itself.
+ * The signed-in user's shell status as JSON, polled by ShellStatusProvider while a sync or import runs so the sync
+ * ring and import progress move without a reload. Behind the sign-in proxy; the handler checks the session itself.
  */
 export async function GET(req: NextRequest) {
-  if (!(await requestSession(req))) return Response.json({ error: "signed_out" }, { status: 401 });
-  return Response.json(getShellStatus(), { headers: { "cache-control": "no-store" } });
+  const user = await requestUser(req);
+  if (!user) return Response.json({ error: "signed_out" }, { status: 401 });
+  return Response.json(await getShellStatus(await ctxOf(getDb(), user.userId)), { headers: { "cache-control": "no-store" } });
 }

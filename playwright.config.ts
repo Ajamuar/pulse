@@ -1,9 +1,8 @@
-import path from "node:path";
 import { defineConfig, devices } from "@playwright/test";
-import { E2E_DB } from "./e2e/days";
+import { E2E_DB, e2eUrl } from "./e2e/days";
 
-// The e2e server is a second `next dev` on its own port, build dir and throwaway demo DB, so it
-// never touches the user's dev server on :3000 or data/demo.db. The `setup` project signs in to the
+// The e2e server is a second `next dev` on its own port, build dir and throwaway Postgres database (on the
+// compose.dev.yaml server, or CI's service container), so it never touches the dev server on :3000 or its data. The `setup` project signs in to the
 // demo once and every other project reuses that session (STORAGE).
 const PORT = 3300;
 
@@ -11,8 +10,8 @@ const STORAGE = "test-results/.auth/demo.json";
 
 const env = {
   GOOGLE_OAUTH_ENABLED: "false",
-  TZ: "Asia/Kolkata",
-  DATABASE_PATH: E2E_DB,
+  DATABASE_URL: e2eUrl(E2E_DB),
+  BETTER_AUTH_SECRET: "e2e-only-secret-0123456789abcdefghijklmnop",
   NEXT_DIST_DIR: ".next/e2e",
   PORT: String(PORT),
 };
@@ -23,7 +22,7 @@ const env = {
 // a profile (src/server/sources/seed/generate.ts). It adds no route and deletes nothing, and only this
 // file sets the flag. Under E2E_PROD it serves the main server's build (webServers start in order).
 const ONBOARDING_PORT = 3301;
-const ONBOARDING_DB = path.join(path.dirname(E2E_DB), "e2e-onboarding.db");
+const ONBOARDING_DB = "pulse_e2e_onboarding";
 
 // Journeys run at one phone and one laptop width; the sweep runs everywhere. onboarding.spec.ts runs only
 // in its own project, against the second server.
@@ -83,7 +82,7 @@ export default defineConfig({
       // Fresh DB each start: the worker seeds 180 days ending today on boot. E2E_PROD=1 (CI) tests a production
       // build: every page compiled once up front instead of on first hit, which is several times faster on a
       // 2-core runner, and it is what gets deployed.
-      command: `rm -f "${E2E_DB}"* && mkdir -p "${path.dirname(E2E_DB)}" && ${
+      command: `node e2e/db.mjs reset ${E2E_DB} && ${
         process.env.E2E_PROD ? `pnpm exec next build && pnpm exec next start -p ${PORT}` : `pnpm exec next dev -p ${PORT}`
       }`,
       url: `http://localhost:${PORT}/healthz`,
@@ -95,13 +94,13 @@ export default defineConfig({
       stderr: "pipe",
     },
     {
-      command: `rm -f "${ONBOARDING_DB}"* && mkdir -p "${path.dirname(ONBOARDING_DB)}" && ${
+      command: `node e2e/db.mjs reset ${ONBOARDING_DB} && ${
         process.env.E2E_PROD ? `pnpm exec next start -p ${ONBOARDING_PORT}` : `pnpm exec next dev -p ${ONBOARDING_PORT}`
       }`,
       url: `http://localhost:${ONBOARDING_PORT}/healthz`,
       env: {
         ...env,
-        DATABASE_PATH: ONBOARDING_DB,
+        DATABASE_URL: e2eUrl(ONBOARDING_DB),
         PORT: String(ONBOARDING_PORT),
         // next dev locks its build dir, so dev needs a second one; next start reads the main build.
         NEXT_DIST_DIR: process.env.E2E_PROD ? env.NEXT_DIST_DIR : ".next/e2e-onboarding",

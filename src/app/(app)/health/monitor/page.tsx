@@ -93,8 +93,8 @@ function Count({ count }: { count: MonitorVM["count"] }) {
 
 /** Health Monitor `/health/monitor?d=` (spec §7.8). */
 export default async function MonitorPage({ searchParams }: PageProps<"/health/monitor">) {
-  const { d, today } = await pageDay(searchParams as SearchParams, "/health/monitor")
-  const vm = getMonitor(d)
+  const { d, today, ctx } = await pageDay(searchParams as SearchParams, "/health/monitor")
+  const vm = await getMonitor(d, ctx)
 
   return (
     <DetailShell

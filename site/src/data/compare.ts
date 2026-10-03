@@ -68,7 +68,7 @@ export const COMPARISONS: Comparison[] = [
       {
         h: "How Pulse gets the data",
         p: [
-          "The band syncs to the Google Health app as usual. Pulse reads it from there through the Google Health API, with an OAuth client you create in your own Google Cloud project, and stores it in SQLite on your server. Your Google Health data is not copied anywhere else.",
+          "The band syncs to the Google Health app as usual. Pulse reads it from there through the Google Health API, with an OAuth client you create in your own Google Cloud project, and stores it in Postgres on your server. Your Google Health data is not copied anywhere else.",
           "Google caps an unverified OAuth app at 100 users, so a shared hosted version is not practical. One instance serves one person, which is also the privacy model.",
         ],
       },
@@ -109,7 +109,7 @@ export const COMPARISONS: Comparison[] = [
             ["Sleep", "A sleep score, often with a bedtime planner", "Sleep Performance, Sleep Planner, sleep consistency (SRI)"],
             ["Biological age", "Offered by some", "Pulse Age and Pace of Aging, from cited studies"],
             ["Method", "Usually proprietary; weights not published", "Open source, with formulas, constants and citations"],
-            ["Where your data lives", "The company's cloud", "Your server (SQLite); the band's data also stays in Google Health"],
+            ["Where your data lives", "The company's cloud", "Your server (Postgres); the band's data also stays in Google Health"],
             ["Apps", "Native iOS and Android apps", "A web app you install from the browser"],
             ["Coaching and support", "Often a coach and company support", "No coach; GitHub issues and the docs"],
           ],

@@ -5,12 +5,13 @@ import { standardConfig } from "@/core/scoring/trainingLoad";
 import { acwrTone } from "@/lib/bands";
 import { dayLabel, formatDay } from "@/lib/format";
 import { weekOf } from "@/lib/url";
+import { and, desc, eq, isNotNull, lte, max } from "drizzle-orm";
+import { dailyMetrics, dailyScores, dailyValues, healthRecords } from "../db/schema";
 import { addDays, daysBetween, fractionalYears, wall } from "../time";
 import { illnessRaised, VITAL_LABEL } from "./home";
 import {
   type DayRow,
   dayStartOf,
-  defaultCtx,
   finite,
   loadDays,
   loadSeries,
@@ -25,7 +26,8 @@ import {
   todayOf,
   vitalReason,
   trendPoints,
-  daySpans,
+  daySpansOf,
+  exercisesBetween,
 } from "./common";
 import type {
   ChipTone,
@@ -43,27 +45,29 @@ import type {
   VitalKey,
 } from "./types";
 
-const lastStored = (ctx: QueryCtx, today: string) =>
-  (ctx.db.$client.prepare("select max(day) from daily_scores where day <= ?").pluck().get(today) as string | null) ?? today;
+const lastStored = async (ctx: QueryCtx, today: string) => {
+  const [r] = await ctx.db
+    .select({ d: max(dailyScores.day) })
+    .from(dailyScores)
+    .where(and(eq(dailyScores.userId, ctx.userId), lte(dailyScores.day, today)));
+  return r?.d ?? today;
+};
 
 // ── Hub ─────────────────────────────────────────────────────────────────────
 
 /** Health hub `/health`: today's values (spec §7.6). */
-export function getHealthHub(ctx: QueryCtx = defaultCtx()): HealthHubVM {
+export async function getHealthHub(ctx: QueryCtx): Promise<HealthHubVM> {
   const today = todayOf(ctx);
-  const rows = loadDays(ctx, addDays(today, -35), today);
+  const rows = await loadDays(ctx, addDays(today, -35), today);
   const row = rows.get(today);
-  const hsVm = getHealthspan(today, ctx);
+  const [hsVm, monitor, fit, stressSeries] = await Promise.all([getHealthspan(today, ctx), getMonitor(today, ctx, rows), getFitness(ctx), loadSeries(ctx, today, "stress")]);
   const hs = hsVm.result;
   // Healthspan updates weekly: compare the shown week's pace with the stored week before it.
-  const prevPace = (() => {
-    const r = loadDays(ctx, addDays(hsVm.asOf, -7), addDays(hsVm.asOf, -7)).get(addDays(hsVm.asOf, -7))?.healthspan;
-    return r && r.reason === null ? r.paceOfAging : null;
-  })();
-  const monitor = getMonitor(today, ctx, rows);
+  const prevDay = addDays(hsVm.asOf, -7);
+  const prevHs = (await loadDays(ctx, prevDay, prevDay)).get(prevDay)?.healthspan;
+  const prevPace = prevHs && prevHs.reason === null ? prevHs.paceOfAging : null;
   const st = row?.stress;
   const sameDays = [7, 14, 21, 28].map((k) => rows.get(addDays(today, -k))?.stress?.highMin).filter(finite);
-  const fit = getFitness(ctx);
   const tl = fit.trainingLoad.value;
   return {
     day: today,
@@ -78,7 +82,7 @@ export function getHealthHub(ctx: QueryCtx = defaultCtx()): HealthHubVM {
               highMin: st.highMin,
               typicalHighMin: sameDays.length ? meanSd(sameDays).mean : null,
               weekday: formatDay(today, { weekday: "short" }),
-              spark: minutePoints(loadSeries(ctx, today, "stress"), dayStartOf(ctx, today), 2),
+              spark: minutePoints(stressSeries, dayStartOf(ctx, today), 2),
             },
             st.provisional,
           )
@@ -178,11 +182,10 @@ const HS_META: Record<string, Omit<HealthspanContributor, "metric" | "target" | 
 const HS_ORDER = ["sleepHours", "sri", "zone13", "zone45", "strength", "steps", "vo2max", "restingHr", "leanMass"];
 
 /** Healthspan `/health/healthspan` for the ISO week containing `day` (spec §7.7). Updated weekly. */
-export function getHealthspan(day: string, ctx: QueryCtx = defaultCtx()): HealthspanVM {
+export async function getHealthspan(day: string, ctx: QueryCtx): Promise<HealthspanVM> {
   const today = todayOf(ctx);
   const [weekStart, weekEnd] = weekOf(day);
-  const last = lastStored(ctx, today);
-  const rows = loadDays(ctx, addDays(weekEnd, -182), weekEnd);
+  const [last, rows] = await Promise.all([lastStored(ctx, today), loadDays(ctx, addDays(weekEnd, -182), weekEnd)]);
   // A finished week shows its Sunday; the current week shows last Sunday until this one ends.
   const lastSunday = addDays(weekStart, -1);
   const shown = weekEnd <= last ? weekEnd : rows.get(lastSunday)?.healthspan ? lastSunday : last;
@@ -268,10 +271,14 @@ const num = (v: number, dp: number, signed = false) => {
 };
 
 /** Health Monitor `/health/monitor` for `day` (spec §7.8). */
-export function getMonitor(day: string, ctx: QueryCtx = defaultCtx(), preloaded?: Map<string, DayRow>): MonitorVM {
+export async function getMonitor(day: string, ctx: QueryCtx, preloaded?: Map<string, DayRow>): Promise<MonitorVM> {
   const today = todayOf(ctx);
   const isToday = day === today;
-  const rows = preloaded?.has(addDays(day, -29)) ? preloaded : loadDays(ctx, addDays(day, -29), day);
+  const [rows, rhythm, measured] = await Promise.all([
+    preloaded?.has(addDays(day, -29)) ? preloaded : loadDays(ctx, addDays(day, -29), day),
+    heartRhythm(ctx, day),
+    measurements(ctx, day, today),
+  ]);
   const row = rows.get(day);
   const hm = row?.healthMonitor;
   const vitals: Vital[] = VITALS.map((v) => {
@@ -320,8 +327,8 @@ export function getMonitor(day: string, ctx: QueryCtx = defaultCtx(), preloaded?
     count,
     illness: hm && hm.reason === null && illnessRaised(hm) ? { level: hm.illness.level, score: hm.illness.score } : null,
     vitals,
-    heartRhythm: heartRhythm(ctx, day),
-    measurements: measurements(ctx, day, today),
+    heartRhythm: rhythm,
+    measurements: measured,
   };
 }
 
@@ -351,12 +358,16 @@ export const ECG_RESULT: Record<string, EcgCopy> = {
 };
 const NO_RESULT: EcgCopy = { label: "No result", tone: "neutral", explanation: "No rhythm result came with this recording." };
 
-function heartRhythm(ctx: QueryCtx, day: string): HeartRhythm {
-  type Row = { id: string; ts: number; day: string; data: string };
-  const q = ctx.db.$client.prepare("select id, ts, day, data from health_records where kind = ? and day <= ? order by ts desc");
-  const rows = (kind: "ecg" | "irn") => q.all(kind, day) as Row[];
+async function heartRhythm(ctx: QueryCtx, day: string): Promise<HeartRhythm> {
+  const h = healthRecords;
+  const all = await ctx.db
+    .select({ id: h.id, kind: h.kind, ts: h.ts, day: h.day, data: h.data })
+    .from(h)
+    .where(and(eq(h.userId, ctx.userId), lte(h.day, day)))
+    .orderBy(desc(h.ts));
+  const rows = (kind: "ecg" | "irn") => all.filter((r) => r.kind === kind);
   const ecg = rows("ecg").map((r): EcgReading => {
-    const d = JSON.parse(r.data) as { result?: string; avgBpm?: number | null };
+    const d = r.data as { result?: string; avgBpm?: number | null };
     const result = d.result ?? "RESULT_CLASSIFICATION_UNSPECIFIED";
     return { id: r.id, at: ms(r.ts), day: r.day, time: wall(r.ts, ctx.timeZone).time.slice(0, 5), result, ...(ECG_RESULT[result] ?? NO_RESULT), avgBpm: finite(d.avgBpm) ? d.avgBpm : null };
   });
@@ -365,21 +376,39 @@ function heartRhythm(ctx: QueryCtx, day: string): HeartRhythm {
 }
 
 const MEASUREMENTS = [
-  { key: "weight", label: "Weight", unit: "kg", format: "decimal1", from: "daily_metrics", col: "weight_kg", always: true },
-  { key: "body_fat", label: "Body fat", unit: "%", format: "decimal1", from: "daily_metrics", col: "body_fat_pct", always: true },
-  { key: "glucose", label: "Blood glucose", unit: "mg/dL", format: "int", from: "daily_values", col: "glucose", always: false },
-  { key: "core_temp", label: "Core temperature", unit: "°C", format: "decimal1", from: "daily_values", col: "core_temp", always: false },
+  { key: "weight", label: "Weight", unit: "kg", format: "decimal1", col: dailyMetrics.weightKg, always: true },
+  { key: "body_fat", label: "Body fat", unit: "%", format: "decimal1", col: dailyMetrics.bodyFatPct, always: true },
+  { key: "glucose", label: "Blood glucose", unit: "mg/dL", format: "int", col: "glucose", always: false },
+  { key: "core_temp", label: "Core temperature", unit: "°C", format: "decimal1", col: "core_temp", always: false },
 ] as const;
 
-function measurements(ctx: QueryCtx, day: string, today: string): Measurement[] {
-  const c = ctx.db.$client;
+/** Every reading of a measurement for the user, newest first: a daily_metrics column, or a daily_values key. */
+async function readings(ctx: QueryCtx, col: (typeof MEASUREMENTS)[number]["col"]): Promise<{ day: string; value: number }[]> {
+  if (typeof col === "string") {
+    const v = dailyValues;
+    return ctx.db
+      .select({ day: v.day, value: v.value })
+      .from(v)
+      .where(and(eq(v.userId, ctx.userId), eq(v.key, col)))
+      .orderBy(desc(v.day));
+  }
+  const m = dailyMetrics;
+  const rows = await ctx.db
+    .select({ day: m.day, value: col })
+    .from(m)
+    .where(and(eq(m.userId, ctx.userId), isNotNull(col)))
+    .orderBy(desc(m.day));
+  return rows as { day: string; value: number }[];
+}
+
+async function measurements(ctx: QueryCtx, day: string, today: string): Promise<Measurement[]> {
+  const all = await Promise.all(MEASUREMENTS.map((m) => readings(ctx, m.col)));
   const out: Measurement[] = [];
-  for (const m of MEASUREMENTS) {
-    // Columns and keys are the constants above, never input.
-    const src = m.from === "daily_metrics" ? `select day, ${m.col} value from daily_metrics where ${m.col} is not null` : `select day, value from daily_values where key = '${m.col}'`;
-    if (!m.always && !c.prepare(`select 1 from (${src}) limit 1`).get()) continue;
-    const latest = c.prepare(`select day, value from (${src}) where day <= ? order by day desc limit 1`).get(day) as { day: string; value: number } | undefined;
-    const prior = latest ? (c.prepare(`select value from (${src}) where day >= ? and day < ?`).pluck().all(addDays(latest.day, -30), latest.day) as number[]) : [];
+  for (const [i, m] of MEASUREMENTS.entries()) {
+    const rs = all[i];
+    if (!m.always && !rs.length) continue;
+    const latest = rs.find((r) => r.day <= day);
+    const prior = latest ? rs.filter((r) => r.day >= addDays(latest.day, -30) && r.day < latest.day).map((r) => r.value) : [];
     const { mean, sd } = meanSd(prior);
     out.push({
       key: m.key,
@@ -399,10 +428,10 @@ function measurements(ctx: QueryCtx, day: string, today: string): Measurement[] 
 // ── Stress Monitor ──────────────────────────────────────────────────────────
 
 /** Stress Monitor `/health/stress` for `day` (spec §7.9). */
-export function getStress(day: string, ctx: QueryCtx = defaultCtx()): StressVM {
+export async function getStress(day: string, ctx: QueryCtx): Promise<StressVM> {
   const today = todayOf(ctx);
   const isToday = day === today;
-  const rows = loadDays(ctx, addDays(day, -29), day);
+  const [rows, series, exs] = await Promise.all([loadDays(ctx, addDays(day, -29), day), loadSeries(ctx, day, "stress"), exercisesBetween(ctx, day, day)]);
   const row = rows.get(day);
   const st = row?.stress;
   const gauge = stressNow(row, isToday);
@@ -411,7 +440,7 @@ export function getStress(day: string, ctx: QueryCtx = defaultCtx()): StressVM {
   const typicalOf = (pick: (x: NonNullable<DayRow["stress"]>) => number) => meanSd(sameStress.map((x) => pick(x!))).mean ?? 0;
   const typical = sameStress.length ? typicalOf((x) => x.highMin) : null;
 
-  const spans = daySpans(ctx, row, day, start);
+  const spans = daySpansOf(row, start, exs);
   const scored = st && st.average != null;
   const empty = row?.s1?.hrCount ? "no_data" : "band_not_worn";
 
@@ -420,7 +449,7 @@ export function getStress(day: string, ctx: QueryCtx = defaultCtx()): StressVM {
     isToday,
     gauge,
     insight: scored ? stressInsight(st, ctx.timeZone) : null,
-    chart: scored ? ok({ points: minutePoints(loadSeries(ctx, day, "stress"), start, 2), spans, now: isToday && st.latest ? ms(st.latest.ts) : null }, st.provisional) : none(empty),
+    chart: scored ? ok({ points: minutePoints(series, start, 2), spans, now: isToday && st.latest ? ms(st.latest.ts) : null }, st.provisional) : none(empty),
     levels: scored
       ? ok(
           {
@@ -461,10 +490,10 @@ const acwrStatus = (acwr: number) => {
 };
 
 /** Fitness `/health/fitness`: latest values (spec §7.10). */
-export function getFitness(ctx: QueryCtx = defaultCtx()): FitnessVM {
+export async function getFitness(ctx: QueryCtx): Promise<FitnessVM> {
   const today = todayOf(ctx);
-  const last = lastStored(ctx, today);
-  const rows = loadDays(ctx, addDays(last, -181), last);
+  const last = await lastStored(ctx, today);
+  const rows = await loadDays(ctx, addDays(last, -181), last);
   const row = rows.get(last);
   const f = row?.fitness;
   const decade = (age: number) => {

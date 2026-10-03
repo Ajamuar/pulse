@@ -2,7 +2,6 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  serverExternalPackages: ["better-sqlite3"],
   // Client cache for visited pages (Next 16 keeps dynamic pages for 0 s by default, so every tab switch re-rendered
   // on the server behind a skeleton). A sync's router.refresh() clears it, so data is never older than the last sync.
   experimental: {

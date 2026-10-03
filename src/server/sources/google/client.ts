@@ -5,6 +5,7 @@
 // code only (see oauth.ts), never a token or a body.
 import { createHash } from "node:crypto";
 import { gzipSync } from "node:zlib";
+import { and, eq, lt } from "drizzle-orm";
 import type { Db } from "../../db";
 import { rawPayloads } from "../../db/schema";
 import { addDays, localDay, localMidnight, wall } from "../../time";
@@ -72,28 +73,29 @@ export function buildFilter(type: DataTypeId, member: FilterMember, w: TimeWindo
 // --- Raw archive --------------------------------------------------------------------------------
 
 /**
- * Stores a page gzipped, keyed by (type, range, sha256 of the body). Re-storing an unchanged page is a no-op.
- * Returns true when a row was inserted.
+ * Stores a page gzipped, keyed by (user, type, range, sha256 of the body). Re-storing an unchanged page is a
+ * no-op. Returns true when a row was inserted.
  */
-export function archivePage(
+export async function archivePage(
   db: Db,
+  userId: number,
   p: { type: string; rangeStart: number; rangeEnd: number; body: string; fetchedAt: number },
-): boolean {
+): Promise<boolean> {
   const bodyHash = createHash("sha256").update(p.body).digest("hex");
-  return (
-    db
-      .insert(rawPayloads)
-      .values({
-        type: p.type,
-        rangeStart: p.rangeStart,
-        rangeEnd: p.rangeEnd,
-        bodyHash,
-        gzBody: gzipSync(p.body),
-        fetchedAt: p.fetchedAt,
-      })
-      .onConflictDoNothing()
-      .run().changes > 0
-  );
+  const ins = await db
+    .insert(rawPayloads)
+    .values({
+      userId,
+      type: p.type,
+      rangeStart: p.rangeStart,
+      rangeEnd: p.rangeEnd,
+      bodyHash,
+      gzBody: gzipSync(p.body),
+      fetchedAt: p.fetchedAt,
+    })
+    .onConflictDoNothing()
+    .returning({ id: rawPayloads.id });
+  return ins.length > 0;
 }
 
 // --- Paired devices -----------------------------------------------------------------------------
@@ -118,19 +120,25 @@ export function parsePairedDevices(body: string): DeviceCheck {
 /**
  * Raw pages are evidence for schema drift and the input for re-mapping recent data, not a backup:
  * 30 days covers the 3-day re-fetch overlap many times over and any recent mapper fix, and bounds
- * the table at roughly a month of fetches. Freed pages are reused by later inserts; the WAL is
- * checkpointed by SQLite's default auto-checkpoint, so no VACUUM is needed.
+ * the table at roughly a month of fetches. Autovacuum reclaims the space for later inserts.
  */
 export const RAW_RETENTION_DAYS = 30;
 
-/** Deletes archived pages fetched more than RAW_RETENTION_DAYS before `nowS` (unix seconds). Returns the count. */
-export const pruneRawPayloads = (db: Db, nowS: number): number =>
-  db.$client.prepare("DELETE FROM raw_payloads WHERE fetched_at < ?").run(nowS - RAW_RETENTION_DAYS * 86_400).changes;
+/** Deletes the user's archived pages fetched more than RAW_RETENTION_DAYS before `nowS` (unix seconds). Returns the count. */
+export async function pruneRawPayloads(db: Db, userId: number, nowS: number): Promise<number> {
+  const gone = await db
+    .delete(rawPayloads)
+    .where(and(eq(rawPayloads.userId, userId), lt(rawPayloads.fetchedAt, nowS - RAW_RETENTION_DAYS * 86_400)))
+    .returning({ id: rawPayloads.id });
+  return gone.length;
+}
 
 // --- Client -------------------------------------------------------------------------------------
 
 export type ClientDeps = {
   db: Db;
+  /** Whose grant the requests use and whose archive the pages land in. */
+  userId: number;
   google: { clientId: string; clientSecret: string };
   timeZone: string;
   fetch?: typeof fetch;
@@ -142,6 +150,7 @@ export type ClientDeps = {
 /** Create one per sync run: the 4 req/s limiter lives in the instance. */
 export function createGoogleClient({
   db,
+  userId,
   google,
   timeZone: tz,
   fetch: fetchFn = fetch,
@@ -168,7 +177,7 @@ export function createGoogleClient({
     let refreshed = false;
     let force = false; // set for the one attempt right after a 401
     for (;;) {
-      const token = await getAccessToken(db, google, { fetch: fetchFn, now, force });
+      const token = await getAccessToken(db, userId, google, { fetch: fetchFn, now, force });
       force = false;
       await throttle();
       let res: Response;
@@ -190,7 +199,7 @@ export function createGoogleClient({
       if (status === 401) {
         await res.body?.cancel();
         if (refreshed) {
-          markRevoked(db, now());
+          await markRevoked(db, userId, now());
           throw new GoogleError("auth_revoked", status, where);
         }
         refreshed = force = true;
@@ -258,7 +267,7 @@ export function createGoogleClient({
           if (++pages > MAX_PAGES) throw new GoogleError("too_many_pages", undefined, type);
           const q = new URLSearchParams({ filter, pageSize: String(t.pageSize), ...(pageToken && { pageToken }) });
           const body = await request(`${API}/${type}/dataPoints?${q}`, type);
-          archivePage(db, { type, ...range, body, fetchedAt: fetchedAt() }); // before parsing: a changed shape is kept as evidence
+          await archivePage(db, userId, { type, ...range, body, fetchedAt: fetchedAt() }); // before parsing: a changed shape is kept as evidence
           const page = readPage(body, "dataPoints", type);
           out.push(...page.points);
           pageToken = page.next;
@@ -302,7 +311,7 @@ export function createGoogleClient({
         const end = addDays(day, step) < toDay ? addDays(day, step) : toDay;
         const req = JSON.stringify({ range: { start: civilDate(day), end: civilDate(end) } });
         const body = await request(`${API}/${type}/dataPoints:dailyRollUp`, `${type} dailyRollUp`, req);
-        archivePage(db, {
+        await archivePage(db, userId, {
           type,
           rangeStart: localMidnight(day, tz),
           rangeEnd: localMidnight(end, tz),

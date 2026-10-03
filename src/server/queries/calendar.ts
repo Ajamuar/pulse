@@ -1,16 +1,16 @@
 // The DateSwitcher calendar's month of scores (spec §4.3).
 import { addDays } from "../time";
-import { defaultCtx, finite, loadDays, type QueryCtx, toStrain } from "./common";
+import { finite, loadDays, type QueryCtx, toStrain } from "./common";
 import type { CalendarMonthVM } from "./types";
 
 export const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 /** Recovery, Strain (0–21) and Sleep performance for every day of `month` ("YYYY-MM"). */
-export function getCalendarMonth(month: string, ctx: QueryCtx = defaultCtx()): CalendarMonthVM {
+export async function getCalendarMonth(month: string, ctx: QueryCtx): Promise<CalendarMonthVM> {
   if (!MONTH.test(month)) throw new Error(`Bad month: ${month}`);
   const [y, m] = month.split("-").map(Number);
   const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
-  const rows = loadDays(ctx, `${month}-01`, addDays(`${month}-01`, last - 1));
+  const rows = await loadDays(ctx, `${month}-01`, addDays(`${month}-01`, last - 1));
   const num = (v: number | null | undefined) => (finite(v) ? v : null);
   return {
     month,

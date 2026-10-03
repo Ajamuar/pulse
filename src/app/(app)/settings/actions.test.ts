@@ -1,65 +1,71 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { parseConfig, type Config } from "@/server/config";
-import { openDb, type Db } from "@/server/db";
-import { oauthTokens } from "@/server/db/schema";
+import type { Db } from "@/server/db";
+import { oauthTokens, syncState } from "@/server/db/schema";
+import { addUser, freshDb, USER } from "@/server/testing";
 import { disconnectGoogle } from "./actions";
 
-const h = vi.hoisted(() => ({ cfg: undefined as unknown, db: undefined as unknown, revalidate: vi.fn(), session: null as unknown }));
-vi.mock("@/server/auth", async (orig) => ({ ...(await orig<object>()), currentSession: async () => h.session }));
+const h = vi.hoisted(() => ({ cfg: undefined as unknown, db: undefined as unknown, revalidate: vi.fn(), user: null as unknown }));
+vi.mock("@/server/auth", async (orig) => ({ ...(await orig<object>()), currentUser: async () => h.user }));
 vi.mock("next/cache", () => ({ revalidatePath: h.revalidate }));
 vi.mock("@/server/config", async (orig) => ({ ...(await orig<object>()), getConfig: () => h.cfg as Config }));
 vi.mock("@/server/db", async (orig) => ({ ...(await orig<object>()), getDb: () => h.db as Db }));
 
-const env = { TZ: "Asia/Kolkata" };
-const live = parseConfig({ ...env, GOOGLE_OAUTH_ENABLED: "true", GOOGLE_CLIENT_ID: "cid", GOOGLE_CLIENT_SECRET: "csecret" });
-const ownerSession = { kind: "owner", email: "me@example.com" };
+const live = parseConfig({ GOOGLE_OAUTH_ENABLED: "true", GOOGLE_CLIENT_ID: "cid", GOOGLE_CLIENT_SECRET: "csecret" });
+const me = { userId: USER, email: "me@example.com", name: "Me", username: "me", image: null };
 
 let db: Db;
-const tokens = () => db.select().from(oauthTokens).all();
+let other: number;
+const tokens = () => db.select({ userId: oauthTokens.userId }).from(oauthTokens).orderBy(oauthTokens.userId);
+const grant = (userId: number) => ({ userId, accessToken: "at", refreshToken: "rt", expiresAt: 1, scope: "s", updatedAt: 1 });
 
 const fetchMock = vi.fn<typeof fetch>(async () => new Response("", { status: 200 }));
 
-beforeEach(() => {
+beforeEach(async () => {
   vi.stubGlobal("fetch", fetchMock);
-  db = h.db = openDb(":memory:");
-  db.insert(oauthTokens)
-    .values({ id: 1, accessToken: "at", refreshToken: "rt", expiresAt: 1, scope: "s", updatedAt: 1 })
-    .run();
+  db = h.db = await freshDb();
+  other = await addUser(db);
+  await db.insert(oauthTokens).values([grant(USER), grant(other)]);
+  await db.insert(syncState).values([
+    { userId: USER, type: "steps", lastError: "401 auth_revoked" },
+    { userId: other, type: "steps", lastError: "401 auth_revoked" },
+  ]);
 });
 afterEach(() => {
   vi.unstubAllGlobals();
-  db.$client.close();
   vi.clearAllMocks();
 });
 
 describe("disconnectGoogle", () => {
-  it("refuses anyone but the signed-in owner and keeps the grant", async () => {
+  it("refuses a signed-out caller, and a demo instance, keeping the grant", async () => {
     h.cfg = live;
-    for (const session of [null, { kind: "demo" }]) {
-      h.session = session;
-      expect(await disconnectGoogle()).toEqual({ ok: false, error: "Signed out. Sign in again." });
-    }
-    h.session = ownerSession;
-    h.cfg = parseConfig(env);
+    h.user = null;
+    expect(await disconnectGoogle()).toEqual({ ok: false, error: "Signed out. Sign in again." });
+    h.user = me;
+    h.cfg = parseConfig({});
     expect(await disconnectGoogle()).toEqual({ ok: false, error: "Google is not enabled" });
-    expect(tokens()).toHaveLength(1);
+    expect(await tokens()).toHaveLength(2);
     expect(h.revalidate).not.toHaveBeenCalled();
   });
 
-  it("revokes every permission at Google, forgets the grant and revalidates the app", async () => {
+  it("revokes the user's grant at Google, forgets it (only theirs) and revalidates the app", async () => {
     h.cfg = live;
-    h.session = ownerSession;
+    h.user = me;
     expect(await disconnectGoogle()).toEqual({ ok: true, data: undefined });
     expect(String(fetchMock.mock.calls[0][0])).toBe("https://oauth2.googleapis.com/revoke");
-    expect(tokens()).toEqual([]);
+    expect(await tokens()).toEqual([{ userId: other }]);
+    expect(await db.select({ userId: syncState.userId, lastError: syncState.lastError }).from(syncState).orderBy(syncState.userId)).toEqual([
+      { userId: USER, lastError: null },
+      { userId: other, lastError: "401 auth_revoked" },
+    ]);
     expect(h.revalidate).toHaveBeenCalledWith("/", "layout");
   });
 
   it("keeps the grant when Google can't be reached, so Disconnect can be retried", async () => {
     h.cfg = live;
-    h.session = ownerSession;
+    h.user = me;
     fetchMock.mockRejectedValueOnce(new TypeError("fetch failed"));
     expect(await disconnectGoogle()).toEqual({ ok: false, error: "Couldn’t reach Google to remove access. Try again." });
-    expect(tokens()).toHaveLength(1);
+    expect(await tokens()).toHaveLength(2);
   });
 });

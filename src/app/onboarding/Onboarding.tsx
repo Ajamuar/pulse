@@ -14,12 +14,12 @@ export function Onboarding({ age }: { age: number | null }) {
     <AuthShell align="top">
       <h1 className="text-[28px] leading-[34px] font-bold tracking-[-0.02em] text-balance">Two things Google doesn’t share</h1>
       <p className="mt-2 mb-8 text-[16px] leading-6 text-pretty text-foreground-secondary">
-        Pulse scores your heart rate against your age and sex. Everything else comes from your Fitbit data. You can change these later in Settings.
+        Pulse scores your heart rate against your age and sex, and starts your days at midnight where you live. Everything else comes from your Fitbit data. You can change these later in Settings.
       </p>
       <ProfileForm
         onboarding
         startYear={age ? year - age - 1 : undefined}
-        defaults={{ birthDate: "", sex: null, maxHr: null, heightCm: null }}
+        defaults={{ birthDate: "", sex: null, maxHr: null, heightCm: null, timeZone: null }}
         footer={(pending) => (
           <div className="sticky bottom-0 -mx-5 mt-2 bg-linear-to-t from-background via-background/95 to-transparent px-5 pt-6 pb-[max(env(safe-area-inset-bottom),24px)]">
             <SaveButton pending={pending} label="Save and continue" />

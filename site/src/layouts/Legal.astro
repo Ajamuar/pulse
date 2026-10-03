@@ -1,0 +1,133 @@
+---
+// The shared frame for the privacy policy and the terms: title, effective date, a table of contents, then the sections.
+import Base from "./Base.astro"
+import { breadcrumbs } from "../lib/schema"
+
+interface Props {
+  title: string
+  description: string
+  keywords: string[]
+  effective: string
+  /** id and heading of each section, in order; the page renders a matching <section id>. */
+  toc: { id: string; title: string }[]
+}
+const { title, description, keywords, effective, toc } = Astro.props
+const path = Astro.url.pathname
+const schema = [
+  breadcrumbs(Astro.site!, [
+    { name: "Pulse", path: "/" },
+    { name: title, path },
+  ]),
+  { "@type": "WebPage", "@id": new URL(path, Astro.site).href, name: title, description, inLanguage: "en", datePublished: effective, dateModified: effective },
+]
+const effectiveLabel = new Date(`${effective}T00:00:00Z`).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" })
+---
+
+<Base title={title} description={description} keywords={keywords} schema={schema}>
+  <article class="wrap legal-page">
+    <header class="head">
+      <h1>{title}</h1>
+      <p class="date">Effective <time datetime={effective}>{effectiveLabel}</time></p>
+      <slot name="lede" />
+    </header>
+    <nav class="toc" aria-label="On this page">
+      <h2>On this page</h2>
+      <ol>{toc.map((s) => <li><a href={`#${s.id}`}>{s.title}</a></li>)}</ol>
+    </nav>
+    <div class="body prose">
+      <slot />
+    </div>
+  </article>
+</Base>
+
+<style>
+  .head {
+    padding-top: clamp(40px, 7vw, 88px);
+  }
+  h1 {
+    font-size: clamp(2.5rem, 6vw, 4.25rem);
+    letter-spacing: -0.035em;
+  }
+  .date {
+    margin-top: 14px;
+    color: var(--muted-foreground);
+    font-size: 0.9375rem;
+  }
+  .head :global(.lede) {
+    margin-top: 18px;
+    max-width: 62ch;
+    color: var(--foreground-secondary);
+    font-size: 1.1875rem;
+  }
+  .toc {
+    margin-top: 40px;
+    max-width: 68ch;
+    padding: 20px 24px;
+    border-radius: var(--radius-card);
+    background: linear-gradient(180deg, var(--card-top), var(--card));
+    box-shadow: inset 0 0 0 1px var(--card-edge);
+  }
+  .toc h2 {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    letter-spacing: 0;
+  }
+  .toc ol {
+    margin: 10px 0 0;
+    padding-left: 1.4em;
+    columns: 2;
+    column-gap: 32px;
+    color: var(--muted-foreground);
+    font-size: 0.9375rem;
+  }
+  .toc li {
+    break-inside: avoid;
+    padding: 3px 0;
+  }
+  .toc a {
+    color: var(--foreground-secondary);
+    text-decoration: none;
+  }
+  .toc a:hover {
+    color: var(--foreground);
+  }
+  .body {
+    margin-top: 56px;
+  }
+  .body :global(section) {
+    scroll-margin-top: 96px;
+  }
+  .body :global(section + section) {
+    margin-top: 48px;
+  }
+  .body :global(h2) {
+    margin-bottom: 14px;
+    color: var(--foreground);
+    font-size: 1.5rem;
+  }
+  .body :global(h3) {
+    margin: 24px 0 8px;
+    color: var(--foreground);
+    font-size: 1.125rem;
+  }
+  .body :global(ul) {
+    margin: 1em 0 0;
+    padding-left: 1.25em;
+  }
+  .body :global(li + li) {
+    margin-top: 6px;
+  }
+  .body :global(ul + p),
+  .body :global(p + ul) {
+    margin-top: 1em;
+  }
+  .body :global(a) {
+    color: var(--foreground);
+    overflow-wrap: anywhere;
+  }
+  @media (max-width: 600px) {
+    .toc ol {
+      columns: 1;
+    }
+  }
+</style>

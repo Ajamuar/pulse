@@ -1,7 +1,7 @@
 import { connection } from "next/server"
-import { currentSession } from "@/server/auth"
-import { avatarSrc, connectedGoogleEmail, ownerName } from "@/server/avatar"
-import { getDb } from "@/server/db"
+import { currentUser, DEMO_EMAIL } from "@/server/auth"
+import { avatarSrc, connectedGoogleEmail } from "@/server/avatar"
+import { userCtx } from "@/server/queries/common"
 import { getSettings } from "@/server/queries/settings"
 import { DetailShell } from "@/components/shells/DetailShell"
 import { OAuthToast } from "./SettingsClient"
@@ -15,9 +15,13 @@ export const metadata = { title: "Settings" }
 /** Settings `/settings` (spec §7.14, journeys 9 and 10). Google's callback lands here with `?oauth=`. */
 export default async function SettingsPage() {
   await connection()
-  const vm = getSettings()
-  const session = await currentSession()
-  const avatar = avatarSrc(getDb())
+  const ctx = await userCtx()
+  const [vm, user, avatar, googleEmail] = await Promise.all([
+    getSettings(ctx),
+    currentUser(),
+    avatarSrc(ctx.db, ctx.userId),
+    connectedGoogleEmail(ctx.db, ctx.userId),
+  ])
   return (
     <DetailShell
       title="Settings"
@@ -29,11 +33,13 @@ export default async function SettingsPage() {
             vm={vm}
             now={requestTime()}
             account={{
-              email: session?.kind === "owner" ? session.email : null,
-              name: session?.kind === "owner" ? ownerName(getDb()) : null,
+              email: user?.email ?? null,
+              name: user?.name ?? null,
+              username: user?.username ?? null,
+              demo: user?.email === DEMO_EMAIL,
               avatar,
               customPhoto: avatar?.startsWith("/avatar?") ?? false,
-              googleEmail: session?.kind === "owner" ? connectedGoogleEmail(getDb()) : null,
+              googleEmail,
             }}
           />
         </>

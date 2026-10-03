@@ -1,10 +1,7 @@
 // End-to-end check on demo data, run by hand: PULSE_E2E=1 pnpm vitest run src/server/pipeline/pipeline.seed.test.ts
-// Starts the real worker (seed source + recomputeIfNeeded) once against a fresh temp demo database and
-// prints the distributions docs/data-notes.md records.
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
-import { describe, expect, it, vi } from "vitest";
+// Seeds a fresh in-process (PGlite) demo database up to now, recomputes, and prints the distributions
+// docs/data-notes.md records. Needs no DATABASE_URL.
+import { describe, expect, it } from "vitest";
 
 const percentiles = (xs: number[], ps = [10, 25, 50, 75, 90]) => {
   const s = [...xs].sort((a, b) => a - b);
@@ -12,49 +9,38 @@ const percentiles = (xs: number[], ps = [10, 25, 50, 75, 90]) => {
 };
 
 describe.skipIf(!process.env.PULSE_E2E)("demo end to end", () => {
-  it("runs the worker once and reports the seed's distributions", async () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pulse-e2e-"));
-    Object.assign(process.env, {
-      GOOGLE_OAUTH_ENABLED: "false",
-      DATABASE_PATH: path.join(dir, "demo.db"),
-      TZ: "Asia/Kolkata",
-    });
-    const { createWorker } = await import("../worker");
-    const { seedSource } = await import("../sources/seed/generate");
-    const { recomputeIfNeeded, lastRun, recompute } = await import(".");
-    const { getDb } = await import("../db");
-    const { getConfig } = await import("../config");
+  it("seeds once and reports the seed's distributions", async () => {
+    const { freshDb, ctxFor, PROFILE, TZ, USER } = await import("../testing");
+    const { seedPull } = await import("../sources/seed/generate");
+    const { recompute } = await import(".");
+    const { rows: query, sql } = await import("../db");
     const { getProfile } = await import("../profile");
     const { ensureDefaultTags } = await import("../journalTags");
     const { getHome } = await import("../queries/home");
-    const { defaultCtx, todayOf } = await import("../queries/common");
+    const { todayOf } = await import("../queries/common");
     const { addDays } = await import("../time");
 
-    const log = { info: vi.fn(), error: vi.fn() };
-    ensureDefaultTags(getDb());
-    const worker = createWorker({ name: "seed", source: seedSource, recompute: recomputeIfNeeded, log });
-    worker.start();
-    await vi.waitFor(() => expect(worker.state.lastRunAt).not.toBeNull(), { timeout: 120_000, interval: 100 });
-    expect(worker.state.lastError).toBeNull();
-    const firstRun = { ...lastRun };
-
-    const db = getDb();
-    const cfg = getConfig();
-    const opts = { timeZone: cfg.timeZone, profile: getProfile(db)! };
+    const db = await freshDb();
+    const now = Math.floor(Date.now() / 1000);
+    await ensureDefaultTags(db, USER);
+    await seedPull(db, { userId: USER, now, timeZone: TZ, maxHr: PROFILE.maxHr });
+    const opts = { userId: USER, timeZone: TZ, profile: (await getProfile(db, USER)) ?? PROFILE };
+    const firstRun = { ...(await recompute(db, opts)) };
     // Full recompute timing: force stage 1 for every day, then a no-op run.
-    db.$client.prepare("update daily_scores set scoring_version = 0").run();
-    const full = { ...recompute(db, opts) };
-    const noop = { ...recompute(db, opts) };
+    await db.execute(sql`update daily_scores set scoring_version = 0 where user_id = ${USER}`);
+    const full = { ...(await recompute(db, opts)) };
+    const noop = { ...(await recompute(db, opts)) };
+    expect(noop.stage1Days).toEqual([]);
 
-    type Row = { day: string; recovery: string; strain: string; energy_bank: string; sleep: string };
-    const rows = (db.$client.prepare("select day, recovery, strain, energy_bank, sleep from daily_scores order by day").all() as Row[]).map((r) => ({
-      day: r.day,
-      rec: JSON.parse(r.recovery),
-      s1: JSON.parse(r.strain),
-      eb: JSON.parse(r.energy_bank),
-    }));
-    const today = todayOf(defaultCtx());
-    const exerciseDays = new Set(db.$client.prepare("select distinct day from exercises").pluck().all() as string[]);
+    type Row = { day: string; recovery: any; strain: any; energy_bank: any }; // eslint-disable-line @typescript-eslint/no-explicit-any
+    const rows = (
+      await query<Row>(db, sql`select day, recovery, strain, energy_bank from daily_scores where user_id = ${USER} order by day`)
+    ).map((r) => ({ day: r.day, rec: r.recovery, s1: r.strain, eb: r.energy_bank }));
+    const ctx = ctxFor(db, now);
+    const today = todayOf(ctx);
+    const exerciseDays = new Set(
+      (await query<{ day: string }>(db, sql`select distinct day from exercises where user_id = ${USER}`)).map((r) => r.day),
+    );
 
     const scored = rows.filter((r) => r.rec.value != null).map((r) => r.rec.value as number);
     const bands = { green: scored.filter((v) => v >= 67).length, yellow: scored.filter((v) => v >= 34 && v < 67).length, red: scored.filter((v) => v < 34).length };
@@ -67,7 +53,7 @@ describe.skipIf(!process.env.PULSE_E2E)("demo end to end", () => {
     // Reasons that appear on Home over the range.
     const reasons = new Set<string>();
     for (const r of rows) {
-      const vm = getHome(r.day);
+      const vm = await getHome(r.day, ctx);
       for (const m of [vm.dials.recovery, vm.dials.sleep, vm.dials.strain, vm.energyBank, vm.tonight, vm.monitor, vm.stress, ...vm.keyStats.map((s) => s.metric)]) {
         if (m.reason) reasons.add(m.reason);
         if (m.provisional) reasons.add("provisional");
@@ -95,6 +81,5 @@ describe.skipIf(!process.env.PULSE_E2E)("demo end to end", () => {
       yesterday: addDays(today, -1),
     };
     console.log(JSON.stringify(report, null, 2));
-    fs.rmSync(dir, { recursive: true, force: true });
   }, 300_000);
 });

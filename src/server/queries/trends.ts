@@ -5,7 +5,7 @@ import { EXTRA_METRICS, type ExtraKey } from "@/lib/extraMetrics";
 import type { FormatKey } from "@/lib/format";
 import { metricHref, RANGE_DAYS, RANGES, type TrendRange } from "@/lib/url";
 import { addDays } from "../time";
-import { type DayRow, defaultCtx, finite, loadDays, none, ok, type QueryCtx, todayOf, toStrain } from "./common";
+import { type DayRow, finite, loadDays, none, ok, type QueryCtx, todayOf, toStrain } from "./common";
 import type { DayPoint, Metric } from "./types";
 
 export type TrendMetricKey =
@@ -131,12 +131,12 @@ function emptyReason(m: TrendMetric, rows: Map<string, DayRow>, today: string): 
   return none("no_data");
 }
 
-export function getTrends(metric: TrendMetricKey, ctx: QueryCtx = defaultCtx()): TrendsVM {
+export async function getTrends(metric: TrendMetricKey, ctx: QueryCtx): Promise<TrendsVM> {
   const m = TREND_METRICS.find((x) => x.key === metric) ?? TREND_METRICS[0];
   const today = todayOf(ctx);
   // Two years: the 1Y average needs the year before it.
   const from = addDays(today, -(2 * SPAN - 1));
-  const rows = loadDays(ctx, from, today);
+  const rows = await loadDays(ctx, from, today);
   const all: DayPoint[] = [];
   for (let d = from; d <= today; d = addDays(d, 1)) {
     const r = rows.get(d)!;

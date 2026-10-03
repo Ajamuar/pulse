@@ -2,7 +2,7 @@
 import { isCycleKind, KIND_TYPES, LOG_KINDS, type LogKind } from "@/lib/log";
 import { logAccess, recentEntries, waterOn, type LogAccess, type LoggedEntry } from "../log";
 import { addDays, localMidnight } from "../time";
-import { defaultCtx, type QueryCtx, todayOf } from "./common";
+import { type QueryCtx, todayOf } from "./common";
 
 export type LogVM = {
   /** Cycle kinds are absent on a male profile. */
@@ -21,9 +21,13 @@ export type LogVM = {
 
 const RANK: Record<LogAccess, number> = { ok: 0, demo: 0, reconnect: 1, not_connected: 2 };
 
-export function getLog(ctx: QueryCtx = defaultCtx()): LogVM {
+export async function getLog(ctx: QueryCtx): Promise<LogVM> {
   const today = todayOf(ctx);
-  const byType = logAccess(ctx.db, ctx.mode);
+  const [byType, waterToday, recent] = await Promise.all([
+    logAccess(ctx.db, ctx.userId, ctx.mode),
+    waterOn(ctx.db, ctx.userId, today),
+    recentEntries(ctx.db, ctx.userId, localMidnight(addDays(today, -13), ctx.timeZone)),
+  ]);
   const kinds = LOG_KINDS.filter((k) => ctx.profile.sex === "female" || !isCycleKind(k));
   const access = Object.fromEntries(
     LOG_KINDS.map((k) => [k, KIND_TYPES[k].map((t) => byType[t]).reduce((a, b) => (RANK[b] > RANK[a] ? b : a))]),
@@ -31,9 +35,9 @@ export function getLog(ctx: QueryCtx = defaultCtx()): LogVM {
   return {
     kinds,
     access,
-    waterToday: waterOn(ctx.db, today),
+    waterToday,
     // A male profile never sees cycle entries, even ones logged before the profile changed.
-    recent: recentEntries(ctx.db, localMidnight(addDays(today, -13), ctx.timeZone)).filter(
+    recent: recent.filter(
       (e) => ctx.profile.sex === "female" || (e.type !== "menstrual-period" && e.type !== "ovulation-test"),
     ),
     today,

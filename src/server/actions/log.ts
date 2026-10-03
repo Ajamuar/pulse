@@ -3,11 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { CYCLE_SYMPTOMS, FLOWS, isCycleKind, MEALS, MOODS, OVULATION_RESULTS, RECONNECT, SYMPTOMS, VALENCES } from "@/lib/log";
-import { currentSession, SIGNED_OUT } from "../auth";
+import { currentUser, SIGNED_OUT } from "../auth";
 import { getConfig } from "../config";
 import { getDb } from "../db";
 import { deleteEntry, isReadable, logAccess, saveEntries, type LogResult, type LogWriter, type NewEntry } from "../log";
-import { getProfile } from "../profile";
+import { getProfile, userTimeZone } from "../profile";
 import { createGoogleClient } from "../sources/google/client";
 import { addDays, fromWall, localDay } from "../time";
 import { requestSync } from "../worker";
@@ -54,20 +54,25 @@ const MESSAGE: Record<Exclude<LogResult, { ok: true }>["reason"], string> = {
 };
 
 /** One Google client per action: it holds the rate limiter. Null in demo mode, where nothing leaves Pulse. */
-function writer(): LogWriter | null {
-  const { google, timeZone } = getConfig();
-  return google ? createGoogleClient({ db: getDb(), google, timeZone }) : null;
+function writer(userId: number, timeZone: string): LogWriter | null {
+  const { google } = getConfig();
+  return google ? createGoogleClient({ db: getDb(), userId, google, timeZone }) : null;
 }
 
 /** Logs water, food, weight (and body fat), mood, symptoms, or (female profiles) a period or ovulation test. */
 export async function logEntry(input: LogInput): Promise<ActionResult<{ demo: boolean }>> {
-  if (!(await currentSession())) return SIGNED_OUT;
+  const user = await currentUser();
+  if (!user) return SIGNED_OUT;
+  const { userId } = user;
   const r = Input.safeParse(input);
   if (!r.success) return { ok: false, error: r.error.issues[0].message };
   const v = r.data;
   const db = getDb();
-  const { timeZone: tz, googleOAuthEnabled } = getConfig();
-  const female = getProfile(db)?.sex === "female";
+  const { googleOAuthEnabled } = getConfig();
+  const p = await getProfile(db, userId);
+  if (!p) return { ok: false, error: "Finish setting up your profile first" };
+  const tz = p.timeZone;
+  const female = p.sex === "female";
   // Cycle tracking never exists on a male profile, whatever a request says.
   if (!female && (isCycleKind(v.kind) || (v.kind === "symptoms" && v.symptoms.some((s) => CYCLE_SYMPTOMS.has(s))))) {
     return { ok: false, error: "Not available for this profile" };
@@ -113,14 +118,14 @@ export async function logEntry(input: LogInput): Promise<ActionResult<{ demo: bo
   }
 
   // A grant without the write scope fails at Google with 403 anyway; asking first saves the request and says why.
-  const access = logAccess(db, googleOAuthEnabled ? "google" : "demo");
+  const access = await logAccess(db, userId, googleOAuthEnabled ? "google" : "demo");
   if (entries.some((e) => access[e.type] === "reconnect" || access[e.type] === "not_connected")) return { ok: false, error: RECONNECT };
 
-  const res = await saveEntries(db, entries, { tz, writer: googleOAuthEnabled ? writer() : null, now });
+  const res = await saveEntries(db, userId, entries, { tz, writer: googleOAuthEnabled ? writer(userId, tz) : null, now });
   revalidatePath("/journal");
   if (!res.ok) return { ok: false, error: MESSAGE[res.reason] };
   // Water, food and weight come back through the sync, which owns their totals: fetch them now.
-  if (googleOAuthEnabled && entries.some((e) => isReadable(e.type))) requestSync({ force: true });
+  if (googleOAuthEnabled && entries.some((e) => isReadable(e.type))) requestSync({ userId, force: true });
   return { ok: true, data: { demo: !googleOAuthEnabled } };
 }
 
@@ -128,13 +133,16 @@ const Delete = z.object({ id: z.uuid() });
 
 /** Deletes a logged entry here and, when it was written there, at Google. */
 export async function deleteLogEntry(input: z.input<typeof Delete>): Promise<ActionResult> {
-  if (!(await currentSession())) return SIGNED_OUT;
+  const user = await currentUser();
+  if (!user) return SIGNED_OUT;
+  const { userId } = user;
   const r = Delete.safeParse(input);
   if (!r.success) return { ok: false, error: r.error.issues[0].message };
   const { googleOAuthEnabled } = getConfig();
-  const res = await deleteEntry(getDb(), r.data.id, googleOAuthEnabled ? writer() : null);
+  const tz = googleOAuthEnabled ? ((await userTimeZone(getDb(), userId)) ?? "UTC") : "UTC";
+  const res = await deleteEntry(getDb(), userId, r.data.id, googleOAuthEnabled ? writer(userId, tz) : null);
   revalidatePath("/journal");
   if (!res.ok) return { ok: false, error: MESSAGE[res.reason] };
-  if (googleOAuthEnabled && res.type && isReadable(res.type)) requestSync({ force: true });
+  if (googleOAuthEnabled && res.type && isReadable(res.type)) requestSync({ userId, force: true });
   return { ok: true, data: undefined };
 }

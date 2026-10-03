@@ -1,73 +1,27 @@
 import { NextRequest } from "next/server";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { parseConfig, type Config } from "@/server/config";
-import { openDb, type Db } from "@/server/db";
-import { saveProfile } from "@/server/profile";
-import { saveAccount } from "@/server/account";
-import { SESSION_COOKIE, signSession } from "@/server/session";
+import { describe, expect, it } from "vitest";
 import { config, proxy } from "./proxy";
 
-const h = vi.hoisted(() => ({ cfg: undefined as unknown, db: undefined as unknown }));
-vi.mock("@/server/config", async (orig) => ({ ...(await orig<object>()), getConfig: () => h.cfg as Config }));
-vi.mock("@/server/db", async (orig) => ({ ...(await orig<object>()), getDb: () => h.db as Db }));
-
-let db: Db;
-const google = parseConfig({ TZ: "UTC", GOOGLE_OAUTH_ENABLED: "true", GOOGLE_CLIENT_ID: "c", GOOGLE_CLIENT_SECRET: "s" });
-const demo = parseConfig({ TZ: "UTC" });
-const go = async (path: string, cookie?: string) => {
-  const res = await proxy(new NextRequest(`http://pulse:3000${path}`, { headers: cookie ? { cookie: `${SESSION_COOKIE}=${cookie}` } : {} }));
+const go = (path: string, cookie?: string) => {
+  const res = proxy(new NextRequest(`http://pulse:3000${path}`, { headers: cookie ? { cookie } : {} }));
   return res ? new URL(res.headers.get("location")!).pathname : "pass";
 };
-const owner = async () => {
-  await saveAccount(db, "me@example.com", "correct horse battery");
-  return signSession(db, { kind: "owner", email: "me@example.com" });
-};
-
-beforeEach(() => {
-  db = h.db = openDb(":memory:");
-  h.cfg = google;
-});
+const SESSION = "better-auth.session_token=abc.def";
 
 describe("proxy", () => {
-  it("signed out with no account yet: every screen goes to /setup; /setup and /login pass", async () => {
-    expect(await go("/")).toBe("/setup");
-    expect(await go("/settings")).toBe("/setup");
-    expect(await go("/setup")).toBe("pass");
-    expect(await go("/login")).toBe("pass");
-    h.cfg = demo;
-    expect(await go("/")).toBe("/login"); // a demo instance has no account to set up
+  it("signed out: every screen goes to /login; the signed-out pages and /logout pass", () => {
+    for (const p of ["/", "/settings", "/onboarding", "/strain/2026-10-01"]) expect(go(p), p).toBe("/login");
+    for (const p of ["/login", "/login/demo", "/signup", "/forgot", "/logout"]) expect(go(p), p).toBe("pass");
+    expect(go("/loginx")).toBe("/login");
   });
 
-  it("signed out once the account exists: every screen goes to /login, and /login itself passes", async () => {
-    await saveAccount(db, "me@example.com", "correct horse battery");
-    expect(await go("/")).toBe("/login");
-    expect(await go("/settings")).toBe("/login");
-    expect(await go("/onboarding")).toBe("/login");
-    expect(await go("/login")).toBe("pass");
+  it("with a session cookie (plain or __Secure-) everything passes; the pages check the session themselves", () => {
+    for (const c of [SESSION, `__Secure-${SESSION}`]) for (const p of ["/", "/settings", "/login", "/signup"]) expect(go(p, c), p).toBe("pass");
   });
 
-  it("signed in without a profile: onboarding first; with one: no onboarding and no login", async () => {
-    const t = await owner();
-    expect(await go("/", t)).toBe("/onboarding");
-    expect(await go("/onboarding", t)).toBe("pass");
-    saveProfile(db, { birthDate: "1990-01-01", sex: "male", maxHr: null, heightCm: null });
-    expect(await go("/", t)).toBe("pass");
-    expect(await go("/onboarding", t)).toBe("/");
-    expect(await go("/login", t)).toBe("/");
-    expect(await go("/setup", t)).toBe("/");
-  });
-
-  it("a demo session is only valid on a demo instance", async () => {
-    saveProfile(db, { birthDate: "1990-01-01", sex: "male", maxHr: null, heightCm: null });
-    const t = await signSession(db, { kind: "demo" });
-    expect(await go("/", t)).toBe("/setup");
-    h.cfg = demo;
-    expect(await go("/", t)).toBe("pass");
-  });
-
-  it("the matcher leaves Google's redirect, the health check, build assets and public files open", () => {
+  it("the matcher leaves better-auth, Google's redirect, the health check, build assets and public files open", () => {
     const re = new RegExp(`^${config.matcher[0]}$`);
-    for (const p of ["/oauth/callback", "/oauth/start", "/healthz", "/_next/static/x.js", "/icon.svg", "/manifest.webmanifest", "/icons/oauth-logo-120.png"])
+    for (const p of ["/api/auth/sign-in/email", "/oauth/callback", "/oauth/start", "/healthz", "/_next/static/x.js", "/icon.svg", "/manifest.webmanifest", "/icons/oauth-logo-120.png"])
       expect(re.test(p), p).toBe(false);
     for (const p of ["/", "/settings", "/login", "/onboarding", "/strain/2026-10-01", "/activity/a.b", "/metric/x.json"]) expect(re.test(p), p).toBe(true);
   });

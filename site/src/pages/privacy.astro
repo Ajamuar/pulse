@@ -1,0 +1,240 @@
+---
+import Legal from "../layouts/Legal.astro"
+import { CONTACT_EMAIL, LICENSE_URL, REPO } from "../config"
+
+const APP = "https://pulsefit.portlabs.in"
+const USER_DATA_POLICY = "https://developers.google.com/terms/api-services-user-data-policy"
+const toc = [
+  { id: "who", title: "Who this covers" },
+  { id: "account-data", title: "Your Pulse account" },
+  { id: "google-data", title: "Data from Google" },
+  { id: "use", title: "How Pulse uses your data" },
+  { id: "limited-use", title: "Google API Services User Data Policy" },
+  { id: "sharing", title: "Sharing" },
+  { id: "storage", title: "Storage and security" },
+  { id: "retention", title: "Retention and deletion" },
+  { id: "choices", title: "Your choices and rights" },
+  { id: "analytics", title: "Cookies and analytics" },
+  { id: "children", title: "Children" },
+  { id: "medical", title: "Not medical advice" },
+  { id: "changes", title: "Changes to this policy" },
+  { id: "contact", title: "Contact" },
+]
+---
+
+<Legal
+  title="Privacy Policy"
+  description="What the hosted Pulse app collects, how it uses your Google Health data, who it is shared with (no one), and how to export or delete it."
+  keywords={["pulse privacy policy", "google health data privacy", "pulse data deletion"]}
+  effective="2026-10-03"
+  toc={toc}
+>
+  <p class="lede" slot="lede">
+    Pulse turns your own Google Health data into recovery, strain and sleep scores. This page explains what the hosted Pulse app collects, why, and how you stay in control of
+    it. Short version: your data is used only to show you your scores. It is never sold, never used for ads, and never shared.
+  </p>
+
+  <section id="who">
+    <h2>Who this covers</h2>
+    <p>
+      Pulse is open-source software (<a href={REPO}>source on GitHub</a>, licensed under the <a href={LICENSE_URL}>PolyForm Noncommercial 1.0.0</a> license). Anyone can
+      run their own copy.
+    </p>
+    <p>
+      This policy covers the hosted instance at <a href={APP}>pulsefit.portlabs.in</a> ("the hosted app"). It is run by the Pulse project maintainer for personal, family and
+      testing use. In this policy, "we" means that maintainer, and "you" means a person with an account on the hosted app.
+    </p>
+    <p>
+      If you use a copy of Pulse that someone else runs, that person is responsible for your data, not us. Self-hosters are the data controllers for their own instances and
+      should give their users their own privacy policy.
+    </p>
+    <p>This website (pulse.portlabs.in) is a public information site. It has no accounts and collects no health data.</p>
+  </section>
+
+  <section id="account-data">
+    <h2>Your Pulse account</h2>
+    <p>When you sign up and use the hosted app, we store:</p>
+    <ul>
+      <li><strong>Account details:</strong> your name, username and email address.</li>
+      <li><strong>Your password,</strong> stored only as a salted scrypt hash. We cannot see or recover your password.</li>
+      <li>
+        <strong>Sessions:</strong> a session record for each device you sign in on, with its IP address and browser user agent. We keep these for security, so you stay signed
+        in and so suspicious sign-ins can be spotted.
+      </li>
+      <li><strong>Rate-limit counters,</strong> short-lived records that slow down repeated sign-in attempts and other abuse.</li>
+      <li>
+        <strong>Your profile:</strong> birth date, sex, height, time zone and, if you enter it, your measured maximum heart rate. Scores need these to be accurate. You can also
+        upload a profile photo.
+      </li>
+      <li><strong>What you enter in Pulse:</strong> journal answers, dashboard layout, settings, and the entries you log (see below).</li>
+    </ul>
+  </section>
+
+  <section id="google-data">
+    <h2>Data from Google</h2>
+    <p>
+      Pulse gets your health data from Google Health, the service your Fitbit Air syncs to. You connect your own Google account through Google's sign-in and consent screen,
+      and you choose what to allow. Pulse asks for these kinds of access:
+    </p>
+    <h3>Sign-in basics</h3>
+    <ul>
+      <li>Your Google account's email address, name and profile photo, so Settings can show which Google account is connected.</li>
+    </ul>
+    <h3>Health data Pulse reads</h3>
+    <ul>
+      <li><strong>Activity and fitness:</strong> steps, workouts, active minutes, calories and similar activity data.</li>
+      <li><strong>Health metrics and measurements:</strong> heart rate, heart rate variability, resting heart rate, blood oxygen, breathing rate, skin temperature, weight and body measurements.</li>
+      <li><strong>Sleep:</strong> sleep sessions and sleep stages.</li>
+      <li><strong>ECG:</strong> ECG results (the classification and average heart rate, never the waveform).</li>
+      <li><strong>Irregular rhythm notifications:</strong> whether and when an irregular heart rhythm alert happened.</li>
+      <li><strong>Location:</strong> location data that Google Health records with your activities, such as a workout route.</li>
+      <li><strong>Logged symptoms</strong> you have recorded.</li>
+      <li><strong>Mindfulness</strong> sessions.</li>
+      <li><strong>Reproductive health:</strong> menstrual cycle data. Pulse only shows cycle features if your profile says you are female.</li>
+      <li><strong>Nutrition:</strong> food, hydration and nutrition logs.</li>
+      <li><strong>Profile and settings:</strong> your Google Health profile (for example age, height and sex) and settings such as units and time zone.</li>
+    </ul>
+    <h3>Data Pulse writes to Google Health</h3>
+    <p>
+      Pulse asks for write access to activity and fitness, health metrics and measurements, sleep, mindfulness, logged symptoms, reproductive health and nutrition. It uses
+      this only to save the entries <strong>you</strong> log in Pulse, such as water, food, weight and body fat, mood, symptoms, menstrual periods and ovulation tests, and to
+      delete them again if you delete them in Pulse. Pulse never writes anything you did not log yourself, and never changes or deletes data it did not create.
+    </p>
+    <p>
+      Pulse also stores a Google refresh token on the server so it can keep syncing in the background. It is never sent to your browser. You can cut off access at any time
+      (see <a href="#choices">Your choices</a>).
+    </p>
+  </section>
+
+  <section id="use">
+    <h2>How Pulse uses your data</h2>
+    <p>Pulse uses your data only to provide the features you see in the app:</p>
+    <ul>
+      <li>computing your recovery, strain, sleep and stress scores, baselines, trends and reports;</li>
+      <li>showing your health data, journal and logged entries back to you;</li>
+      <li>saving what you log to your Google Health account;</li>
+      <li>keeping your account secure and the service running.</li>
+    </ul>
+    <p>Specifically, Pulse does <strong>not</strong>:</p>
+    <ul>
+      <li>sell your data, or transfer it to data brokers or information resellers;</li>
+      <li>use your data for advertising, including personalised or retargeted ads;</li>
+      <li>use your data to train artificial intelligence or machine learning models;</li>
+      <li>use your data to decide on credit, lending, insurance or employment;</li>
+      <li>let people read your data, except as described below.</li>
+    </ul>
+    <p>
+      No human reads your health data unless you ask us to (for example, to help you with a support problem and you give your consent), it is needed for security (for
+      example, investigating abuse), or the law requires it.
+    </p>
+  </section>
+
+  <section id="limited-use">
+    <h2>Google API Services User Data Policy</h2>
+    <p>
+      <strong>
+        Pulse's use and transfer of information received from Google APIs adheres to the <a href={USER_DATA_POLICY}>Google API Services User Data Policy</a>, including the
+        Limited Use requirements.
+      </strong>
+    </p>
+    <p>
+      In practice, this means data from Google is used only to provide and improve the user-facing features of Pulse described on this page. It is not transferred to anyone
+      else, except as needed to provide those features, to comply with the law, or as part of a merger or acquisition with your consent. It is not used for ads, not sold, and
+      not read by humans except as listed above.
+    </p>
+  </section>
+
+  <section id="sharing">
+    <h2>Sharing</h2>
+    <p>
+      We do not share your personal data or Google data with third parties. The only outside company involved is our network provider, <strong>Cloudflare</strong>, which
+      carries traffic to and from the hosted app (encrypted with HTTPS) and protects it from attacks. Cloudflare does not get access to the database.
+    </p>
+    <p>We may disclose data if the law requires it, for example a valid court order. We would tell you if we are allowed to.</p>
+  </section>
+
+  <section id="storage">
+    <h2>Storage and security</h2>
+    <ul>
+      <li>Your data is stored in the hosted app's own PostgreSQL database, on a server the maintainer runs. It is not stored with a cloud analytics or data company.</li>
+      <li>Every connection to the app uses HTTPS.</li>
+      <li>Each user can see only their own data. Passwords are hashed, and sign-in attempts are rate-limited.</li>
+      <li>Database backups are encrypted.</li>
+    </ul>
+    <p>No system is perfectly secure. If we learn of a breach that affects your data, we will tell you without undue delay.</p>
+  </section>
+
+  <section id="retention">
+    <h2>Retention and deletion</h2>
+    <ul>
+      <li><strong>While you use Pulse,</strong> your data is kept so your scores, baselines and history work.</li>
+      <li>
+        <strong>Raw Google responses</strong> are archived for up to 30 days to help fix sync problems, then deleted automatically. The processed data stays until you delete
+        it.
+      </li>
+      <li>
+        <strong>Disconnecting Google</strong> revokes Pulse's access, so no new data is read or written. Data already synced stays in your Pulse account until you delete it.
+      </li>
+      <li><strong>Switching to a different Google account</strong> deletes the data synced from the previous one.</li>
+      <li>
+        <strong>Deleting your account</strong> in Settings › Account permanently deletes your account and everything linked to it: profile, sessions, tokens, synced Google
+        data, scores, journal and logged entries.
+      </li>
+      <li><strong>Backups</strong> are kept for about 14 days, so deleted data is fully gone from backups within that time.</li>
+    </ul>
+    <p>Entries you logged in Pulse and saved to Google Health stay in your Google account until you delete them there, because Google holds them, not Pulse.</p>
+  </section>
+
+  <section id="choices">
+    <h2>Your choices and rights</h2>
+    <ul>
+      <li><strong>See and export</strong> your data at any time: the app's data page exports it as CSV or JSON.</li>
+      <li><strong>Correct</strong> your profile and account details in Settings.</li>
+      <li><strong>Disconnect Google</strong> in Settings, or remove Pulse's access from your Google account at <a href="https://myaccount.google.com/permissions">myaccount.google.com/permissions</a>.</li>
+      <li><strong>Delete</strong> your account and all your data in Settings › Account.</li>
+      <li>
+        <strong>Ask us</strong> for a copy of your data, a correction, or deletion by emailing <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>. Depending on where you
+        live, you may have further rights under laws such as India's Digital Personal Data Protection Act or the GDPR. We will honour them.
+      </li>
+    </ul>
+  </section>
+
+  <section id="analytics">
+    <h2>Cookies and analytics</h2>
+    <p>
+      The hosted app uses only the cookies it needs to keep you signed in and secure. It has no advertising, no third-party analytics and no trackers.
+    </p>
+    <p>
+      This website (pulse.portlabs.in) may count page views with Umami, a privacy-friendly analytics tool that we host ourselves. It uses no cookies, collects no personal
+      data, and does not track you across sites.
+    </p>
+  </section>
+
+  <section id="children">
+    <h2>Children</h2>
+    <p>
+      Pulse is not for children under 13. The app requires an age between 13 and 100. If you believe a child under 13 has created an account, email us and we will delete it.
+    </p>
+  </section>
+
+  <section id="medical">
+    <h2>Not medical advice</h2>
+    <p>
+      Pulse is a wellness tool, not a medical device. Its scores are estimates and are not a diagnosis or medical advice. Talk to a doctor about any health concern.
+    </p>
+  </section>
+
+  <section id="changes">
+    <h2>Changes to this policy</h2>
+    <p>
+      If we change this policy, we will update the effective date above. For important changes, especially any new use of Google data, we will tell you in the app or by email
+      first and, where required, ask for your consent.
+    </p>
+  </section>
+
+  <section id="contact">
+    <h2>Contact</h2>
+    <p>Questions or requests about privacy: <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.</p>
+    <p>See also the <a href="/terms/">Terms of Service</a>.</p>
+  </section>
+</Legal>

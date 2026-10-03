@@ -49,6 +49,18 @@ jobs:
     name: e2e
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: pulse
+          POSTGRES_PASSWORD: pulse
+          POSTGRES_DB: pulse
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U pulse -d pulse"
+          --health-interval 5s --health-timeout 3s --health-retries 20
     steps:
       - uses: actions/checkout@v7
         with:
@@ -68,7 +80,7 @@ jobs:
         if: steps.browsers.outputs.cache-hit != 'true'
       - run: pnpm exec playwright install-deps chromium
         if: steps.browsers.outputs.cache-hit == 'true'
-      # Demo mode against a production build on its own port and throwaway database (playwright.config.ts);
+      # Demo mode against a production build on its own port and throwaway Postgres database (playwright.config.ts);
       # no secrets needed. CI runs the phone (361) and laptop (1440) widths, plus the onboarding journey on its
       # profile-less second server; local `pnpm e2e` sweeps all five.
       - run: pnpm e2e --project=setup --project=361 --project=1440 --project=onboarding

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { clock, dayLabel, formatValue, hmm } from "@/lib/format"
-import { dayHref, todayIn } from "@/lib/url"
+import { dayHref } from "@/lib/url"
 import { IntradayHrChart } from "@/components/charts/IntradayHrChart"
 import { ZoneBars } from "@/components/charts/ZoneBars"
 import { ACTIVITY_ICON } from "@/components/metrics/ActivityCard"
@@ -12,8 +12,8 @@ import { StatusChip, ValueUnit } from "@/components/metrics/primitives"
 import { DetailShell } from "@/components/shells/DetailShell"
 import { SectionShell } from "@/components/shells/SectionShell"
 import { Card } from "@/components/ui/card"
-import { getConfig } from "@/server/config"
 import { getActivity } from "@/server/queries/activity"
+import { todayOf, userCtx } from "@/server/queries/common"
 import type { ActivityVM } from "@/server/queries/types"
 import { CAPTION, hrSeries, statProps } from "../../_lib/view"
 
@@ -22,10 +22,11 @@ export const metadata = { title: "Activity", description: "Activity strain, hear
 /** Activity `/activity/[id]` (spec §7.4). No date switcher; back falls back to that day's Strain. */
 export default async function ActivityPage({ params }: PageProps<"/activity/[id]">) {
   const { id } = await params
-  const vm = getActivity(decodeURIComponent(id))
+  const ctx = await userCtx()
+  const vm = await getActivity(decodeURIComponent(id), ctx)
   if (!vm) notFound()
-  const { timeZone } = getConfig()
-  const today = todayIn(timeZone)
+  const { timeZone } = ctx
+  const today = todayOf(ctx)
 
   const Icon = ACTIVITY_ICON[vm.kind]
   const tiles = vm.stats.filter((k) => k.key !== "duration")

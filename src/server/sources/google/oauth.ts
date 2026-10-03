@@ -90,23 +90,29 @@ export const appOrigin = (req: Request, appUrl: string | null) => appUrl ?? new 
 export const redirectUri = (origin: string) => `${origin}/oauth/callback`;
 
 // globalThis, not module scope: Next bundles /oauth/start and /oauth/callback separately.
-const g = globalThis as typeof globalThis & { __pulseOAuthStates?: Map<string, number> };
+const g = globalThis as typeof globalThis & { __pulseOAuthStates?: Map<string, { userId: number; expires: number }> };
 const states = () => (g.__pulseOAuthStates ??= new Map());
 
-/** A random state, valid once for 10 minutes. Held in memory: a restart mid-consent just means consenting again. */
-export function createState(now = Date.now()): string {
-  for (const [s, expires] of states()) if (expires <= now) states().delete(s);
+/**
+ * A random state for the user starting the consent, valid once for 10 minutes. Held in memory: a restart
+ * mid-consent just means consenting again.
+ */
+export function createState(userId: number, now = Date.now()): string {
+  for (const [s, { expires }] of states()) if (expires <= now) states().delete(s);
   const state = randomBytes(32).toString("base64url");
-  states().set(state, now + STATE_TTL_MS);
+  states().set(state, { userId, expires: now + STATE_TTL_MS });
   return state;
 }
 
-/** True once for a state createState issued under 10 minutes ago; false for missing, unknown, reused or expired. */
-export function consumeState(state: string | null, now = Date.now()): boolean {
+/**
+ * True once for a state createState issued under 10 minutes ago to this same user; false for missing, unknown,
+ * reused, expired, or another user's (which would link someone else's Google account to this session: login CSRF).
+ */
+export function consumeState(state: string | null, userId: number, now = Date.now()): boolean {
   if (!state) return false;
-  const expires = states().get(state);
+  const entry = states().get(state);
   states().delete(state);
-  return expires !== undefined && expires > now;
+  return entry !== undefined && entry.expires > now && entry.userId === userId;
 }
 
 /**
@@ -155,8 +161,8 @@ async function tokenRequest(fetchFn: typeof fetch, params: Record<string, string
 }
 
 /** True when a grant is stored and not revoked: sign-in can skip the consent screen. */
-export function hasGrant(db: Db): boolean {
-  const row = db.select({ revokedAt: oauthTokens.revokedAt }).from(oauthTokens).get();
+export async function hasGrant(db: Db, userId: number): Promise<boolean> {
+  const [row] = await db.select({ revokedAt: oauthTokens.revokedAt }).from(oauthTokens).where(eq(oauthTokens.userId, userId));
   return !!row && row.revokedAt === null;
 }
 
@@ -164,8 +170,8 @@ export function hasGrant(db: Db): boolean {
  * The scopes in SCOPES the stored grant lacks (empty with no grant: that is "not connected", not "missing").
  * A grant made before a scope was added keeps working for the rest; only a new consent adds it.
  */
-export function missingScopes(db: Db): string[] {
-  const row = db.select({ scope: oauthTokens.scope }).from(oauthTokens).get();
+export async function missingScopes(db: Db, userId: number): Promise<string[]> {
+  const [row] = await db.select({ scope: oauthTokens.scope }).from(oauthTokens).where(eq(oauthTokens.userId, userId));
   if (!row) return [];
   const granted = new Set(row.scope.split(/\s+/));
   return SCOPES.filter((s) => !granted.has(s));
@@ -191,14 +197,15 @@ function verifiedAccount(idToken: string | undefined, clientId: string): { email
 }
 
 /**
- * Exchanges an authorization code and stores the grant in the single `oauth_tokens` row, clearing any
- * revocation. Returns the Google account's email, photo and name.
+ * Exchanges an authorization code and stores the grant in the user's `oauth_tokens` row, clearing any
+ * revocation. Returns the Google account's email, photo and name, which the row keeps too (Settings).
  * - Without a refresh token (no consent screen), only the access token of a still-working grant is
  *   updated. With no such grant it stores nothing and throws `auth_revoked`: accepting it would give
  *   a connection that syncs for an hour and then stops.
  */
 export async function exchangeCode(
   db: Db,
+  userId: number,
   o: { google: Google; redirectUri: string; code: string } & Deps,
 ): Promise<{ email: string; picture: string | null; name: string | null }> {
   const { fetch: fetchFn = fetch, now = Date.now } = o;
@@ -218,11 +225,15 @@ export async function exchangeCode(
   // Before storing anything: an account without Google Health would connect and then sync nothing.
   await requireHealthProfile(fetchFn, r.accessToken);
   const t = Math.floor(now() / 1000);
+  const who = { googleEmail: account.email, googleName: account.name, googlePicture: account.picture };
   if (!r.refreshToken) {
-    if (!hasGrant(db)) {
+    if (!(await hasGrant(db, userId))) {
       throw new GoogleError("auth_revoked", r.status, "token exchange returned no refresh_token; revoke the app's access in your Google account and connect again");
     }
-    db.update(oauthTokens).set({ accessToken: r.accessToken, expiresAt: t + r.expiresIn, updatedAt: t }).where(eq(oauthTokens.id, 1)).run();
+    await db
+      .update(oauthTokens)
+      .set({ accessToken: r.accessToken, expiresAt: t + r.expiresIn, updatedAt: t, ...who })
+      .where(eq(oauthTokens.userId, userId));
     return account;
   }
   const row = {
@@ -232,11 +243,12 @@ export async function exchangeCode(
     scope: r.scope ?? SCOPES.join(" "),
     revokedAt: null,
     updatedAt: t,
+    ...who,
   };
-  db.insert(oauthTokens)
-    .values({ id: 1, ...row })
-    .onConflictDoUpdate({ target: oauthTokens.id, set: row })
-    .run();
+  await db
+    .insert(oauthTokens)
+    .values({ userId, ...row })
+    .onConflictDoUpdate({ target: oauthTokens.userId, set: row });
   return account;
 }
 
@@ -256,10 +268,10 @@ async function requireHealthProfile(fetchFn: typeof fetch, accessToken: string) 
  * and no sex, only `age`, so onboarding still asks for both and uses this to open the date picker on the
  * right year. Best effort: any failure is just null.
  */
-export async function googleAge(db: Db, google: Google, o: Deps = {}): Promise<number | null> {
+export async function googleAge(db: Db, userId: number, google: Google, o: Deps = {}): Promise<number | null> {
   const { fetch: fetchFn = fetch } = o;
   try {
-    const token = await getAccessToken(db, google, o);
+    const token = await getAccessToken(db, userId, google, o);
     const res = await fetchFn(PROFILE_URL, { headers: { authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(5_000) });
     if (!res.ok) {
       await res.body?.cancel();
@@ -277,9 +289,9 @@ export async function googleAge(db: Db, google: Google, o: Deps = {}): Promise<n
  * Third-party access), then forgets it. The stored data stays. Google answering 400 means the token was
  * already invalid, which is the goal anyway; a network failure throws and keeps the row, so it can be retried.
  */
-export async function revokeGrant(db: Db, o: Deps = {}): Promise<void> {
+export async function revokeGrant(db: Db, userId: number, o: Deps = {}): Promise<void> {
   const { fetch: fetchFn = fetch } = o;
-  const row = db.select().from(oauthTokens).get();
+  const [row] = await db.select().from(oauthTokens).where(eq(oauthTokens.userId, userId));
   if (!row) return;
   const res = await fetchFn(REVOKE_URL, {
     method: "POST",
@@ -289,21 +301,21 @@ export async function revokeGrant(db: Db, o: Deps = {}): Promise<void> {
   });
   await res.body?.cancel();
   if (!res.ok && res.status !== 400) throw new GoogleError(`http_${res.status}`, res.status, "revoke");
-  db.delete(oauthTokens).where(eq(oauthTokens.id, 1)).run();
+  await db.delete(oauthTokens).where(eq(oauthTokens.userId, userId));
 }
 
-export function markRevoked(db: Db, now = Date.now()) {
+export async function markRevoked(db: Db, userId: number, now = Date.now()) {
   const t = Math.floor(now / 1000);
-  db.update(oauthTokens).set({ revokedAt: t, updatedAt: t }).where(eq(oauthTokens.id, 1)).run();
+  await db.update(oauthTokens).set({ revokedAt: t, updatedAt: t }).where(eq(oauthTokens.userId, userId));
 }
 
 /**
  * The stored access token, refreshed when it expires within a minute or when `force` is set (after a 401).
  * Throws `not_connected` with no grant, and `auth_revoked` once revoked; `invalid_grant` on refresh marks it revoked.
  */
-export async function getAccessToken(db: Db, google: Google, o: Deps & { force?: boolean } = {}): Promise<string> {
+export async function getAccessToken(db: Db, userId: number, google: Google, o: Deps & { force?: boolean } = {}): Promise<string> {
   const { fetch: fetchFn = fetch, now = Date.now, force = false } = o;
-  const row = db.select().from(oauthTokens).get();
+  const [row] = await db.select().from(oauthTokens).where(eq(oauthTokens.userId, userId));
   if (!row) throw new GoogleError("not_connected");
   if (row.revokedAt !== null) throw new GoogleError("auth_revoked");
   const t = Math.floor(now() / 1000);
@@ -322,12 +334,13 @@ export async function getAccessToken(db: Db, google: Google, o: Deps & { force?:
   if (!r.ok) {
     // Only invalid_grant means reconnect. A 5xx is Google having a bad day, not a revocation.
     if (r.code === "invalid_grant") {
-      markRevoked(db, now());
+      await markRevoked(db, userId, now());
       throw new GoogleError("auth_revoked", r.status, "token refresh");
     }
     throw new GoogleError(r.code, r.status, "token refresh");
   }
-  db.update(oauthTokens)
+  await db
+    .update(oauthTokens)
     .set({
       accessToken: r.accessToken,
       expiresAt: t + r.expiresIn,
@@ -335,7 +348,6 @@ export async function getAccessToken(db: Db, google: Google, o: Deps & { force?:
       scope: r.scope ?? row.scope,
       updatedAt: t,
     })
-    .where(eq(oauthTokens.id, 1))
-    .run();
+    .where(eq(oauthTokens.userId, userId));
   return r.accessToken;
 }

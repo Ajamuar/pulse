@@ -1,8 +1,10 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import type { Db } from "../db";
+import { beforeAll, describe, expect, it } from "vitest";
+import { type Db, rows, sql } from "../db";
+import { dailyMetrics, dailyValues, dashboardMetrics, hrDays } from "../db/schema";
+import { and, eq } from "drizzle-orm";
 import { DASHBOARD_DEFAULT, PHONE_DEFAULT } from "@/lib/dashboard";
 import { recompute } from "../pipeline";
-import { cleanup, copyDb, ctxFor, dayAt, OPTS, seeded } from "../testing";
+import { copyDb, ctxFor, dayAt, OPTS, seeded, USER } from "../testing";
 import { getActivity } from "./activity";
 import { getFitness, getHealthHub, getHealthspan, getMonitor, getStress } from "./health";
 import { getHome } from "./home";
@@ -12,8 +14,6 @@ import { getReport } from "./reports";
 import { getMore, getSettings, getShellStatus } from "./settings";
 import { getSleep } from "./sleep";
 import { getStrain } from "./strain";
-
-afterAll(cleanup);
 
 const REASONS = ["calibrating", "no_hrv_last_night", "awaiting_sleep_sync", "insufficient_hr_data", "band_not_worn", "no_data"];
 const BEFORE_WAKE = Date.parse("2026-10-02T05:00:00+05:30") / 1000;
@@ -40,14 +40,14 @@ function inspect(vm: unknown, seen: Set<string>, path = "vm") {
 
 let db: Db;
 let early: Db;
-beforeAll(() => {
-  db = seeded();
-  early = seeded([BEFORE_WAKE]);
+beforeAll(async () => {
+  db = await seeded();
+  early = await seeded([BEFORE_WAKE]);
 });
 
 describe("getHome", () => {
-  it("has every Home section for today", () => {
-    const vm = getHome(dayAt(179), ctxFor(db));
+  it("has every Home section for today", async () => {
+    const vm = await getHome(dayAt(179), ctxFor(db));
     expect(Object.keys(vm).sort()).toEqual(
       [
         "activities",
@@ -96,26 +96,26 @@ describe("getHome", () => {
     expect(vm.weeklyTeaser).toMatchObject({ period: "2026-W39", start: "2026-09-21", end: "2026-09-27" });
   });
 
-  it("never holds NaN, and every missing metric says why, on every seeded day", () => {
+  it("never holds NaN, and every missing metric says why, on every seeded day", async () => {
     const seen = new Set<string>();
-    for (let i = 0; i < 180; i++) inspect(getHome(dayAt(i), ctxFor(db)), seen);
-    inspect(getHome(dayAt(179), ctxFor(early, BEFORE_WAKE)), seen);
+    for (let i = 0; i < 180; i++) inspect((await getHome(dayAt(i), ctxFor(db))), seen);
+    inspect((await getHome(dayAt(179), ctxFor(early, BEFORE_WAKE))), seen);
     expect([...seen].sort()).toEqual([...REASONS, "provisional", "stale_baseline"].sort());
   });
 
-  it("shows the seeded reasons: calibrating with nights left, no HRV, band off, and today before wake", () => {
-    for (let i = 0; i < 7; i++) expect(getHome(dayAt(i), ctxFor(db)).dials.recovery).toMatchObject({ value: null, reason: "calibrating", nightsLeft: 7 - i });
-    expect(getHome(dayAt(7), ctxFor(db)).dials.recovery.value).toBeTypeOf("number");
-    expect(getHome(dayAt(164), ctxFor(db)).dials.recovery.reason).toBe("no_hrv_last_night");
+  it("shows the seeded reasons: calibrating with nights left, no HRV, band off, and today before wake", async () => {
+    for (let i = 0; i < 7; i++) expect((await getHome(dayAt(i), ctxFor(db))).dials.recovery).toMatchObject({ value: null, reason: "calibrating", nightsLeft: 7 - i });
+    expect((await getHome(dayAt(7), ctxFor(db))).dials.recovery.value).toBeTypeOf("number");
+    expect((await getHome(dayAt(164), ctxFor(db))).dials.recovery.reason).toBe("no_hrv_last_night");
     for (const i of [156, 157]) {
-      const vm = getHome(dayAt(i), ctxFor(db));
+      const vm = await getHome(dayAt(i), ctxFor(db));
       expect(vm.dials.recovery.reason).toBe("band_not_worn");
       expect(vm.dials.sleep.reason).toBe("band_not_worn");
     }
-    expect(getHome(dayAt(156), ctxFor(db)).dials.strain.reason).toBe("band_not_worn");
-    expect(getHome(dayAt(157), ctxFor(db)).dials.strain.reason).toBe("insufficient_hr_data");
+    expect((await getHome(dayAt(156), ctxFor(db))).dials.strain.reason).toBe("band_not_worn");
+    expect((await getHome(dayAt(157), ctxFor(db))).dials.strain.reason).toBe("insufficient_hr_data");
 
-    const morning = getHome(dayAt(179), ctxFor(early, BEFORE_WAKE));
+    const morning = await getHome(dayAt(179), ctxFor(early, BEFORE_WAKE));
     expect(morning.dials.recovery.reason).toBe("awaiting_sleep_sync");
     expect(morning.dials.sleep.reason).toBe("awaiting_sleep_sync");
     expect(morning.energyBank.reason).toBe("awaiting_sleep_sync");
@@ -123,16 +123,17 @@ describe("getHome", () => {
     expect(morning.keyStats.find((s) => s.key === "hrv")!.metric.reason).toBe("awaiting_sleep_sync");
   });
 
-  it("builds extra metrics and body readings generically, against their 30-day averages", () => {
-    const c = copyDb(db);
+  it("builds extra metrics and body readings generically, against their 30-day averages", async () => {
+    const c = await copyDb(db);
     const day = dayAt(179);
-    c.$client.exec("delete from daily_values where key = 'distance'"); // the demo seed writes its own; pin the window
-    const put = c.$client.prepare("insert or replace into daily_values (day, key, value) values (?, ?, ?)");
-    for (let k = 1; k <= 10; k++) put.run(dayAt(179 - k), "distance", k % 2 ? 3 : 5);
-    put.run(day, "distance", 6.25);
-    c.$client.prepare("update daily_metrics set weight_kg = 72.5 where day = ?").run(day);
-    ["distance", "weight", "glucose"].forEach((k, i) => c.$client.prepare("insert into dashboard_metrics (key, position) values (?, ?)").run(k, i));
-    const vm = getHome(day, ctxFor(c));
+    await c.delete(dailyValues).where(and(eq(dailyValues.userId, USER), eq(dailyValues.key, "distance"))); // the demo seed writes its own; pin the window
+    await c.insert(dailyValues).values([
+      ...Array.from({ length: 10 }, (_, i) => ({ userId: USER, day: dayAt(179 - (i + 1)), key: "distance", value: (i + 1) % 2 ? 3 : 5 })),
+      { userId: USER, day, key: "distance", value: 6.25 },
+    ]);
+    await c.update(dailyMetrics).set({ weightKg: 72.5 }).where(and(eq(dailyMetrics.userId, USER), eq(dailyMetrics.day, day)));
+    await c.insert(dashboardMetrics).values(["distance", "weight", "glucose"].map((key, position) => ({ userId: USER, key, position })));
+    const vm = await getHome(day, ctxFor(c));
     expect(vm.keyStats).toMatchObject([
       { key: "distance", label: "Distance", unit: "km", format: "decimal2", direction: "up", href: "/metric/distance", metric: { value: 6.25 }, average: 4 },
       { key: "weight", label: "Weight", unit: "kg", metric: { value: 72.5 } },
@@ -145,11 +146,12 @@ describe("getHome", () => {
     expect(vm.phone).toBeNull();
   });
 
-  it("without a band, Home leads with the phone's stats and My Dashboard defaults to phone metrics", () => {
-    const c = copyDb(db);
-    c.$client.exec("delete from hr_samples; insert or ignore into intraday_dirty (day) select day from daily_metrics");
-    recompute(c, OPTS);
-    const vm = getHome(dayAt(170), ctxFor(c));
+  it("without a band, Home leads with the phone's stats and My Dashboard defaults to phone metrics", async () => {
+    const c = await copyDb(db);
+    await c.delete(hrDays).where(eq(hrDays.userId, USER));
+    await c.execute(sql`insert into intraday_dirty (user_id, day) select user_id, day from daily_metrics where user_id = ${USER} on conflict do nothing`);
+    await recompute(c, OPTS);
+    const vm = await getHome(dayAt(170), ctxFor(c));
     expect(vm.dials.strain.value).toBeNull();
     // The demo seed writes the phone extras (distance, active minutes) beside steps and calories.
     expect(vm.phone?.map((s) => s.key)).toEqual(["steps", "distance", "calories", "active_minutes"]);
@@ -157,43 +159,43 @@ describe("getHome", () => {
     expect(vm.dashboard.defaults).toEqual(PHONE_DEFAULT);
     expect(vm.keyStats.map((s) => s.key)).toEqual(PHONE_DEFAULT);
     // A band-off day with no phone data either keeps the plain empty state.
-    expect(getHome(dayAt(156), ctxFor(c)).phone).toBeNull();
+    expect((await getHome(dayAt(156), ctxFor(c))).phone).toBeNull();
   });
 
-  it("orders My Dashboard as chosen, skipping unknown keys, and falls back to the default list", () => {
-    const set = (keys: string[]) => {
-      db.$client.prepare("delete from dashboard_metrics").run();
-      keys.forEach((k, i) => db.$client.prepare("insert into dashboard_metrics (key, position) values (?, ?)").run(k, i));
+  it("orders My Dashboard as chosen, skipping unknown keys, and falls back to the default list", async () => {
+    const set = async (keys: string[]) => {
+      await db.delete(dashboardMetrics).where(eq(dashboardMetrics.userId, USER));
+      if (keys.length) await db.insert(dashboardMetrics).values(keys.map((key, position) => ({ userId: USER, key, position })));
     };
-    const keys = () => getHome(dayAt(179), ctxFor(db)).keyStats.map((s) => s.key);
+    const keys = async () => (await getHome(dayAt(179), ctxFor(db))).keyStats.map((s) => s.key);
     const all = ["hrv", "rhr", "resp", "sleep", "calories", "steps", "spo2", "skin"];
     try {
-      expect(keys()).toEqual(all);
-      set(["steps", "vo2max", "hrv"]);
-      expect(keys()).toEqual(["steps", "hrv"]);
-      expect(getHome(dayAt(179), ctxFor(db)).keyStats[0]).toMatchObject({ label: "Steps", href: "/metric/steps", direction: "up" });
-      set(["vo2max"]);
-      expect(keys()).toEqual(all);
+      expect(await keys()).toEqual(all);
+      await set(["steps", "vo2max", "hrv"]);
+      expect(await keys()).toEqual(["steps", "hrv"]);
+      expect((await getHome(dayAt(179), ctxFor(db))).keyStats[0]).toMatchObject({ label: "Steps", href: "/metric/steps", direction: "up" });
+      await set(["vo2max"]);
+      expect(await keys()).toEqual(all);
     } finally {
-      set([]);
+      await set([]);
     }
   });
 
-  it("switches the day banner from outlook to review at 17:00, and past days always review", () => {
+  it("switches the day banner from outlook to review at 17:00, and past days always review", async () => {
     const at = (h: number) => Date.parse(`2026-10-02T${String(h).padStart(2, "0")}:00:00+05:30`) / 1000;
-    const morning = getHome(dayAt(179), ctxFor(db, at(14))).outlook;
+    const morning = (await getHome(dayAt(179), ctxFor(db, at(14)))).outlook;
     expect(morning).toMatchObject({ kind: "outlook", title: "Your daily outlook" });
     expect(morning!.body).toMatch(/^Your Recovery is \d+%, (green|yellow|red)\./);
-    expect(getHome(dayAt(179), ctxFor(db, at(17))).outlook).toMatchObject({ kind: "review", title: "Your day in review" });
-    const past = getHome(dayAt(170), ctxFor(db)).outlook!;
+    expect((await getHome(dayAt(179), ctxFor(db, at(17)))).outlook).toMatchObject({ kind: "review", title: "Your day in review" });
+    const past = (await getHome(dayAt(170), ctxFor(db))).outlook!;
     expect(past.kind).toBe("review");
     expect(past.body).toMatch(/Day Strain was \d+\.\d/);
     // A day with no band data has nothing to summarise.
-    expect(getHome(dayAt(156), ctxFor(db)).outlook).toBeNull();
+    expect((await getHome(dayAt(156), ctxFor(db))).outlook).toBeNull();
   });
 
-  it("lists today's coach cards (strain first) and none on past days", () => {
-    const today = getHome(dayAt(179), ctxFor(db));
+  it("lists today's coach cards (strain first) and none on past days", async () => {
+    const today = await getHome(dayAt(179), ctxFor(db));
     expect(today.insights.length).toBeGreaterThan(0);
     expect(today.insights[0].key).toBe("strain");
     for (const i of today.insights) {
@@ -201,11 +203,11 @@ describe("getHome", () => {
       expect(i.body).not.toMatch(/the reference app|!/);
       expect(i.href).toMatch(/^\/(strain|recovery|sleep)$/);
     }
-    expect(getHome(dayAt(170), ctxFor(db)).insights).toEqual([]);
+    expect((await getHome(dayAt(170), ctxFor(db))).insights).toEqual([]);
   });
 
-  it("gives the journal week and the 7-day Strain and Recovery series ending on the day", () => {
-    const vm = getHome(dayAt(170), ctxFor(db));
+  it("gives the journal week and the 7-day Strain and Recovery series ending on the day", async () => {
+    const vm = await getHome(dayAt(170), ctxFor(db));
     expect(vm.journalWeek.map((w) => w.day)).toEqual([164, 165, 166, 167, 168, 169, 170].map(dayAt));
     expect(vm.journalWeek.some((w) => w.done)).toBe(true);
     expect(vm.strainRecovery.map((p) => p.day)).toEqual(vm.journalWeek.map((w) => w.day));
@@ -214,12 +216,12 @@ describe("getHome", () => {
       if (p.recovery !== null) expect(p.recovery >= 0 && p.recovery <= 100).toBe(true);
     }
     // The band-off day has neither score.
-    const off = getHome(dayAt(158), ctxFor(db)).strainRecovery.find((p) => p.day === dayAt(156))!;
+    const off = (await getHome(dayAt(158), ctxFor(db))).strainRecovery.find((p) => p.day === dayAt(156))!;
     expect(off).toEqual({ day: dayAt(156), strain: null, recovery: null });
   });
 
-  it("leaves today's Strain a gap in the 7-day series until it has a score, never a 0.0 dive", () => {
-    const morning = getHome(dayAt(179), ctxFor(early, BEFORE_WAKE));
+  it("leaves today's Strain a gap in the 7-day series until it has a score, never a 0.0 dive", async () => {
+    const morning = await getHome(dayAt(179), ctxFor(early, BEFORE_WAKE));
     expect(morning.dials.strain.value).toBe(0);
     const today = morning.strainRecovery.at(-1)!;
     expect(today.day).toBe(dayAt(179));
@@ -227,65 +229,65 @@ describe("getHome", () => {
     // Past days keep their scores.
     expect(morning.strainRecovery.slice(0, -1).some((p) => p.strain !== null && p.strain > 0)).toBe(true);
     // Once effort accrues, today plots.
-    const later = getHome(dayAt(170), ctxFor(db)).strainRecovery.at(-1)!;
+    const later = (await getHome(dayAt(170), ctxFor(db))).strainRecovery.at(-1)!;
     expect(later.strain).not.toBeNull();
   });
 
-  it("raises the Health Monitor alert in the seeded illness week", () => {
-    const flagged = [118, 119, 120, 121, 122].map((i) => getHome(dayAt(i), ctxFor(db)).monitorAlert);
+  it("raises the Health Monitor alert in the seeded illness week", async () => {
+    const flagged = await Promise.all([118, 119, 120, 121, 122].map(async (i) => (await getHome(dayAt(i), ctxFor(db))).monitorAlert));
     expect(flagged.some((a) => a?.kind === "illness")).toBe(true);
-    expect(getHome(dayAt(60), ctxFor(db)).monitorAlert?.kind ?? null).not.toBe("illness");
+    expect((await getHome(dayAt(60), ctxFor(db))).monitorAlert?.kind ?? null).not.toBe("illness");
   });
 });
 
 describe("every screen query", () => {
-  it("returns NaN-free view models with reasons for a spread of days", () => {
+  it("returns NaN-free view models with reasons for a spread of days", async () => {
     const ctx = ctxFor(db);
     const seen = new Set<string>();
     for (const i of [0, 3, 7, 14, 30, 60, 100, 120, 156, 157, 164, 170, 178, 179]) {
       const d = dayAt(i);
-      for (const vm of [getRecovery(d, ctx), getStrain(d, ctx), getSleep(d, ctx), getMonitor(d, ctx), getStress(d, ctx), getHealthspan(d, ctx), getJournal(d, ctx)]) {
+      for (const vm of [(await getRecovery(d, ctx)), (await getStrain(d, ctx)), (await getSleep(d, ctx)), (await getMonitor(d, ctx)), (await getStress(d, ctx)), (await getHealthspan(d, ctx)), (await getJournal(d, ctx))]) {
         inspect(vm, seen);
       }
     }
-    inspect([getHealthHub(ctx), getFitness(ctx), getMore(ctx), getSettings(ctx), getShellStatus(ctx)], seen);
-    for (const m of ["recovery", "hrv", "sleep"] as const) inspect(getJournalInsights(m, ctx), seen);
-    const periods = db.$client.prepare("select period from reports").pluck().all() as string[];
-    for (const p of periods) inspect(getReport(p, ctx), seen);
-    const ids = db.$client.prepare("select id from exercises where day >= ?").pluck().all(dayAt(150)) as string[];
-    for (const id of ids) inspect(getActivity(id, ctx), seen);
+    inspect([(await getHealthHub(ctx)), (await getFitness(ctx)), (await getMore(ctx)), (await getSettings(ctx)), (await getShellStatus(ctx))], seen);
+    for (const m of ["recovery", "hrv", "sleep"] as const) inspect((await getJournalInsights(m, ctx)), seen);
+    const periods = (await rows<{ period: string }>(db, sql`select period from reports where user_id = ${USER}`)).map((r) => r.period);
+    for (const p of periods) inspect((await getReport(p, ctx)), seen);
+    const ids = (await rows<{ id: string }>(db, sql`select id from exercises where user_id = ${USER} and day >= ${dayAt(150)}`)).map((r) => r.id);
+    for (const id of ids) inspect((await getActivity(id, ctx)), seen);
     expect(seen).toContain("calibrating");
-    expect(getActivity("nope", ctx)).toBeNull();
-    expect(getReport("1999-W01", ctx)).toBeNull();
+    expect((await getActivity("nope", ctx))).toBeNull();
+    expect((await getReport("1999-W01", ctx))).toBeNull();
   });
 
-  it("Stress Monitor gives the typical weekday minutes per level, and the hub a week-on-week pace change", () => {
-    const l = getStress(dayAt(170), ctxFor(db)).levels.value!;
+  it("Stress Monitor gives the typical weekday minutes per level, and the hub a week-on-week pace change", async () => {
+    const l = (await getStress(dayAt(170), ctxFor(db))).levels.value!;
     expect(l.typical).not.toBeNull();
     expect(l.typical!.highMin).toBeCloseTo(l.highMin - l.typicalDeltaMin!, 6);
-    expect(getStress(dayAt(3), ctxFor(db)).levels.value?.typical ?? null).toBeNull();
-    const hs = getHealthHub(ctxFor(db)).healthspan.value;
+    expect((await getStress(dayAt(3), ctxFor(db))).levels.value?.typical ?? null).toBeNull();
+    const hs = (await getHealthHub(ctxFor(db))).healthspan.value;
     if (hs) expect(hs.paceDelta === null || Number.isFinite(hs.paceDelta)).toBe(true);
   });
 
-  it("Journal Insights shows the seeded alcohol effect as negative", () => {
-    const vm = getJournalInsights("recovery", ctxFor(db));
+  it("Journal Insights shows the seeded alcohol effect as negative", async () => {
+    const vm = await getJournalInsights("recovery", ctxFor(db));
     const alcohol = vm.items.find((x) => x.key === "alcohol");
     expect(alcohol?.effect).toBe("negative");
     expect(alcohol!.avgWith!).toBeLessThan(alcohol!.avgWithout!);
   });
 
-  it("Settings reports the demo source and the read-only profile", () => {
-    const vm = getSettings(ctxFor(db));
+  it("Settings reports the demo source and the read-only profile", async () => {
+    const vm = await getSettings(ctxFor(db));
     expect(vm.source).toEqual({ label: "Demo data", status: "demo" });
     expect(vm.sync).toEqual([expect.objectContaining({ key: "seed", label: "Demo generator", status: "ok" })]);
     expect(vm.profile).toMatchObject({ sex: "male", maxHr: 183, maxHrSource: "set", age: 36 });
-    expect(getShellStatus(ctxFor(db))).toMatchObject({ mode: "demo", connection: "connected", today: dayAt(179), firstDay: dayAt(0) });
+    expect((await getShellStatus(ctxFor(db)))).toMatchObject({ mode: "demo", connection: "connected", today: dayAt(179), firstDay: dayAt(0) });
   });
 
-  it("counts the wear streak back to the band-off day; early on, today does not count yet", () => {
+  it("counts the wear streak back to the band-off day; early on, today does not count yet", async () => {
     // Day 156 had no heart rate at all; day 157 got the band back late in the evening.
-    expect(getShellStatus(ctxFor(db)).streak).toEqual({ days: 179 - 157 + 1, asOf: dayAt(179) });
-    expect(getShellStatus(ctxFor(early, BEFORE_WAKE)).streak).toEqual({ days: 178 - 157 + 1, asOf: dayAt(178) });
+    expect((await getShellStatus(ctxFor(db))).streak).toEqual({ days: 179 - 157 + 1, asOf: dayAt(179) });
+    expect((await getShellStatus(ctxFor(early, BEFORE_WAKE))).streak).toEqual({ days: 178 - 157 + 1, asOf: dayAt(178) });
   });
 });

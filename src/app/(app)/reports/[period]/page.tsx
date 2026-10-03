@@ -4,11 +4,10 @@ import { ChevronLeft, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { DataColor } from "@/lib/bands"
 import { DAY, formatDay, formatValue, rangeLabel, type FormatKey } from "@/lib/format"
-import { dayHref, todayIn } from "@/lib/url"
-import { getConfig } from "@/server/config"
+import { dayHref } from "@/lib/url"
 import { getReport } from "@/server/queries/reports"
 import { latestReport } from "@/server/queries/home"
-import { defaultCtx } from "@/server/queries/common"
+import { todayOf, userCtx } from "@/server/queries/common"
 import type { KeyStat, ReportVM } from "@/server/queries/types"
 import { ZoneBars } from "@/components/charts/ZoneBars"
 import { DriverList } from "@/components/metrics/DriverList"
@@ -147,13 +146,13 @@ export default async function ReportPage({ params }: PageProps<"/reports/[period
   const { period } = await params
   const isWeek = WEEK.test(period)
   if (!isWeek && !MONTH.test(period)) notFound()
-  const today = todayIn(getConfig().timeZone)
-  const vm = getReport(period)
+  const ctx = await userCtx()
+  const today = todayOf(ctx)
+  const vm = await getReport(period, ctx)
   const title = isWeek ? "Weekly report" : "Monthly report"
 
   if (!vm) {
-    const ctx = defaultCtx()
-    const latest = latestReport(ctx, isWeek ? "week" : "month")
+    const latest = await latestReport(ctx, isWeek ? "week" : "month")
     return (
       <DetailShell
         title={title}

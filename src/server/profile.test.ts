@@ -1,55 +1,64 @@
 import { describe, expect, it } from "vitest";
-import { openDb } from "./db";
+import { rows, sql } from "./db";
+import { dailyMetrics } from "./db/schema";
 import { getProfile, ProfileInput, saveProfile } from "./profile";
-import { seeded } from "./testing";
+import { addUser, freshDb, seeded, USER } from "./testing";
 
-const input = { birthDate: "1990-06-15", sex: "female", maxHr: null, heightCm: 165 } as const;
+const input = { birthDate: "1990-06-15", sex: "female", maxHr: null, heightCm: 165, timeZone: "Asia/Kolkata" } as const;
 
 describe("profile", () => {
-  it("is null before onboarding", () => {
-    expect(getProfile(openDb(":memory:"))).toBeNull();
+  it("is null before onboarding", async () => {
+    expect(await getProfile(await freshDb(), USER)).toBeNull();
   });
 
-  it("estimates max HR from age (Tanaka) unless measured", () => {
-    const db = openDb(":memory:");
-    saveProfile(db, input);
+  it("estimates max HR from age (Tanaka) unless measured", async () => {
+    const db = await freshDb();
+    await saveProfile(db, USER, input);
     // Age 36 on 2026-10-02: 208 - 0.7 * 36 = 182.8
-    expect(getProfile(db, "2026-10-02")).toEqual({ birthDate: "1990-06-15", sex: "female", maxHr: 183, maxHrSource: "estimated", heightCm: 165 });
+    expect(await getProfile(db, USER, "2026-10-02")).toEqual({ birthDate: "1990-06-15", sex: "female", maxHr: 183, maxHrSource: "estimated", heightCm: 165, timeZone: "Asia/Kolkata" });
     // Birthday not reached yet, age 35: 183.5
-    expect(getProfile(db, "2026-06-14")!.maxHr).toBe(184);
-    saveProfile(db, { ...input, maxHr: 190 });
-    expect(getProfile(db)).toMatchObject({ maxHr: 190, maxHrSource: "set" });
+    expect((await getProfile(db, USER, "2026-06-14"))!.maxHr).toBe(184);
+    await saveProfile(db, USER, { ...input, maxHr: 190 });
+    expect(await getProfile(db, USER)).toMatchObject({ maxHr: 190, maxHrSource: "set" });
   });
 
-  it("without the user's own, max HR is the top of Google's latest peak zone", () => {
-    const db = openDb(":memory:");
-    saveProfile(db, input);
-    const zones = db.$client.prepare("insert into daily_metrics (day, hr_zones, source) values (?, ?, 'google')");
-    zones.run("2026-09-30", "[98,118,137,157,186]");
-    zones.run("2026-10-01", "[99,119,138,158,188]");
-    expect(getProfile(db, "2026-10-02")).toMatchObject({ maxHr: 188, maxHrSource: "google" });
-    saveProfile(db, { ...input, maxHr: 190 });
-    expect(getProfile(db)).toMatchObject({ maxHr: 190, maxHrSource: "set" });
+  it("without the user's own, max HR is the top of Google's latest peak zone (that user's)", async () => {
+    const db = await freshDb();
+    const other = await addUser(db);
+    await saveProfile(db, USER, input);
+    await db.insert(dailyMetrics).values([
+      { userId: USER, day: "2026-09-30", hrZones: [98, 118, 137, 157, 186], source: "google" },
+      { userId: USER, day: "2026-10-01", hrZones: [99, 119, 138, 158, 188], source: "google" },
+      { userId: other, day: "2026-10-02", hrZones: [99, 119, 138, 158, 199], source: "google" },
+    ]);
+    expect(await getProfile(db, USER, "2026-10-02")).toMatchObject({ maxHr: 188, maxHrSource: "google" });
+    await saveProfile(db, USER, { ...input, maxHr: 190 });
+    expect(await getProfile(db, USER)).toMatchObject({ maxHr: 190, maxHrSource: "set" });
+    expect(await getProfile(db, other)).toBeNull();
   });
 
-  it("saving a change marks every day for recompute; saving the same values does nothing", () => {
-    const db = seeded();
-    const days = db.$client.prepare("select count(distinct day) from daily_metrics").pluck().get();
-    const dirty = () => db.$client.prepare("select count(*) from intraday_dirty").pluck().get();
-    expect(dirty()).toBe(0);
-    expect(saveProfile(db, input)).toBe(true);
-    expect(dirty()).toBe(days);
-    db.$client.prepare("delete from intraday_dirty").run();
-    expect(saveProfile(db, input)).toBe(false);
-    expect(dirty()).toBe(0);
+  it("saving a change marks every day for recompute; saving the same values does nothing", async () => {
+    const db = await seeded();
+    const count = async (q: ReturnType<typeof sql>) => (await rows<{ n: number }>(db, q))[0].n;
+    const days = await count(sql`select count(distinct day) n from daily_metrics where user_id = ${USER}`);
+    const dirty = () => count(sql`select count(*) n from intraday_dirty`);
+    expect(await dirty()).toBe(0);
+    expect(await saveProfile(db, USER, input)).toBe(true);
+    expect(await dirty()).toBe(days);
+    await db.execute(sql`delete from intraday_dirty`);
+    expect(await saveProfile(db, USER, input)).toBe(false);
+    expect(await dirty()).toBe(0);
+    expect(await saveProfile(db, USER, { ...input, timeZone: "UTC" })).toBe(true);
+    expect(await dirty()).toBe(days);
   });
 
   it("validates input, coercing form strings", () => {
-    expect(ProfileInput.parse({ birthDate: "1990-06-15", sex: "male", maxHr: "185", heightCm: "178.5" })).toEqual({
+    expect(ProfileInput.parse({ birthDate: "1990-06-15", sex: "male", maxHr: "185", heightCm: "178.5", timeZone: "UTC" })).toEqual({
       birthDate: "1990-06-15",
       sex: "male",
       maxHr: 185,
       heightCm: 178.5,
+      timeZone: "UTC",
     });
     for (const bad of [
       { ...input, birthDate: "15/06/1990" },
@@ -57,6 +66,7 @@ describe("profile", () => {
       { ...input, sex: "x" },
       { ...input, maxHr: 300 },
       { ...input, heightCm: 20 },
+      { ...input, timeZone: "Mars/Olympus" },
     ])
       expect(ProfileInput.safeParse(bad).success).toBe(false);
   });

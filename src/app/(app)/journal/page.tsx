@@ -23,12 +23,11 @@ const RECENT = 7
 
 /** Journal `/journal?d=` (spec §7.11, journey 7). */
 export default async function JournalPage({ searchParams }: PageProps<"/journal">) {
-  const { d, today } = await pageDay(searchParams as SearchParams, "/journal")
+  const { d, today, ctx } = await pageDay(searchParams as SearchParams, "/journal")
   const allHistory = (await searchParams).history === "all"
   const base = dayHref("/journal", d, today)
   const historyHref = allHistory ? base : `${base}${d === today ? "?" : "&"}history=all`
-  const vm = getJournal(d)
-  const log = getLog()
+  const [vm, log] = await Promise.all([getJournal(d, ctx), getLog(ctx)])
   const date = formatDay(d, DAY.short)
 
   return (

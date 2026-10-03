@@ -1,5 +1,6 @@
 import { connection } from "next/server"
 import { RANGES, type TrendRange } from "@/lib/url"
+import { userCtx } from "@/server/queries/common"
 import { getTrends, parseTrendMetric } from "@/server/queries/trends"
 import { TrendChart } from "@/components/charts/TrendChart"
 import { KeyStatRow } from "@/components/metrics/KeyStatRow"
@@ -16,7 +17,7 @@ export default async function TrendsPage({ searchParams }: PageProps<"/trends">)
   const sp = await searchParams
   const m = parseTrendMetric(sp.metric)
   const r = typeof sp.r === "string" && (RANGES as readonly string[]).includes(sp.r) ? sp.r : undefined
-  const vm = getTrends(m.key)
+  const vm = await getTrends(m.key, await userCtx())
   // Rounded as the chip shows it, so 0.04 km reads "+0.04", not "0.00".
   const k = m.format === "decimal2" ? 100 : 10
   const deltas = Object.fromEntries(

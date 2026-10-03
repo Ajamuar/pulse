@@ -1,6 +1,9 @@
-// Stage 1: per-sample work for the days whose inputs changed. Reads hr_samples and steps_minutes and
+// Stage 1: per-sample work for the days whose inputs changed. Reads heart rate and steps (hr_days, steps_days) and
 // caches each day's strain, activities, session resting HR and per-minute series.
+import { eq, sql } from "drizzle-orm";
 import type { Db } from "../db";
+import { dailyScores, intradayDirty } from "../db/schema";
+import { readHr, readSamples } from "../samples";
 import { addDays } from "../time";
 import { hrRecovery } from "@/core/scoring/hrRecovery";
 import { sessionRestingHR } from "@/core/scoring/restingHr";
@@ -9,7 +12,7 @@ import type { BaselineState, HrSample } from "@/core/scoring/types";
 import { googleZones, timeInZone, zones as hrZones } from "@/core/scoring/zones";
 import { minuteLoad } from "@/core/algorithms/energyBank";
 import { minuteMeanHr, stress } from "@/core/algorithms/stress";
-import { BATCH_DAYS, type Data, type Exercise, r1, round, SERIES_UPSERT, type Session, sha, touching } from "./data";
+import { BATCH_DAYS, type Data, type Exercise, r1, round, type Session, sha, touching, upsertSeries } from "./data";
 import { type PipelineOptions, SCORING_VERSION, type Stage1Activity, type Stage1Day } from "./types";
 
 /** A baseline whose centre is set, so stress() scores every still minute; only the still mask is kept. */
@@ -33,16 +36,16 @@ function stage1Key(data: Data, day: string, opts: PipelineOptions) {
   );
 }
 
-export function stage1(db: Db, data: Data, opts: PipelineOptions): string[] {
-  const c = db.$client;
+export async function stage1(db: Db, data: Data, opts: PipelineOptions): Promise<string[]> {
+  const { userId } = opts;
+  const ds = dailyScores;
+  const [storedRows, dirtyRows] = await Promise.all([
+    db.select({ day: ds.day, v: ds.scoringVersion, key: sql<string | null>`${ds.strain}->>'key'` }).from(ds).where(eq(ds.userId, userId)),
+    db.select({ day: intradayDirty.day }).from(intradayDirty).where(eq(intradayDirty.userId, userId)),
+  ]);
   // A row written under another scoring version is stale whatever its key says.
-  const stored = new Map(
-    (c.prepare("select day, scoring_version v, strain from daily_scores").all() as { day: string; v: number; strain: string | null }[]).map((r) => [
-      r.day,
-      r.strain && r.v === SCORING_VERSION ? (JSON.parse(r.strain) as Stage1Day).key : null,
-    ]),
-  );
-  const dirty = new Set(c.prepare("select day from intraday_dirty").pluck().all() as string[]);
+  const stored = new Map(storedRows.map((r) => [r.day, r.key && r.v === SCORING_VERSION ? r.key : null]));
+  const dirty = new Set(dirtyRows.map((r) => r.day));
   // A night that starts before midnight reads the previous day's HR for its resting HR.
   for (const d of [...dirty]) {
     const main = data.mainOf.get(addDays(d, 1));
@@ -51,39 +54,62 @@ export function stage1(db: Db, data: Data, opts: PipelineOptions): string[] {
   const keys = new Map(data.days.map((d) => [d, stage1Key(data, d, opts)]));
   const todo = data.days.filter((d) => dirty.has(d) || stored.get(d) !== keys.get(d));
 
-  const readHr = c.prepare("select ts, bpm from hr_samples where ts >= ? and ts < ? order by ts");
-  const readSteps = c.prepare("select ts, steps from steps_minutes where ts >= ? and ts < ?");
-  // Stage 1 never stamps scoring_version (a new row gets 0) and leaves intraday_dirty alone: stage 2 does
-  // both when it commits, so a crash between the stages still shows up in needsRecompute.
-  const upsert = c.prepare(
-    `insert into daily_scores (day, scoring_version, strain, activities, session_rhr_bpm) values (?, 0, ?, ?, ?)
-     on conflict(day) do update set strain = excluded.strain,
-       activities = excluded.activities, session_rhr_bpm = excluded.session_rhr_bpm`,
-  );
-  const series = c.prepare(SERIES_UPSERT);
-
   // Written in batches as it goes: holding every day's three per-minute series until one final write made
   // memory grow with history (3 years of a full recompute overflowed a 96 MB heap). Each day's key is its own,
-  // so a crash between batches just recomputes the days not yet written.
-  const write = c.transaction((batch: string[]) => {
-    for (const day of batch) {
+  // so a crash between batches just recomputes the days not yet written. Each batch reads its HR and steps in one
+  // query each and writes in one statement per table.
+  for (let i = 0; i < todo.length; i += BATCH_DAYS) {
+    const batch = todo.slice(i, i + BATCH_DAYS).map((day) => {
       const start = data.dayStart(day);
       const end = data.dayStart(addDays(day, 1));
       const main = data.mainOf.get(day);
       const exs = data.exercisesByDay.get(day) ?? [];
-      const lo = Math.min(start, main?.startTs ?? start);
-      const hi = Math.max(end, ...exs.map((e) => e.endTs + 330));
-      const hr = readHr.all(lo, hi) as HrSample[];
-      const steps = readSteps.all(start, end) as { ts: number; steps: number }[];
-      const r = stage1Day(data, day, start, end, main, exs, hr, steps, keys.get(day)!, opts);
-      upsert.run(day, JSON.stringify(r.s1), JSON.stringify(r.activities), r.sessionRhr);
-      series.run(day, "hr", JSON.stringify(r.hrSeries));
-      series.run(day, "still_hr", JSON.stringify(r.still));
-      series.run(day, "load", JSON.stringify(r.load));
+      return { day, start, end, main, exs, lo: Math.min(start, main?.startTs ?? start), hi: Math.max(end, ...exs.map((e) => e.endTs + 330)) };
+    });
+    // ponytail: one range per batch, so scattered dirty days read the HR between them too; split on gaps if that bites.
+    const lo = Math.min(...batch.map((b) => b.lo));
+    const hi = Math.max(...batch.map((b) => b.hi));
+    const [hrAll, stepsAll] = await Promise.all([
+      readHr(db, userId, lo, hi),
+      readSamples(db, "steps", userId, Math.min(...batch.map((b) => b.start)), Math.max(...batch.map((b) => b.end))),
+    ]);
+    const scores: (typeof dailyScores.$inferInsert)[] = [];
+    const series: { day: string; kind: string; data: (number | null)[] }[] = [];
+    for (const b of batch) {
+      const steps = between(stepsAll, b.start, b.end).map((s) => ({ ts: s.ts, steps: s.v }));
+      const r = stage1Day(data, b.day, b.start, b.end, b.main, b.exs, between(hrAll, b.lo, b.hi), steps, keys.get(b.day)!, opts);
+      // Stage 1 never stamps scoring_version (a new row gets 0) and leaves intraday_dirty alone: stage 2 does
+      // both when it commits, so a crash between the stages still shows up in needsRecompute.
+      scores.push({ userId, day: b.day, scoringVersion: 0, strain: r.s1, activities: r.activities, sessionRhrBpm: r.sessionRhr });
+      series.push({ day: b.day, kind: "hr", data: r.hrSeries }, { day: b.day, kind: "still_hr", data: r.still }, { day: b.day, kind: "load", data: r.load });
     }
-  });
-  for (let i = 0; i < todo.length; i += BATCH_DAYS) write(todo.slice(i, i + BATCH_DAYS));
+    await db.transaction(async (tx) => {
+      await tx
+        .insert(ds)
+        .values(scores)
+        .onConflictDoUpdate({
+          target: [ds.userId, ds.day],
+          set: { strain: sql`excluded.strain`, activities: sql`excluded.activities`, sessionRhrBpm: sql`excluded.session_rhr_bpm` },
+        });
+      await upsertSeries(tx, userId, series);
+    });
+  }
   return todo;
+}
+
+/** The samples with lo <= ts < hi of a time-ordered list. */
+function between<T extends { ts: number }>(xs: T[], lo: number, hi: number): T[] {
+  const first = (t: number) => {
+    let a = 0;
+    let z = xs.length;
+    while (a < z) {
+      const m = (a + z) >> 1;
+      if (xs[m].ts < t) a = m + 1;
+      else z = m;
+    }
+    return a;
+  };
+  return xs.slice(first(lo), first(hi));
 }
 
 function stage1Day(

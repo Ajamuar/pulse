@@ -1,6 +1,10 @@
 // Loading: the daily rows, sessions and exercises both stages fold over, and small shared helpers.
 import { createHash } from "node:crypto";
+import { eq, sql } from "drizzle-orm";
+import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import type { Db } from "../db";
+import { dailyMetrics, exercises as exercisesTable, intradaySeries, sleepSessions } from "../db/schema";
+import { sampleRange } from "../samples";
 import { addDays, daysBetween, localDay, localMidnight } from "../time";
 import type { PipelineOptions } from "./types";
 
@@ -32,7 +36,7 @@ export type Metrics = {
   calories: number | null;
   weightKg: number | null;
   bodyFatPct: number | null;
-  /** Google's zone bounds for the day (see daily_metrics.hr_zones), parsed. */
+  /** Google's zone bounds for the day (see daily_metrics.hr_zones). */
   hrZones: number[] | null;
   lightModerateMin: number | null;
   vigorousPeakMin: number | null;
@@ -45,7 +49,7 @@ export type Metrics = {
 };
 export type Segment = { sessionId: string; startTs: number; endTs: number; stage: "awake" | "light" | "deep" | "rem" };
 
-export type Data = ReturnType<typeof load> & {};
+export type Data = Awaited<ReturnType<typeof load>> & {};
 
 export function groupBy<T>(xs: T[], key: (x: T) => string) {
   const m = new Map<string, T[]>();
@@ -58,31 +62,45 @@ export function groupBy<T>(xs: T[], key: (x: T) => string) {
   return m;
 }
 
-export function load(db: Db, { timeZone: tz }: PipelineOptions) {
-  const c = db.$client;
-  const all = <T>(q: string) => c.prepare(q).all() as T[];
-  const metrics = all<Omit<Metrics, "hrZones"> & { hrZones: string | null }>(
-    `select day, hrv_ms hrvMs, rhr_bpm rhrBpm, resp_bpm respBpm, nightly_temp_c nightlyTempC, spo2_pct spo2Pct,
-       vo2max_daily vo2maxDaily, vo2max_run vo2maxRun, steps, calories, weight_kg weightKg, body_fat_pct bodyFatPct,
-       hr_zones hrZones, light_moderate_min lightModerateMin, vigorous_peak_min vigorousPeakMin, temp_baseline_c tempBaselineC,
-       temp_sd_c tempSdC, rhr_range_low rhrRangeLow, rhr_range_high rhrRangeHigh, hrv_range_low hrvRangeLow, hrv_range_high hrvRangeHigh
-     from daily_metrics order by day`,
-  ).map((m): Metrics => ({ ...m, hrZones: m.hrZones == null ? null : (JSON.parse(m.hrZones) as number[]) }));
-  const sessions = all<Session>(
-    `select id, day, start_ts startTs, end_ts endTs, is_main isMain, processed, stages_status stagesStatus,
-       asleep_min asleepMin, awake_min awakeMin, deep_min deepMin, light_min lightMin, rem_min remMin
-     from sleep_sessions order by start_ts, id`,
-  ).map((s) => ({ ...s, isMain: !!s.isMain, processed: !!s.processed }));
-  const exercises = all<Exercise>(
-    "select id, day, start_ts startTs, end_ts endTs, type, name, calories from exercises order by start_ts, id",
-  );
-  const hrSpan = c.prepare("select min(ts) lo, max(ts) hi from hr_samples").get() as { lo: number | null; hi: number | null };
+// Text tie-breaks sort bytewise ("C"), as SQLite did: session and exercise order feeds stage 1's keys and the naps list.
+const byteOrder = (c: AnyPgColumn) => sql`${c} collate "C"`;
 
+export async function load(db: Db, { userId, timeZone: tz }: PipelineOptions) {
+  const m = dailyMetrics;
+  const s = sleepSessions;
+  const e = exercisesTable;
+  const [metrics, sessions, exercises, hrSpan] = await Promise.all([
+    db
+      .select({
+        day: m.day, hrvMs: m.hrvMs, rhrBpm: m.rhrBpm, respBpm: m.respBpm, nightlyTempC: m.nightlyTempC, spo2Pct: m.spo2Pct,
+        vo2maxDaily: m.vo2maxDaily, vo2maxRun: m.vo2maxRun, steps: m.steps, calories: m.calories, weightKg: m.weightKg,
+        bodyFatPct: m.bodyFatPct, hrZones: m.hrZones, lightModerateMin: m.lightModerateMin, vigorousPeakMin: m.vigorousPeakMin,
+        tempBaselineC: m.tempBaselineC, tempSdC: m.tempSdC, rhrRangeLow: m.rhrRangeLow, rhrRangeHigh: m.rhrRangeHigh,
+        hrvRangeLow: m.hrvRangeLow, hrvRangeHigh: m.hrvRangeHigh,
+      })
+      .from(m)
+      .where(eq(m.userId, userId))
+      .orderBy(m.day) as Promise<Metrics[]>,
+    db
+      .select({
+        id: s.id, day: s.day, startTs: s.startTs, endTs: s.endTs, isMain: s.isMain, processed: s.processed, stagesStatus: s.stagesStatus,
+        asleepMin: s.asleepMin, awakeMin: s.awakeMin, deepMin: s.deepMin, lightMin: s.lightMin, remMin: s.remMin,
+      })
+      .from(s)
+      .where(eq(s.userId, userId))
+      .orderBy(s.startTs, byteOrder(s.id)) as Promise<Session[]>,
+    db
+      .select({ id: e.id, day: e.day, startTs: e.startTs, endTs: e.endTs, type: e.type, name: e.name, calories: e.calories })
+      .from(e)
+      .where(eq(e.userId, userId))
+      .orderBy(e.startTs, byteOrder(e.id)) as Promise<Exercise[]>,
+    sampleRange(db, "hr", userId),
+  ]);
   const candidates = [
     ...metrics.map((m) => m.day),
     ...sessions.map((s) => s.day),
-    ...exercises.map((e) => e.day),
-    ...(hrSpan.lo != null ? [localDay(hrSpan.lo, tz), localDay(hrSpan.hi!, tz)] : []),
+    ...exercises.map((x) => x.day),
+    ...(hrSpan ? [localDay(hrSpan.min, tz), localDay(hrSpan.max, tz)] : []),
   ].sort();
   if (!candidates.length) return null;
   const first = candidates[0];
@@ -107,7 +125,7 @@ export function load(db: Db, { timeZone: tz }: PipelineOptions) {
     sessionsByDay,
     mainOf,
     exercises,
-    exercisesByDay: groupBy(exercises, (e) => e.day),
+    exercisesByDay: groupBy(exercises, (x) => x.day),
   };
 }
 
@@ -122,6 +140,16 @@ export const r1 = (x: number | null) => (x == null ? null : round(x, 1));
 /** Days per write transaction: keeps memory flat in history length and each write lock short. */
 export const BATCH_DAYS = 30;
 
-/** Upserts a per-minute series, writing only when it differs. */
-export const SERIES_UPSERT = `insert into intraday_series (day, kind, data) values (?, ?, ?)
-     on conflict(day, kind) do update set data = excluded.data where data is not excluded.data`;
+/** Upserts per-minute series in one statement, writing only the rows whose data differs. */
+export async function upsertSeries(db: Db, userId: number, rows: { day: string; kind: string; data: (number | null)[] }[]) {
+  if (!rows.length) return;
+  const t = intradaySeries;
+  await db
+    .insert(t)
+    .values(rows.map((r) => ({ userId, ...r })))
+    .onConflictDoUpdate({
+      target: [t.userId, t.day, t.kind],
+      set: { data: sql`excluded.data` },
+      setWhere: sql`intraday_series.data is distinct from excluded.data`,
+    });
+}

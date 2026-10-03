@@ -50,7 +50,7 @@ const platform = (p: unknown) => str(at(p, "dataSource.platform"));
 
 // --- Daily rows -----------------------------------------------------------------------------------
 
-export type DailyValues = Partial<Omit<typeof dailyMetrics.$inferInsert, "day" | "source">>;
+export type DailyValues = Partial<Omit<typeof dailyMetrics.$inferInsert, "userId" | "day" | "source">>;
 export type DailyRow = { day: string } & DailyValues;
 
 /** Payload object -> daily_metrics columns, per list type. Civil-date types keep Google's day as-is. */
@@ -84,14 +84,14 @@ const DAILY = {
 const ZONE_TYPES = ["LIGHT", "MODERATE", "VIGOROUS", "PEAK"];
 
 /**
- * `heartRateZones[]` -> JSON `[light, moderate, vigorous, peak]` minimum bpm, then the peak maximum. Null unless all
+ * `heartRateZones[]` -> `[light, moderate, vigorous, peak]` minimum bpm, then the peak maximum. Null unless all
  * four zones are there with increasing minimums and a peak maximum above the peak minimum.
  */
-function hrZones(v: unknown): string | null {
+function hrZones(v: unknown): number[] | null {
   const zone = (type: string) => list(v).find((z) => at(z, "heartRateZoneType") === type);
   const bounds = [...ZONE_TYPES.map((t) => int(at(zone(t), "minBeatsPerMinute"))), int(at(zone("PEAK"), "maxBeatsPerMinute"))];
   if (bounds.some((b, i) => b === null || b <= 0 || (i > 0 && b <= bounds[i - 1]!))) return null;
-  return JSON.stringify(bounds);
+  return bounds as number[];
 }
 
 export type DailyType = keyof typeof DAILY;
@@ -214,9 +214,9 @@ export function mapStepsMinutes(points: unknown[]): Map<number, number> {
 export type Stage = "awake" | "light" | "deep" | "rem";
 const STAGES: Record<string, Stage> = { AWAKE: "awake", LIGHT: "light", DEEP: "deep", REM: "rem" };
 
-export type SessionRow = typeof sleepSessions.$inferInsert;
+export type SessionRow = Omit<typeof sleepSessions.$inferInsert, "userId">;
 export type SegmentRow = { sessionId: string; startTs: number; endTs: number; stage: Stage };
-export type ExerciseRow = typeof exercises.$inferInsert;
+export type ExerciseRow = Omit<typeof exercises.$inferInsert, "userId">;
 
 /** A point's stable id: its resource name, which survives a re-fetch, else type and start. */
 const pointId = (p: unknown, kind: string, start: number) => str(at(p, "name")) ?? `${kind}-${start}`;

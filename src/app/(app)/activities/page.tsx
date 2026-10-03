@@ -7,8 +7,8 @@ import { DetailShell } from "@/components/shells/DetailShell"
 import { EmptyState } from "@/components/shells/EmptyState"
 import { GROUP_LABEL, MORE_COLUMN } from "@/components/shells/LinkList"
 import { CARD_MATERIAL } from "@/components/ui/card"
-import { getConfig } from "@/server/config"
 import { ACTIVITY_PAGE_DAYS, getActivities } from "@/server/queries/activities"
+import { userCtx } from "@/server/queries/common"
 import type { ActivitiesVM } from "@/server/queries/types"
 import { CAPTION } from "../_lib/view"
 
@@ -35,8 +35,9 @@ export default async function ActivitiesPage({ searchParams }: PageProps<"/activ
   const sp = await searchParams
   const pages = Math.min(120, Math.max(1, Math.round(Number(sp.days) / ACTIVITY_PAGE_DAYS) || 1))
   const days = pages * ACTIVITY_PAGE_DAYS
-  const vm = getActivities(days)
-  const { timeZone } = getConfig()
+  const ctx = await userCtx()
+  const vm = await getActivities(days, ctx)
+  const { timeZone } = ctx
   const kinds = [...new Set(vm.groups.flatMap((g) => g.items.map((a) => a.activityKind)))]
   const kind = kinds.find((k) => k === sp.kind) ?? null
   const groups = vm.groups

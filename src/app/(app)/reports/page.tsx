@@ -2,6 +2,7 @@ import Link from "next/link"
 import { connection } from "next/server"
 import { cn } from "@/lib/utils"
 import { DAY, formatDay, formatValue, rangeLabel } from "@/lib/format"
+import { userCtx } from "@/server/queries/common"
 import { getReportArchive, type ReportListItem } from "@/server/queries/reports"
 import { MiniRing } from "@/components/metrics/MiniRing"
 import { DetailShell } from "@/components/shells/DetailShell"
@@ -75,7 +76,7 @@ function ViewSwitch({ view }: { view: View }) {
 export default async function ReportsPage({ searchParams }: PageProps<"/reports">) {
   await connection()
   const q = await searchParams
-  const vm = getReportArchive()
+  const vm = await getReportArchive(await userCtx())
   const empty = !vm.weeks.length && !vm.months.length
   // A first week can exist before any month has data, and vice versa: fall back to the kind that has rows.
   const view: View = (q.view === "months" && vm.months.length) || !vm.weeks.length ? "months" : "weeks"

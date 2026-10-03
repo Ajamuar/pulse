@@ -1,17 +1,24 @@
 // Metric detail screens `/metric/[key]` (spec §11 MD1).
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import type { Db } from "../db";
+import { beforeAll, describe, expect, it } from "vitest";
+import { and, eq } from "drizzle-orm";
+import { type Db, row, sql } from "../db";
+import { dailyMetrics, dailyValues, loggedEntries } from "../db/schema";
+import { readSamples } from "../samples";
 import { localMidnight } from "../time";
-import { cleanup, copyDb, ctxFor, dayAt, seeded, TZ } from "../testing";
+import { copyDb, ctxFor, dayAt, seeded, TZ, USER } from "../testing";
 
 import { DETAIL_KEYS, getMetricDetail, rangeStats, STEP_TARGET, WEEKLY_TARGET, type Section } from "./metric";
 
-afterAll(cleanup);
-
 let db: Db;
-beforeAll(() => {
-  db = seeded();
+beforeAll(async () => {
+  db = await seeded();
 });
+
+/** daily_values upsert for the test user. */
+const putValue = (c: Db, day: string, key: string, value: number) =>
+  c.insert(dailyValues).values({ userId: USER, day, key, value }).onConflictDoUpdate({ target: [dailyValues.userId, dailyValues.day, dailyValues.key], set: { value } });
+const metricOn = async (c: Db, day: string) =>
+  (await c.select().from(dailyMetrics).where(and(eq(dailyMetrics.userId, USER), eq(dailyMetrics.day, day))))[0];
 
 const TODAY = dayAt(179);
 const PAST = dayAt(170);
@@ -24,10 +31,10 @@ function finiteEverywhere(v: unknown, path = "vm"): void {
 }
 
 describe("getMetricDetail", () => {
-  it("builds every metric, today and on a past day, with finite numbers and honest empty states", () => {
+  it("builds every metric, today and on a past day, with finite numbers and honest empty states", async () => {
     for (const key of DETAIL_KEYS)
       for (const day of [TODAY, PAST]) {
-        const vm = getMetricDetail(key, day, ctxFor(db));
+        const vm = await getMetricDetail(key, day, ctxFor(db));
         finiteEverywhere(vm, `${key}@${day}`);
         if (vm.value.value === null) expect(vm.value.reason).toBe("no_data");
         if (vm.history.value === null) expect(vm.history.reason).toBe("no_data");
@@ -35,59 +42,62 @@ describe("getMetricDetail", () => {
       }
   });
 
-  it("steps: the day's value against its prior 30 days, today a gap in history, hours summing steps_minutes", () => {
-    const vm = getMetricDetail("steps", PAST, ctxFor(db));
-    const steps = (d: string) => db.$client.prepare("select steps from daily_metrics where day = ?").pluck().get(d) as number;
-    expect(vm.value.value).toBe(steps(PAST));
-    const prior = Array.from({ length: 30 }, (_, k) => steps(dayAt(169 - k))).filter((x) => x != null);
+  it("steps: the day's value against its prior 30 days, today a gap in history, hours summing the stored steps", async () => {
+    const vm = await getMetricDetail("steps", PAST, ctxFor(db));
+    const steps = async (d: string) => (await metricOn(db, d))?.steps ?? null;
+    expect(vm.value.value).toBe(await steps(PAST));
+    const prior = (await Promise.all(Array.from({ length: 30 }, (_, k) => steps(dayAt(169 - k))))).filter((x): x is number => x != null);
     expect(vm.average).toBeCloseTo(prior.reduce((a, b) => a + b, 0) / prior.length, 6);
     const hours = section(vm.sections, "hourly")!.hours.value!;
     const start = localMidnight(PAST, TZ);
-    const sum = db.$client.prepare("select sum(steps) from steps_minutes where ts >= ? and ts < ?").pluck().get(start, start + 86400) as number;
+    const sum = (await readSamples(db, "steps", USER, start, start + 86400)).reduce((a, x) => a + x.v, 0);
     expect(hours).toHaveLength(24);
     expect(hours.reduce((a, h) => a + (h.value ?? 0), 0)).toBe(sum);
     expect(vm.chart.reference).toEqual({ y: STEP_TARGET, label: "7,000" });
     expect(section(vm.sections, "weekday")!.days.map((d) => d.label)).toEqual(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]);
 
-    const today = getMetricDetail("steps", TODAY, ctxFor(db));
+    const today = await getMetricDetail("steps", TODAY, ctxFor(db));
     expect(today.soFar).toBe(true);
     expect(today.history.value!.at(-1)!.value).toBeNull();
     // 14:00: the hours after now are gaps, not zeros.
     expect(section(today.sections, "hourly")!.hours.value!.slice(15).every((h) => h.value === null)).toBe(true);
   });
 
-  it("sedentary time: the longest stretch without steps stays inside 07:00-22:00", () => {
-    const still = section(getMetricDetail("sedentary_minutes", PAST, ctxFor(db)).sections, "hourly")!.still!;
+  it("sedentary time: the longest stretch without steps stays inside 07:00-22:00", async () => {
+    const still = section((await getMetricDetail("sedentary_minutes", PAST, ctxFor(db))).sections, "hourly")!.still!;
     const start = localMidnight(PAST, TZ) * 1000;
     expect(still.from).toBeGreaterThanOrEqual(start + 7 * 3600_000);
     expect(still.to).toBeLessThanOrEqual(start + 22 * 3600_000);
     expect(still.minutes).toBe(Math.round((still.to - still.from) / 60_000));
   });
 
-  it("steps goal: the streak runs back from the day, today counting only once it is met", () => {
-    const c = copyDb(db);
-    const set = c.$client.prepare("update daily_metrics set steps = ? where day = ?");
-    for (let k = 1; k <= 40; k++) set.run(k <= 4 ? STEP_TARGET + 500 : 1000, dayAt(179 - k));
-    set.run(200, TODAY);
-    const g = section(getMetricDetail("steps", TODAY, ctxFor(c)).sections, "goal")!;
+  it("steps goal: the streak runs back from the day, today counting only once it is met", async () => {
+    const c = await copyDb(db);
+    const set = (steps: number, day: string) => c.update(dailyMetrics).set({ steps }).where(and(eq(dailyMetrics.userId, USER), eq(dailyMetrics.day, day)));
+    for (let k = 1; k <= 40; k++) await set(k <= 4 ? STEP_TARGET + 500 : 1000, dayAt(179 - k));
+    await set(200, TODAY);
+    const g = section((await getMetricDetail("steps", TODAY, ctxFor(c))).sections, "goal")!;
     expect(g).toMatchObject({ streak: 4, met: 4, days: 30 });
     expect(g.longest).toBeGreaterThanOrEqual(4);
-    set.run(STEP_TARGET, TODAY);
-    expect(section(getMetricDetail("steps", TODAY, ctxFor(c)).sections, "goal")!.streak).toBe(5);
+    await set(STEP_TARGET, TODAY);
+    expect(section((await getMetricDetail("steps", TODAY, ctxFor(c))).sections, "goal")!.streak).toBe(5);
   });
 
-  it("calories: each day's parts add up to its total; workouts list the day's exercises", () => {
-    const vm = getMetricDetail("calories", PAST, ctxFor(db));
+  it("calories: each day's parts add up to its total; workouts list the day's exercises", async () => {
+    const vm = await getMetricDetail("calories", PAST, ctxFor(db));
     expect(vm.chart.stack).toBe("calories");
     for (const p of vm.history.value!.filter((x) => x.parts)) expect(p.parts!.active + p.parts!.resting).toBeCloseTo(p.value!, 6);
-    const n = db.$client.prepare("select count(*) from exercises where day = ?").pluck().get(PAST) as number;
+    const { n } = (await row<{ n: number }>(db, sql`select count(*) n from exercises where user_id = ${USER} and day = ${PAST}`))!;
     expect(section(vm.sections, "workouts")!.items).toHaveLength(n);
   });
 
-  it("active minutes: this week's total and twelve weeks against 150", () => {
-    const vm = getMetricDetail("active_minutes", PAST, ctxFor(db));
+  it("active minutes: this week's total and twelve weeks against 150", async () => {
+    const vm = await getMetricDetail("active_minutes", PAST, ctxFor(db));
     const w = section(vm.sections, "weekly")!;
-    const sum = db.$client.prepare("select coalesce(sum(value), 0) from daily_values where key = 'active_minutes' and day >= ? and day <= ?").pluck().get(w.week.from, PAST) as number;
+    const { sum } = (await row<{ sum: number }>(
+      db,
+      sql`select coalesce(sum(value), 0) sum from daily_values where user_id = ${USER} and key = 'active_minutes' and day >= ${w.week.from} and day <= ${PAST}`,
+    ))!;
     expect(w.week.total).toBeCloseTo(sum, 6);
     expect(w.target).toBe(WEEKLY_TARGET);
     expect(w.weeks).toHaveLength(12);
@@ -95,43 +105,42 @@ describe("getMetricDetail", () => {
     expect(section(vm.sections, "intensity")!.rows.map((r) => r.key)).toEqual(["active_minutes", "light_minutes", "sedentary_minutes"]);
   });
 
-  it("weight: the latest reading on or before the day, with its changes and readings", () => {
-    const vm = getMetricDetail("weight", PAST, ctxFor(db));
-    const latest = db.$client.prepare("select day, weight_kg w from daily_metrics where weight_kg is not null and day <= ? order by day desc limit 1").get(PAST) as { day: string; w: number };
+  it("weight: the latest reading on or before the day, with its changes and readings", async () => {
+    const vm = await getMetricDetail("weight", PAST, ctxFor(db));
+    const latest = (await row<{ day: string; w: number }>(
+      db,
+      sql`select day::text, weight_kg w from daily_metrics where user_id = ${USER} and weight_kg is not null and day <= ${PAST} order by day desc limit 1`,
+    ))!;
     expect(vm.valueDay).toBe(latest.day);
     expect(vm.value.value).toBe(latest.w);
     expect(vm.chart.smooth).toBe(7);
     expect(section(vm.sections, "readings")!.items[0]).toEqual({ day: latest.day, value: latest.w });
   });
 
-  it("vitals: days outside mean ± 2 SD of the last 90 are listed", () => {
-    const c = copyDb(db);
-    const put = c.$client.prepare("insert or replace into daily_values (day, key, value) values (?, 'avg_hr', ?)");
-    for (let k = 0; k < 90; k++) put.run(dayAt(170 - k), 70 + (k % 3));
-    put.run(dayAt(160), 110);
-    const vm = getMetricDetail("avg_hr", PAST, ctxFor(c));
+  it("vitals: days outside mean ± 2 SD of the last 90 are listed", async () => {
+    const c = await copyDb(db);
+    for (let k = 0; k < 90; k++) await putValue(c, dayAt(170 - k), "avg_hr", 70 + (k % 3));
+    await putValue(c, dayAt(160), "avg_hr", 110);
+    const vm = await getMetricDetail("avg_hr", PAST, ctxFor(c));
     expect(section(vm.sections, "outliers")!.items).toEqual([{ day: dayAt(160), value: 110, dir: "high" }]);
     expect(vm.chart.baseline!.mean).toBeGreaterThan(70);
   });
 
-  it("nutrition: the day's logged entries, eaten vs burned and the protein reference", () => {
-    const c = copyDb(db);
+  it("nutrition: the day's logged entries, eaten vs burned and the protein reference", async () => {
+    const c = await copyDb(db);
     const ts = localMidnight(PAST, TZ) + 13 * 3600;
-    c.$client
-      .prepare("insert into logged_entries (id, type, ts, day, data, created_at) values ('e1', 'nutrition-log', ?, ?, ?, ?)")
-      .run(ts, PAST, JSON.stringify({ meal: "lunch", kcal: 650, proteinG: 30 }), ts);
-    const put = c.$client.prepare("insert or replace into daily_values (day, key, value) values (?, ?, ?)");
-    put.run(PAST, "calories_in", 2000);
-    put.run(PAST, "protein", 90);
-    const vm = getMetricDetail("calories_in", PAST, ctxFor(c));
+    await c.insert(loggedEntries).values({ userId: USER, id: "e1", type: "nutrition-log", ts, day: PAST, data: { meal: "lunch", kcal: 650, proteinG: 30 }, createdAt: ts });
+    await putValue(c, PAST, "calories_in", 2000);
+    await putValue(c, PAST, "protein", 90);
+    const vm = await getMetricDetail("calories_in", PAST, ctxFor(c));
     expect(section(vm.sections, "entries")!.items.map((e) => e.id)).toEqual(["e1"]);
-    const burned = c.$client.prepare("select calories from daily_metrics where day = ?").pluck().get(PAST) as number;
+    const burned = (await metricOn(c, PAST)).calories!;
     expect(section(vm.sections, "balance")!.rows.find((r) => r.key === "balance")!.metric.value).toBeCloseTo(2000 - burned, 6);
     expect(section(vm.sections, "macros")!.rows.map((r) => r.key)).toContain("protein_target");
   });
 
-  it("is honest when Google has never sent the metric", () => {
-    const vm = getMetricDetail("glucose", PAST, ctxFor(db));
+  it("is honest when Google has never sent the metric", async () => {
+    const vm = await getMetricDetail("glucose", PAST, ctxFor(db));
     expect(vm.value).toMatchObject({ value: null, reason: "no_data" });
     expect(vm.history).toMatchObject({ value: null, reason: "no_data" });
     expect(vm.sections).toEqual([]);
@@ -139,7 +148,7 @@ describe("getMetricDetail", () => {
 });
 
 describe("rangeStats", () => {
-  it("averages, extremes, total and coverage over the last n, against the n before", () => {
+  it("averages, extremes, total and coverage over the last n, against the n before", async () => {
     const days = ["a", "b", "c", "d", "e", "f"];
     expect(rangeStats([1, 3, 5, null, 2, 8], days, 3, true)).toEqual({
       average: 5,

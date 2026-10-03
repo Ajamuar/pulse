@@ -1,6 +1,6 @@
-// Builds the pinned 180-day demo database (seeded and recomputed) once, before any test file runs; seeded()
-// with default arguments copies it instead of seeding its own. The file is cached under node_modules/.cache,
-// keyed by every non-test source file and migration, so a rerun with unchanged sources builds nothing.
+// Builds the pinned 180-day demo database (seeded and recomputed) once, before any test file runs, and saves its
+// PGlite data directory; seeded() with default arguments restores it instead of seeding its own. The snapshot is
+// cached under node_modules/.cache, keyed by every non-test source file and migration.
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -18,21 +18,19 @@ export default async function setup(project: TestProject) {
     if (fs.statSync(f).isFile()) hash.update(f).update(fs.readFileSync(f));
   }
   const dir = path.resolve("node_modules/.cache/pulse-test");
-  const file = path.join(dir, `seed-${hash.digest("hex").slice(0, 16)}.db`);
+  const file = path.join(dir, `seed-${hash.digest("hex").slice(0, 16)}.tar.gz`);
   if (!fs.existsSync(file)) {
     fs.rmSync(dir, { recursive: true, force: true }); // older builds
     fs.mkdirSync(dir, { recursive: true });
-    const { buildSeeded, cleanup } = await import("./src/server/testing");
+    const { buildSeeded, snapshotOf } = await import("./src/server/testing");
     const tmp = `${file}.${process.pid}.tmp`;
     try {
-      buildSeeded(tmp).$client.close(); // closing checkpoints the WAL into the file
+      fs.writeFileSync(tmp, await snapshotOf(await buildSeeded(undefined, { install: false })));
       fs.renameSync(tmp, file);
     } catch (e) {
       // A broken seed or pipeline must fail the tests that use it, not abort the run: seeded() builds its own.
       console.warn(`[global-setup] no shared seed database: ${e instanceof Error ? e.message : e}`);
       return;
-    } finally {
-      cleanup();
     }
   }
   project.provide("seedDb", file);

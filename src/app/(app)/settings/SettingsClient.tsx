@@ -11,7 +11,8 @@ import { ResponsiveSheet } from "@/components/shells/ResponsiveSheet"
 import { ProfileForm, SaveButton, type ProfileDefaults } from "@/components/profile/ProfileForm"
 import type { Crop } from "@/lib/crop"
 import { AuthField } from "@/components/auth/AuthForm"
-import { changePassword, disconnectGoogle } from "./actions"
+import { authClient } from "@/lib/auth-client"
+import { disconnectGoogle } from "./actions"
 import { AvatarCropSheet, decodePhoto, encodeAvatar } from "./AvatarCropSheet"
 
 /** Landing back from Google with `?oauth=connected` or `?oauth=<code>` shows one toast, then drops the param. */
@@ -118,6 +119,17 @@ export function SwitchGoogleButton({ current }: { current: string | null }) {
   )
 }
 
+/** A better-auth client call's failure as one line of copy. */
+function authErrorText(e: { status?: number; code?: string }, wrongPassword: string) {
+  if (e.status === 429) return "Too many tries. Wait a few minutes, then try again."
+  if (e.status === 0) return "Couldn’t reach Pulse. Try again."
+  if (e.code === "INVALID_PASSWORD") return wrongPassword
+  if (e.code === "PASSWORD_TOO_SHORT") return "Use at least 10 characters."
+  if (e.code === "PASSWORD_TOO_LONG") return "Use at most 128 characters."
+  return "Something went wrong. Try again."
+}
+const offline = () => ({ data: null, error: { status: 0 } })
+
 /** Settings › Account › Change password, in a sheet. Other devices are signed out when it saves. */
 export function ChangePasswordButton() {
   const [open, setOpen] = React.useState(false)
@@ -128,9 +140,11 @@ export function ChangePasswordButton() {
     const form = new FormData(e.currentTarget)
     setPending(true)
     setError(null)
-    const r = await changePassword(String(form.get("current")), String(form.get("next"))).catch(() => ({ ok: false as const, error: "Couldn’t reach Pulse. Try again." }))
+    const { error: err } = await authClient
+      .changePassword({ currentPassword: String(form.get("current")), newPassword: String(form.get("next")), revokeOtherSessions: true })
+      .catch(offline)
     setPending(false)
-    if (!r.ok) return setError(r.error)
+    if (err) return setError(authErrorText(err, "Current password is incorrect."))
     setOpen(false)
     toast.success("Password changed. Other devices are signed out.")
   }
@@ -139,10 +153,19 @@ export function ChangePasswordButton() {
       <Button variant="secondary" size="touch" className="w-full" onClick={() => setOpen(true)}>
         Change password
       </Button>
-      <ResponsiveSheet open={open} onOpenChange={(o) => !pending && setOpen(o)} title="Change password" description="Other devices are signed out.">
+      <ResponsiveSheet
+        open={open}
+        onOpenChange={(o) => {
+          if (pending) return
+          setOpen(o)
+          setError(null)
+        }}
+        title="Change password"
+        description="Other devices are signed out."
+      >
         <form onSubmit={submit} className="flex flex-col gap-5 px-4 pb-[max(env(safe-area-inset-bottom),16px)] md:px-6 md:pb-6">
           <AuthField label="Current password" name="current" type="password" autoComplete="current-password" required />
-          <AuthField label="New password" name="next" type="password" autoComplete="new-password" required minLength={10} maxLength={256} hint="At least 10 characters." />
+          <AuthField label="New password" name="next" type="password" autoComplete="new-password" required minLength={10} maxLength={128} hint="At least 10 characters." />
           {error && (
             <p role="alert" className="px-1 text-[13px] leading-[18px] font-medium text-recovery-red-text">
               {error}
@@ -151,6 +174,70 @@ export function ChangePasswordButton() {
           <SaveButton pending={pending} label="Change password" />
         </form>
       </ResponsiveSheet>
+    </>
+  )
+}
+
+/**
+ * Settings › Account › Delete account: asks for the password, then removes the account and everything stored for it
+ * (the database cascades every per-user table). Lands on sign-up.
+ */
+export function DeleteAccountButton() {
+  const router = useRouter()
+  const [open, setOpen] = React.useState(false)
+  const [pending, setPending] = React.useState(false)
+  const [error, setError] = React.useState<string | null>(null)
+  const submit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const password = String(new FormData(e.currentTarget).get("password"))
+    setPending(true)
+    setError(null)
+    const { error: err } = await authClient.deleteUser({ password }).catch(offline)
+    if (err) {
+      setPending(false)
+      return setError(authErrorText(err, "Password is incorrect."))
+    }
+    router.replace("/signup")
+    router.refresh()
+  }
+  return (
+    <>
+      <Button variant="ghost" size="touch" className="col-span-2 w-full text-recovery-red-text hover:text-recovery-red-text" onClick={() => setOpen(true)}>
+        Delete account
+      </Button>
+      <Dialog
+        open={open}
+        onOpenChange={(o) => {
+          if (pending) return
+          setOpen(o)
+          setError(null)
+        }}
+      >
+        <DialogContent showCloseButton={false} className="ring-1 ring-border">
+          <form onSubmit={submit} className="grid gap-4">
+            <DialogHeader>
+              <DialogTitle>Delete your account?</DialogTitle>
+              <DialogDescription>
+                Removes your account and everything Pulse stored for it: synced data, scores, journal, profile and the Google connection. This can’t be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <AuthField label="Password" name="password" type="password" autoComplete="current-password" required autoFocus />
+            {error && (
+              <p role="alert" className="px-1 text-[13px] leading-[18px] font-medium text-recovery-red-text">
+                {error}
+              </p>
+            )}
+            <DialogFooter>
+              <Button type="button" variant="secondary" size="touch" onClick={() => setOpen(false)} disabled={pending}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="outline" size="touch" className="text-recovery-red-text" disabled={pending} aria-busy={pending || undefined}>
+                {pending ? "Deleting…" : "Delete account"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

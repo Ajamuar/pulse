@@ -7,8 +7,7 @@
 //
 // Determinism: the same database gives byte-identical daily_scores, and writes only touch rows whose
 // JSON differs, so an unchanged recompute writes nothing.
-import { getConfig } from "../config";
-import { type Db, getDb } from "../db";
+import { type Db, getDb, row, sql } from "../db";
 import { getProfile } from "../profile";
 import { load } from "./data";
 import { stage1 } from "./stage1";
@@ -21,36 +20,42 @@ export * from "./types";
 export const lastRun = { stage1Days: [] as string[], ms: 0, stage1Ms: 0, stage2Ms: 0 };
 
 /** The worker's hook: recompute when a source changed something, a day is dirty, or the version moved. */
-export async function recomputeIfNeeded(changed: boolean): Promise<void> {
+export async function recomputeIfNeeded(userId: number, changed: boolean): Promise<void> {
   const db = getDb();
-  if (!changed && !needsRecompute(db)) return;
+  if (!changed && !(await needsRecompute(db, userId))) return;
   // Scores need age and sex: before onboarding, sync keeps importing and scoring waits.
-  const profile = getProfile(db);
+  const profile = await getProfile(db, userId);
   if (!profile) return;
-  recompute(db, { timeZone: getConfig().timeZone, profile });
-  console.info(`[pipeline] recomputed in ${lastRun.ms} ms (stage 1: ${lastRun.stage1Days.length} days)`);
+  await recompute(db, { userId, timeZone: profile.timeZone, profile });
+  console.info(`[pipeline] user ${userId} recomputed in ${lastRun.ms} ms (stage 1: ${lastRun.stage1Days.length} days)`);
 }
 
-export function needsRecompute(db: Db): boolean {
-  const c = db.$client;
-  if (c.prepare("select 1 from intraday_dirty limit 1").get()) return true;
-  if (c.prepare("select 1 from daily_scores where scoring_version != ? limit 1").get(SCORING_VERSION)) return true;
-  const last = c.prepare("select max(day) from daily_metrics").pluck().get() as string | null;
-  return last != null && !c.prepare("select 1 from daily_scores where day = ?").get(last);
+/** A dirty day, a row from another scoring version, or a newest daily row not yet scored. One round trip. */
+export async function needsRecompute(db: Db, userId: number): Promise<boolean> {
+  const r = await row<{ v: boolean }>(
+    db,
+    sql`select exists (select 1 from intraday_dirty where user_id = ${userId})
+      or exists (select 1 from daily_scores where user_id = ${userId} and scoring_version <> ${SCORING_VERSION})
+      or exists (
+        select 1 from (select max(day) d from daily_metrics where user_id = ${userId}) m
+        where m.d is not null and not exists (select 1 from daily_scores s where s.user_id = ${userId} and s.day = m.d)
+      ) as v`,
+  );
+  return !!r?.v;
 }
 
-/** Runs both stages. Synchronous: better-sqlite3 is, and the worker never overlaps runs. */
-export function recompute(db: Db, opts: PipelineOptions) {
+/** Runs both stages for one user. The worker never overlaps runs for a user. */
+export async function recompute(db: Db, opts: PipelineOptions) {
   const t0 = performance.now();
-  const data = load(db, opts);
+  const data = await load(db, opts);
   if (!data) {
     Object.assign(lastRun, { stage1Days: [], ms: Math.round(performance.now() - t0), stage1Ms: 0, stage2Ms: 0 });
     return lastRun;
   }
   const t1 = performance.now();
-  lastRun.stage1Days = stage1(db, data, opts);
+  lastRun.stage1Days = await stage1(db, data, opts);
   const t2 = performance.now();
-  stage2(db, data, opts);
+  await stage2(db, data, opts);
   const t3 = performance.now();
   Object.assign(lastRun, { stage1Ms: Math.round(t2 - t1), stage2Ms: Math.round(t3 - t2), ms: Math.round(t3 - t0) });
   return lastRun;

@@ -6,8 +6,9 @@
 #   scripts/deploy.sh --branch some-branch --force
 #
 # Steps: check the checkout and Docker, fetch and reset to origin/<branch>, build the image (Docker's layer cache keeps
-# unchanged layers), keep the running image as pulse:previous, recreate the container, wait for its HEALTHCHECK, and
-# roll back to pulse:previous when it never turns healthy. Then remove the dangling images the rebuild left behind.
+# unchanged layers), dump Postgres, keep the running image as pulse:previous, recreate the containers, wait for the
+# app's HEALTHCHECK, and roll back to pulse:previous when it never turns healthy (restore the dump by hand if a
+# migration ran). Then remove the dangling images the rebuild left behind.
 set -euo pipefail
 
 BRANCH=main
@@ -55,6 +56,17 @@ git log --oneline "$OLD..$NEW" | sed 's/^/  + /'
 git checkout --quiet -B "$BRANCH" "origin/$BRANCH"
 git reset --quiet --hard "origin/$BRANCH"
 ok "now at $(git log -1 --format='%h %s')"
+
+step "Backing up Postgres"
+# Migrations run at boot; a dump first means a bad migration can be undone. Kept: the last 10.
+if docker inspect pulse-db >/dev/null 2>&1; then
+  mkdir -p backups
+  f="backups/pre-deploy-$(date +%Y%m%d-%H%M%S).dump"
+  docker exec pulse-db pg_dump -U pulse -Fc pulse > "$f" && ok "saved $f ($(du -h "$f" | cut -f1))"
+  ls -1t backups/pre-deploy-*.dump 2>/dev/null | tail -n +11 | xargs -r rm -f
+else
+  ok "no pulse-db container yet; nothing to back up"
+fi
 
 step "Building $IMAGE"
 docker image inspect "$IMAGE" >/dev/null 2>&1 && docker tag "$IMAGE" pulse:previous && ok "kept the current image as pulse:previous"

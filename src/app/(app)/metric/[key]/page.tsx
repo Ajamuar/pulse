@@ -37,8 +37,8 @@ export async function generateMetadata({ params }: PageProps<"/metric/[key]">) {
 export default async function MetricPage({ params, searchParams }: PageProps<"/metric/[key]">) {
   const { key } = await params
   if (!isDetailKey(key)) notFound()
-  const { d, timeZone } = await pageDay(searchParams as SearchParams, `/metric/${key}`)
-  const vm = getMetricDetail(key, d)
+  const { d, timeZone, ctx } = await pageDay(searchParams as SearchParams, `/metric/${key}`)
+  const vm = await getMetricDetail(key, d, ctx)
   const empty = vm.value.value === null && vm.history.value === null
   // The day's hourly view sits beside the hero on laptop; every other section follows the history.
   const [first, ...rest] = vm.sections

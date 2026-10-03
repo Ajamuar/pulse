@@ -1,7 +1,6 @@
 "use client"
 
 import * as React from "react"
-import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { CalendarHeart, Droplet, FlaskConical, Scale, Smile, Thermometer, Trash2, Utensils, type LucideIcon } from "lucide-react"
 import { toast } from "sonner"
@@ -354,9 +353,9 @@ export function Log({ vm }: LogProps) {
                 : `Pulse needs new permissions to save ${KIND_LABEL[shown].toLowerCase()} to Google Health. Reconnect Google and allow them; nothing you have synced is lost.`}
             </p>
             <Button asChild size="sheet">
-              <Link href="/oauth/start" prefetch={false}>
+              <a href="/oauth/start">
                 {access === "not_connected" ? "Connect Google" : "Reconnect Google"}
-              </Link>
+              </a>
             </Button>
           </div>
         ) : (

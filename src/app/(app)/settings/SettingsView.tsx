@@ -1,4 +1,3 @@
-import Link from "next/link"
 import { Check, ChevronDown, CircleAlert, Minus, TriangleAlert } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ago, DAY, formatDay } from "@/lib/format"
@@ -11,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { GoogleFit } from "@/components/brand/GoogleFit"
 import { Mark } from "@/components/brand/Mark"
-import { AvatarButtons, ChangePasswordButton, DisconnectButton, EditProfileButton, SwitchGoogleButton } from "./SettingsClient"
+import { AvatarButtons, ChangePasswordButton, DeleteAccountButton, DisconnectButton, EditProfileButton, SwitchGoogleButton } from "./SettingsClient"
 import { CAPTION } from "@/components/metrics/primitives"
 
 const BODY = "max-w-[65ch] text-[15px] leading-[22px] text-pretty text-foreground-secondary"
@@ -22,11 +21,25 @@ const ROW_VALUE = "truncate text-right text-[15px] leading-[22px] text-foregroun
 /** The logo tile beside a row's name (account photo, data source mark). */
 const TILE = "grid size-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-white/[0.06]"
 
-export type SettingsAccount = { email: string | null; name?: string | null; avatar: string | null; customPhoto: boolean; googleEmail?: string | null }
+export type SettingsAccount = {
+  email: string | null
+  name?: string | null
+  username?: string | null
+  /** The shared demo user: no password to change, nothing of its own to delete. */
+  demo?: boolean
+  avatar: string | null
+  customPhoto: boolean
+  googleEmail?: string | null
+}
 
-/** Who is signed in: photo, account, change photo, sign out (U20). Sign out is a plain form post, so it works before hydration. */
+/**
+ * Who is signed in (name, @username, email) and what they can do about it: photo, password, sign out, delete the
+ * account. Sign out is a plain form post, so it works before hydration.
+ */
 export function Account({ account }: { account: SettingsAccount }) {
-  const owner = account.email !== null
+  const own = !account.demo && account.email !== null
+  const title = account.name || (account.username ? `@${account.username}` : account.email)
+  const line = [account.username && `@${account.username}`, account.email].filter((v) => v && v !== title).join(" · ")
   return (
     <SectionShell variant="card" level={2} id="account" title="Account">
       <div className="flex min-h-11 items-center gap-3">
@@ -34,20 +47,19 @@ export function Account({ account }: { account: SettingsAccount }) {
           <UserAvatar src={account.avatar} />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[15px] leading-[22px] font-semibold">{owner ? (account.name ?? account.email) : "Demo"}</p>
-          <p className="truncate text-[13px] leading-[18px] text-muted-foreground">
-            {owner ? (account.name ? account.email : "Pulse account") : "Signed in to the demo"}
-          </p>
+          <p className="truncate text-[15px] leading-[22px] font-semibold">{own ? title : "Demo"}</p>
+          <p className="truncate text-[13px] leading-[18px] text-muted-foreground">{own ? line : "Signed in to the demo"}</p>
         </div>
       </div>
       <div className="mt-4 grid grid-cols-2 gap-2">
-        {owner && <AvatarButtons customPhoto={account.customPhoto} />}
-        {owner && <ChangePasswordButton />}
+        {own && <AvatarButtons customPhoto={account.customPhoto} />}
+        {own && <ChangePasswordButton />}
         <form method="post" action="/logout" className="col-span-2">
           <Button type="submit" variant="outline" size="touch" className="w-full">
             Sign out
           </Button>
         </form>
+        {own && <DeleteAccountButton />}
       </div>
     </SectionShell>
   )
@@ -77,9 +89,9 @@ const SOURCE: Record<SettingsVM["source"]["status"], { line?: string; tone?: str
 function OAuthLink({ label }: { label: string }) {
   return (
     <Button asChild size="touch" variant="default" className="w-full">
-      <Link href="/oauth/start" prefetch={false}>
+      <a href="/oauth/start">
         {label}
-      </Link>
+      </a>
     </Button>
   )
 }
@@ -226,7 +238,7 @@ export function Profile({ profile }: { profile: SettingsVM["profile"] }) {
       title="Profile"
       action={
         <EditProfileButton
-          defaults={{ birthDate: profile.birthDate, sex: profile.sex, maxHr: profile.maxHrSource === "set" ? profile.maxHr : null, heightCm: profile.heightCm }}
+          defaults={{ birthDate: profile.birthDate, sex: profile.sex, maxHr: profile.maxHrSource === "set" ? profile.maxHr : null, heightCm: profile.heightCm, timeZone: profile.timeZone }}
         />
       }
     >

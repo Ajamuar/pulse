@@ -1,0 +1,166 @@
+---
+import Legal from "../layouts/Legal.astro"
+import { CONTACT_EMAIL, LICENSE_URL, REPO } from "../config"
+
+const APP = "https://pulsefit.portlabs.in"
+const toc = [
+  { id: "acceptance", title: "Accepting these terms" },
+  { id: "service", title: "The service" },
+  { id: "license", title: "Open-source license" },
+  { id: "medical", title: "Not medical advice" },
+  { id: "account", title: "Your account" },
+  { id: "acceptable-use", title: "Acceptable use" },
+  { id: "google", title: "Connecting Google" },
+  { id: "your-data", title: "Your data" },
+  { id: "termination", title: "Ending your account" },
+  { id: "availability", title: "Availability and changes" },
+  { id: "warranty", title: "No warranty" },
+  { id: "liability", title: "Limitation of liability" },
+  { id: "changes", title: "Changes to these terms" },
+  { id: "law", title: "Governing law" },
+  { id: "contact", title: "Contact" },
+]
+---
+
+<Legal
+  title="Terms of Service"
+  description="The terms for using the hosted Pulse app: free personal use, not medical advice, your responsibilities, and what happens if the service changes."
+  keywords={["pulse terms of service", "pulse terms"]}
+  effective="2026-10-03"
+  toc={toc}
+>
+  <p class="lede" slot="lede">
+    These terms apply to the hosted Pulse app at <a href={APP}>pulsefit.portlabs.in</a>. They are written to be read. If anything is unclear, email us.
+  </p>
+
+  <section id="acceptance">
+    <h2>Accepting these terms</h2>
+    <p>
+      By creating an account or using the hosted app, you agree to these terms and to the <a href="/privacy/">Privacy Policy</a>. If you do not agree, please do not use the
+      app. "We" means the Pulse project maintainer who runs the hosted app. "You" means the person using it.
+    </p>
+  </section>
+
+  <section id="service">
+    <h2>The service</h2>
+    <p>
+      Pulse reads your health data from Google Health and turns it into recovery, strain, sleep and other scores. The hosted app is a hobby project, run for personal, family
+      and testing use. It is free of charge, and you may use it only for your own personal, noncommercial purposes.
+    </p>
+  </section>
+
+  <section id="license">
+    <h2>Open-source license</h2>
+    <p>
+      Pulse's source code is public at <a href={REPO}>github.com/adityaongit/pulse</a> under the <a href={LICENSE_URL}>PolyForm Noncommercial 1.0.0</a> license. That license,
+      not these terms, governs how you may copy, change and run the code yourself. These terms cover only your use of the hosted app.
+    </p>
+    <p>If you run your own copy, you are its operator. These terms and our privacy policy do not apply to it.</p>
+  </section>
+
+  <section id="medical">
+    <h2>Not medical advice</h2>
+    <p>
+      Pulse is a wellness tool, not a medical device. Its scores are estimates based on data from your wearable and may be wrong. They are not a diagnosis, and they are not
+      medical advice. Do not use Pulse to make medical decisions. If you have a health concern, talk to a doctor. In an emergency, call your local emergency number.
+    </p>
+  </section>
+
+  <section id="account">
+    <h2>Your account</h2>
+    <ul>
+      <li>You must be at least 13 years old to use Pulse.</li>
+      <li>Give accurate information, especially in your profile. Scores depend on it.</li>
+      <li>Keep your password safe and do not share your account. You are responsible for what happens under it.</li>
+      <li>Tell us at once if you think someone else has access to your account.</li>
+    </ul>
+  </section>
+
+  <section id="acceptable-use">
+    <h2>Acceptable use</h2>
+    <p>Use the hosted app lawfully and fairly. Do not:</p>
+    <ul>
+      <li>try to access another person's account or data;</li>
+      <li>attack, probe, scan or overload the service, or try to get around its security or rate limits;</li>
+      <li>use bots or scripts that put unreasonable load on it;</li>
+      <li>use it for any commercial purpose, or resell access to it;</li>
+      <li>upload anything illegal or harmful, or connect a Google account that is not yours.</li>
+    </ul>
+    <p>Found a security problem? Please report it privately, as described in the <a href={`${REPO}/blob/main/SECURITY.md`}>security policy</a>.</p>
+  </section>
+
+  <section id="google">
+    <h2>Connecting Google</h2>
+    <p>
+      To get data, you connect your own Google account and approve the access Pulse asks for. Your use of Google's services, including Google Health and your Fitbit device,
+      is governed by Google's own terms and privacy policy. Pulse is not made by, affiliated with, or endorsed by Google.
+    </p>
+    <p>
+      Pulse saves to your Google Health account only the entries you log in Pulse. You can disconnect Google in Settings, or remove Pulse's access from your Google account, at
+      any time.
+    </p>
+  </section>
+
+  <section id="your-data">
+    <h2>Your data</h2>
+    <p>
+      Your data stays yours. You give us permission to store and process it only to run the app for you, as described in the <a href="/privacy/">Privacy Policy</a>. You can
+      export it as CSV or JSON, and delete it, at any time.
+    </p>
+  </section>
+
+  <section id="termination">
+    <h2>Ending your account</h2>
+    <p>
+      <strong>You</strong> can stop using Pulse whenever you like. Deleting your account in Settings › Account permanently deletes it and all of its data.
+    </p>
+    <p>
+      <strong>We</strong> may suspend or delete an account that breaks these terms, abuses the service, or puts other users or the service at risk. Where it is reasonable, we
+      will warn you first and give you a chance to export your data.
+    </p>
+  </section>
+
+  <section id="availability">
+    <h2>Availability and changes</h2>
+    <p>
+      The hosted app runs on a single server maintained by one person. It may be slow, go offline, or lose features, and we do not promise any level of uptime. We may change
+      the app, limit sign-ups, or shut it down. If we plan to shut it down, we will try to give you notice so you can export your data. Because Pulse is open source, you can
+      always run your own copy.
+    </p>
+  </section>
+
+  <section id="warranty">
+    <h2>No warranty</h2>
+    <p>
+      The hosted app is provided free, <strong>"as is" and "as available"</strong>, without warranties of any kind, express or implied. This includes, as far as the law
+      allows, warranties of accuracy, fitness for a particular purpose, and that the service will be uninterrupted or error-free.
+    </p>
+  </section>
+
+  <section id="liability">
+    <h2>Limitation of liability</h2>
+    <p>
+      As far as the law allows, we are not liable for any indirect, incidental, special or consequential loss, or for loss of data, arising from your use of the hosted app or
+      from relying on its scores. Our total liability for any claim is limited to what you paid us for the service in the 12 months before the claim. The service is free, so that is nothing.
+    </p>
+    <p>Nothing in these terms limits liability that cannot be limited by law, such as for fraud or gross negligence.</p>
+  </section>
+
+  <section id="changes">
+    <h2>Changes to these terms</h2>
+    <p>
+      We may update these terms. We will change the effective date above, and for important changes we will tell you in the app or by email before they take effect. If you
+      keep using the app after that, you accept the new terms. If you do not, you can delete your account.
+    </p>
+  </section>
+
+  <section id="law">
+    <h2>Governing law</h2>
+    <p>These terms are governed by the laws of India. Any dispute will be handled by the courts of India.</p>
+  </section>
+
+  <section id="contact">
+    <h2>Contact</h2>
+    <p>Questions about these terms: <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.</p>
+  </section>
+</Legal>

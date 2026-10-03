@@ -1,5 +1,4 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
-import type { Config } from "@/server/config"
 import { pageDay } from "./day"
 
 const h = vi.hoisted(() => ({
@@ -8,7 +7,10 @@ const h = vi.hoisted(() => ({
   }),
 }))
 vi.mock("next/navigation", () => ({ redirect: h.redirect }))
-vi.mock("@/server/config", () => ({ getConfig: () => ({ timeZone: "Asia/Kolkata" }) as Config }))
+vi.mock("@/server/queries/common", async (orig) => ({
+  ...(await orig<object>()),
+  userCtx: async () => ({ timeZone: "Asia/Kolkata", now: Math.floor(Date.now() / 1000) }),
+}))
 
 const sp = (q: Record<string, string>) => Promise.resolve(q)
 

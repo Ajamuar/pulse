@@ -1,6 +1,6 @@
 # Pulse
 
-A personal recovery, strain and sleep app for the Fitbit Air: one Next.js app (frontend, sync worker and scoring) on SQLite.
+A personal recovery, strain and sleep app for the Fitbit Air: one Next.js app (frontend, sync worker and scoring) on Postgres. Anyone with the URL can sign up, connect their own Google account and see only their own data.
 See `docs/plans/` for the plan.
 
 ## Screenshots
@@ -15,7 +15,7 @@ Every screen, on a phone and a laptop: [docs/screenshots.md](docs/screenshots.md
 
 ## Run in demo mode
 
-Demo mode generates deterministic data into `data/demo.db`, so no Google account is needed.
+Demo mode generates deterministic data for a shared demo user, so no Google account is needed. Start Postgres first: `docker compose -f compose.dev.yaml up -d`.
 
 ```sh
 pnpm install
@@ -29,7 +29,7 @@ The database is created and migrated on boot, and the sync worker starts once (`
 
 Every variable is listed and explained in [`.env.example`](.env.example). It is validated at startup, and the server exits on invalid config.
 
-- `GOOGLE_OAUTH_ENABLED=true` switches to the Google Health API and `data/pulse.db`. It needs `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`, and the first visit asks you to create the Pulse account (email and password) with a one-time setup code from the server log (`docker logs pulse`). You then connect Google from inside Pulse, and can switch to another Google account any time.
+- `GOOGLE_OAUTH_ENABLED=true` switches to real data from the Google Health API. It needs `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` and `BETTER_AUTH_SECRET`. People sign up with a name, username, email and password (better-auth), sign in with the username or the email, and connect their own Google account from inside Pulse.
 - The first sign-in asks for your birth date and sex (onboarding). Settings › Profile edits them.
 
 ## Deploy

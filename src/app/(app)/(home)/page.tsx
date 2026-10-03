@@ -70,8 +70,8 @@ const ICON_LINK =
 
 /** Home `/` (spec §7.1). */
 export default async function HomePage({ searchParams }: PageProps<"/">) {
-  const { d, today, timeZone } = await pageDay(searchParams as SearchParams, "/")
-  const vm = getHome(d)
+  const { d, today, timeZone, ctx } = await pageDay(searchParams as SearchParams, "/")
+  const vm = await getHome(d, ctx)
   const at = (href: string) => dayHref(href, d, today)
   const { dials } = vm
 
