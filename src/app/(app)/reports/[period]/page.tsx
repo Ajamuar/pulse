@@ -1,10 +1,9 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { format, parseISO } from "date-fns"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { DataColor } from "@/lib/bands"
-import { formatValue, rangeLabel, type FormatKey } from "@/lib/format"
+import { DAY, formatDay, formatValue, rangeLabel, type FormatKey } from "@/lib/format"
 import { dayHref, todayIn } from "@/lib/url"
 import { getConfig } from "@/server/config"
 import { getReport } from "@/server/queries/reports"
@@ -46,7 +45,7 @@ const DIAL_FORMAT = { sleep: "int", recovery: "int", strain: "decimal1" } as con
 const BALANCE_TONE = { balanced: "text-optimal", overreaching: "text-warning", undertrained: "text-muted-foreground" }
 
 function periodLabel(kind: "week" | "month", start: string, end: string) {
-  return kind === "week" ? rangeLabel(start, end) : format(parseISO(start), "MMMM yyyy")
+  return kind === "week" ? rangeLabel(start, end) : formatDay(start, DAY.monthYear)
 }
 
 /** Previous / next period as links; the next arrow is disabled at the latest period (spec §7.13). */
@@ -225,12 +224,12 @@ export default async function ReportPage({ params }: PageProps<"/reports/[period
                     <li key={b.label}>
                       <Link
                         href={dayHref("/", b.day, today)}
-                        aria-label={`${b.label}: ${format(parseISO(b.day), "EEEE d MMMM")}, Recovery ${Math.round(b.recovery)} percent${b.strain === null ? "" : `, strain ${formatValue("decimal1", b.strain)}`}`}
+                        aria-label={`${b.label}: ${formatDay(b.day, DAY.long)}, Recovery ${Math.round(b.recovery)} percent${b.strain === null ? "" : `, strain ${formatValue("decimal1", b.strain)}`}`}
                         className="-mx-2 flex min-h-16 items-center gap-3 rounded-lg px-2 py-2 transition-[background-color] duration-150 ease-standard outline-none hover:bg-accent focus-visible:ring-3 focus-visible:ring-ring/50 active:bg-accent"
                       >
                         <span aria-hidden className="min-w-0 flex-1">
                           <span className="block text-xs leading-4 font-bold tracking-[0.08em] uppercase">{b.label}</span>
-                          <span className={cn(CAPTION, "mt-1 block tabular-nums")}>{format(parseISO(b.day), "EEE, MMM d")}</span>
+                          <span className={cn(CAPTION, "mt-1 block tabular-nums")}>{formatDay(b.day, DAY.short)}</span>
                         </span>
                         <span aria-hidden className="flex items-center gap-4">
                           <ScoreDial variant="recovery" size="sm" value={b.recovery} />

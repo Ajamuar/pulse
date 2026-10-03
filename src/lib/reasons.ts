@@ -41,7 +41,7 @@ export const REASONS: Record<ReasonCode, ReasonEntry> = {
   awaiting_sleep_sync: {
     icon: RefreshCw,
     short: "Waiting for sleep",
-    long: () => "Waiting for last night's sleep to sync",
+    long: () => "Waiting for last night’s sleep to sync",
   },
   insufficient_hr_data: {
     icon: Activity,

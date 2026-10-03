@@ -65,7 +65,7 @@ export default async function StrainPage({ searchParams }: PageProps<"/strain">)
           </p>
         </Card>
       }
-      insight={vm.coach && <InsightCard body={vm.coach} action={{ label: "Plan tonight's sleep", href: dayHref("/sleep#planner", d, today) }} />}
+      insight={vm.coach && <InsightCard body={vm.coach} action={{ label: "Plan tonight’s sleep", href: dayHref("/sleep#planner", d, today) }} />}
       primary={
         <SectionShell variant="card" title="Heart rate" level={2}>
           <IntradayHrChart data={hrSeries(vm.hr, vm.maxHr)} />

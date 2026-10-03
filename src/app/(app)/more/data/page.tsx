@@ -1,5 +1,5 @@
 import { connection } from "next/server"
-import { format, parseISO } from "date-fns"
+import { DAY, formatDay } from "@/lib/format"
 import { Download } from "lucide-react"
 import { currentSession } from "@/server/auth"
 import { getYourData } from "@/server/queries/settings"
@@ -30,14 +30,14 @@ export default async function YourDataPage() {
   await connection()
   const vm = getYourData()
   const owner = (await currentSession())?.kind === "owner"
-  const since = vm.first ? ` since ${format(parseISO(vm.first), "d MMM yyyy")}` : ""
+  const since = vm.first ? ` since ${formatDay(vm.first, DAY.full)}` : ""
 
   return (
     <DetailShell
       title="Your data"
       primary={
         <div className="mx-auto flex w-full max-w-[640px] flex-col gap-3 md:gap-4">
-          <SectionShell variant="card" level={2} title="Daily scores" aside={<span className={`${CAPTION} tabular-nums`}>{grouped.format(vm.days)} days</span>}>
+          <SectionShell variant="card" level={2} title="Daily scores" aside={<span className={`${CAPTION} tabular-nums`}>{grouped.format(vm.days)}&nbsp;days</span>}>
             <p className={BODY}>
               One row per day{since}: Recovery, Strain, sleep performance, hours and consistency, heart rate variability, resting heart rate, respiratory rate,
               stress and steps.
@@ -48,7 +48,7 @@ export default async function YourDataPage() {
             </div>
           </SectionShell>
 
-          <SectionShell variant="card" level={2} title="Journal" aside={<span className={`${CAPTION} tabular-nums`}>{grouped.format(vm.answers)} answers</span>}>
+          <SectionShell variant="card" level={2} title="Journal" aside={<span className={`${CAPTION} tabular-nums`}>{grouped.format(vm.answers)}&nbsp;answers</span>}>
             <p className={BODY}>Every check-in answer, hidden behaviours included. The JSON also lists your behaviours.</p>
             <div className="mt-4 grid grid-cols-2 gap-2">
               <DownloadLink href="/export/journal?format=csv" label="CSV" />
@@ -70,7 +70,7 @@ export default async function YourDataPage() {
                     <Download aria-hidden />
                     Download backup
                   </Button>
-                  <p className={`${CAPTION} mt-2`}>Backups are for the owner&apos;s Google account. Demo data is generated, so there is nothing to keep.</p>
+                  <p className={`${CAPTION} mt-2`}>Backups are for the owner’s Google account. Demo data is generated, so there is nothing to keep.</p>
                 </>
               )}
             </div>

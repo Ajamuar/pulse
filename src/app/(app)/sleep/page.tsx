@@ -17,7 +17,7 @@ import { HashScroll } from "../_lib/HashScroll"
 import { SLEEP_INFO, TONIGHT_INFO } from "../_lib/info"
 import { CAPTION, LABEL, LEGEND, statProps, trendProps } from "../_lib/view"
 
-export const metadata = { title: "Sleep", description: "Sleep performance, stages, need and debt, plus tonight's bedtime plan." }
+export const metadata = { title: "Sleep", description: "Sleep performance, stages, need and debt, plus tonight’s bedtime plan." }
 
 const STATUS_LEGEND = [
   ["bg-warning", "Poor"],
@@ -72,7 +72,7 @@ export default async function SleepPage({ searchParams }: PageProps<"/sleep">) {
       }
       insight={vm.insight && <InsightCard body={vm.insight} />}
       primary={
-        <SectionShell variant="card" title="Last night's sleep" aside="vs. prior 30 days" level={2}>
+        <SectionShell variant="card" title="Last night’s sleep" aside="vs. prior 30 days" level={2}>
           <SleepStages hours={vm.hours} hr={vm.nightHr} data={vm.stages} />
         </SectionShell>
       }
@@ -90,7 +90,7 @@ export default async function SleepPage({ searchParams }: PageProps<"/sleep">) {
         <SectionShell key="debt" variant="card" title="Sleep debt" level={2}>
           <TrendChart label="Sleep debt" unit="h" format="decimal1" colorBy="sleep" direction="down" {...trendProps(vm.debtTrend)} />
         </SectionShell>,
-        <SectionShell key="planner" variant="card" title="Tonight's sleep" id="planner" info={TONIGHT_INFO} level={2}>
+        <SectionShell key="planner" variant="card" title="Tonight’s sleep" id="planner" info={TONIGHT_INFO} level={2}>
           <Planner vm={vm} timeZone={timeZone} />
           <HashScroll />
         </SectionShell>,
@@ -105,7 +105,7 @@ function HoursVsNeed({ vm }: { vm: SleepVM }) {
   const h = m.value
   const rows: [string, string][] = [
     ["Baseline need", hmm(h.parts.baselineMin)],
-    ["Yesterday's strain", signedHmm(h.parts.strainMin, "+")],
+    ["Yesterday’s strain", signedHmm(h.parts.strainMin, "+")],
     ["Sleep debt", signedHmm(h.parts.debtMin, "+")],
     ["Naps", signedHmm(h.parts.napMin, "−")],
   ]

@@ -12,7 +12,7 @@ export default function HowItWorksPage() {
       primary={
         <div className="flex flex-col gap-6">
           <p className="max-w-[65ch] text-[15px] leading-[22px] text-pretty text-foreground-secondary">
-            What goes into each score, how it is weighted, what its bands mean and what it cannot know. Every number comes from Pulse&apos;s own code.
+            What goes into each score, how it is weighted, what its bands mean and what it cannot know. Every number comes from Pulse’s own code.
           </p>
           <LinkList title="Scores" columns={2} rows={SCORE_DOCS.map((d) => ({ label: d.name, description: d.summary, href: `/more/how-it-works/${d.slug}` }))} />
         </div>

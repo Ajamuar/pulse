@@ -77,7 +77,7 @@ export default async function ScoreExplainer({ params }: PageProps<"/more/how-it
       footer={
         <div className="flex flex-col gap-4">
           <p className="text-xs leading-4 font-medium text-pretty text-muted-foreground">
-            Not a medical device. Pulse&apos;s scores are estimates from a wrist sensor, for personal use, not a diagnosis.
+            Not a medical device. Pulse’s scores are estimates from a wrist sensor, for personal use, not a diagnosis.
           </p>
           <nav aria-label="Other scores" className="flex gap-2">
             {prev ? (

@@ -1,6 +1,5 @@
 import { connection } from "next/server"
-import { format, parseISO } from "date-fns"
-import { formatValue, rangeLabel } from "@/lib/format"
+import { DAY, formatDay, formatValue, rangeLabel } from "@/lib/format"
 import { getReportArchive, type ReportListItem } from "@/server/queries/reports"
 import { MiniRing } from "@/components/metrics/MiniRing"
 import { DetailShell } from "@/components/shells/DetailShell"
@@ -45,7 +44,7 @@ export default async function ReportsPage() {
             {vm.months.length > 0 && (
               <LinkList
                 title="Months"
-                rows={vm.months.map((r) => ({ label: format(parseISO(r.start), "MMMM yyyy"), href: `/reports/${r.period}`, aside: <Aside r={r} />, description: r.partial ? "Partial month" : undefined }))}
+                rows={vm.months.map((r) => ({ label: formatDay(r.start, DAY.monthYear), href: `/reports/${r.period}`, aside: <Aside r={r} />, description: r.partial ? "Partial month" : undefined }))}
               />
             )}
           </div>

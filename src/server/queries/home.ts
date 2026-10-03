@@ -75,7 +75,7 @@ export function getHome(day: string, ctx: QueryCtx = defaultCtx()): HomeVM {
     monitorAlert: monitorAlert(row),
     monitor: monitorSummary(row, isToday),
     stress: stressNow(row, isToday),
-    activities: { title: isToday ? "Today's activities" : "Activities", items: timeline(ctx, row, day) },
+    activities: { title: isToday ? "Today’s activities" : "Activities", items: timeline(ctx, row, day) },
     energyBank: energyBankVM(ctx, row, day, isToday),
     tonight: planVM(ctx, row, isToday),
     keyStats: keyStats(rows, day, isToday, dashboardKeys(ctx.db)),
@@ -109,7 +109,7 @@ export function outlookOf(ctx: QueryCtx, row: DayRow | undefined, s: DayScores, 
   const parts: string[] = [];
   if (!review) {
     if (rec != null) parts.push(`Your Recovery is ${Math.round(rec)}%, ${recoveryBand(rec)}.`);
-    if (target) parts.push(`Today's Strain Target is ${target}.`);
+    if (target) parts.push(`Today’s Strain Target is ${target}.`);
     const main = row?.sleep?.main;
     if (main && row?.sleep?.needHours) parts.push(`You slept ${hmm(main.asleepMin)} of the ${hmm(row.sleep.needHours * 60)} you needed.`);
   } else {
@@ -140,7 +140,7 @@ function insightsOf(ctx: QueryCtx, rows: Map<string, DayRow>, row: DayRow | unde
   const r = row?.recovery;
   if (r?.value != null) out.push({ key: "recovery", title: RECOVERY_TITLE[recoveryBand(r.value)], body: recoveryInsight(r.drivers), href: "/recovery" });
   const sl = sleepInsight(rows, day, ctx.timeZone);
-  if (sl) out.push({ key: "sleep", title: "Last night's sleep", body: sl, href: "/sleep" });
+  if (sl) out.push({ key: "sleep", title: "Last night’s sleep", body: sl, href: "/sleep" });
   return out;
 }
 

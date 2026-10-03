@@ -36,7 +36,7 @@ describe("Settings view", () => {
 
   it("journey 9: importing shows backfill progress", () => {
     render(<SettingsView vm={{ ...base, import: { done: 42, total: 180 } }} now={NOW} account={account} />)
-    expect(screen.getByText("Importing history: 42 of 180 days")).toBeInTheDocument()
+    expect(screen.getByText("Importing history… 42 of 180 days")).toBeInTheDocument()
     expect(screen.getByRole("progressbar", { name: "Import progress" })).toBeInTheDocument()
   })
 

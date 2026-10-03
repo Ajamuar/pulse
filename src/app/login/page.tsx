@@ -11,12 +11,12 @@ export const metadata: Metadata = { title: "Sign in" }
 /** What a failed sign-in says; codes come from /oauth/callback (`GoogleError.code` or Google's own `error`). */
 const ERRORS: Record<string, string> = {
   access_denied: "Google sign-in was cancelled. Try again, and allow every permission on the consent screen.",
-  auth_revoked: "Google didn't grant offline access. Remove Pulse under Google Account › Security › Third-party access, then sign in again.",
+  auth_revoked: "Google didn’t grant offline access. Remove Pulse under Google Account › Security › Third-party access, then sign in again.",
   account_not_linked:
     "That Google account has no Google Health profile, so Pulse has nothing to read. Sign in with the account your Fitbit Air uses, or set up Google Health first.",
-  email_unverified: "That Google account's email isn't verified yet. Verify it with Google, then sign in again.",
+  email_unverified: "That Google account’s email isn’t verified yet. Verify it with Google, then sign in again.",
 }
-const FALLBACK = "Sign-in didn't finish. Try again."
+const FALLBACK = "Sign-in didn’t finish. Try again."
 
 const HEADLINE = "text-[32px] leading-[38px] font-bold tracking-[-0.02em] text-balance"
 const BODY = "text-[16px] leading-6 text-pretty text-foreground-secondary"
@@ -47,7 +47,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
           <p className={FOOTNOTE}>
             {google
               ? "Pulse reads your Google Health data and keeps it on this server. It never writes to your account."
-              : "This server runs on generated data. To use your own, set up a Google OAuth client (see docs/setup.md)."}
+              : <>This server runs on generated data. To use your own, set up a Google OAuth client (see <span translate="no">docs/setup.md</span>).</>}
           </p>
         </>
       }
@@ -63,8 +63,8 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
         </div>
         {notOwner ? (
           <>
-            <h1 className={HEADLINE}>This Pulse belongs to someone else</h1>
-            <p className={`${BODY} mt-3 max-w-[32ch]`}>The Google account you chose doesn&apos;t own this server. Only the account that set it up can open it.</p>
+            <h1 className={HEADLINE}>This <span translate="no">Pulse</span> belongs to someone else</h1>
+            <p className={`${BODY} mt-3 max-w-[32ch]`}>The Google account you chose doesn’t own this server. Only the account that set it up can open it.</p>
           </>
         ) : (
           <>

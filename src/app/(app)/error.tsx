@@ -50,7 +50,7 @@ export default function AppError({ error, retry }: { error: Error & { digest?: s
       <TitleHeader title="Pulse" />
       <div className={CONTENT_COLUMN}>
         <div role="alert" className="pt-16">
-          <EmptyState icon={CircleAlert} body="Couldn't load this screen." action={{ label: "Try again", onClick: () => retry() }} />
+          <EmptyState icon={CircleAlert} body="Couldn’t load this screen." action={{ label: "Try again", onClick: () => retry() }} />
         </div>
       </div>
     </>

@@ -103,7 +103,7 @@ export type HomeVM = {
   monitorAlert: { kind: "flagged" | "illness"; count: number; names: string[] } | null;
   monitor: Metric<{ inRange: number; total: number; flagged: number }>;
   stress: Metric<{ value: number; level: StressLevel; at: number | null; dayAverage: boolean }>;
-  activities: { title: "Today's activities" | "Activities"; items: TimelineItem[] };
+  activities: { title: "Today’s activities" | "Activities"; items: TimelineItem[] };
   energyBank: Metric<EnergyBankVM>;
   tonight: Metric<SleepPlanVM>;
   keyStats: KeyStat[];
@@ -232,7 +232,7 @@ export type HealthHubVM = {
   /** `paceDelta`: this week's Pace of Aging minus last week's; null without both. */
   healthspan: Metric<{ pulseAge: number; deltaYears: number; pace: number; paceDelta: number | null }>;
   monitor: Metric<{ vitals: { key: VitalKey; short: string; status: Vital["status"] }[]; inRange: number; total: number }>;
-  stress: Metric<{ highMin: number; typicalHighMin: number | null; weekday: string; spark: TimePoint[] }>;
+  stress: Metric<{ highMin: number; typicalHighMin: number | null; /** Today’s weekday, short ("Mon"). */ weekday: string; spark: TimePoint[] }>;
   fitness: Metric<{ vo2max: number; category: string; percentile: number; acwr: number | null; acwrTone: ChipTone | null }>;
 };
 

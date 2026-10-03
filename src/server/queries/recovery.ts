@@ -169,6 +169,6 @@ export function insightOf(drivers: ChargeDriver[]): string {
   const cap = (s: string) => s[0].toUpperCase() + s.slice(1);
   if (up.length && !down.length) return `${cap(phrase(up[0], true))}, which lifted Recovery today.`;
   if (down.length && !up.length) return `${cap(phrase(down[0], false))}, which held Recovery back today.`;
-  if (up.length && down.length) return `${cap(phrase(up[0], true))}, but ${phrase(down[0], false)}. Together they shaped today's Recovery.`;
+  if (up.length && down.length) return `${cap(phrase(up[0], true))}, but ${phrase(down[0], false)}. Together they shaped today’s Recovery.`;
   return "Your signals sit close to your baseline, so Recovery is near your usual level.";
 }

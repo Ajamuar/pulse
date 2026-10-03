@@ -19,7 +19,7 @@ export const RECOVERY_INFO: InfoContent = {
   body: (
     <>
       <p>
-        Recovery shows how ready your body is to take on strain, from 0 to 100%. Pulse scores it each morning from last night&apos;s heart rate
+        Recovery shows how ready your body is to take on strain, from 0 to 100%. Pulse scores it each morning from last night’s heart rate
         variability, resting heart rate, respiratory rate, sleep performance and skin temperature, each compared with your own baseline.
       </p>
       <Rows
@@ -30,7 +30,7 @@ export const RECOVERY_INFO: InfoContent = {
         ]}
       />
       <p>
-        Recovery needs 7 nights of HRV before the first score and stays provisional until 14. A day without HRV or processed sleep gets no score
+        Recovery needs 7&nbsp;nights of HRV before the first score and stays provisional until 14. A day without HRV or processed sleep gets no score
         rather than a guess.
       </p>
     </>
@@ -54,7 +54,7 @@ export const STRAIN_INFO: InfoContent = {
         ]}
       />
       <p>
-        Your Strain Target is a range for today, set from your Recovery and your recent training load. Today&apos;s Strain is a running total
+        Your Strain Target is a range for today, set from your Recovery and your recent training load. Today’s Strain is a running total
         until midnight.
       </p>
     </>
@@ -65,7 +65,7 @@ export const STRAIN_TARGET_INFO: InfoContent = {
   title: "Strain Target",
   body: (
     <p>
-      Your Strain Target is a range for today, set from your Recovery and your training load over the last 28 days. Inside it, training builds
+      Your Strain Target is a range for today, set from your Recovery and your training load over the last 28&nbsp;days. Inside it, training builds
       fitness without digging a recovery hole.
     </p>
   ),
@@ -77,8 +77,8 @@ export const SLEEP_INFO: InfoContent = {
     <>
       <p>
         Sleep Performance compares the sleep you got with the sleep you needed, adjusted for consistency, efficiency and restorative sleep. Your
-        need is your personal baseline: the upper quartile of your last 28 nights, between 8 and 9.5 hours. Strain, sleep debt and naps change
-        tonight&apos;s need in the sleep planner, not this score.
+        need is your personal baseline: the upper quartile of your last 28&nbsp;nights, between 8 and 9.5&nbsp;hours. Strain, sleep debt and naps change
+        tonight’s need in the sleep planner, not this score.
       </p>
       <p>
         Sleep consistency is the Sleep Regularity Index: how closely your sleep and wake times match from one day to the next, over the last 7
@@ -89,10 +89,10 @@ export const SLEEP_INFO: InfoContent = {
 }
 
 export const TONIGHT_INFO: InfoContent = {
-  title: "Tonight's sleep",
+  title: "Tonight’s sleep",
   body: (
     <p>
-      Bedtimes are worked back from your typical wake time and how efficiently you sleep. Peak gets you 100% of tonight&apos;s need, Perform 85%,
+      Bedtimes are worked back from your typical wake time and how efficiently you sleep. Peak gets you 100% of tonight’s need, Perform 85%,
       Get by 70%.
     </p>
   ),
@@ -121,7 +121,7 @@ export const STRAIN_RECOVERY_INFO: InfoContent = {
   title: "Strain & recovery",
   body: (
     <>
-      <p>Your last 7 days side by side: Day Strain in blue on the left scale, from 0 to 21, and Recovery on the right scale, from 0 to 100%.</p>
+      <p>Your last 7&nbsp;days side by side: Day Strain in blue on the left scale, from 0 to 21, and Recovery on the right scale, from 0 to 100%.</p>
       <p>High strain on one day often shows up as lower Recovery the next morning. Days without a score are left as gaps.</p>
     </>
   ),

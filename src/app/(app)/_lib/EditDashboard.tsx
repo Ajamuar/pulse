@@ -46,7 +46,7 @@ export function EditDashboard({ keys }: { keys: DashboardKey[] }) {
     setSaving(true)
     const r = await saveDashboard({ keys: items.filter((it) => it.shown).map((it) => it.key) }).catch(() => ({ ok: false as const, error: "network" }))
     setSaving(false)
-    if (!r.ok) return void toast.error("Couldn't save your dashboard. Try again.")
+    if (!r.ok) return void toast.error("Couldn’t save your dashboard. Try again.")
     setOpen(false)
     toast.success("Dashboard saved")
   }
@@ -71,7 +71,7 @@ export function EditDashboard({ keys }: { keys: DashboardKey[] }) {
         footer={
           <>
             <Button size="sheet" onClick={save} disabled={saving || shown === 0} aria-describedby={shown === 0 ? "dashboard-none" : undefined}>
-              {saving ? "Saving…" : "Save"}
+              {saving ? "Saving…" : "Save dashboard"}
             </Button>
             <Button size="sheet" variant="outline-pill" onClick={() => setItems(itemsOf(DASHBOARD_KEYS))} disabled={saving || isDefault(items)}>
               Reset to default

@@ -106,7 +106,7 @@ export function requestSync(opts?: { force?: boolean }) {
  */
 export async function syncAndWait(timeoutMs = 60_000): Promise<{ ok: boolean; error: string | null }> {
   const w = g.__pulseWorker;
-  if (!w) return { ok: false, error: "The sync worker isn't running" };
+  if (!w) return { ok: false, error: "The sync worker isn’t running" };
   let runs = w.state.running ? 2 : 1;
   let seen = w.state.lastRunAt;
   w.requestSync({ force: true });

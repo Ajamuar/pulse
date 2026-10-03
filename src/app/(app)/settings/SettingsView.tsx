@@ -1,8 +1,7 @@
 import Link from "next/link"
-import { format, parseISO } from "date-fns"
 import { Check, ChevronDown, CircleAlert, Minus, TriangleAlert } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { ago } from "@/lib/format"
+import { ago, DAY, formatDay } from "@/lib/format"
 import { HEALTH_SIGNUP_URL } from "@/lib/google"
 import type { SettingsVM } from "@/server/queries/types"
 import { SectionShell } from "@/components/shells/SectionShell"
@@ -102,7 +101,7 @@ function DataTypes({ rows, now }: { rows: SettingsVM["sync"]; now: number }) {
         <span className={ROW_LABEL}>Data types</span>
         <span className="flex items-center gap-2">
           <span className={cn("text-[13px] leading-[18px]", failing ? "text-recovery-red-text" : behind ? "text-warning" : "text-muted-foreground")}>{summary}</span>
-          <ChevronDown aria-hidden className="size-4 text-muted-foreground transition-transform duration-200 ease-standard group-open:rotate-180" strokeWidth={2} />
+          <ChevronDown aria-hidden className="size-4 text-muted-foreground transition-transform duration-200 ease-standard group-open:rotate-180 motion-reduce:transition-none" strokeWidth={2} />
         </span>
       </summary>
       <ul className="divide-y divide-border border-t border-border">
@@ -175,7 +174,7 @@ export function DataSource({ vm, now }: { vm: Pick<SettingsVM, "source" | "sync"
       {vm.import && (
         <div className="mt-4 space-y-2" role="status" aria-live="polite">
           <p className="text-[15px] leading-[22px] tabular-nums">
-            Importing history: {vm.import.done} of {vm.import.total} days
+            Importing history… {vm.import.done} of {vm.import.total}&nbsp;days
           </p>
           <Progress value={(vm.import.done / vm.import.total) * 100} aria-label="Import progress" className="h-1.5 bg-muted" />
         </div>
@@ -188,11 +187,11 @@ export function DataSource({ vm, now }: { vm: Pick<SettingsVM, "source" | "sync"
 
 export function Profile({ profile }: { profile: SettingsVM["profile"] }) {
   const rows: [string, string][] = [
-    ["Birth date", format(parseISO(profile.birthDate), "d MMM yyyy")],
+    ["Birth date", formatDay(profile.birthDate, DAY.full)],
     ["Age", String(profile.age)],
     ["Sex", profile.sex === "male" ? "Male" : "Female"],
-    ["Height", profile.heightCm ? `${profile.heightCm} cm` : "Not set"],
-    ["Max heart rate", `${profile.maxHr} bpm, ${profile.maxHrSource}`],
+    ["Height", profile.heightCm ? `${profile.heightCm}\u00a0cm` : "Not set"],
+    ["Max heart rate", `${profile.maxHr}\u00a0bpm, ${profile.maxHrSource}`],
     ["Time zone", profile.timeZone],
   ]
   return (
@@ -214,7 +213,7 @@ export function Profile({ profile }: { profile: SettingsVM["profile"] }) {
           </div>
         ))}
       </dl>
-      <p className={cn(CAPTION, "mt-2")}>The time zone comes from the server&apos;s TZ setting.</p>
+      <p className={cn(CAPTION, "mt-2")}>The time zone comes from the server’s <span translate="no">TZ</span> setting.</p>
     </SectionShell>
   )
 }

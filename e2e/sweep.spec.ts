@@ -170,7 +170,7 @@ test.describe("sweep", () => {
       await page.goto(withDay("/", days().past));
       await settle(page);
       await page.evaluate(() => window.scrollTo(0, 900));
-      await expect(page.locator("[data-state]").filter({ has: page.getByRole("navigation", { name: "Today's scores" }) })).toHaveAttribute("data-state", "rings");
+      await expect(page.locator("[data-state]").filter({ has: page.getByRole("navigation", { name: "Today’s scores" }) })).toHaveAttribute("data-state", "rings");
       const overlaps = await page.evaluate(() => {
         const box = (el: Element | null) => el!.getBoundingClientRect();
         const hit = (a: DOMRect, b: DOMRect) => a.left < b.right - 0.5 && b.left < a.right - 0.5 && a.top < b.bottom - 0.5 && b.top < a.bottom - 0.5;

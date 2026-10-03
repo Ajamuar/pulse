@@ -13,7 +13,7 @@ const ROW = "flex min-h-13 items-center justify-between gap-3 py-2"
 export function About({ version, scoringVersion }: { version: string; scoringVersion: number }) {
   return (
     <SectionShell variant="card" level={2} title="About">
-      <p className={BODY}>Scoring is ported from noop. Pulse is for personal use and is not a medical device.</p>
+      <p className={BODY}>Scoring is ported from <span translate="no">noop</span>. <span translate="no">Pulse</span> is for personal use and is not a medical device.</p>
       <dl className="mt-3 divide-y divide-border border-t border-border">
         {[
           ["Version", version],

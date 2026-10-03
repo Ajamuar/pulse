@@ -22,7 +22,7 @@ describe("reasons", () => {
   });
   it("spec copy", () => {
     expect(reasonCopy("no_hrv_last_night").long).toBe("No HRV last night (needs about 3 h of sleep)");
-    expect(reasonCopy("awaiting_sleep_sync").long).toBe("Waiting for last night's sleep to sync");
+    expect(reasonCopy("awaiting_sleep_sync").long).toBe("Waiting for last night’s sleep to sync");
     expect(reasonCopy("insufficient_hr_data").long).toBe("Not enough heart-rate data");
     expect(reasonCopy("band_not_worn").long).toBe("No data: band not worn");
     expect(TAG_COPY.stale_baseline.label).toBe("Baseline stale");

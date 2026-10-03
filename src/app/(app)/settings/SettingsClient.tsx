@@ -22,8 +22,8 @@ function OAuthToastInner() {
     // A fixed id: Strict Mode (dev) runs this effect twice before the param is gone, and sonner keeps one toast per id.
     const id = "oauth-result"
     if (result === "connected") toast.success("Google connected", { id })
-    else if (result === "access_denied") toast.error("Google access wasn't granted. Connect again to allow it.", { id })
-    else toast.error(`Couldn't connect Google (${result}). Try again.`, { id })
+    else if (result === "access_denied") toast.error("Google access wasn’t granted. Connect again to allow it.", { id })
+    else toast.error(`Couldn’t connect Google (${result}). Try again.`, { id })
     router.replace(`${pathname}${window.location.hash}`, { scroll: false })
   }, [result, router, pathname])
   return null
@@ -60,11 +60,11 @@ export function DisconnectButton() {
         <DialogContent showCloseButton={false} className="ring-1 ring-border">
           <DialogHeader>
             <DialogTitle>Disconnect Google?</DialogTitle>
-            <DialogDescription>Removes every permission Pulse has in your Google account, so you don&apos;t have to do it in Google. Sync stops; your stored data stays on this server.</DialogDescription>
+            <DialogDescription>Removes every permission Pulse has in your Google account, so you don’t have to do it in Google. Sync stops; your stored data stays on this server.</DialogDescription>
           </DialogHeader>
           {error && (
             <p role="alert" className="text-xs leading-4 font-medium text-recovery-red-text">
-              Couldn&apos;t reach Google to remove access. Check your connection and try again.
+              Couldn’t reach Google to remove access. Check your connection and try again.
             </p>
           )}
           <DialogFooter>
@@ -99,9 +99,9 @@ export function EditProfileButton({ defaults }: { defaults: ProfileDefaults }) {
         <Pencil aria-hidden strokeWidth={2} className="size-3.5" />
         Edit
       </Button>
-      <ResponsiveSheet open={open} onOpenChange={setOpen} title="Profile" description="Changing it recomputes every day's scores.">
+      <ResponsiveSheet open={open} onOpenChange={setOpen} title="Profile" description="Changing it recomputes every day’s scores.">
         <div className="px-4 pb-[max(env(safe-area-inset-bottom),16px)] md:px-6 md:pb-6">
-          <ProfileForm defaults={defaults} onSaved={saved} footer={(pending) => <SaveButton pending={pending} label="Save" />} />
+          <ProfileForm defaults={defaults} onSaved={saved} footer={(pending) => <SaveButton pending={pending} label="Save profile" />} />
         </div>
       </ResponsiveSheet>
     </>
@@ -115,7 +115,7 @@ export function AvatarButtons({ customPhoto }: { customPhoto: boolean }) {
   const [pending, start] = React.useTransition()
   const done = (r: { ok: boolean; error?: string }, ok: string) => {
     if (!r.ok) {
-      toast.error(r.error ?? "Couldn't update the photo", { id: "avatar" })
+      toast.error(r.error ?? "Couldn’t update the photo", { id: "avatar" })
       return
     }
     router.refresh()

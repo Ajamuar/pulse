@@ -92,8 +92,8 @@ export function coach(strain: Metric<number>, target: { low: number; high: numbe
     const minutes = Math.max(10, Math.round(((low - strain.value) * 8) / 5) * 5);
     return `Your target today is ${range}. You are at ${fmt1(strain.value)}, so about ${minutes} minutes of moderate activity would put you in range.`;
   }
-  if (strain.value <= high) return `You are inside today's target of ${range}. More strain from here adds load faster than benefit.`;
-  return "You are past today's target. Prioritise sleep tonight to recover.";
+  if (strain.value <= high) return `You are inside today’s target of ${range}. More strain from here adds load faster than benefit.`;
+  return "You are past today’s target. Prioritise sleep tonight to recover.";
 }
 
 export const zoneBounds = (lower: number[]): ZoneRow[] =>

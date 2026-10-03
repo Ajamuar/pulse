@@ -13,7 +13,7 @@ import { defaultCtx } from "@/server/queries/common";
 export async function GET(req: NextRequest) {
   const session = await requestSession(req);
   if (!session) return refuse(401, "Signed out. Sign in again.");
-  if (session.kind !== "owner") return refuse(403, "Backups are for the owner's account.");
+  if (session.kind !== "owner") return refuse(403, "Backups are for the owner’s account.");
   const file = await backupCopy(getDb());
   try {
     return download(defaultCtx(), "backup", "db", "application/vnd.sqlite3", new Uint8Array(fs.readFileSync(file)));

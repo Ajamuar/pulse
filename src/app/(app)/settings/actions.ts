@@ -14,7 +14,7 @@ export async function disconnectGoogle(): Promise<ActionResult> {
   try {
     await revokeGrant(db);
   } catch {
-    return { ok: false, error: "Couldn't reach Google to remove access. Try again." };
+    return { ok: false, error: "Couldn’t reach Google to remove access. Try again." };
   }
   // The old grant's sync errors (revoked, not linked) no longer describe anything.
   db.$client.prepare("update sync_state set last_error = null").run();

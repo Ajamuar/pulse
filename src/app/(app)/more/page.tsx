@@ -1,8 +1,7 @@
 import Link from "next/link"
 import { connection } from "next/server"
-import { format, parseISO } from "date-fns"
 import { Archive, BookOpen, CalendarDays, CalendarRange, ChartLine, ChevronRight, Database, ListChecks } from "lucide-react"
-import { rangeLabel } from "@/lib/format"
+import { formatDay, rangeLabel } from "@/lib/format"
 import { currentSession } from "@/server/auth"
 import { avatarSrc } from "@/server/avatar"
 import { getDb } from "@/server/db"
@@ -48,7 +47,7 @@ export default async function MorePage() {
       ? [{ icon: CalendarRange, label: "Weekly report", aside: rangeLabel(vm.latestWeek.start, vm.latestWeek.end), href: `/reports/${vm.latestWeek.period}` }]
       : []),
     ...(vm.latestMonth
-      ? [{ icon: CalendarDays, label: "Monthly report", aside: format(parseISO(vm.latestMonth.start), "MMMM"), href: `/reports/${vm.latestMonth.period}` }]
+      ? [{ icon: CalendarDays, label: "Monthly report", aside: formatDay(vm.latestMonth.start, { month: "long" }), href: `/reports/${vm.latestMonth.period}` }]
       : []),
     { icon: Archive, label: "All reports", aside: vm.reportCount ? String(vm.reportCount) : undefined, href: "/reports" },
   ]

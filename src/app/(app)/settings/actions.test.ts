@@ -59,7 +59,7 @@ describe("disconnectGoogle", () => {
     h.cfg = live;
     h.session = ownerSession;
     fetchMock.mockRejectedValueOnce(new TypeError("fetch failed"));
-    expect(await disconnectGoogle()).toEqual({ ok: false, error: "Couldn't reach Google to remove access. Try again." });
+    expect(await disconnectGoogle()).toEqual({ ok: false, error: "Couldn’t reach Google to remove access. Try again." });
     expect(tokens()).toHaveLength(1);
   });
 });

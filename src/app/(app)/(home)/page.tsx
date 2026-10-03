@@ -1,9 +1,8 @@
 import Link from "next/link"
-import { format, parseISO } from "date-fns"
 import { CalendarRange, Check, ChevronRight, CircleAlert, Lightbulb, Maximize2, Moon, Plus, Sun, TriangleAlert } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { isDashboardKey } from "@/lib/dashboard"
-import { clock, formatValue, MISSING, rangeLabel } from "@/lib/format"
+import { clock, DAY, formatDay, formatValue, MISSING, rangeLabel } from "@/lib/format"
 import { reasonCopy } from "@/lib/reasons"
 import { dayHref } from "@/lib/url"
 import { Wordmark } from "@/components/brand/Wordmark"
@@ -33,7 +32,7 @@ import { ENERGY_INFO, STRAIN_RECOVERY_INFO, TONIGHT_INFO } from "../_lib/info"
 import { TonightPlan } from "../_lib/TonightPlan"
 import { CAPTION, energySeries, LABEL, statProps } from "../_lib/view"
 
-export const metadata = { title: "Today", description: "Today's Sleep, Recovery and Strain at a glance." }
+export const metadata = { title: "Today", description: "Today’s Sleep, Recovery and Strain at a glance." }
 
 const STRESS_TONE: Record<StressLevel, { chip: string; text: string; word: string }> = {
   low: { chip: "bg-stress-low/15 text-stress-low", text: "text-stress-low", word: "Low" },
@@ -192,7 +191,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
                 <EnergyCard vm={vm} timeZone={timeZone} />
                 <SectionShell
                   variant="card"
-                  title="Tonight's sleep"
+                  title="Tonight’s sleep"
                   info={TONIGHT_INFO}
                   fill
                   action={
@@ -292,18 +291,17 @@ function JournalWeek({ vm, at }: { vm: HomeVM; at: (href: string) => string }) {
     >
       <ol className="grid grid-cols-7 pt-1">
         {vm.journalWeek.map((w) => {
-          const date = parseISO(w.day)
-          const current = w.day === vm.day
+                    const current = w.day === vm.day
           return (
             <li key={w.day}>
               <Link
                 href={dayHref("/journal", w.day, vm.today)}
-                aria-label={`${format(date, "EEEE d MMMM")}: ${w.done ? "checked in" : "no check-in"}`}
+                aria-label={`${formatDay(w.day, DAY.long)}: ${w.done ? "checked in" : "no check-in"}`}
                 aria-current={current ? "date" : undefined}
                 className="flex min-h-16 flex-col items-center justify-center gap-2 rounded-lg transition-[background-color] duration-150 ease-standard outline-none hover:bg-white/5 focus-visible:ring-3 focus-visible:ring-ring/50 active:bg-accent"
               >
                 <span aria-hidden className={cn("text-xs leading-4 font-bold tracking-[0.08em] uppercase", current ? "text-foreground" : "text-muted-foreground")}>
-                  {format(date, "EEE")}
+                  {formatDay(w.day, { weekday: "short" })}
                 </span>
                 <span
                   aria-hidden
