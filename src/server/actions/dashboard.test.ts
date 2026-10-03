@@ -53,8 +53,15 @@ it("rejects unknown, repeated or no metrics, writing nothing", async () => {
   expect(rows()).toEqual([{ key: "hrv", position: 0 }]);
 });
 
-it("the default list (Reset to default) is stored as no rows", async () => {
+it("the default list (Reset to default) is stored as no rows: phone metrics until heart rate syncs, then the v1 rows", async () => {
   await saveDashboard({ keys: ["steps"] });
-  await saveDashboard({ keys: ["hrv", "rhr", "resp", "sleep", "calories", "steps", "spo2", "skin"] });
+  await saveDashboard({ keys: ["steps", "distance", "calories", "active_minutes", "active_calories", "floors"] });
   expect(rows()).toEqual([]);
+  db.$client.prepare("insert into hr_samples (ts, bpm) values (1, 60)").run();
+  try {
+    await saveDashboard({ keys: ["hrv", "rhr", "resp", "sleep", "calories", "steps", "spo2", "skin"] });
+    expect(rows()).toEqual([]);
+  } finally {
+    db.$client.prepare("delete from hr_samples").run();
+  }
 });

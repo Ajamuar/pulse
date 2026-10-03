@@ -227,7 +227,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
             title="My Dashboard"
             aside="vs. 30-day average"
             // the reference app's pencil on the right of the section header opens the metric picker (spec §11 CD1).
-            action={<EditDashboard keys={vm.keyStats.map((s) => s.key).filter(isDashboardKey)} />}
+            action={<EditDashboard keys={vm.keyStats.map((s) => s.key).filter(isDashboardKey)} defaults={vm.dashboard.defaults} empty={vm.dashboard.empty} />}
             className="xl:flex xl:h-full xl:flex-col"
           >
             {/* One card per metric (V9, [latest-home-dashboard-1]). */}

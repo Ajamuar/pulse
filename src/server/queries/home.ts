@@ -1,4 +1,5 @@
-import { DASHBOARD_KEYS, DASHBOARD_LABEL, type DashboardKey, isDashboardKey } from "@/lib/dashboard";
+import { BODY_METRICS, DASHBOARD_DEFAULT, DASHBOARD_LABEL, DASHBOARD_METRICS, type DashboardKey, isDashboardKey, PHONE_DEFAULT, PHONE_STATS } from "@/lib/dashboard";
+import { EXTRA_METRICS, type ExtraKey, type ExtraMetric } from "@/lib/extraMetrics";
 import { hmm } from "@/lib/format";
 import type { Db } from "../db";
 import { addDays, localMinutes } from "../time";
@@ -79,6 +80,8 @@ export function getHome(day: string, ctx: QueryCtx = defaultCtx()): HomeVM {
     energyBank: energyBankVM(ctx, row, day, isToday),
     tonight: planVM(ctx, row, isToday),
     keyStats: keyStats(rows, day, isToday, dashboardKeys(ctx.db)),
+    dashboard: { defaults: dashboardDefault(ctx.db), empty: emptyKeys(rows, day, isToday) },
+    phone: phoneDay(rows, day, isToday),
     weeklyTeaser: latestReport(ctx, "week"),
     outlook: outlookOf(ctx, row, { recovery, strain, target }, isToday),
     insights: isToday ? insightsOf(ctx, rows, row, day, { strain, target }) : [],
@@ -197,42 +200,84 @@ export function energyBankVM(ctx: QueryCtx, row: DayRow | undefined, day: string
   );
 }
 
+/** True once any heart rate has synced: a phone-only account (no Fitbit band) has none. */
+const hasBand = (db: Db) => !!db.$client.prepare("select 1 from hr_samples limit 1").get();
+
+/** My Dashboard's default list: the v1 rows, or the phone metrics for an account that has never synced heart rate (§11 CD2). */
+export const dashboardDefault = (db: Db): DashboardKey[] => (hasBand(db) ? DASHBOARD_DEFAULT : PHONE_DEFAULT);
+
 /** My Dashboard's chosen metrics in order. Keys no longer in the catalogue are skipped; none chosen means the default list. */
 export function dashboardKeys(db: Db): DashboardKey[] {
   const keys = (db.$client.prepare("select key from dashboard_metrics order by position").pluck().all() as string[]).filter(isDashboardKey);
-  return keys.length ? keys : DASHBOARD_KEYS;
+  return keys.length ? keys : dashboardDefault(db);
 }
 
-/** The dashboard rows for `keys`, in that order. */
-function keyStats(rows: Map<string, DayRow>, day: string, isToday: boolean, keys: DashboardKey[]): KeyStat[] {
-  const row = rows.get(day);
+type StatSpec = Omit<KeyStat, "key" | "label" | "average" | "sd"> & { pick: (r: DayRow) => number | null | undefined };
+
+const spec = (
+  pick: StatSpec["pick"],
+  metric: Metric<number>,
+  unit: string | undefined,
+  direction: KeyStat["direction"],
+  href?: string,
+  format?: KeyStat["format"],
+): StatSpec => ({ pick, metric, ...(unit && { unit }), direction, ...(href && { href }), ...(format && { format }) });
+
+/** Each dashboard metric on `row`'s day: its value path (for averages), the metric with its reason, unit and link. */
+function statSpecs(row: DayRow | undefined, isToday: boolean): Record<DashboardKey, StatSpec> {
   const m = row?.metrics;
   const rhr = (r: DayRow) => r.sessionRhr ?? r.metrics?.rhrBpm ?? null;
   const skin = (r: DayRow) => r.recovery?.inputs.skinTempDev ?? null;
-  const stat = (
-    pick: (r: DayRow) => number | null | undefined,
-    metric: Metric<number>,
-    unit: string | undefined,
-    direction: KeyStat["direction"],
-    href: string,
-  ) => {
-    const { mean, sd } = priorStats(rows, day, pick);
-    return { metric, ...(unit && { unit }), average: mean, ...(sd !== undefined && { sd }), direction, href };
-  };
   const skinReason = m?.nightlyTempC != null ? "calibrating" : vitalReason(row, isToday);
   const dailyReason = !row?.s1 || row.s1.hrCount === 0 ? hrReason(row?.s1 ?? null) : "no_data";
-  // Lazy: only the chosen metrics compute their 30-day averages.
-  const all: Record<DashboardKey, () => Omit<KeyStat, "key" | "label">> = {
-    hrv: () => stat((r) => r.metrics?.hrvMs, maybe(m?.hrvMs, vitalReason(row, isToday, true)), "ms", "up", "/recovery"),
-    rhr: () => stat(rhr, maybe(row && rhr(row), vitalReason(row, isToday)), "bpm", "down", "/recovery"),
-    resp: () => stat((r) => r.metrics?.respBpm, maybe(m?.respBpm, vitalReason(row, isToday)), "rpm", "neutral", "/health/monitor"),
-    sleep: () => stat((r) => r.sleep?.performance, sleepMetric(row, isToday), "%", "up", "/sleep"),
-    calories: () => stat((r) => r.metrics?.calories, maybe(m?.calories, dailyReason), "kcal", "neutral", "/strain"),
-    steps: () => stat((r) => r.metrics?.steps, maybe(m?.steps, dailyReason), undefined, "up", "/strain"),
-    spo2: () => stat((r) => r.metrics?.spo2Pct, maybe(m?.spo2Pct, vitalReason(row, isToday)), "%", "up", "/health/monitor"),
-    skin: () => stat(skin, maybe(row && skin(row), skinReason), "°C", "toward_zero", "/health/monitor"),
-  };
-  return keys.map((key) => ({ key, label: DASHBOARD_LABEL[key], ...all[key]() }));
+  const out = {
+    hrv: spec((r) => r.metrics?.hrvMs, maybe(m?.hrvMs, vitalReason(row, isToday, true)), "ms", "up", "/recovery"),
+    rhr: spec(rhr, maybe(row && rhr(row), vitalReason(row, isToday)), "bpm", "down", "/recovery"),
+    resp: spec((r) => r.metrics?.respBpm, maybe(m?.respBpm, vitalReason(row, isToday)), "rpm", "neutral", "/health/monitor"),
+    sleep: spec((r) => r.sleep?.performance, sleepMetric(row, isToday), "%", "up", "/sleep"),
+    calories: spec((r) => r.metrics?.calories, maybe(m?.calories, dailyReason), "kcal", "neutral", "/strain"),
+    steps: spec((r) => r.metrics?.steps, maybe(m?.steps, dailyReason), undefined, "up", "/strain"),
+    spo2: spec((r) => r.metrics?.spo2Pct, maybe(m?.spo2Pct, vitalReason(row, isToday)), "%", "up", "/health/monitor"),
+    skin: spec(skin, maybe(row && skin(row), skinReason), "°C", "toward_zero", "/health/monitor"),
+  } as Record<DashboardKey, StatSpec>;
+  // Shown-only readings: missing simply means Google had none for the day.
+  for (const b of BODY_METRICS) {
+    const pick = (r: DayRow) => (b.key === "weight" ? r.metrics?.weightKg : r.metrics?.bodyFatPct);
+    out[b.key] = spec(pick, maybe(row && pick(row), "no_data"), b.unit, b.direction, b.href, b.format);
+  }
+  for (const e of EXTRA_METRICS as readonly ExtraMetric[])
+    out[e.key as ExtraKey] = spec((r) => r.extra[e.key as ExtraKey], maybe(row?.extra[e.key as ExtraKey], "no_data"), e.unit, e.direction, e.href, e.format);
+  return out;
+}
+
+/** The dashboard rows for `keys`, in that order, each against its mean over the 30 days before `day`. */
+export function keyStats(rows: Map<string, DayRow>, day: string, isToday: boolean, keys: DashboardKey[]): KeyStat[] {
+  const specs = statSpecs(rows.get(day), isToday);
+  return keys.map((key) => {
+    const { pick, ...s } = specs[key];
+    const { mean, sd } = priorStats(rows, day, pick);
+    return { key, label: DASHBOARD_LABEL[key], ...s, average: mean, ...(sd !== undefined && { sd }) };
+  });
+}
+
+/** Catalogue metrics with no value on `day` or in the 30 days before it: the editor marks them "No data yet". */
+function emptyKeys(rows: Map<string, DayRow>, day: string, isToday: boolean): DashboardKey[] {
+  const specs = statSpecs(rows.get(day), isToday);
+  const days = Array.from({ length: 31 }, (_, k) => rows.get(addDays(day, -k))).filter((r): r is DayRow => !!r);
+  return DASHBOARD_METRICS.map((m) => m.key).filter((key) => !days.some((r) => finite(specs[key].pick(r))));
+}
+
+/**
+ * The band recorded no heart rate on `day` but the phone counted something: Home leads with those numbers (§11 CD2).
+ * Null when the band was worn, or when the phone recorded nothing either.
+ */
+function phoneDay(rows: Map<string, DayRow>, day: string, isToday: boolean): KeyStat[] | null {
+  const row = rows.get(day);
+  if (!row || (row.s1 && row.s1.hrCount > 0)) return null;
+  // Calories alone is Google's resting-burn estimate, there with or without a phone: it needs movement too.
+  if (!row.metrics?.steps && !row.extra.distance && !row.activities.length) return null;
+  const stats = keyStats(rows, day, isToday, PHONE_STATS).filter((s) => s.metric.value !== null);
+  return stats.length ? stats : null;
 }
 
 /** The latest complete week or month with a report. */

@@ -2,9 +2,10 @@
 // Home's My Dashboard (spec §11 CD1): which metrics it shows, in which order.
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { DASHBOARD_KEYS, isDashboardKey } from "@/lib/dashboard";
+import { isDashboardKey } from "@/lib/dashboard";
 import { currentSession, SIGNED_OUT } from "../auth";
 import { getDb } from "../db";
+import { dashboardDefault } from "../queries/home";
 import type { ActionResult } from "./journal";
 
 const Dashboard = z.object({
@@ -22,7 +23,8 @@ export async function saveDashboard(input: z.input<typeof Dashboard>): Promise<A
   const { keys } = r.data;
   const c = getDb().$client;
   const insert = c.prepare("insert into dashboard_metrics (key, position) values (?, ?)");
-  const isDefault = keys.length === DASHBOARD_KEYS.length && keys.every((k, i) => k === DASHBOARD_KEYS[i]);
+  const def = dashboardDefault(getDb());
+  const isDefault = keys.length === def.length && keys.every((k, i) => k === def[i]);
   c.transaction(() => {
     c.prepare("delete from dashboard_metrics").run();
     if (!isDefault) keys.forEach((k, i) => insert.run(k, i));
