@@ -28,10 +28,10 @@ export const SCORE_DOCS: ScoreDoc[] = [
         ],
         rows: [
           { term: "Heart rate variability", detail: "Fitbit’s nightly HRV, in ms. Higher is better." },
-          { term: "Resting heart rate", detail: "The lowest 5-minute average during sleep, in bpm. Lower is better." },
+          { term: "Resting heart rate", detail: "Fitbit’s daily resting heart rate from Google, in bpm; the lowest 5-minute average during sleep only on a day Google has none. Lower is better." },
           { term: "Sleep performance", detail: "Last night’s Sleep Performance. 85% is neutral." },
           { term: "Respiratory rate", detail: "Breaths per minute asleep, in rpm. Higher counts against you." },
-          { term: "Skin temperature", detail: "Distance from your baseline, in °C. Either direction counts against you." },
+          { term: "Skin temperature", detail: "Distance from Google’s skin-temperature baseline (your 30-night median), in °C; Pulse’s own baseline only when Google gives none. Either direction counts against you." },
         ],
       },
       {
@@ -76,8 +76,8 @@ export const SCORE_DOCS: ScoreDoc[] = [
         title: "What goes in",
         rows: [
           { term: "Heart rate", detail: "Every reading from local midnight to midnight, sleep included. Each reading covers the gap to the next one, up to 2\u00a0minutes." },
-          { term: "Resting heart rate", detail: "Last night’s sleeping resting heart rate, else Fitbit’s daily value, else 60\u00a0bpm." },
-          { term: "Max heart rate", detail: "The value in Settings, or 208 − 0.7 × your age if you have not set one." },
+          { term: "Resting heart rate", detail: "Fitbit’s daily value from Google, else last night’s sleeping resting heart rate, else 60\u00a0bpm." },
+          { term: "Max heart rate", detail: "The value in Settings; else the top of your Peak zone from Google; else 208 − 0.7 × your age." },
         ],
       },
       {
@@ -110,7 +110,7 @@ export const SCORE_DOCS: ScoreDoc[] = [
         title: "Limits",
         paragraphs: [
           "Strain needs at least 600 heart-rate readings, or 20 spread over at least 10\u00a0minutes; otherwise the day shows Not enough data. Today’s Strain is a running total until midnight. Each activity also gets its own Strain from the heart rate during it.",
-          "Heart rate misses effort that barely raises it, such as heavy lifting with long rests. The zone chart uses % of max heart rate while Strain uses heart-rate reserve, so the two do not line up exactly.",
+          "Heart rate misses effort that barely raises it, such as heavy lifting with long rests. The zone chart uses Google’s heart-rate zones for the day (Light, Moderate, Vigorous, Peak), or % of max heart rate on a day Google has none, while Strain uses its own steps of heart-rate reserve, so the two do not line up exactly.",
         ],
       },
     ],
@@ -253,12 +253,12 @@ export const SCORE_DOCS: ScoreDoc[] = [
         paragraphs: ["Nine habits and vitals, averaged over 6\u00a0months, each against a reference: a fit person of your age and sex."],
         rows: [
           { term: "VO2 max", detail: "From runs in the last 90\u00a0days, else Fitbit’s daily estimate at half weight. Reference: your age’s 75th percentile." },
-          { term: "Resting heart rate", detail: "Reference 60\u00a0bpm." },
+          { term: "Resting heart rate", detail: "Fitbit’s daily value from Google. Reference 60\u00a0bpm." },
           { term: "Steps", detail: "Reference and cap: 10,000 a day under 60, 8,000 from 60." },
           { term: "Sleep hours", detail: "Reference 7.5\u00a0hours; 7 to 8\u00a0scores the same." },
           { term: "Sleep consistency", detail: "Reference 86.3." },
-          { term: "Heart rate zones 1-3", detail: "Reference 150\u00a0minutes a week." },
-          { term: "Heart rate zones 4-5", detail: "Reference 75\u00a0minutes a week." },
+          { term: "Light and moderate zones", detail: "Google’s daily time in its Light and Moderate zones. Reference 150\u00a0minutes a week." },
+          { term: "Vigorous and peak zones", detail: "Google’s daily time in its Vigorous and Peak zones. Reference 75\u00a0minutes a week." },
           { term: "Strength activity", detail: "Reference 40\u00a0minutes a week." },
           { term: "Lean body mass", detail: "Fat-free mass for your height. Needs weight, body fat and height." },
         ],
@@ -282,7 +282,7 @@ export const SCORE_DOCS: ScoreDoc[] = [
       {
         title: "Limits",
         paragraphs: [
-          "Pulse Age needs 5 of the 9 inputs, is Provisional until 20\u00a0days have data, stays within 15\u00a0years of your age and updates weekly. Pace of Aging is provisional until your data spans 6\u00a0months. Both rest on population studies, not a clinical test of your body.",
+          "On a day Google has no time in zones, Pulse counts them from your heart rate instead. Pulse Age needs 5 of the 9 inputs, is Provisional until 20\u00a0days have data, stays within 15\u00a0years of your age and updates weekly. Pace of Aging is provisional until your data spans 6\u00a0months. Both rest on population studies, not a clinical test of your body.",
         ],
       },
     ],
@@ -379,17 +379,17 @@ export const SCORE_DOCS: ScoreDoc[] = [
       {
         title: "What goes in",
         rows: [
-          { term: "Resting heart rate", detail: "The lowest 5-minute average during sleep, in bpm." },
+          { term: "Resting heart rate", detail: "Fitbit’s daily resting heart rate from Google, in bpm." },
           { term: "Heart rate variability", detail: "Fitbit’s nightly HRV, in ms." },
           { term: "Respiratory rate", detail: "Breaths per minute asleep, in rpm." },
           { term: "SpO2", detail: "Blood oxygen overnight, in %." },
-          { term: "Skin temperature", detail: "Last night against your skin-temperature baseline, in °C." },
+          { term: "Skin temperature", detail: "Last night against Google’s skin-temperature baseline, in °C." },
         ],
       },
       {
         title: "How it is weighted",
         paragraphs: [
-          "Each normal range is your baseline ± 2 of your usual night-to-night swings, built from earlier nights only. The narrowest ranges are about ±5\u00a0bpm, ±12.5\u00a0ms, ±1.25\u00a0rpm, ±1.25\u00a0points of SpO2 and ±0.75\u00a0°C. SpO2 is one-sided: below 95% is always low, and a high value is never flagged.",
+          "Resting heart rate and HRV use Google’s personal ranges when Google gives them, and skin temperature uses ± 2 of Google’s 30-night standard deviation around its baseline. Otherwise, and always for respiratory rate and SpO2, a normal range is your baseline ± 2 of your usual night-to-night swings, built from earlier nights only. Pulse’s narrowest ranges are about ±5\u00a0bpm, ±12.5\u00a0ms, ±1.25\u00a0rpm, ±1.25\u00a0points of SpO2 and ±0.75\u00a0°C. SpO2 is one-sided: below 95% is always low, and a high value is never flagged.",
           "The illness signal compares resting heart rate, HRV, skin temperature and respiratory rate with your 30\u00a0nights before. A vital fires at 2 standard deviations in the unwell direction and adds 22\u00a0points per extra deviation, up to 40. With at least 2 vitals firing, 25\u00a0points is mild and 50 is raised. If you logged alcohol, sauna or travel the day before, Pulse takes that as the likely cause instead.",
         ],
       },
@@ -405,7 +405,7 @@ export const SCORE_DOCS: ScoreDoc[] = [
       {
         title: "Limits",
         paragraphs: [
-          "A vital needs 4 earlier nights to get a range, and its range lapses after 14\u00a0nights without a value. Skin temperature needs its own baseline first, so it takes about 8\u00a0nights. The illness signal stays quiet until 14 of your last 30\u00a0nights have resting heart rate or HRV. A flagged vital is a prompt to notice, not a diagnosis.",
+          "A range from Google is there as soon as Google sends one. Pulse’s own range needs 4 earlier nights and lapses after 14\u00a0nights without a value; without Google’s baseline, skin temperature needs Pulse’s own first, so it takes about 8\u00a0nights. The illness signal stays quiet until 14 of your last 30\u00a0nights have resting heart rate or HRV. A flagged vital is a prompt to notice, not a diagnosis.",
         ],
       },
     ],

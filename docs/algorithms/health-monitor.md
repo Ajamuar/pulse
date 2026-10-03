@@ -2,7 +2,7 @@
 
 Code: `src/core/algorithms/healthMonitor.ts`. Tests: `healthMonitor.test.ts`.
 
-The Health Monitor checks last night's five vitals against your own normal ranges and shows "N of 5 in range". The vitals are resting HR, HRV, respiratory rate, SpO2 and skin-temperature deviation. Each range is your baseline mean ± 2σ, and SpO2 also has a fixed floor of 95 %. noop's illness signal is shown alongside as a combined flag. This is a wellness view, not a diagnosis.
+The Health Monitor checks last night's five vitals against your own normal ranges and shows "N of 5 in range". The vitals are resting HR, HRV, respiratory rate, SpO2 and skin-temperature deviation. Where Google gives a range, Pulse uses it (resting HR and HRV from its personal-range roll-ups, skin temperature from its 30-night SD); every other range is your baseline mean ± 2σ, and SpO2 also has a fixed floor of 95 %. noop's illness signal is shown alongside as a combined flag. This is a wellness view, not a diagnosis.
 
 ## Flow
 
@@ -10,6 +10,9 @@ The Health Monitor checks last night's five vitals against your own normal range
 flowchart TB
   D[Nightly rows, oldest first] --> P[Prior nights]
   D --> T[Last night]
+  T --> G{Google range for this vital?}
+  G -->|yes| C
+  G -->|no| F
   P --> F[foldHistory per vital: Winsorized EWMA]
   F --> U{Baseline usable?}
   U -->|no| ND[no_data]
@@ -28,6 +31,7 @@ flowchart TB
 
 ## Formula
 
+0. **Google's range first.** The caller (`scores.ts` `googleRanges`) passes last night's ranges from Google: resting HR = `[rhr_range_low, rhr_range_high]` and HRV = `[hrv_range_low, hrv_range_high]` from the `dailyRollUp` personal ranges, and skin temperature = ± 2 × `temp_sd_c` (Google's 30-night SD of nightly − baseline) around 0, since the deviation is already relative to Google's baseline. A vital with one uses it as is (`rangeSource: "google"`), even before Pulse's baseline is usable; steps 1–2 are skipped for it. Google's skin-temperature range has no floor, so it can be narrower than Pulse's ±0.75 °C.
 1. **Baselines.** For each vital, fold the prior nights' values, oldest first and excluding last night, through `baselines.foldHistory` with that vital's `MetricCfg`. This gives a Winsorized EWMA centre and spread, with hard outliers rejected once settled.
 2. **Range** = centre ± 2 × `baselines.sigma(state)`, where σ = 1.253 × spread. The floor spreads keep σ from collapsing on smooth nightly values.
 3. **SpO2** is one-sided. The low bound is max(centre − 2σ, 95), and the high bound is 100, so a high SpO2 is never flagged.
@@ -40,10 +44,13 @@ flowchart TB
 | Input | Unit | Notes |
 |---|---|---|
 | `days` | rows, oldest first | The last row is the night shown. Fields: `rhr` (bpm), `hrv` (ms), `resp` (breaths/min), `spo2` (%) and `skinTempDev` (°C). |
-| `skinTempDev` | °C | `nightly_temp_c` minus our causal skin-temperature baseline: the same deviation Recovery and the illness signal use. |
+| `skinTempDev` | °C | `nightly_temp_c` minus Google's `baselineTemperatureCelsius` (its 30-night median), else minus Pulse's causal skin-temperature baseline: the same deviation Recovery and the illness signal use. |
+| `ranges` | per vital | Google's ranges for last night (step 0); a vital without one keeps Pulse's. |
 | `journal` | confounders | `alcohol`, `sauna`, `travelPhaseJump` and so on, passed to the illness signal, which then reports "suppressed" instead of "raised". |
 
-**Which RHR.** Use the same nightly resting HR as the illness signal, so the two views agree. U10 decides between `sessionRestingHR` and Google's daily value; the scale is the same either way.
+**Which RHR.** The same resting HR as Recovery and the illness signal: Google's `daily-resting-heart-rate`, and `sessionRestingHR` only on a day Google has none.
+
+**Unconfirmed.** The personal-range roll-ups are documented on `dailyRollUp` ("returned by default when rolling up data points from the `daily-resting-heart-rate` data type"), but the data types table lists only `list` for those two types. Until a real account syncs, it is not known whether Google answers, or whether each day's range covers that day. With no answer, the sync job records its error in Settings (Personal ranges) and Pulse's own range stays.
 
 ## Constants
 
@@ -59,7 +66,7 @@ flowchart TB
 
 ## Edge rules
 
-- **Fewer than 4 prior nights** with a value make that vital `no_data`, with no range.
+- **Fewer than 4 prior nights** with a value make that vital `no_data`, with no range, unless Google gave one.
 - **A stale baseline** (no value for more than 14 nights) is also `no_data`, until it has refreshed.
 - **`inRange` never counts `no_data`**, so a sparse night can show "3 of 5" with nothing flagged. The UI should show the no-data vitals as such, not as out of range.
 

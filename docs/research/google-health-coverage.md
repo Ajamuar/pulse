@@ -28,11 +28,11 @@ Status: **Shown** means visible on a screen; **Used** means it feeds a score but
 | `steps` | Step counts per interval | **Shown** | Daily total (roll-up) on My Dashboard, Strain, Trends, Pulse Age. Per-minute counts gate stress |
 | `heart-rate` | HR samples | **Shown** | Strain, HR charts, zones, stress, Energy Bank. Band only: `HEALTH_CONNECT` points are dropped. Google's daily average shows in Trends (Vitals) |
 | `sleep` | Sessions with stages | **Shown** | Sleep, Recovery, Sleep Planner, SRI |
-| `daily-resting-heart-rate` | Daily RHR | **Shown** | Recovery, My Dashboard, Pulse Age. The calculation method is stored, not shown |
-| `daily-heart-rate-variability` | Nightly average RMSSD | **Shown** | Recovery, My Dashboard. The deep-sleep RMSSD is stored, not shown. The non-REM HR is not stored |
+| `daily-resting-heart-rate` | Daily RHR | **Shown** | Recovery, Strain's heart-rate reserve, Health Monitor, My Dashboard, Pulse Age (the sleep-session estimate only on days without it). The calculation method is stored, not shown. Its `dailyRollUp` personal range sets Health Monitor's RHR range (unconfirmed) |
+| `daily-heart-rate-variability` | Nightly average RMSSD | **Shown** | Recovery, My Dashboard. The deep-sleep RMSSD is stored, not shown. The non-REM HR is not stored. Its `dailyRollUp` personal range sets Health Monitor's HRV range (unconfirmed) |
 | `daily-respiratory-rate` | Nightly breathing rate | **Shown** | Health Monitor, My Dashboard |
 | `daily-oxygen-saturation` | Nightly SpO2 | **Shown** | Average only, on Health Monitor and My Dashboard. The lower and upper bounds are not stored |
-| `daily-sleep-temperature-derivations` | Nightly skin temperature | **Shown** | Health Monitor, My Dashboard (deviation from Pulse's own baseline) |
+| `daily-sleep-temperature-derivations` | Nightly skin temperature | **Shown** | Health Monitor, Recovery, My Dashboard: deviation from Google's baseline, Health Monitor's range from its 30-night SD |
 | `daily-vo2-max` | Daily cardio fitness | **Shown** | Fitness, Pulse Age (half weight) |
 | `run-vo2-max` | VO2max from runs | **Shown** | Fitness, Pulse Age |
 | `exercise` | Workouts | **Shown** | Activities: type, name, time, calories, distance (rows and the activity screen) and pace for runs and walks. Splits are not stored |
@@ -44,8 +44,8 @@ Status: **Shown** means visible on a screen; **Used** means it feeds a score but
 | `floors` | Floors climbed | **Shown** | Strain, Trends (Activity) |
 | `altitude` | Elevation gain | **Shown** | Trends (Activity) |
 | `active-zone-minutes` | Fitbit AZM | **Shown** | Strain, Trends (Activity), beside Pulse's own zone minutes |
-| `time-in-heart-rate-zone` | Time per HR zone | No | Same |
-| `daily-heart-rate-zones` | The user's zone bounds | No | Pulse uses %HRmax zones |
+| `time-in-heart-rate-zone` | Time per HR zone | **Shown** | Daily roll-up: Pulse Age's zone terms and Strain's two zone rows |
+| `daily-heart-rate-zones` | The user's zone bounds | **Shown** | Zone bounds per day (Strain, activities, HR chart); PEAK's max is max HR when Settings has none |
 | `active-minutes` | Minutes by activity level | **Shown** | Moderate + vigorous as Active minutes (Strain, Trends); light as Light activity (Trends) |
 | `activity-level` | Daily activity level | No | |
 | `sedentary-period` | Sedentary intervals | **Shown** | Daily total as Sedentary time (Trends) |

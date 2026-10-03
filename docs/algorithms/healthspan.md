@@ -50,8 +50,8 @@ Both Δage values use the reference at today's age, so flat inputs give exactly 
 |---|---|---|---|---|
 | Sleep duration | `sleepHours` | h | mean | main sleep `asleep_min` / 60 |
 | Sleep regularity | `sri` | SRI, −100..100 | mean | `sleepRegularityIndex` over the 7 days ending that day |
-| Zones 1–3 | `zone13Min` | min/day | mean × 7 = min/week | `timeInZone` (%HRmax zones) on that day's `hr_samples` |
-| Zones 4–5 | `zone45Min` | min/day | mean × 7 = min/week | same |
+| Zones 1–3 | `zone13Min` | min/day | mean × 7 = min/week | Google's `time-in-heart-rate-zone` roll-up, LIGHT + MODERATE (`light_moderate_min`); on a day without it, Pulse's `timeInZone` on that day's `hr_samples` (Light + Moderate) |
+| Zones 4–5 | `zone45Min` | min/day | mean × 7 = min/week | same, VIGOROUS + PEAK (`vigorous_peak_min`) |
 | Strength | `strengthMin` | min/day | mean × 7 = min/week | `exercises` with a strength type; 0 on a worn day without one |
 | Steps | `steps` | steps/day | mean, capped at the plateau | `daily_metrics.steps` |
 | VO2max | `vo2maxRun`, `vo2maxDaily` | mL/kg/min | mean of the chosen kind | `daily_metrics.vo2max_run`, `vo2max_daily` |
@@ -80,7 +80,7 @@ Each row is [x, HR]. The code stores ln HR. When a paper gives a continuous dose
 
 Notes on the choices:
 
-- **Zones 1–3 against Ekelund MVPA.** Ekelund's MVPA is accelerometer time at ≥ 3 METs. Zones 1–3 are 50–80 % HRmax. Zone 1 is lighter than moderate, so this term saturates easily: the spline is flat from about 24 min/day. Ekelund's cohorts were older (mean age 63) and its HRs are large, so this term is mostly a penalty for inactivity.
+- **Zones 1–3 against Ekelund MVPA.** Ekelund's MVPA is accelerometer time at ≥ 3 METs. Zones 1–3 are Google's Light and Moderate zones (Karvonen, on heart-rate reserve), or 50–80 % HRmax in Pulse's fallback. Zone 1 is lighter than moderate, so this term saturates easily: the spline is flat from about 24 min/day. Ekelund's cohorts were older (mean age 63) and its HRs are large, so this term is mostly a penalty for inactivity.
 - **Zones 4–5 against Lee 2022.** Lee's vigorous HRs are adjusted for moderate activity, so this term is the extra benefit of vigorous time on top of the zones 1–3 term, rather than a second count of the same minutes. Ekelund reports vigorous time only in thirds, without minutes.
 - **Strength J-shape.** Momma's authors call the high-volume upturn "unclear". The curve follows it up to 140 min/week, so beyond 40 min/week the term slowly gives back its benefit. To drop the upturn, replace the last knot with [140, 0.83].
 - **Sleep duration.** Cappuccio's durations were self-reported, which usually reads longer than wearable asleep time. A wearable 6.8 h therefore falls slightly more often in "short" than the study would place it.
