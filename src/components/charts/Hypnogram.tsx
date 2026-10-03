@@ -3,7 +3,7 @@
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts"
 import { DATA_COLORS } from "@/lib/bands"
 import { hourTicks, hypnogramSeries, STAGES, type Stage, type StageSegment } from "@/lib/charts"
-import { clock } from "@/lib/format"
+import { clock, durationWords } from "@/lib/format"
 import type { Metric } from "@/lib/reasons"
 import { ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -22,15 +22,21 @@ export type HypnogramProps = {
 const STAGE_NAME: Record<Stage, string> = { awake: "Awake", rem: "REM", light: "Light", deep: "Deep" }
 const LANE_NAME = ["Deep", "Light", "REM", "Awake"]
 
-function Chart({ night }: { night: HypnogramNight }) {
+/**
+ * The night as one step line over four lanes, Awake on top to Deep at the bottom, as sleep apps draw it. Hover, tap or
+ * arrow keys (the chart is a tab stop) step through the stretches; the tooltip names the stage and its times.
+ */
+export function HypnogramChart({ night }: { night: HypnogramNight }) {
   const tz = useOptionalShellCalendar()?.timeZone
   const anim = useSeriesAnimation()
   const { connector, stages } = hypnogramSeries(night.segments)
   const total = night.segments.reduce((a, s) => a + (s.end - s.start), 0)
-  const share = (st: Stage) =>
-    Math.round((night.segments.filter((s) => s.stage === st).reduce((a, s) => a + s.end - s.start, 0) / (total || 1)) * 100)
-  const summary = `Sleep stages from ${clock(night.bed, tz)} to ${clock(night.wake, tz)}: ${STAGES.map((s) => `${STAGE_NAME[s]} ${share(s)} percent`).join(", ")}.`
-  const segAt = (t: number) => night.segments.find((s) => s.start === t)
+  const minutes = (st: Stage) => night.segments.filter((s) => s.stage === st).reduce((a, s) => a + s.end - s.start, 0) / 60_000
+  const summary = `Sleep stages from ${clock(night.bed, tz)} to ${clock(night.wake, tz)}, ${night.segments.length} stretches: ${STAGES.map(
+    (s) => `${STAGE_NAME[s]} ${durationWords(minutes(s))}, ${Math.round(((minutes(s) * 60_000) / (total || 1)) * 100)} percent`
+  ).join("; ")}.`
+  // The connector's last point is the wake time, the end of the last stretch: it reads as that stretch.
+  const segAt = (t: number) => night.segments.find((s) => s.start <= t && t < s.end) ?? night.segments.findLast((s) => s.end === t)
 
   return (
     <ChartFigure summary={summary} config={{}} className="h-40">
@@ -86,7 +92,7 @@ function Chart({ night }: { night: HypnogramNight }) {
             dataKey="lane"
             type="stepAfter"
             stroke={DATA_COLORS[`stage-${st}`].css}
-            strokeWidth={6}
+            strokeWidth={8}
             strokeLinecap="butt"
             dot={false}
             activeDot={false}
@@ -118,7 +124,7 @@ export function Hypnogram({ data }: HypnogramProps) {
         </div>
       )}
     >
-      {(night) => (night.segments.length ? <Chart night={night} /> : empty)}
+      {(night) => (night.segments.length ? <HypnogramChart night={night} /> : empty)}
     </MetricState>
   )
 }

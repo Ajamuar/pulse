@@ -8,6 +8,7 @@ import type { Metric } from "@/lib/reasons"
 import { Skeleton, SkeletonText } from "@/components/ui/skeleton"
 import { EmptyState } from "@/components/shells/EmptyState"
 import { MetricState } from "@/components/shells/MetricState"
+import { HypnogramChart, HypnogramSkeleton } from "@/components/charts/Hypnogram"
 import { SleepHrChart, SleepHrChartSkeleton, type SleepHr } from "@/components/charts/SleepHrChart"
 import { ReasonPlaceholder } from "./ReasonPlaceholder"
 import { CAPTION, DeltaMark, LABEL } from "./primitives"
@@ -66,11 +67,17 @@ function Rows({ night, selected, onSelect }: { night: SleepStagesNight; selected
   return (
     <div className="space-y-4">
       {/* Bed and wake times sit on the heart-rate chart's axis above, as in the reference app. */}
-      <div className={cn(CAPTION, "flex items-baseline justify-end gap-2 tabular-nums")}>
-        <span className={cn(LABEL, "text-muted-foreground")}>Duration</span>
-        <span className="font-numeric text-[17px] leading-5 font-bold text-foreground">{hmm(span / 60_000)}</span>
+      <div className={cn(CAPTION, "flex items-baseline justify-between gap-2 tabular-nums")}>
+        <h3 className={cn(LABEL, "text-foreground-secondary")}>Stages</h3>
+        <span className="flex items-baseline gap-2">
+          <span className={cn(LABEL, "text-muted-foreground")}>Duration</span>
+          <span className="font-numeric text-[17px] leading-5 font-bold text-foreground">{hmm(span / 60_000)}</span>
+        </span>
       </div>
-      <div role="radiogroup" aria-label="Highlight a sleep stage" className="space-y-4">
+      {/* The whole night at a glance (a community request): when you were awake, in REM, light or deep sleep. The
+          rows below break each stage out and light it on the heart-rate line. */}
+      <HypnogramChart night={night} />
+      <div role="radiogroup" aria-label="Highlight a sleep stage" className="space-y-4 pt-1">
         {rows.map((r) => {
           const on = r.stage === selected
           const blocks = night.segments.filter((g) => g.stage === r.stage)
@@ -169,9 +176,11 @@ export function SleepStages({ hours, hr, data }: SleepStagesProps) {
 function StageRowsSkeleton() {
   return (
     <div aria-hidden className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex items-baseline justify-between">
+        <span className={cn(LABEL, "text-foreground-secondary")}>Stages</span>
         <SkeletonText className="w-24 text-[17px] leading-5" />
       </div>
+      <HypnogramSkeleton />
       {["Awake", "Light", "Deep", "REM"].map((l) => (
         <div key={l} className="space-y-2.5">
           <div className="flex items-center gap-3">
