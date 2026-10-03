@@ -36,11 +36,15 @@ export const addDays = (day: string, n: number) =>
 /** Whole days from `from` to `to`. */
 export const daysBetween = (from: string, to: string) => Math.round((Date.parse(to) - Date.parse(from)) / 86_400_000);
 
-/** The instant local midnight opens `day`. The offset is read twice, so a DST day uses midnight's own offset. */
+/**
+ * The first instant of local `day`. Midnight is tried under each offset in force within a day of it, and the
+ * earliest candidate that falls on `day` wins: the first of a repeated midnight (fall-back to 00:00), or the
+ * transition itself when a spring-forward at 00:00 skips midnight (Santiago, Havana, Azores...).
+ */
 export function localMidnight(day: string, tz: string): number {
   const utc = Date.parse(`${day}T00:00:00Z`) / 1000;
-  const offset = (s: number) => wall(s, tz).asUtc - Math.floor(s);
-  return utc - offset(utc - offset(utc));
+  const offset = (s: number) => wall(s, tz).asUtc - s;
+  return Math.min(...[-86_400, 0, 86_400].map((d) => utc - offset(utc + d)).filter((s) => localDay(s, tz) === day));
 }
 
 /** The instant a local wall time (`YYYY-MM-DDTHH:mm[:ss]`) names in `tz`; in a DST gap, the same offset trick as localMidnight. */
