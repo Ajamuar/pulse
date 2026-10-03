@@ -144,6 +144,34 @@ export const journalTags = sqliteTable("journal_tags", {
 });
 
 /** Home's My Dashboard as the owner chose it: the metric keys shown, in `position` order. No rows means the default list. */
+/**
+ * Google's daily roll-ups beyond the scored metrics (distance, floors, active minutes, water, nutrition, ...),
+ * one row per local day and metric key (`src/lib/extraMetrics.ts`). Shown, never scored.
+ */
+export const dailyValues = sqliteTable(
+  "daily_values",
+  {
+    day: text("day").notNull(),
+    key: text("key").notNull(),
+    value: real("value").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.day, t.key] })],
+);
+
+/** Heart-rhythm records (ECG readings, irregular rhythm notifications), one row per Google data point. */
+export const healthRecords = sqliteTable(
+  "health_records",
+  {
+    id: text("id").primaryKey(),
+    kind: text("kind", { enum: ["ecg", "irn"] }).notNull(),
+    ts: integer("ts").notNull(),
+    day: text("day").notNull(),
+    /** ECG: classification and average bpm. IRN: alert window count. Never the waveform. */
+    data: json("data").notNull(),
+  },
+  (t) => [index("health_records_ts").on(t.ts)],
+);
+
 export const dashboardMetrics = sqliteTable("dashboard_metrics", {
   key: text("key").primaryKey(),
   position: integer("position").notNull(),

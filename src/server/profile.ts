@@ -34,9 +34,13 @@ export function getProfile(db: Db, today = new Date().toISOString().slice(0, 10)
     sex: row.sex,
     maxHr: row.maxHr ?? Math.round(208 - 0.7 * wholeYears(row.birthDate, today)),
     maxHrSet: row.maxHr !== null,
-    heightCm: row.heightCm,
+    // The user's own height wins; else the latest from Google (sync's `height` job).
+    heightCm: row.heightCm ?? googleHeight(db),
   };
 }
+
+const googleHeight = (db: Db) =>
+  (db.$client.prepare("select value from daily_values where day = 'latest' and key = 'height_cm'").pluck().get() as number | undefined) ?? null;
 
 /**
  * Saves the profile and marks every day for recompute: zones, Strain, Pulse Age and fitness level all

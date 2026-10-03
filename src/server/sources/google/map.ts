@@ -6,6 +6,7 @@
 // read goes through num/str and treats "absent" as "unknown", never as zero.
 import type { dailyMetrics, exercises, sleepSessions } from "../../db/schema";
 import type { DataTypeId } from "./catalogue";
+import type { ExtraKey } from "@/lib/extraMetrics";
 import { localDay } from "../../time";
 
 type Obj = Record<string, unknown>;
@@ -276,4 +277,82 @@ export function mapExercises(points: unknown[], tz: string): ExerciseRow[] {
     });
   }
   return [...out.values()];
+}
+
+// --- Extra metrics (shown, not scored) --------------------------------------------------------------
+
+/** Seconds from a proto Duration ("3600s", "1.5s"). */
+const durationS = (v: unknown) => (typeof v === "string" && /^-?\d+(\.\d+)?s$/.test(v) ? Number(v.slice(0, -1)) : null);
+const sum = (...xs: (number | null)[]) => (xs.every((x) => x === null) ? null : xs.reduce<number>((a, x) => a + (x ?? 0), 0));
+const list = (v: unknown) => (Array.isArray(v) ? v : []);
+
+/** `dailyRollUp` value -> extra metric values, per Google type. Paths from the `{Type}RollupValue` reference pages. */
+const EXTRA = {
+  distance: (o: Obj) => ({ distance: per(num(o.millimetersSum), 1e6) }),
+  floors: (o: Obj) => ({ floors: int(o.countSum) }),
+  altitude: (o: Obj) => ({ elevation: per(num(o.gainMillimetersSum), 1000) }),
+  "active-zone-minutes": (o: Obj) => ({ azm: sum(int(o.sumInFatBurnHeartZone), int(o.sumInCardioHeartZone), int(o.sumInPeakHeartZone)) }),
+  "active-minutes": (o: Obj) => {
+    const by = (level: string) => sum(...list(o.activeMinutesRollupByActivityLevel).filter((r) => at(r, "activityLevel") === level).map((r) => int(at(r, "activeMinutesSum"))));
+    return { active_minutes: sum(by("MODERATE"), by("VIGOROUS")), light_minutes: by("LIGHT") };
+  },
+  "active-energy-burned": (o: Obj) => ({ active_calories: num(o.kcalSum) }),
+  "sedentary-period": (o: Obj) => ({ sedentary_minutes: per(durationS(o.durationSum), 60) }),
+  "heart-rate": (o: Obj) => ({ avg_hr: num(o.beatsPerMinuteAvg) }),
+  "hydration-log": (o: Obj) => ({ water: num(at(o, "amountConsumed.millilitersSum")) }),
+  "nutrition-log": (o: Obj) => ({
+    calories_in: num(at(o, "energy.kcalSum")),
+    carbs: num(at(o, "totalCarbohydrate.gramsSum")),
+    fat: num(at(o, "totalFat.gramsSum")),
+    protein: num(at(list(o.nutrients).find((n) => at(n, "nutrient") === "PROTEIN"), "quantity.gramsSum")),
+  }),
+  "blood-glucose": (o: Obj) => ({ glucose: num(o.bloodGlucoseMilligramsPerDeciliterAvg) }),
+  "core-body-temperature": (o: Obj) => ({ core_temp: num(o.temperatureCelsiusAvg) }),
+  "swim-lengths-data": (o: Obj) => ({ swim_strokes: int(o.strokeCountSum) }),
+} satisfies Partial<Record<DataTypeId, (o: Obj) => Partial<Record<ExtraKey, number | null>>>>;
+
+export type ExtraType = keyof typeof EXTRA;
+export const EXTRA_TYPES = Object.keys(EXTRA) as ExtraType[];
+export type ExtraValue = { day: string; key: ExtraKey; value: number };
+
+/** `dailyRollUp` points -> one value per day and metric. Missing values are skipped, never written as 0. */
+export function mapExtra(type: ExtraType, points: unknown[]): ExtraValue[] {
+  const out: ExtraValue[] = [];
+  for (const p of points) {
+    const day = civil(at(p, "civilStartTime.date"));
+    const o = at(p, bodyKey(type));
+    if (!day || !isObj(o)) continue;
+    for (const [key, value] of Object.entries(EXTRA[type](o))) if (value !== null) out.push({ day, key: key as ExtraKey, value });
+  }
+  return out;
+}
+
+/** The latest height reading, in cm (profile fallback when the user gave none). */
+export function mapHeight(points: unknown[]): { ts: number; cm: number } | null {
+  let best: { ts: number; cm: number } | null = null;
+  for (const p of points) {
+    const ts = secs(at(p, "height.sampleTime.physicalTime"));
+    const mm = num(at(p, "height.heightMillimeters"));
+    if (ts !== null && mm !== null && mm > 0 && (!best || ts >= best.ts)) best = { ts, cm: Math.round(mm) / 10 };
+  }
+  return best;
+}
+
+export type HealthRecord = { id: string; kind: "ecg" | "irn"; ts: number; day: string; data: Record<string, unknown> };
+
+/** ECG readings and irregular rhythm notifications. The ECG waveform is never kept, only its result. */
+export function mapRecords(type: "electrocardiogram" | "irregular-rhythm-notification", points: unknown[], tz: string): HealthRecord[] {
+  const out: HealthRecord[] = [];
+  for (const p of points) {
+    const o = at(p, bodyKey(type));
+    const ts = secs(at(o, "interval.startTime"));
+    if (!isObj(o) || ts === null) continue;
+    const kind = type === "electrocardiogram" ? "ecg" : "irn";
+    const data =
+      kind === "ecg"
+        ? { result: str(o.resultClassification) ?? "RESULT_CLASSIFICATION_UNSPECIFIED", avgBpm: int(o.beatsPerMinuteAvg) }
+        : { alertWindows: list(o.alertWindows).length, endTs: secs(at(o, "interval.endTime")) };
+    out.push({ id: pointId(p, kind, ts), kind, ts, day: localDay(ts, tz), data });
+  }
+  return out;
 }

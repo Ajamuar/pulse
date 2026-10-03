@@ -39,7 +39,7 @@ const expectGoogleError = async (p: Promise<unknown>, code: string) => {
 };
 
 describe("authUrl", () => {
-  it("asks for offline access, the given prompt, sign-in and every read scope", () => {
+  it("asks for offline access, the given prompt, sign-in and every Health scope", () => {
     const u = new URL(authUrl({ clientId: "cid", redirectUri: "https://p.example/oauth/callback", state: "st", prompt: "consent" }));
     expect(`${u.origin}${u.pathname}`).toBe("https://accounts.google.com/o/oauth2/v2/auth");
     expect(Object.fromEntries(u.searchParams)).toEqual({
@@ -52,10 +52,9 @@ describe("authUrl", () => {
       state: "st",
     });
     expect(LOGIN_SCOPES).toEqual(["openid", "email", "profile"]);
-    expect(SCOPES).toHaveLength(12);
-    // Read-only everywhere except nutrition, which has no read-only scope.
-    for (const s of SCOPES)
-      expect(s).toMatch(/^https:\/\/www\.googleapis\.com\/auth\/googlehealth\.(\w+\.readonly|nutrition\.writeonly)$/);
+    expect(SCOPES).toHaveLength(19);
+    // Every Google Health scope, read and write: Pulse reads every type and logs the write-only ones.
+    for (const s of SCOPES) expect(s).toMatch(/^https:\/\/www\.googleapis\.com\/auth\/googlehealth\.\w+\.(readonly|writeonly)$/);
   });
 });
 

@@ -143,15 +143,15 @@ describe("google sync", () => {
   it("first connect backfills 180 days oldest first, with monotonic N-of-180 progress", async () => {
     const progress: [number | null, number | null][] = [];
     const { source, calls } = setup({
-      onRequest: (type) => {
-        if (type !== "heart-rate") return;
+      onRequest: (type, filter) => {
+        if (type !== "heart-rate" || !filter) return; // the sample list, not the extra roll-up
         const s = state("heart-rate");
         progress.push([s?.backfillDaysDone ?? null, s?.backfillDaysTotal ?? null]);
       },
     });
     expect(await source.pull()).toEqual({ changed: true });
 
-    const hr = calls.filter((c) => c.type === "heart-rate");
+    const hr = calls.filter((c) => c.type === "heart-rate" && c.filter);
     expect(hr).toHaveLength(BACKFILL_DAYS); // one local day per request
     expect(lowerBound(hr[0].filter)).toBe("2026-04-05T18:30:00.000Z"); // local midnight, 6 April
     const starts = hr.map((c) => Date.parse(lowerBound(c.filter)));
@@ -212,7 +212,7 @@ describe("google sync", () => {
     expect(await source.pull()).toEqual({ changed: true });
 
     // The last stored sample (05:50) is older than synced_through, so the hour runs back from it.
-    const hr = calls.filter((c) => c.type === "heart-rate");
+    const hr = calls.filter((c) => c.type === "heart-rate" && c.filter);
     expect(hr.map((c) => lowerBound(c.filter))).toEqual(["2026-10-02T04:50:00.000Z"]);
     // daily-* re-fetch 3 local days before synced_through.
     expect(lowerBound(calls.find((c) => c.type === "daily-resting-heart-rate")!.filter)).toBe("2026-09-29");
@@ -359,7 +359,7 @@ describe("google sync", () => {
     fail = false;
     calls.length = 0;
     await source.pull();
-    const hr = calls.filter((c) => c.type === "heart-rate");
+    const hr = calls.filter((c) => c.type === "heart-rate" && c.filter);
     expect(lowerBound(hr[0].filter)).toBe("2026-07-01T18:30:00.000Z");
     expect(state("heart-rate")).toMatchObject({ backfillDaysDone: 180, lastError: null });
   });

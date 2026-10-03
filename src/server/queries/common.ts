@@ -1,4 +1,5 @@
 // Shared by the screen queries: the query context, batched day loaders and the Metric builders.
+import type { ExtraKey } from "@/lib/extraMetrics";
 import { getConfig } from "../config";
 import { type Db, getDb } from "../db";
 import { getProfile, type Profile } from "../profile";
@@ -53,6 +54,8 @@ export type MetricsRow = {
   vo2maxRun: number | null;
   steps: number | null;
   calories: number | null;
+  weightKg: number | null;
+  bodyFatPct: number | null;
 };
 
 export type DayRow = {
@@ -71,6 +74,8 @@ export type DayRow = {
   healthspan: HealthspanRow | null;
   fitness: FitnessRow | null;
   metrics: MetricsRow | null;
+  /** Google's shown-only daily roll-ups (src/lib/extraMetrics.ts); a key is absent when that day has none. */
+  extra: Partial<Record<ExtraKey, number>>;
 };
 
 const parse = <T>(s: string | null): T | null => (s == null ? null : (JSON.parse(s) as T));
@@ -95,12 +100,16 @@ export function loadDays(ctx: QueryCtx, from: string, to: string): Map<string, D
       c
         .prepare(
           `select day, hrv_ms hrvMs, rhr_bpm rhrBpm, resp_bpm respBpm, nightly_temp_c nightlyTempC, spo2_pct spo2Pct,
-             vo2max_daily vo2maxDaily, vo2max_run vo2maxRun, steps, calories
+             vo2max_daily vo2maxDaily, vo2max_run vo2maxRun, steps, calories, weight_kg weightKg, body_fat_pct bodyFatPct
            from daily_metrics where day >= ? and day <= ?`,
         )
         .all(from, to) as MetricsRow[]
     ).map((r) => [r.day, r]),
   );
+  const extra = new Map<string, Partial<Record<ExtraKey, number>>>();
+  for (const r of c.prepare("select day, key, value from daily_values where day >= ? and day <= ?").all(from, to) as { day: string; key: ExtraKey; value: number }[]) {
+    extra.set(r.day, { ...extra.get(r.day), [r.key]: r.value });
+  }
   const out = new Map<string, DayRow>();
   for (let d = from; d <= to; d = addDays(d, 1)) {
     const r = scores.get(d);
@@ -120,6 +129,7 @@ export function loadDays(ctx: QueryCtx, from: string, to: string): Map<string, D
       healthspan: parse(r?.healthspan ?? null),
       fitness: parse(r?.fitness ?? null),
       metrics: metrics.get(d) ?? null,
+      extra: extra.get(d) ?? {},
     });
   }
   return out;

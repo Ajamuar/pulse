@@ -26,6 +26,7 @@ export type DataType = {
 const PAGE = 10_000;
 const daily = { member: "date", maxDays: 90, pageSize: PAGE, dailyRollUp: false } as const;
 const sample = { member: "sample_time.physical_time", maxDays: 90, pageSize: PAGE, dailyRollUp: false } as const;
+const rollup = { member: null, maxDays: 14, pageSize: PAGE, dailyRollUp: true } as const;
 
 export const DATA_TYPES = {
   "daily-heart-rate-variability": daily,
@@ -41,10 +42,28 @@ export const DATA_TYPES = {
   // A night is windowed by when it ends: a window on bed time drops the night that crosses it.
   sleep: { member: "interval.end_time", maxDays: 90, pageSize: 25, dailyRollUp: false },
   exercise: { member: "interval.civil_start_time", maxDays: 90, pageSize: 25, dailyRollUp: false },
-  "heart-rate": { ...sample, maxDays: 14 },
+  // list for the band's samples; dailyRollUp for the all-source daily average (an extra metric).
+  "heart-rate": { ...sample, maxDays: 14, dailyRollUp: true },
   // dailyRollUp gives Google's merged, worn-only daily total; list gives per-minute counts for movement gating.
   steps: { member: "interval.start_time", maxDays: 14, pageSize: PAGE, dailyRollUp: true },
   "total-calories": { member: null, maxDays: 14, pageSize: PAGE, dailyRollUp: true },
+  // Shown as extra metrics (src/lib/extraMetrics.ts): daily roll-ups only, value paths from the RollupValue docs.
+  distance: rollup,
+  floors: rollup,
+  altitude: rollup,
+  "active-zone-minutes": rollup,
+  "active-minutes": rollup,
+  "active-energy-burned": rollup,
+  "sedentary-period": rollup,
+  "hydration-log": rollup,
+  "nutrition-log": rollup,
+  "blood-glucose": rollup,
+  "core-body-temperature": rollup,
+  "swim-lengths-data": rollup,
+  // Heart-rhythm records and height: rare points, listed by time.
+  electrocardiogram: { member: "interval.start_time", maxDays: 90, pageSize: 25, dailyRollUp: false },
+  "irregular-rhythm-notification": { member: "interval.start_time", maxDays: 90, pageSize: 25, dailyRollUp: false },
+  height: sample,
 } as const satisfies Record<string, DataType>;
 
 export type DataTypeId = keyof typeof DATA_TYPES;

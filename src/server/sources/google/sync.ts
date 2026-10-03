@@ -16,7 +16,7 @@ import { eq, getTableColumns, getTableName } from "drizzle-orm";
 import type { SQLiteTable } from "drizzle-orm/sqlite-core";
 import { getConfig } from "../../config";
 import { type Db, getDb } from "../../db";
-import { dailyMetrics, exercises, oauthTokens, sleepSessions, syncState } from "../../db/schema";
+import { dailyMetrics, exercises, healthRecords, oauthTokens, sleepSessions, syncState } from "../../db/schema";
 import type { Source } from "../types";
 import { DATA_TYPES, type DataTypeId } from "./catalogue";
 import { addDays, localDay, localMidnight } from "../../time";
@@ -24,9 +24,14 @@ import { type ClientDeps, createGoogleClient, localWindows, pruneRawPayloads, ty
 import {
   DAILY_TYPES,
   type DailyRow,
+  EXTRA_TYPES,
+  type ExtraType,
   mapDaily,
   mapExercises,
+  mapExtra,
   mapHeartRate,
+  mapHeight,
+  mapRecords,
   mapRollup,
   mapSleep,
   mapStepsMinutes,
@@ -47,7 +52,18 @@ const INTRADAY_OVERLAP_S = 3600;
 type Job =
   | { key: string; kind: "daily"; type: (typeof DAILY_TYPES)[number] }
   | { key: string; kind: "rollup"; type: RollupType }
-  | { key: string; kind: "sleep" | "exercise" | "hr" | "steps"; type: DataTypeId };
+  | { key: string; kind: "extra"; type: ExtraType }
+  | { key: string; kind: "records"; type: "electrocardiogram" | "irregular-rhythm-notification" }
+  | { key: string; kind: "sleep" | "exercise" | "hr" | "steps" | "height"; type: DataTypeId };
+
+/** Shown-only extras (src/lib/extraMetrics.ts). heart-rate's roll-up gets its own key: "heart-rate" is the sample list. */
+export const EXTRA_JOBS: Job[] = [
+  ...EXTRA_TYPES.map((type) => ({ key: type === "heart-rate" ? "heart-rate-daily" : type, kind: "extra" as const, type })),
+  { key: "electrocardiogram", kind: "records", type: "electrocardiogram" },
+  { key: "irregular-rhythm-notification", kind: "records", type: "irregular-rhythm-notification" },
+  { key: "height", kind: "height", type: "height" },
+];
+export const EXTRA_JOB_KEYS = new Set(EXTRA_JOBS.map((j) => j.key));
 
 /** Cheap types first, so a first connect shows daily data long before heart rate (~1,300 requests) is done. */
 const JOBS: Job[] = [
@@ -58,6 +74,8 @@ const JOBS: Job[] = [
   { key: "steps-daily", kind: "rollup", type: "steps" }, // daily totals; "steps" below is per minute
   { key: "steps", kind: "steps", type: "steps" },
   { key: "heart-rate", kind: "hr", type: "heart-rate" },
+  // Last, so the scored data lands first; each fails on its own (a scope granted later, a 400 on a new type).
+  ...EXTRA_JOBS,
 ];
 
 export type SyncDeps = ClientDeps & { log?: Pick<Console, "error"> };
@@ -132,7 +150,7 @@ export function createGoogleSource(deps: SyncDeps): Source {
         const chunkDays = job.kind === "hr" ? 1 : DATA_TYPES[job.type].maxDays;
         for (const win of localWindows(from, t, chunkDays, tz)) {
           const points =
-            job.kind === "rollup"
+            job.kind === "rollup" || job.kind === "extra"
               ? await client.dailyRollUp(job.type, localDay(win.start, tz), dayAfter(win.end, tz))
               : await client.list(job.type, win.start, win.end);
           db.$client.transaction(() => {
@@ -226,6 +244,21 @@ function writer(db: Db, tz: string) {
       case "rollup":
         changed = dailyRows(mapRollup(job.type, points));
         break;
+      // Extras and records feed no score, so they never set `changed` (no recompute for them).
+      case "extra": {
+        const q = prep("INSERT INTO daily_values (day, key, value) VALUES (?, ?, ?) ON CONFLICT (day, key) DO UPDATE SET value = excluded.value WHERE value IS NOT excluded.value");
+        for (const v of mapExtra(job.type, points)) q.run(v.day, v.key, v.value);
+        break;
+      }
+      case "records":
+        for (const r of mapRecords(job.type, points, tz)) upsert(healthRecords, "id", { ...r, data: JSON.stringify(r.data) });
+        break;
+      case "height": {
+        // Pulse Age's lean-mass term reads it when the profile has no height, so a new value rescores.
+        const h = mapHeight(points);
+        if (h) changed = prep("INSERT INTO daily_values (day, key, value) VALUES ('latest', 'height_cm', ?) ON CONFLICT (day, key) DO UPDATE SET value = excluded.value WHERE value IS NOT excluded.value").run(h.cm).changes > 0;
+        break;
+      }
       case "hr": {
         const q = prep("INSERT INTO hr_samples (ts, bpm) VALUES (?, ?) ON CONFLICT (ts) DO UPDATE SET bpm = excluded.bpm WHERE bpm IS NOT excluded.bpm");
         const hr = mapHeartRate(points);

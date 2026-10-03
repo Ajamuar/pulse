@@ -23,8 +23,19 @@ const GROUPS: { key: string; label: string; types: string[] }[] = [
   { key: "exercise", label: "Exercise", types: ["exercise"] },
   { key: "vo2max", label: "VO2 max", types: ["daily-vo2-max", "run-vo2-max"] },
   { key: "calories", label: "Calories", types: ["total-calories"] },
-  { key: "weight", label: "Weight and body fat", types: ["weight", "body-fat"] },
+  { key: "weight", label: "Weight and body fat", types: ["weight", "body-fat", "height"] },
+  { key: "activity", label: "Distance, floors and active minutes", types: ["distance", "floors", "altitude", "active-zone-minutes", "active-minutes", "active-energy-burned", "sedentary-period", "heart-rate-daily", "swim-lengths-data"] },
+  { key: "nutrition", label: "Food and water", types: ["hydration-log", "nutrition-log"] },
+  { key: "vitals", label: "Glucose and core temperature", types: ["blood-glucose", "core-body-temperature"] },
+  { key: "rhythm", label: "ECG and irregular rhythm", types: ["electrocardiogram", "irregular-rhythm-notification"] },
 ];
+
+/**
+ * Shown-only types (extra metrics, records, height). Optional for the shell: one that fails (a scope granted only on
+ * the next sign-in, a type the account never has) shows in Settings, but never turns the sync dot red or holds the
+ * import banner open.
+ */
+const OPTIONAL_TYPES = new Set(GROUPS.filter((g) => ["activity", "nutrition", "vitals", "rhythm"].includes(g.key)).flatMap((g) => g.types).concat("height"));
 
 type SyncRow = {
   type: string;
@@ -189,7 +200,7 @@ const workerRunning = () => !!(globalThis as { __pulseWorker?: { state?: { runni
 export function getShellStatus(ctx: QueryCtx = defaultCtx()): ShellStatusVM {
   const all = syncRows(ctx);
   // The device check is account state (connection below), not a sync that succeeded or failed.
-  const rows = all.filter((r) => (ctx.mode === "demo" ? r.type === "seed" : r.type !== "seed" && r.type !== DEVICES_ROW));
+  const rows = all.filter((r) => (ctx.mode === "demo" ? r.type === "seed" : r.type !== "seed" && r.type !== DEVICES_ROW && !OPTIONAL_TYPES.has(r.type)));
   const successes = rows.map((r) => r.lastSuccessAt).filter((s): s is number => s != null);
   const lastSuccessAt = successes.length ? Math.max(...successes) * 1000 : null;
   const stale = lastSuccessAt == null || ctx.now * 1000 - lastSuccessAt > STALE_MS;

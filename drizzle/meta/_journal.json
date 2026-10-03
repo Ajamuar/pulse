@@ -43,6 +43,13 @@
       "when": 1791022142501,
       "tag": "0005_raw_payloads_retention",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1791029221613,
+      "tag": "0006_google_extras",
+      "breakpoints": true
     }
   ]
 }

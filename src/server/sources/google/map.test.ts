@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { mapDaily, mapExercises, mapHeartRate, mapRollup, mapSleep, mapStepsMinutes } from "./map";
+import { mapDaily, mapExercises, mapExtra, mapHeartRate, mapHeight, mapRecords, mapRollup, mapSleep, mapStepsMinutes } from "./map";
 
 const TZ = "Asia/Kolkata"; // UTC+5:30: a night's UTC date and its local wake day differ
 const fixture = (name: string): { dataPoints?: unknown[]; rollupDataPoints?: unknown[] } =>
@@ -144,5 +144,36 @@ describe("exercises", () => {
         source: "FITBIT",
       },
     ]);
+  });
+});
+
+describe("extra metrics", () => {
+  const day = { civilStartTime: { date: { year: 2026, month: 10, day: 3 } } };
+  it("reads each roll-up's value path and converts units", () => {
+    expect(mapExtra("distance", [{ ...day, distance: { millimetersSum: "5432100" } }])).toEqual([{ day: "2026-10-03", key: "distance", value: 5.4321 }]);
+    expect(mapExtra("altitude", [{ ...day, altitude: { gainMillimetersSum: "12000" } }])).toEqual([{ day: "2026-10-03", key: "elevation", value: 12 }]);
+    expect(mapExtra("sedentary-period", [{ ...day, sedentaryPeriod: { durationSum: "36000s" } }])[0].value).toBe(600);
+    expect(mapExtra("active-zone-minutes", [{ ...day, activeZoneMinutes: { sumInFatBurnHeartZone: "10", sumInPeakHeartZone: "4" } }])[0].value).toBe(14);
+    const am = mapExtra("active-minutes", [
+      { ...day, activeMinutes: { activeMinutesRollupByActivityLevel: [{ activityLevel: "LIGHT", activeMinutesSum: "120" }, { activityLevel: "MODERATE", activeMinutesSum: "20" }, { activityLevel: "VIGOROUS", activeMinutesSum: "15" }] } },
+    ]);
+    expect(Object.fromEntries(am.map((v) => [v.key, v.value]))).toEqual({ active_minutes: 35, light_minutes: 120 });
+    const food = mapExtra("nutrition-log", [{ ...day, nutritionLog: { energy: { kcalSum: 1800 }, nutrients: [{ nutrient: "PROTEIN", quantity: { gramsSum: 90 } }] } }]);
+    expect(Object.fromEntries(food.map((v) => [v.key, v.value]))).toEqual({ calories_in: 1800, protein: 90 });
+  });
+  it("skips missing values instead of writing zero", () => {
+    expect(mapExtra("floors", [{ ...day, floors: {} }])).toEqual([]);
+    expect(mapExtra("water" as never, [])).toEqual([]);
+  });
+});
+
+describe("height and heart-rhythm records", () => {
+  it("keeps the latest height in cm", () => {
+    const h = (t: string, mm: string) => ({ height: { sampleTime: { physicalTime: t }, heightMillimeters: mm } });
+    expect(mapHeight([h("2026-01-01T00:00:00Z", "1800"), h("2026-06-01T00:00:00Z", "1805")])).toEqual({ ts: 1780272000, cm: 180.5 });
+  });
+  it("keeps an ECG's result and bpm, never its waveform", () => {
+    const [r] = mapRecords("electrocardiogram", [{ name: "e1", electrocardiogram: { interval: { startTime: "2026-10-03T06:00:00Z" }, resultClassification: "NORMAL_SINUS_RHYTHM", beatsPerMinuteAvg: "64", waveformSamples: [1, 2, 3] } }], "Asia/Kolkata");
+    expect(r).toEqual({ id: "e1", kind: "ecg", ts: 1791007200, day: "2026-10-03", data: { result: "NORMAL_SINUS_RHYTHM", avgBpm: 64 } });
   });
 });
