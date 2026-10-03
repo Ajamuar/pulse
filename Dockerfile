@@ -1,5 +1,8 @@
 # Build inside Linux: the standalone trace only keeps the better-sqlite3 binary for the build platform.
 FROM node:24-slim AS build
+# On both stages, so the classic builder's leftover stage images can be pruned without touching other projects:
+# docker image prune -f --filter label=app=pulse
+LABEL app=pulse
 WORKDIR /app
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0 NEXT_TELEMETRY_DISABLED=1
 # pnpm runs node-gyp for better-sqlite3 (allowBuilds) because it ships binding.gyp; the app still loads
@@ -12,6 +15,7 @@ COPY . .
 RUN pnpm build
 
 FROM node:24-slim
+LABEL app=pulse
 WORKDIR /app
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0
 # Memory: fewer glibc malloc arenas and a small V8 young generation keep RSS low (idle ~100 MB). The heap
