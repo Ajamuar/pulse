@@ -30,14 +30,14 @@ import { evaluateWithTrainingLoad, type ReadinessDay } from "@/core/scoring/read
 import { gatedRecovery, minBaselineNights } from "@/core/scoring/recovery";
 import { sessionRestingHR } from "@/core/scoring/restingHr";
 import { creditedSleepMin, hypnogramMetrics, ledger, minNeedNights, personalizedNeedHours, rest } from "@/core/scoring/sleep";
-import { defaultRestingHR, strain } from "@/core/scoring/strain";
+import { defaultRestingHR, strain, toStrainScale } from "@/core/scoring/strain";
 import { foldDaytimeBaseline } from "@/core/scoring/stressBase";
 import type { BaselineState, HrSample } from "@/core/scoring/types";
 import { timeInZone, zones as hrZones } from "@/core/scoring/zones";
 import { energyBank, energyBankConfig, minuteLoad, type Drain } from "@/core/algorithms/energyBank";
 import { fitnessLevel, type FitnessCategory } from "@/core/algorithms/fitnessLevel";
 import { healthMonitor, type HealthMonitorDay, type HealthMonitorResult } from "@/core/algorithms/healthMonitor";
-import { healthspan, type HealthspanDay, type HealthspanResult } from "@/core/algorithms/healthspan";
+import { healthspan, STRENGTH_TYPES, type HealthspanDay, type HealthspanResult } from "@/core/algorithms/healthspan";
 import { journalImpact, type JournalDay, type OutcomeDay, type TagImpact } from "@/core/algorithms/journalImpact";
 import { buildReport, periodBounds, reportPeriods, type ReportDay } from "@/core/algorithms/reports";
 import { sleepPlan, type SleepPlan } from "@/core/algorithms/sleepPlanner";
@@ -502,7 +502,6 @@ type Cached = { s1: Stage1Day; activities: Stage1Activity[]; sessionRhr: number 
 const summarize = (s: BaselineState | null): BaselineSummary =>
   s && { mean: s.baseline, sd: sigma(s), status: s.status, nValid: s.nValid };
 
-const STRENGTH = /STRENGTH|WEIGHT|CROSSFIT|CALISTHENICS/;
 const meanOf = (xs: (number | null | undefined)[]) => {
   const v = xs.filter((x): x is number => x != null);
   return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
@@ -879,7 +878,7 @@ function stage2(db: Db, data: Data, opts: PipelineOptions) {
 
     // ── Healthspan ───────────────────────────────────────────────────────────
     const strengthMin = (data.exercisesByDay.get(day) ?? [])
-      .filter((e) => STRENGTH.test(e.type))
+      .filter((e) => STRENGTH_TYPES.test(e.type))
       .reduce((a, e) => a + (e.endTs - e.startTs) / 60, 0);
     hsRows.push({
       day,
@@ -909,7 +908,7 @@ function stage2(db: Db, data: Data, opts: PipelineOptions) {
     reportRows.push({
       day,
       recovery: value,
-      strain: effort == null ? null : (effort * 21) / 100,
+      strain: effort == null ? null : toStrainScale(effort),
       sleepPerf: performance,
       sleepHours: main ? (main.asleepMin + naps.reduce((a, n) => a + n.asleepMin, 0)) / 60 : null,
       hrv,

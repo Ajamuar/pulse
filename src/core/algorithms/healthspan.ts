@@ -6,6 +6,9 @@ import { isoEpochDay } from "../scoring/baselines";
 import { piecewiseLinear, referenceVo2max, type Knots, type Sex } from "./fitnessLevel";
 
 /** One day's inputs. A null or absent field means no data that day. */
+/** Google exercise types that count as strength minutes (pipeline) and the strength icon (queries). */
+export const STRENGTH_TYPES = /STRENGTH|WEIGHT|CROSSFIT|CALISTHENICS/;
+
 export interface HealthspanDay {
   /** yyyy-MM-dd */
   day: string;

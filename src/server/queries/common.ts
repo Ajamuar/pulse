@@ -16,6 +16,8 @@ import type {
   StressRow,
   TrainingLoadRow,
 } from "../pipeline";
+import { STRENGTH_TYPES } from "@/core/algorithms/healthspan";
+import { toStrainScale } from "@/core/scoring/strain";
 import { stressLevel } from "@/lib/bands";
 import { addDays, localDay, localMidnight } from "../time";
 import type { ActivityKind, DayPoint, Metric, MetricTag, ReasonCode, SleepPlanVM, Span, TimelineItem, TimePoint } from "./types";
@@ -165,7 +167,7 @@ export const maybe = (v: number | null | undefined, reason: ReasonCode, provisio
 /** Why strain-type (HR) data is missing. */
 export const hrReason = (s1: Stage1Day | null): ReasonCode => (!s1 || s1.hrCount === 0 ? "band_not_worn" : "insufficient_hr_data");
 
-export const toStrain = (effort: number) => (effort * 21) / 100;
+export const toStrain = toStrainScale;
 export const ms = (s: number) => s * 1000;
 
 export function meanSd(xs: (number | null | undefined)[]) {
@@ -215,7 +217,7 @@ export function activityKind(type: string): ActivityKind {
   if (/RUN/.test(type)) return "run";
   if (/BIK|CYCL|RIDE/.test(type)) return "ride";
   if (/WALK|HIK/.test(type)) return "walk";
-  if (/STRENGTH|WEIGHT|CROSSFIT|CALISTHENICS/.test(type)) return "strength";
+  if (STRENGTH_TYPES.test(type)) return "strength";
   return "workout";
 }
 
