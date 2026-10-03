@@ -24,9 +24,16 @@ export default async function setup(project: TestProject) {
     fs.mkdirSync(dir, { recursive: true });
     const { buildSeeded, cleanup } = await import("./src/server/testing");
     const tmp = `${file}.${process.pid}.tmp`;
-    buildSeeded(tmp).$client.close(); // closing checkpoints the WAL into the file
-    fs.renameSync(tmp, file);
-    cleanup();
+    try {
+      buildSeeded(tmp).$client.close(); // closing checkpoints the WAL into the file
+      fs.renameSync(tmp, file);
+    } catch (e) {
+      // A broken seed or pipeline must fail the tests that use it, not abort the run: seeded() builds its own.
+      console.warn(`[global-setup] no shared seed database: ${e instanceof Error ? e.message : e}`);
+      return;
+    } finally {
+      cleanup();
+    }
   }
   project.provide("seedDb", file);
 }
