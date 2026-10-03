@@ -11,6 +11,9 @@ import type { HypnogramNight } from "@/components/charts/Hypnogram"
 import type { HrSeries } from "@/components/charts/IntradayHrChart"
 import type { EnergySeries } from "@/components/charts/EnergyBankChart"
 import type { StressSeries } from "@/components/charts/StressChart"
+import type { SleepHr } from "@/components/charts/SleepHrChart"
+import type { StrainRecoveryPoint } from "@/components/charts/StrainRecoveryChart"
+import type { SleepHours, SleepStagesNight } from "@/components/metrics/SleepStages"
 import type { ShellStatus } from "@/components/shells/ShellStatus"
 import type { Metric, MetricTag, ReasonCode } from "@/lib/reasons"
 import { addDays } from "@/lib/url"
@@ -250,3 +253,31 @@ export const insight = {
   body: "Your HRV is above your baseline while resting heart rate and sleep are typical, which lifted Recovery today.",
   action: { label: "See what shaped it", href: "#drivers" },
 }
+
+// --- Catalogue additions (/dev/kit: SleepStages, SleepHrChart, StrainRecoveryChart) ---
+
+export const sleepHours = ok<SleepHours>({ asleepMin: 400, average: 412, sd: 28 })
+const STAGE_TYPICAL = { awake: [5, 15], light: [45, 60], deep: [12, 22], rem: [18, 28] } as const
+const STAGE_LABEL = { awake: "Awake", light: "Light", deep: "Deep", rem: "REM" } as const
+export const sleepStagesNight: SleepStagesNight = {
+  ...night,
+  rows: (["awake", "light", "deep", "rem"] as const).map((stage) => {
+    const minutes = night.segments.filter((s) => s.stage === stage).reduce((a, s) => a + (s.end - s.start) / MIN, 0)
+    const pct = Math.round((minutes / ((night.wake - night.bed) / MIN)) * 100)
+    return { stage, label: STAGE_LABEL[stage], pct, minutes, typical: [...STAGE_TYPICAL[stage]] as [number, number] }
+  }),
+}
+export const sleepHr: SleepHr = {
+  bed: night.bed,
+  wake: night.wake,
+  points: Array.from({ length: Math.round((night.wake - night.bed) / MIN) + 30 }, (_, i) => {
+    const t = night.bed - 15 * MIN + i * MIN
+    if (i > 200 && i < 214) return { t, v: null } // a gap stays a gap
+    return { t, v: Math.round(54 - Math.sin((i / 470) * Math.PI) * 8 + noise(i + 60) * 5) }
+  }),
+}
+export const strainRecoveryWeek: StrainRecoveryPoint[] = days.slice(-7).map((day, i) => ({
+  day,
+  strain: i === 4 ? null : strainTrend[175 + i].value,
+  recovery: i === 2 ? null : recoveryTrend[175 + i].value,
+}))

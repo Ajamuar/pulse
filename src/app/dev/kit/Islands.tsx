@@ -3,6 +3,9 @@
 import * as React from "react"
 import { CircleGauge, Heart, Wind } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, PopoverTrigger } from "@/components/ui/popover"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { ResponsiveSheet } from "@/components/shells/ResponsiveSheet"
 import { ContributorRow } from "@/components/metrics/ContributorRow"
 import { DriverList } from "@/components/metrics/DriverList"
@@ -10,6 +13,52 @@ import { KeyStatRow } from "@/components/metrics/KeyStatRow"
 import { healthspan, impactDrivers, vitals } from "@/components/__fixtures__/kit"
 
 // Client-only demos: sheets and onSelect handlers cannot be passed from a server page.
+
+/** The segmented control as Journal Insights styles it (Impacts.tsx). */
+export function SegmentedDemo() {
+  const [value, setValue] = React.useState("recovery")
+  return (
+    <ToggleGroup type="single" value={value} onValueChange={(v) => v && setValue(v)} spacing={0} aria-label="Outcome" className="gap-0.5 rounded-lg bg-muted p-0.5">
+      {["recovery", "hrv", "sleep"].map((k) => (
+        <ToggleGroupItem
+          key={k}
+          value={k}
+          className="h-10 min-w-11 rounded-md! px-3 text-[13px] font-bold tracking-[0.06em] text-muted-foreground uppercase transition-[background-color,color] duration-150 ease-standard hover:bg-transparent hover:text-foreground data-[state=on]:bg-secondary data-[state=on]:text-foreground"
+        >
+          {k === "hrv" ? "HRV" : k}
+        </ToggleGroupItem>
+      ))}
+    </ToggleGroup>
+  )
+}
+
+export function OverlayDemo() {
+  return (
+    <div className="flex flex-wrap gap-2">
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button size="touch" variant="secondary">
+            Tooltip
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>Last synced 09:42</TooltipContent>
+      </Tooltip>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button size="touch" variant="secondary">
+            Popover
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent>
+          <PopoverHeader>
+            <PopoverTitle>Date of birth</PopoverTitle>
+            <PopoverDescription>The birth date picker opens its calendar here.</PopoverDescription>
+          </PopoverHeader>
+        </PopoverContent>
+      </Popover>
+    </div>
+  )
+}
 
 export function SheetDemo() {
   const [open, setOpen] = React.useState<false | "default" | "tall">(false)
