@@ -54,10 +54,12 @@ export const HIDE = `window.hideWhere = (test) => {
 // The phone's round check-in button floats over the bottom right of every screen (src/components/shells/AppNav.tsx).
 export const FLOAT = `a[aria-label^="Check in for"]`
 
-// Runs in the page. Picks the screen height so the capture ends on a row or card boundary rather than mid-row: the
-// lowest y that no row, chip, line of text or icon crosses. Containers taller than a few rows (a card of rows) may be
-// cut between their rows. Everything below the cut is hidden, so the screen ends on a gap of background (or of the
-// card being cut), and on tab roots the floating tab bar shows no half-row through its glass.
+// Runs in the page. Every phone screen keeps the full screen height (so the site's phones are one size), and its
+// content ends on a row or card boundary rather than mid-row: the lowest y above the floating tab bar that no row,
+// chip, line of text or icon crosses. Containers taller than a few rows (a card of rows) may be cut between their
+// rows. Everything below the cut is hidden, so the content ends on a gap of background (or of the card being cut).
+// A card's bottom edge may slip a little under the floating tab bar, as it does in the app, but no line of text or
+// icon shows through its glass.
 export function cleanCut({ maxH, minH }) {
   // A sheet (the dashboard editor) fills the screen and ends on its own buttons.
   if (document.querySelector("[role=dialog]")) return maxH
@@ -68,6 +70,7 @@ export function cleanCut({ maxH, minH }) {
   const inset = maxH - bar // space the bottom bar takes, 0 without one
   const boxes = [] // what a cut must not cross
   const ends = new Set() // where a cut may fall: the bottom of any row, card or line
+  const marks = [] // bottoms of text lines and icons, which never go under the bar
   const solid = (c) => !/rgba\(0, 0, 0, 0\)|transparent/.test(c.backgroundColor) || c.backgroundImage !== "none" || c.boxShadow !== "none" || parseFloat(c.borderTopWidth) + parseFloat(c.borderBottomWidth) > 0
   for (const e of document.querySelectorAll("main *")) {
     const c = getComputedStyle(e)
@@ -76,25 +79,27 @@ export function cleanCut({ maxH, minH }) {
     if (!r.height || !r.width) continue
     const ink = /^(svg|img|canvas|video|input|button)$/i.test(e.tagName)
     if (ink || solid(c)) ends.add(Math.ceil(r.bottom))
+    if (ink) marks.push(r.bottom)
     // A row: a short box with a background or divider, or a short group of several parts (label, bar, caption).
     if (ink || (r.height <= ROW && (solid(c) || e.children.length > 1))) boxes.push([r.top, r.bottom])
     for (const n of e.childNodes) {
       if (n.nodeType !== 3 || !n.textContent.trim()) continue
       const range = document.createRange()
       range.selectNodeContents(n)
-      for (const t of range.getClientRects()) boxes.push([t.top, t.bottom]), ends.add(Math.ceil(t.bottom))
+      for (const t of range.getClientRects()) boxes.push([t.top, t.bottom]), ends.add(Math.ceil(t.bottom)), marks.push(t.bottom)
     }
   }
   const crosses = (y) => boxes.some(([t, b]) => t < y - 0.5 && b > y + 0.5)
-  // Below the cut: a gap of plain background, enough to clear the rounded corners of the screen, or the bar.
-  const gap = inset ? 16 : 28
-  const cut = [...ends].sort((a, b) => b - a).find((y) => y >= minH - inset - gap && y + gap + inset <= maxH && !crosses(y))
+  // With a bar: up to 16 under its top edge, with every line and icon above it. Without: a gap of plain background
+  // that clears the screen's rounded corners.
+  const fits = (y) => (inset ? y <= bar + 16 && !marks.some((b) => b > bar && b < y + 0.5) : y + 28 <= maxH)
+  const cut = [...ends].sort((a, b) => b - a).find((y) => y >= minH && fits(y) && !crosses(y))
   if (!cut) throw new Error(`No clean cut on ${location.pathname}`)
   hideWhere((r) => r.top >= cut)
-  return cut + gap + inset
+  return maxH
 }
 
-/** Opens one screen at one device size, ready to capture; returns its height (a phone ends on a clean row). */
+/** Opens one screen at one device size, ready to capture; returns its height (a phone's content ends on a clean row). */
 export async function openScreen(page, kind, [, path, act]) {
   const opts = DEVICES[kind]
   await page.setViewportSize(opts.viewport)
@@ -107,9 +112,7 @@ export async function openScreen(page, kind, [, path, act]) {
   await page.waitForTimeout(600)
   let height = opts.viewport.height
   if (kind === "phone") {
-    height = await page.evaluate(cleanCut, { maxH: height, minH: 600 })
-    await page.setViewportSize({ width: opts.viewport.width, height })
-    await page.waitForTimeout(300)
+    height = await page.evaluate(cleanCut, { maxH: height, minH: 480 })
   }
   return height
 }
