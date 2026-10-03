@@ -52,12 +52,14 @@ export type TrendChartProps = {
   /** A labelled horizontal line ("Your age" on Pulse Age history). */
   reference?: { y: number; label: string }
   /**
-   * Draws each day's `parts` as stacked bars (W and M only) with a legend of the shown day's split; a day without parts
+   * Draws each day's `parts` as stacked bars (W and M; 6M and 1Y draw the total as a line) with a legend of the shown day's split; a day without parts
    * draws its total in a neutral bar and the legend says it has no breakdown (Strain's calories, spec §11 CAL1).
    */
   stack?: readonly TrendSeries[]
   /** `day`: the header shows the selected (last) day's value instead of the range average. */
   headline?: "average" | "day"
+  /** Draws a line of the trailing `smooth`-day average over the bars or dots (weight's 7-day average). */
+  smooth?: number
 }
 
 const RANGE_ARIA: Record<TrendRange, string> = { w: "1 week", m: "1 month", "6m": "6 months", "1y": "1 year" }
@@ -75,6 +77,12 @@ const unitText = (unit?: string) => (unit ? (unit === "%" ? "%" : `\u00a0${unit}
 /** Three ranges sit beside the average; four (Trends) take their own full-width row above it, so the chip never wraps. */
 const headerClass = (ranges: readonly TrendRange[]) =>
   cn("mb-4 flex gap-3", ranges.length > 3 ? "flex-col-reverse" : "items-start justify-between")
+
+/** Mean of the values in the `days` days ending at index `i`; null when there are none. */
+function trailingMean(points: TrendPoint[], i: number, days: number) {
+  const xs = points.slice(Math.max(0, i - days + 1), i + 1).flatMap((x) => (x.value === null ? [] : [x.value]))
+  return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null
+}
 
 function colorFor(colorBy: TrendChartProps["colorBy"], v: number) {
   if (colorBy === "band") return DATA_COLORS[recoveryColor(v)].css
@@ -103,7 +111,8 @@ function Trend({ points, p }: { points: TrendPoint[]; p: TrendChartProps }) {
     if (!p.fixedRange) setRange(urlRange)
   }
 
-  const rows = points.slice(-RANGE_DAYS[range]).map((pt) => ({
+  const n = RANGE_DAYS[range]
+  const rows = points.slice(-n).map((pt, i) => ({
     ...pt,
     fill: pt.value === null ? undefined : colorFor(p.colorBy, pt.value),
     fillOpacity: pt.provisional ? 0.45 : 1,
@@ -114,6 +123,7 @@ function Trend({ points, p }: { points: TrendPoint[]; p: TrendChartProps }) {
     // The total over the stack's top bar: on the top part's bar for a split day, on the grey bar for the rest.
     label_top: pt.parts && pt.value !== null ? formatValue(p.format, pt.value) : "",
     label_unsplit: !pt.parts && pt.value !== null ? formatValue(p.format, pt.value) : "",
+    smooth: p.smooth ? trailingMean(points, points.length - Math.min(n, points.length) + i, p.smooth) : null,
   }))
   const values = rows.map((r) => r.value).filter((v): v is number => v !== null)
   const avg = values.length ? values.reduce((a, b) => a + b, 0) / values.length : null
@@ -123,7 +133,7 @@ function Trend({ points, p }: { points: TrendPoint[]; p: TrendChartProps }) {
   const byDay = p.headline === "day"
   // The day the header and legend describe: the scrubbed one, else the selected (last) day.
   const shown = scrubbed ?? (byDay || p.stack ? (rows.at(-1) ?? null) : null)
-  const line = !p.stack && (range === "6m" || range === "1y")
+  const line = range === "6m" || range === "1y"
   // A single-hue 6M line (Pulse Age, VO2 max, vitals) fits its data; bars always start at zero.
   const domain: [number | "auto", number | "auto"] =
     p.colorBy === "band" ? [0, 100] : p.colorBy === "stress" ? [0, 3] : line && p.colorBy === "single" ? ["auto", "auto"] : [0, "auto"]
@@ -169,7 +179,14 @@ function Trend({ points, p }: { points: TrendPoint[]; p: TrendChartProps }) {
             unit={p.unit}
             className="block font-numeric text-[28px] leading-8 font-bold"
           />
-          {p.stack && <StackLegend series={p.stack} point={shown} format={p.format} />}
+          {p.stack && (
+            <StackLegend
+              series={p.stack}
+              // The header's number: the shown day's split, or the range's average split under "Average".
+              point={scrubbed || byDay ? shown : { date: "", value: avg, parts: Object.fromEntries(p.stack.map((x) => [x.key, partAvg(x.key) ?? 0])) }}
+              format={p.format}
+            />
+          )}
           {!scrubbed && !byDay && delta !== null && (
             <StatusChip
               tone={tone === "good" ? "optimal" : tone === "bad" ? "warning" : "neutral"}
@@ -222,7 +239,7 @@ function Trend({ points, p }: { points: TrendPoint[]; p: TrendChartProps }) {
                 stroke="var(--chart-cursor)"
                 strokeDasharray="4 4"
                 ifOverflow="extendDomain"
-                label={{ value: p.reference.label, position: "insideTopLeft", fill: "var(--muted-foreground)", fontSize: 11 }}
+                label={{ value: p.reference.label, position: "insideTopRight", fill: "var(--muted-foreground)", fontSize: 11 }}
               />
             )}
             {/* the reference app's month bars carry a dashed average line [latest-trends-1] (spec §11 F21). */}
@@ -310,12 +327,13 @@ function Trend({ points, p }: { points: TrendPoint[]; p: TrendChartProps }) {
                 {range === "w" && <LabelList dataKey="text" position="top" fill="var(--foreground)" fontSize={11} />}
               </Bar>
             )}
+            {p.smooth && <Line dataKey="smooth" type="monotone" stroke="var(--foreground)" strokeWidth={2} dot={false} activeDot={false} connectNulls {...anim} />}
           </ComposedChart>
         </ChartFigure>
       )}
-      {(p.baseline || p.target) && values.length > 0 && (
+      {(p.baseline || p.target || p.smooth) && values.length > 0 && (
         <p className={cn("mt-2 text-xs leading-4 font-medium text-muted-foreground")}>
-          {p.target ? "Shaded: your Strain Target" : "Shaded: your normal range"}
+          {p.target ? "Shaded: your Strain Target" : p.baseline ? "Shaded: your normal range" : `Line: ${p.smooth}-day average`}
         </p>
       )}
     </div>
