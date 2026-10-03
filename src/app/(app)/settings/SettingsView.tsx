@@ -249,7 +249,7 @@ export function Profile({ profile }: { profile: SettingsVM["profile"] }) {
           </div>
         ))}
       </dl>
-      <p className={cn(CAPTION, "mt-2")}>The time zone comes from the server’s <span translate="no">TZ</span> setting.</p>
+      <p className={cn(CAPTION, "mt-2")}>Your days start at midnight in your time zone. Edit changes it and recomputes your scores.</p>
     </SectionShell>
   )
 }
