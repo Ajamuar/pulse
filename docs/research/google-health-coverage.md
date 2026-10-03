@@ -36,8 +36,8 @@ Status: **Shown** means visible on a screen; **Used** means it feeds a score but
 | `daily-vo2-max` | Daily cardio fitness | **Shown** | Fitness, Pulse Age (half weight) |
 | `run-vo2-max` | VO2max from runs | **Shown** | Fitness, Pulse Age |
 | `exercise` | Workouts | **Shown** | Activities: type, name, time, calories. Distance is stored, not shown. Splits are not stored |
-| `weight` | Weight | **Used** | Lean mass (FFMI) in Pulse Age; no weight screen |
-| `body-fat` | Body fat % | **Used** | Same |
+| `weight` | Weight | **Shown** | Health Monitor › Measurements (latest, date, vs. the 30 days before); lean mass (FFMI) in Pulse Age |
+| `body-fat` | Body fat % | **Shown** | Same |
 | `vo2-max` | Generic VO2max | **Stored** | Probe only |
 | `total-calories` (roll-up) | Daily total kcal | **Shown** | My Dashboard, Strain |
 | `distance` | Distance per interval | No | |
@@ -54,12 +54,12 @@ Status: **Shown** means visible on a screen; **Used** means it feeds a score but
 | `heart-rate-variability` | HRV samples | No | Only the nightly average is fetched |
 | `oxygen-saturation` | SpO2 samples | No | Only the nightly average is fetched |
 | `respiratory-rate-sleep-summary` | Breathing rate per sleep stage | No | |
-| `core-body-temperature` | Core temperature | No | |
+| `core-body-temperature` | Core temperature | **Shown** | Daily average (`daily_values.core_temp`): Health Monitor › Measurements, once ever recorded |
 | `height` | Height | No | Asked in onboarding instead (deferred: read it from Google) |
 | `swim-lengths-data` | Swim strokes per length | No | |
-| `electrocardiogram` | ECG readings | No | Scope requested |
-| `irregular-rhythm-notification` | AFib alerts | No | Scope requested |
-| `blood-glucose` | Glucose readings | No | |
+| `electrocardiogram` | ECG readings | **Shown** | Result and average bpm (`health_records`, never the waveform): Health Monitor › Heart rhythm, latest, history and a detail sheet |
+| `irregular-rhythm-notification` | AFib alerts | **Shown** | Count and latest date: Health Monitor › Heart rhythm |
+| `blood-glucose` | Glucose readings | **Shown** | Daily average (`daily_values.glucose`): Health Monitor › Measurements, once ever recorded |
 | `hydration-log` | Water logged | No | |
 | `nutrition-log` | Meals and nutrients | No | |
 | `food`, `food-measurement-unit` | Food database entries | No | |
@@ -73,11 +73,11 @@ Status: **Shown** means visible on a screen; **Used** means it feeds a score but
 These are the gaps a Fitbit Air user would notice, ordered by how often they come up:
 
 1. **Distance, floors and active minutes**: the everyday activity numbers next to steps. Each is one roll-up type, and they fit beside Steps on Strain and My Dashboard.
-2. **Weight and body fat**: already stored, just never shown. A Health Monitor-style tile or a dashboard row would cost nothing to fetch.
+2. **Weight and body fat**: done, Health Monitor › Measurements.
 3. **Exercise distance and pace**: distance is already stored per workout; it should show on the activity row.
 4. **Active Zone Minutes**: Fitbit's headline goal. Pulse has its own zone minutes; showing Google's AZM beside them would avoid "my numbers don't match Fitbit".
 5. **Hydration and food logs**: a Journal-adjacent feature, not a score input.
-6. **ECG and irregular rhythm alerts**: Health Monitor entries. Rare, but they matter when they happen.
+6. **ECG and irregular rhythm alerts**: done, Health Monitor › Heart rhythm (UI research: `heart-rhythm-ui.md`).
 7. **Cycle tracking, symptoms, moods, glucose**: logged data. These are useful as Journal inputs (Behaviour Insights) rather than as screens of their own.
 
 If none of 5–7 are planned, drop their scopes: a consent screen that asks for ECG and reproductive health access, for an app that never reads them, is a fair privacy objection.
