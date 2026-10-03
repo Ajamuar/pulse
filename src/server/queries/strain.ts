@@ -1,4 +1,5 @@
 import { type ExtraKey, extraMetric } from "@/lib/extraMetrics";
+import { metricHref } from "@/lib/url";
 import { addDays } from "../time";
 import {
   activityItem,
@@ -63,14 +64,14 @@ export function getStrain(day: string, ctx: QueryCtx = defaultCtx()): StrainVM {
   const extra = (key: ExtraKey): KeyStat => {
     const m = extraMetric(key);
     const why = (row?.s1?.hrCount ?? 0) > 0 ? "no_data" : "band_not_worn";
-    return { ...stat(key, m.label, (d) => rows.get(d)?.extra[key] ?? null, m.unit, why), format: m.format, direction: m.direction };
+    return { ...stat(key, m.label, (d) => rows.get(d)?.extra[key] ?? null, m.unit, why), format: m.format, direction: m.direction, href: metricHref(key) };
   };
   const worn = (d: string) => (rows.get(d)?.s1?.hrCount ?? 0) > 0;
   const summary: KeyStat[] = [
     stat("zones13", "Light and moderate zones", (d) => zoneMin(rows.get(d), rows.get(d)?.metrics?.lightModerateMin, 0, 2), "min"),
     stat("zones45", "Vigorous and peak zones", (d) => zoneMin(rows.get(d), rows.get(d)?.metrics?.vigorousPeakMin, 2, 4), "min"),
     stat("strength", "Strength activity time", (d) => (worn(d) ? strengthMin(d) : null), "min"),
-    stat("steps", "Steps", (d) => rows.get(d)?.metrics?.steps ?? null, undefined),
+    { ...stat("steps", "Steps", (d) => rows.get(d)?.metrics?.steps ?? null, undefined), href: metricHref("steps") },
     ...STRAIN_EXTRAS.map(extra),
   ];
 

@@ -3,6 +3,7 @@
 import type { GoodDirection } from "./bands"
 import { EXTRA_METRICS, type ExtraKey } from "./extraMetrics"
 import type { FormatKey } from "./format"
+import { metricHref } from "./url"
 
 export const DASHBOARD_GROUPS = [
   { key: "recovery", label: "Recovery & sleep" },
@@ -25,22 +26,19 @@ const CORE = [
   { key: "skin", label: "Skin temperature", group: "vitals" },
 ] as const
 
-/** Google's weight and body-fat readings (daily_metrics). Pulse Age reads weight, so they link there. */
+/** Google's weight and body-fat readings (daily_metrics); each opens its detail screen. */
 export const BODY_METRICS = [
-  { key: "weight", label: "Weight", unit: "kg", format: "decimal1", direction: "neutral", href: "/health/healthspan" },
-  { key: "body_fat", label: "Body fat", unit: "%", format: "decimal1", direction: "neutral", href: "/health/healthspan" },
+  { key: "weight", label: "Weight", unit: "kg", format: "decimal1", direction: "neutral", href: metricHref("weight") },
+  { key: "body_fat", label: "Body fat", unit: "%", format: "decimal1", direction: "neutral", href: metricHref("body_fat") },
 ] as const satisfies readonly { key: string; label: string; unit: string; format: FormatKey; direction: GoodDirection; href: string }[]
 export type BodyKey = (typeof BODY_METRICS)[number]["key"]
 
 export type DashboardKey = (typeof CORE)[number]["key"] | BodyKey | ExtraKey
 
-/** An extra metric's group follows the screen it links to. */
-const GROUP_BY_HREF: Record<string, DashboardGroup> = { "/strain": "activity", "/journal": "nutrition", "/health/monitor": "vitals" }
-
 const ALL: { key: DashboardKey; label: string; group: DashboardGroup }[] = [
   ...CORE,
   ...BODY_METRICS.map((m) => ({ key: m.key, label: m.label, group: "body" as const })),
-  ...EXTRA_METRICS.map((m) => ({ key: m.key, label: m.label, group: GROUP_BY_HREF[m.href] ?? "activity" })),
+  ...EXTRA_METRICS.map((m) => ({ key: m.key, label: m.label, group: m.group })),
 ]
 
 /** Every metric, in editor order: by group, then catalogue order within it. */

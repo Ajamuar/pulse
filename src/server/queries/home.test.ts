@@ -134,7 +134,7 @@ describe("getHome", () => {
     ["distance", "weight", "glucose"].forEach((k, i) => c.$client.prepare("insert into dashboard_metrics (key, position) values (?, ?)").run(k, i));
     const vm = getHome(day, ctxFor(c));
     expect(vm.keyStats).toMatchObject([
-      { key: "distance", label: "Distance", unit: "km", format: "decimal2", direction: "up", href: "/strain", metric: { value: 6.25 }, average: 4 },
+      { key: "distance", label: "Distance", unit: "km", format: "decimal2", direction: "up", href: "/metric/distance", metric: { value: 6.25 }, average: 4 },
       { key: "weight", label: "Weight", unit: "kg", metric: { value: 72.5 } },
       { key: "glucose", label: "Blood glucose", metric: { value: null, reason: "no_data" }, average: null },
     ]);
@@ -171,7 +171,7 @@ describe("getHome", () => {
       expect(keys()).toEqual(all);
       set(["steps", "vo2max", "hrv"]);
       expect(keys()).toEqual(["steps", "hrv"]);
-      expect(getHome(dayAt(179), ctxFor(db)).keyStats[0]).toMatchObject({ label: "Steps", href: "/strain", direction: "up" });
+      expect(getHome(dayAt(179), ctxFor(db)).keyStats[0]).toMatchObject({ label: "Steps", href: "/metric/steps", direction: "up" });
       set(["vo2max"]);
       expect(keys()).toEqual(all);
     } finally {

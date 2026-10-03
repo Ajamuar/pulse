@@ -72,6 +72,9 @@ export function dayHref(href: string, d: string, today: string) {
   return `${path}${q}${hash ? `#${hash}` : ""}`;
 }
 
+/** A metric's own detail screen (Steps, Distance, Weight, …): `/metric/steps`. */
+export const metricHref = (key: string) => `/metric/${key}`;
+
 // --- Navigation structure (spec §4.2, §4.5) ---
 
 export type Tab = "home" | "health" | "journal" | "more";

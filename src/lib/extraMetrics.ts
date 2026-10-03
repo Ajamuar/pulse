@@ -11,30 +11,30 @@ export type ExtraMetric = {
   unit?: string
   format: FormatKey
   direction: GoodDirection
-  /** The screen it belongs to, for the dashboard row's link. */
-  href: string
+  /** My Dashboard's editor group. Every extra opens its own detail screen, `/metric/<key>`. */
+  group: "activity" | "nutrition" | "vitals"
   /** Accrues through the day: today is a gap in trends, not a low bar. */
   partialToday?: boolean
 }
 
 export const EXTRA_METRICS = [
-  { key: "distance", label: "Distance", unit: "km", format: "decimal2", direction: "up", href: "/strain", partialToday: true },
-  { key: "floors", label: "Floors", format: "grouped", direction: "up", href: "/strain", partialToday: true },
-  { key: "elevation", label: "Elevation gain", unit: "m", format: "int", direction: "up", href: "/strain", partialToday: true },
-  { key: "active_minutes", label: "Active minutes", format: "duration", direction: "up", href: "/strain", partialToday: true },
-  { key: "light_minutes", label: "Light activity", format: "duration", direction: "up", href: "/strain", partialToday: true },
-  { key: "azm", label: "Active Zone Minutes", format: "duration", direction: "up", href: "/strain", partialToday: true },
-  { key: "active_calories", label: "Active calories", unit: "kcal", format: "grouped", direction: "neutral", href: "/strain", partialToday: true },
-  { key: "sedentary_minutes", label: "Sedentary time", format: "duration", direction: "down", href: "/strain", partialToday: true },
-  { key: "avg_hr", label: "Average heart rate", unit: "bpm", format: "int", direction: "neutral", href: "/strain" },
-  { key: "water", label: "Water", unit: "ml", format: "grouped", direction: "up", href: "/journal", partialToday: true },
-  { key: "calories_in", label: "Calories eaten", unit: "kcal", format: "grouped", direction: "neutral", href: "/journal", partialToday: true },
-  { key: "protein", label: "Protein", unit: "g", format: "int", direction: "neutral", href: "/journal", partialToday: true },
-  { key: "carbs", label: "Carbohydrates", unit: "g", format: "int", direction: "neutral", href: "/journal", partialToday: true },
-  { key: "fat", label: "Fat", unit: "g", format: "int", direction: "neutral", href: "/journal", partialToday: true },
-  { key: "glucose", label: "Blood glucose", unit: "mg/dL", format: "int", direction: "neutral", href: "/health/monitor" },
-  { key: "core_temp", label: "Core temperature", unit: "°C", format: "decimal1", direction: "neutral", href: "/health/monitor" },
-  { key: "swim_strokes", label: "Swim strokes", format: "grouped", direction: "up", href: "/strain", partialToday: true },
+  { key: "distance", label: "Distance", unit: "km", format: "decimal2", direction: "up", group: "activity", partialToday: true },
+  { key: "floors", label: "Floors", format: "grouped", direction: "up", group: "activity", partialToday: true },
+  { key: "elevation", label: "Elevation gain", unit: "m", format: "int", direction: "up", group: "activity", partialToday: true },
+  { key: "active_minutes", label: "Active minutes", format: "duration", direction: "up", group: "activity", partialToday: true },
+  { key: "light_minutes", label: "Light activity", format: "duration", direction: "up", group: "activity", partialToday: true },
+  { key: "azm", label: "Active Zone Minutes", format: "duration", direction: "up", group: "activity", partialToday: true },
+  { key: "active_calories", label: "Active calories", unit: "kcal", format: "grouped", direction: "neutral", group: "activity", partialToday: true },
+  { key: "sedentary_minutes", label: "Sedentary time", format: "duration", direction: "down", group: "activity", partialToday: true },
+  { key: "avg_hr", label: "Average heart rate", unit: "bpm", format: "int", direction: "neutral", group: "activity" },
+  { key: "water", label: "Water", unit: "ml", format: "grouped", direction: "up", group: "nutrition", partialToday: true },
+  { key: "calories_in", label: "Calories eaten", unit: "kcal", format: "grouped", direction: "neutral", group: "nutrition", partialToday: true },
+  { key: "protein", label: "Protein", unit: "g", format: "int", direction: "neutral", group: "nutrition", partialToday: true },
+  { key: "carbs", label: "Carbohydrates", unit: "g", format: "int", direction: "neutral", group: "nutrition", partialToday: true },
+  { key: "fat", label: "Fat", unit: "g", format: "int", direction: "neutral", group: "nutrition", partialToday: true },
+  { key: "glucose", label: "Blood glucose", unit: "mg/dL", format: "int", direction: "neutral", group: "vitals" },
+  { key: "core_temp", label: "Core temperature", unit: "°C", format: "decimal1", direction: "neutral", group: "vitals" },
+  { key: "swim_strokes", label: "Swim strokes", format: "grouped", direction: "up", group: "activity", partialToday: true },
 ] as const satisfies readonly ExtraMetric[]
 
 export type ExtraKey = (typeof EXTRA_METRICS)[number]["key"]

@@ -3,7 +3,7 @@
 import type { GoodDirection } from "@/lib/bands";
 import { EXTRA_METRICS, type ExtraKey } from "@/lib/extraMetrics";
 import type { FormatKey } from "@/lib/format";
-import { RANGE_DAYS, RANGES, type TrendRange } from "@/lib/url";
+import { metricHref, RANGE_DAYS, RANGES, type TrendRange } from "@/lib/url";
 import { addDays } from "../time";
 import { type DayRow, defaultCtx, finite, loadDays, none, ok, type QueryCtx, todayOf, toStrain } from "./common";
 import type { DayPoint, Metric } from "./types";
@@ -80,9 +80,9 @@ const CORE: readonly TrendMetric[] = [
   { key: "rhr", group: "Vitals", label: "Resting heart rate", unit: "bpm", format: "int", colorBy: "single", direction: "down", href: "/recovery", column: "resting_hr_bpm", pick: (r) => r.metrics?.rhrBpm },
   { key: "resp", group: "Vitals", label: "Respiratory rate", unit: "rpm", format: "decimal1", colorBy: "single", direction: "neutral", href: "/health/monitor", column: "respiratory_rate_rpm", pick: (r) => r.metrics?.respBpm },
   { key: "stress", group: "Recovery & sleep", label: "Stress", format: "decimal1", colorBy: "stress", direction: "down", href: "/health/stress", column: "stress_avg", pick: (r) => r.stress?.average, provisional: (r) => !!r.stress?.provisional, partialToday: true },
-  { key: "steps", group: "Activity", label: "Steps", format: "grouped", colorBy: "single", direction: "up", href: "/strain", column: "steps", pick: (r) => r.metrics?.steps, partialToday: true },
-  { key: "weight", group: "Body", label: "Weight", unit: "kg", format: "decimal1", colorBy: "single", direction: "neutral", href: "/health/healthspan", column: "weight_kg", pick: (r) => r.metrics?.weightKg },
-  { key: "body_fat", group: "Body", label: "Body fat", unit: "%", format: "decimal1", colorBy: "single", direction: "down", href: "/health/healthspan", column: "body_fat_pct", pick: (r) => r.metrics?.bodyFatPct },
+  { key: "steps", group: "Activity", label: "Steps", format: "grouped", colorBy: "single", direction: "up", href: metricHref("steps"), column: "steps", pick: (r) => r.metrics?.steps, partialToday: true },
+  { key: "weight", group: "Body", label: "Weight", unit: "kg", format: "decimal1", colorBy: "single", direction: "neutral", href: metricHref("weight"), column: "weight_kg", pick: (r) => r.metrics?.weightKg },
+  { key: "body_fat", group: "Body", label: "Body fat", unit: "%", format: "decimal1", colorBy: "single", direction: "down", href: metricHref("body_fat"), column: "body_fat_pct", pick: (r) => r.metrics?.bodyFatPct },
 ];
 
 /** Every metric: Pulse's own first, then Google's extras from their catalogue, each in a picker section. */
@@ -96,7 +96,7 @@ export const TREND_METRICS: readonly TrendMetric[] = [
     format: m.format,
     colorBy: "single",
     direction: m.direction,
-    href: m.href,
+    href: metricHref(m.key),
     column: columnOf(m.key, "unit" in m ? m.unit : undefined, m.format),
     pick: (r) => r.extra[m.key],
     ...("partialToday" in m && { partialToday: m.partialToday }),

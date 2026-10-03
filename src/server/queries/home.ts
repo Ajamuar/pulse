@@ -1,6 +1,7 @@
 import { BODY_METRICS, DASHBOARD_DEFAULT, DASHBOARD_LABEL, DASHBOARD_METRICS, type DashboardKey, isDashboardKey, PHONE_DEFAULT, PHONE_STATS } from "@/lib/dashboard";
 import { EXTRA_METRICS, type ExtraKey, type ExtraMetric } from "@/lib/extraMetrics";
 import { hmm } from "@/lib/format";
+import { metricHref } from "@/lib/url";
 import type { Db } from "../db";
 import { addDays, localMinutes } from "../time";
 import { insightOf as recoveryInsight } from "./recovery";
@@ -235,8 +236,8 @@ function statSpecs(row: DayRow | undefined, isToday: boolean): Record<DashboardK
     rhr: spec(rhr, maybe(row && rhr(row), vitalReason(row, isToday)), "bpm", "down", "/recovery"),
     resp: spec((r) => r.metrics?.respBpm, maybe(m?.respBpm, vitalReason(row, isToday)), "rpm", "neutral", "/health/monitor"),
     sleep: spec((r) => r.sleep?.performance, sleepMetric(row, isToday), "%", "up", "/sleep"),
-    calories: spec((r) => r.metrics?.calories, maybe(m?.calories, dailyReason), "kcal", "neutral", "/strain"),
-    steps: spec((r) => r.metrics?.steps, maybe(m?.steps, dailyReason), undefined, "up", "/strain"),
+    calories: spec((r) => r.metrics?.calories, maybe(m?.calories, dailyReason), "kcal", "neutral", metricHref("calories")),
+    steps: spec((r) => r.metrics?.steps, maybe(m?.steps, dailyReason), undefined, "up", metricHref("steps")),
     spo2: spec((r) => r.metrics?.spo2Pct, maybe(m?.spo2Pct, vitalReason(row, isToday)), "%", "up", "/health/monitor"),
     skin: spec(skin, maybe(row && skin(row), skinReason), "°C", "toward_zero", "/health/monitor"),
   } as Record<DashboardKey, StatSpec>;
@@ -246,7 +247,7 @@ function statSpecs(row: DayRow | undefined, isToday: boolean): Record<DashboardK
     out[b.key] = spec(pick, maybe(row && pick(row), "no_data"), b.unit, b.direction, b.href, b.format);
   }
   for (const e of EXTRA_METRICS as readonly ExtraMetric[])
-    out[e.key as ExtraKey] = spec((r) => r.extra[e.key as ExtraKey], maybe(row?.extra[e.key as ExtraKey], "no_data"), e.unit, e.direction, e.href, e.format);
+    out[e.key as ExtraKey] = spec((r) => r.extra[e.key as ExtraKey], maybe(row?.extra[e.key as ExtraKey], "no_data"), e.unit, e.direction, metricHref(e.key), e.format);
   return out;
 }
 

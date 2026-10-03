@@ -1,6 +1,7 @@
 import { CircleAlert } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { reasonCopy } from "@/lib/reasons"
+import { dayHref, metricHref } from "@/lib/url"
 import { getMonitor } from "@/server/queries/health"
 import type { MonitorVM } from "@/server/queries/types"
 import { StatusChip } from "@/components/metrics/primitives"
@@ -39,7 +40,7 @@ const CHIP = {
  * Weight and body fat, then blood glucose and core temperature once ever recorded: each the latest reading with its
  * date, against the mean of the readings in the 30 days before it (docs/research/heart-rhythm-ui.md, placement).
  */
-function Measurements({ rows }: { rows: MonitorVM["measurements"] }) {
+function Measurements({ rows, at }: { rows: MonitorVM["measurements"]; at: (href: string) => string }) {
   return (
     <Card className="gap-0 px-4 py-1 ring-0">
       <div className="divide-y divide-border">
@@ -57,6 +58,7 @@ function Measurements({ rows }: { rows: MonitorVM["measurements"] }) {
             averageLabel="prior 30-day average"
             sd={m.sd}
             direction="neutral"
+            href={at(metricHref(m.key))}
           />
         ))}
       </div>
@@ -91,7 +93,7 @@ function Count({ count }: { count: MonitorVM["count"] }) {
 
 /** Health Monitor `/health/monitor?d=` (spec §7.8). */
 export default async function MonitorPage({ searchParams }: PageProps<"/health/monitor">) {
-  const { d } = await pageDay(searchParams as SearchParams, "/health/monitor")
+  const { d, today } = await pageDay(searchParams as SearchParams, "/health/monitor")
   const vm = getMonitor(d)
 
   return (
@@ -124,7 +126,7 @@ export default async function MonitorPage({ searchParams }: PageProps<"/health/m
             <HeartRhythm rhythm={vm.heartRhythm} />
           </SectionShell>
           <SectionShell variant="section" title="Measurements">
-            <Measurements rows={vm.measurements} />
+            <Measurements rows={vm.measurements} at={(href) => dayHref(href, d, today)} />
           </SectionShell>
         </div>
       }

@@ -63,7 +63,7 @@ export default async function StrainPage({ searchParams }: PageProps<"/strain">)
           <div className="divide-y divide-border">
             <TargetRow vm={vm} />
             {vm.summary.map((k) => (
-              <KeyStatRow key={k.key} variant="row" {...statProps(k)} />
+              <KeyStatRow key={k.key} variant="row" {...statProps(k, { d, today })} />
             ))}
           </div>
           <p className={cn(LEGEND, "flex items-center gap-2")}>
