@@ -1393,7 +1393,7 @@ Added 2026-10-02 at the user's request, after the Home dials shipped at unequal 
 Agreed on 2026-10-03 to do later, not to drop:
 
 - ~~The residual review findings in `docs/residual-review-findings.md` (pipeline refactor, raw-archive retention, deleted Fitbit records).~~ Done 2026-10-03: all resolved, see that file.
-- The 41 low web-guideline findings in `docs/design/guidelines-review.md`.
+- ~~The 41 low web-guideline findings in `docs/design/guidelines-review.md`.~~ Done 2026-10-03: 40 fixed and applied to the new screens, 1 declined (per-visitor locale: the copy is English only; one `LOCALE` constant in format.ts), none obsolete; see that file and spec §11 SYM12.
 - ~~The Sleep card's hours hero and overnight HR chart (the view model has no data for them yet).~~ Done 2026-10-03: `getSleep().hours` and `.nightHr`, `SleepHrChart`, spec §11 R19.
 - ~~A customizable My Dashboard (suggested on Reddit).~~ Done 2026-10-03: pencil on the section header, show/hide and reorder in a sheet, Reset to default (spec §11 CD1).
 - Height from Google: the API has a `height` data type, but its value field isn't in the reference docs. Confirm it with the first real probe, then sync it into the profile (Settings keeps the manual field). Google's profile itself only has `age`: no birth date, no sex.

@@ -1177,7 +1177,7 @@ Purpose: the one place the app talks about its data connection. Rendered by Page
 
 ```
  ┌──────────────────────────────────────────────────────────┐
- │ (icon)  Importing history                                │  shadcn Alert, bg-card, rounded-xl
+ │ (icon)  Importing history…                               │  shadcn Alert, bg-card, rounded-xl
  │         42 of 180 days. Scores fill in as days arrive.   │
  │         ▓▓▓▓▓▓▓▓▓▓░░░░░░░░░░░░░░░░░░░░░░░░               │  Progress (import only)
  │                                         [ RECONNECT ]    │  action (phone: own row, full width)
@@ -1187,7 +1187,7 @@ Purpose: the one place the app talks about its data connection. Rendered by Page
 | State | Icon (tone) | Title | Description | Action |
 |---|---|---|---|---|
 | `not_connected` | `Plug` (`text-foreground`) | Connect Google to start | Pulse reads your Fitbit data from Google Health. Nothing syncs until you connect. | Button default "Connect Google" → `/oauth/start` |
-| `importing` | `CloudDownload` (`text-coach`) | Importing history | {done} of 180 days. Scores fill in as days arrive. | none; `Progress value={done / total × 100}` |
+| `importing` | `CloudDownload` (`text-coach`) | Importing history… | {done} of 180 days. Scores fill in as days arrive. | none; `Progress value={done / total × 100}` |
 | `auth_revoked` | `Unplug` (`text-recovery-red-text`) | Reconnect Google | Google access was revoked or expired. Sync is paused until you reconnect. | Button default "Reconnect Google" → `/oauth/start` |
 | `stale` (> 2 h since success) | `TriangleAlert` (`text-warning`) | Sync is behind | Last successful sync {relative} ago. Data may be out of date. | Button secondary "Retry" → `router.refresh()` (a page load already calls `requestSync()`) |
 
@@ -2281,8 +2281,8 @@ Shell: `PageShell dateSwitcher={{ mode: "day" }} actions={Insights button}` . Th
 
 - Groups (card-title role headings, `mt-6` above each): "Evening": Alcohol, Late caffeine, Late meal, Screen in bed. "Recovery": Meditation, Stretching, Sauna. "Context": Travel, Illness. "Your behaviours": custom tags.
 - Row: `flex min-h-14 items-center gap-3 border-b border-border`; icon 20 px muted; label body role (`text-foreground`); control `ToggleGroup type="single" variant="outline"` with items "No" and "Yes" (`h-11 min-w-14 rounded-lg text-[13px] font-bold uppercase tracking-[0.06em]`, on-state: No `bg-secondary text-foreground`, Yes `bg-foreground text-primary-foreground`). Unset = neither pressed (the behaviour is not logged). Each row's group has `aria-label="{Behaviour}"`.
-- Add a behaviour: `Label` "Add a behaviour" + `Input` (`h-11`, placeholder "e.g. Cold shower…", `autoComplete="off"`, `maxLength={32}`) + `Button variant="secondary" size="touch"` "Add". Error under the input: "That behaviour already exists." / "Use 32 characters or fewer."
-- Footer: `Button size="touch"` default "Save" (full width on phone). While saving: "Saving…", disabled. On success: close, toast "Check-in saved", `revalidatePath`. On error: inline `Alert` in the footer "Couldn't save. Check your connection and try again."
+- Add a behaviour: `Label` "Add a behaviour" + `Input` (`h-11`, placeholder "e.g. Cold shower…", `autoComplete="off"`, `maxLength={32}`) + `Button variant="secondary" size="touch"` "Add" (accessible name "Add behaviour"; `name="behaviour"`, `enterKeyHint="done"`). Error under the input: "That behaviour already exists." / "Use 32 characters or fewer."
+- Footer: `Button size="touch"` default "Save check-in" (full width on phone). While saving: "Saving…", disabled. On success: close, toast "Check-in saved", `revalidatePath`. On error: inline `Alert` in the footer "Couldn't save. Check your connection and try again."
 - Dismissing with unsaved changes opens a `Dialog`: title "Discard changes?", body "Your check-in for Mon, Sep 28 isn't saved.", buttons "Keep editing" (secondary) and "Discard" (outline, `text-recovery-red-text`).
 
 Phone, 390:
@@ -2513,8 +2513,8 @@ Laptop, 1440:
 | Section (SectionShell `card`, with `id` for deep links) | Content | Copy |
 |---|---|---|
 | "Data source" `#source` | row "Source" with value "Demo data" or "Google Health"; status tag; description; actions | Demo: tag "Demo", body "Demo mode generates 180 days of realistic data so every screen can be explored. Set GOOGLE_OAUTH_ENABLED=true on the server to use your Fitbit data." (no actions). Google not connected: tag "Not connected", body "Connect the Google account your Fitbit Air syncs to. Pulse only reads data.", `Button size="touch"` default "Connect Google" → `/oauth/start`. Connected: tag "Connected", body "Connected as {email}." (if the query exposes it) and buttons "Reconnect" (secondary) and "Disconnect" (outline, red text). Revoked: tag "Reconnect needed", body "Google access was revoked or expired. Sync is paused.", button default "Reconnect Google" |
-| "Sync status" `#sync` | importing: `Progress` + "Importing history: 42 of 180 days"; then rows per data type: label (body role) left; right: relative time (caption, `font-numeric`) + status icon (`Check` optimal, `TriangleAlert` warning for stale > 2 h, `CircleAlert` red with the error code as caption, e.g. "HTTP 429") | types: "Heart rate", "Steps", "Sleep", "Heart rate variability", "Resting heart rate", "Respiratory rate", "Skin temperature", "Blood oxygen", "Exercise", "VO2 max", "Calories", "Weight and body fat". Demo: one row "Demo generator" "Updated 3 min ago" |
-| "Profile" | read-only rows (label stat-label, value body right) | "Birth date" (`d MMM yyyy`), "Age", "Sex", "Max heart rate" ("186 bpm, estimated" or "190 bpm, set"), "Time zone" ("Asia/Kolkata"); caption "Set in the server environment. Change it there and restart." |
+| "Sync status" `#sync` | importing: `Progress` + "Importing history… 42 of 180 days"; then rows per data type: label (body role) left; right: relative time (caption, `font-numeric`) + status icon (`Check` optimal, `TriangleAlert` warning for stale > 2 h, `CircleAlert` red with the error code as caption, e.g. "HTTP 429") | types: "Heart rate", "Steps", "Sleep", "Heart rate variability", "Resting heart rate", "Respiratory rate", "Skin temperature", "Blood oxygen", "Exercise", "VO2 max", "Calories", "Weight and body fat". Demo: one row "Demo generator" "Updated 3 min ago" |
+| "Profile" | read-only rows (label stat-label, value body right) | "Birth date" ("Jan 1, 1990": `Intl.DateTimeFormat`, month short, day, year), "Age", "Sex", "Max heart rate" ("186 bpm, estimated" or "190 bpm, set"), "Time zone" ("Asia/Kolkata"); caption "Set in the server environment. Change it there and restart." |
 | "About" | body text | "Scoring is ported from noop (PolyForm Noncommercial 1.0.0). Google Health ingestion follows Hælan (AGPL-3.0). The interface is modelled on the reference app and another app for personal use. Pulse is not a medical device." Then rows "Version 0.1.0", "Scoring version {n}" |
 
 Disconnect `Dialog`: title "Disconnect Google?", body "Sync stops. Your stored data stays on this server.", buttons "Cancel" (secondary), "Disconnect" (outline, red text). Toast after: "Google disconnected".
@@ -2645,7 +2645,7 @@ flowchart LR
 4. **Bedtime plan.** `/` → "Tonight's sleep" card shows "22:40 Recommended bedtime" (Peak). Switch to "Perform" (client state only). Tap the card's chevron → `/sleep?d=#planner`, which scrolls to the "Tonight's sleep" card listing all three goals.
 5. **Healthspan.** Tab "Health" → `/health` → Healthspan card → `/health/healthspan` (current week). Tap "VO2 max" → contributor ResponsiveSheet (drawer on phone, floating right sheet on laptop) with value, target, years, explanation and trend. Close → focus returns to the row.
 6. **Illness week (seeded).** Choose a day in the illness week (tap the date pill → the calendar panel drops from the top → pick the date) → `/?d=…`: the Health Monitor alert shows above the monitor row, and the Health Monitor card reads "Out of range, 3/5 metrics". Tap "View Health Monitor" → `/health/monitor?d=…`: hero "2/5", illness alert, flagged tiles ringed in warning. Tap "Resting heart rate" → vital sheet with the 30-day line and the shaded normal range.
-7. **Journal.** Tab "Journal" → `/journal`. "Check in" (or the round FloatingAction from any screen) opens the sheet; set Alcohol "Yes", Stretching "No"; "Save" → toast "Check-in saved", card shows "Checked in" with the Alcohol tag, today's strip mark turns optimal. "Insights" → `/journal/insights`: Alcohol is near the top with a negative (orange) bar and "14 days with, 52 without".
+7. **Journal.** Tab "Journal" → `/journal`. "Check in" (or the round FloatingAction from any screen) opens the sheet; set Alcohol "Yes", Stretching "No"; "Save check-in" → toast "Check-in saved", card shows "Checked in" with the Alcohol tag, today's strip mark turns optimal. "Insights" → `/journal/insights`: Alcohol is near the top with a negative (orange) bar and "14 days with, 52 without".
 8. **Weekly report.** `/` → scroll to "Your week in review" → `/reports/2026-W39`. Switch to "Month" → `/reports/2026-09`; ‹ › step periods. Tap "Best day" → `/?d=` that day.
 9. **First real connect** (Google mode, runbook-checked). `/more` → "Settings" → `/settings#source` "Not connected" → "Connect Google" → `/oauth/start` → Google consent → `/oauth/callback` → redirect to `/`. ConnectionBanner shows "Importing history, 0 of 180 days" with a Progress bar; each page load advances it; dials show reasons until enough nights exist; the banner disappears when import completes.
 10. **Token revoked.** Sync returns `auth_revoked` → the sync dot turns red and every screen shows the "Reconnect Google" banner (`role="alert"`). "Reconnect Google" → `/oauth/start` → consent → back on `/`; the next sync succeeds, dot turns green, banner hides.
@@ -2661,8 +2661,8 @@ flowchart LR
 - Focus: shadcn's `focus-visible:ring-3 ring-ring/50` (white at 50%, 4.6 : 1 on cards) on every interactive element; cards and rows that are links show the same ring with `rounded-xl` / `rounded-lg`. Never `outline-none` without it. Sticky bars must not cover focused elements: the main scroller uses `scroll-pt-16` (and `scroll-pb-24` on phone for the tab bar).
 - Landmarks: skip link, one `<main>`, `nav aria-label="Primary"`, `<h1>` = the top-bar title (visually that role) or "Today" on Home (sr-only h1 "Home"), `<h2>` sections, `<h3>` cards inside sections.
 - Live regions: ConnectionBanner (§5.13), Sonner toasts (polite), saving state in the check-in sheet.
-- Reduced motion: §2.7. Zoom is never disabled (no `maximum-scale`). `touch-action: manipulation` on the tab bar and DayStrip.
-- `viewport` export in the root layout (U12): `{ viewportFit: "cover", themeColor: "#262e33" }`; manifest `theme_color` and `background_color` `#0f1113`, `display: "standalone"`.
+- Reduced motion: §2.7. Zoom is never disabled (no `maximum-scale`). `touch-action: manipulation` on every link, button, label and summary (base layer).
+- `viewport` export in the root layout (U12): `{ viewportFit: "cover", themeColor: "#262e33" }`; manifest `theme_color` `#262e33` (the same, so the installed bar never changes colour on load) and `background_color` `#0f1113`, `display: "standalone"`.
 
 **v2 additions to accessibility.**
 
@@ -2847,6 +2847,7 @@ Rows overridden by v2: **D2** (TopBar part only, V3), **B1** (V10), **CAL6** (of
 | SYM9 | §7.14 laptop (U18 ST-01): Settings cards at natural height (`items-start`) | Each row's cards share their top and bottom; About's version rows sit at its foot | Row bottoms differed by 74 and 106 px |
 | SYM10 | §7.12 laptop (U18 JI-01): the sticky hero column holds the intro and toggle; Keep logging to unlock sits alone in a half row under the list | From 1280 px Keep logging to unlock sits in the sticky hero column under the toggle; on phone and tablet it stays after the list (two renders, one hidden per width, so the phone order is unchanged). The title follows the outcome ("HRV impact analysis") | A 500 px empty column under the hero and an orphaned half row. The remaining 178 px is closed by the sticky column, which pins until its bottom meets the list's |
 | SYM11 | §6 copy; guidelines review | Health Monitor reads "N/5 within range" with "Out of range" as the status on Home and on /health/monitor (the illness alert names the signal); Home's monitor caption wraps rather than truncating. From the guidelines review: no `transition-all` left, the behaviour input is 16 px (no iOS zoom), Home's monitor cards are `h2` | Coordinator request (copy mismatch on the illness day, a 1 px truncation at 320 px); docs/design/guidelines-review.md |
+| SYM12 | §6 dates, §2.7, §9; guidelines review (the 41 low findings) | Display dates go through `formatDay` (`Intl.DateTimeFormat` in the one `LOCALE`, en-US), so the full date reads "Jan 1, 1990"; copy uses ’ not ', number and unit pairs are joined by a non-breaking space, loading text ends with "…"; buttons name their action ("Save check-in", "Save dashboard", "Save profile", "Save and continue"; "Add" keeps its short face with the name "Add behaviour"); the detail Back and Close are links to the parent; the Healthspan, vital and behaviour sheets live in `?contributor=`, `?vital=`, `?behaviour=`; every press drops its scale under reduced motion in the base layer; charts show the focus ring on `:focus-visible`; manifest `theme_color` is `#262e33` | docs/design/guidelines-review.md |
 
 
 **More hub rows (H).** Decisions from U21 (2026-10-03). They override §7.14 and the rows they name.
