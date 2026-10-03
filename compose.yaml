@@ -6,6 +6,8 @@ services:
     container_name: pulse
     restart: unless-stopped
     env_file: .env
+    # Uses ~110-180 MB; the limit is headroom for the first Google backfill.
+    mem_limit: 384m
     volumes:
       - pulse-data:/app/data
     ports:

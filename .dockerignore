@@ -13,3 +13,8 @@ e2e/__screens__
 docs/design/reference
 *.tsbuildinfo
 .DS_Store
+.claude
+docs
+e2e
+playwright.config.ts
+.github
