@@ -1,5 +1,6 @@
 // The More hub's view models (U21): Trends, the reports archive, Behaviours, More itself and Your data.
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { EXTRA_KEYS } from "@/lib/extraMetrics";
 import { type Db, openDb } from "../db";
 import { addTag, reorderTags, setTagHidden } from "../journalTags";
 import { cleanup, ctxFor, seeded } from "../testing";
@@ -7,7 +8,7 @@ import { addDays } from "../time";
 import { getBehaviours, getJournal, getJournalInsights } from "./journal";
 import { getReportArchive } from "./reports";
 import { getMore, getYourData } from "./settings";
-import { getTrends, parseTrendMetric, TREND_METRICS } from "./trends";
+import { getTrends, parseTrendMetric, TREND_GROUPS, TREND_METRICS } from "./trends";
 import { todayOf } from "./common";
 
 let db: Db;
@@ -38,13 +39,20 @@ describe("getTrends", () => {
 
   it("leaves today a gap for metrics that accrue through the day", () => {
     const ctx = ctxFor(db);
-    for (const key of ["strain", "steps", "stress"] as const) expect(getTrends(key, ctx).points.value!.at(-1)!.value).toBeNull();
+    for (const key of ["strain", "steps", "stress", "distance", "azm"] as const) expect(getTrends(key, ctx).points.value!.at(-1)!.value).toBeNull();
+    expect(getTrends("avg_hr", ctx).points.value!.at(-1)!.value).not.toBeNull();
     expect(getTrends("hrv", ctx).points.value!.some((p) => p.value !== null)).toBe(true);
   });
 
-  it("every metric yields finite values on the demo, and unknown keys fall back to Recovery", () => {
+  it("every seeded metric yields finite values on the demo, the unseeded logs are no_data, and unknown keys fall back to Recovery", () => {
     const ctx = ctxFor(db);
-    for (const m of TREND_METRICS) expect(getTrends(m.key, ctx).points.value!.some((p) => p.value !== null), m.key).toBe(true);
+    const unseeded = ["water", "calories_in", "protein", "carbs", "fat", "glucose", "core_temp", "swim_strokes"];
+    for (const m of TREND_METRICS) {
+      const points = getTrends(m.key, ctx).points;
+      if (unseeded.includes(m.key)) expect(points, m.key).toMatchObject({ value: null, reason: "no_data" });
+      else expect(points.value!.some((p) => p.value !== null), m.key).toBe(true);
+    }
+    expect(parseTrendMetric("distance").key).toBe("distance");
     expect(parseTrendMetric("nope").key).toBe("recovery");
     expect(parseTrendMetric(["hrv"]).key).toBe("hrv");
   });
@@ -59,6 +67,25 @@ describe("getTrends", () => {
       .run(todayOf(ctx), JSON.stringify({ value: null, reason: "calibrating", nightsLeft: 4, provisional: false, stale: [], terms: [], updated: false }));
     expect(getTrends("recovery", ctx).points).toEqual({ value: null, reason: "calibrating", provisional: false, nightsLeft: 4 });
     expect(getTrends("hrv", ctx).points).toMatchObject({ value: null, reason: "no_data" });
+  });
+});
+
+describe("TREND_METRICS", () => {
+  it("adds every extra from the catalogue plus weight and body fat, each in a picker section, with unique export columns", () => {
+    const keys = TREND_METRICS.map((m) => m.key);
+    expect(keys).toEqual(expect.arrayContaining([...EXTRA_KEYS, "weight", "body_fat"]));
+    expect(new Set(keys).size).toBe(keys.length);
+    expect(new Set(TREND_METRICS.map((m) => m.column)).size).toBe(keys.length);
+    expect(TREND_METRICS.every((m) => TREND_GROUPS.includes(m.group))).toBe(true);
+    const col = (k: string) => TREND_METRICS.find((m) => m.key === k)!.column;
+    expect([col("distance"), col("azm"), col("active_minutes"), col("glucose"), col("core_temp"), col("weight")]).toEqual([
+      "distance_km",
+      "azm_minutes",
+      "active_minutes",
+      "glucose_mg_dl",
+      "core_temp_c",
+      "weight_kg",
+    ]);
   });
 });
 

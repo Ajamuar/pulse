@@ -1,17 +1,36 @@
 // Trends `/trends?metric=&r=` (More): one daily metric over up to a year, with each range's average against
 // the range before it. The same metric table feeds the daily-scores export (src/app/export/daily).
 import type { GoodDirection } from "@/lib/bands";
+import { EXTRA_METRICS, type ExtraKey } from "@/lib/extraMetrics";
 import type { FormatKey } from "@/lib/format";
 import { RANGE_DAYS, RANGES, type TrendRange } from "@/lib/url";
 import { addDays } from "../time";
 import { type DayRow, defaultCtx, finite, loadDays, none, ok, type QueryCtx, todayOf, toStrain } from "./common";
 import type { DayPoint, Metric } from "./types";
 
-export type TrendMetricKey = "recovery" | "strain" | "sleep" | "hours" | "consistency" | "hrv" | "rhr" | "resp" | "stress" | "steps";
+export type TrendMetricKey =
+  | "recovery"
+  | "strain"
+  | "sleep"
+  | "hours"
+  | "consistency"
+  | "hrv"
+  | "rhr"
+  | "resp"
+  | "stress"
+  | "steps"
+  | "weight"
+  | "body_fat"
+  | ExtraKey;
+
+/** The Trends picker's sections, in order. */
+export const TREND_GROUPS = ["Recovery & sleep", "Activity", "Body", "Nutrition", "Vitals"] as const;
+export type TrendGroup = (typeof TREND_GROUPS)[number];
 
 export type TrendMetric = {
   key: TrendMetricKey;
   label: string;
+  group: TrendGroup;
   unit?: string;
   format: FormatKey;
   colorBy: "band" | "strain" | "sleep" | "single" | "stress";
@@ -26,17 +45,62 @@ export type TrendMetric = {
   partialToday?: boolean;
 };
 
+/** Where each extra sits in the picker; typed by key, so a new extra metric must pick a section. */
+const EXTRA_GROUP: Record<ExtraKey, TrendGroup> = {
+  distance: "Activity",
+  floors: "Activity",
+  elevation: "Activity",
+  active_minutes: "Activity",
+  light_minutes: "Activity",
+  azm: "Activity",
+  active_calories: "Activity",
+  sedentary_minutes: "Activity",
+  swim_strokes: "Activity",
+  avg_hr: "Vitals",
+  water: "Nutrition",
+  calories_in: "Nutrition",
+  protein: "Nutrition",
+  carbs: "Nutrition",
+  fat: "Nutrition",
+  glucose: "Vitals",
+  core_temp: "Vitals",
+};
+
+/** Export column: the key plus its unit ("distance_km", "glucose_mg_dl"); h:mm metrics export minutes. */
+const columnOf = (key: string, unit: string | undefined, format: FormatKey) =>
+  unit ? `${key}_${unit.replace("°", "").replace("/", "_").toLowerCase()}` : format === "duration" && !key.endsWith("_minutes") ? `${key}_minutes` : key;
+
+const CORE: readonly TrendMetric[] = [
+  { key: "recovery", group: "Recovery & sleep", label: "Recovery", unit: "%", format: "int", colorBy: "band", direction: "up", href: "/recovery", column: "recovery_pct", pick: (r) => r.recovery?.value, provisional: (r) => !!r.recovery?.provisional },
+  { key: "strain", group: "Activity", label: "Strain", format: "decimal1", colorBy: "strain", direction: "neutral", href: "/strain", column: "strain", pick: (r) => (finite(r.s1?.effort) ? toStrain(r.s1.effort) : null), partialToday: true },
+  { key: "sleep", group: "Recovery & sleep", label: "Sleep performance", unit: "%", format: "int", colorBy: "sleep", direction: "up", href: "/sleep", column: "sleep_performance_pct", pick: (r) => r.sleep?.performance },
+  { key: "hours", group: "Recovery & sleep", label: "Hours of sleep", format: "duration", colorBy: "sleep", direction: "up", href: "/sleep", column: "sleep_minutes", pick: (r) => r.sleep?.main?.asleepMin },
+  { key: "consistency", group: "Recovery & sleep", label: "Sleep consistency", unit: "%", format: "int", colorBy: "sleep", direction: "up", href: "/sleep", column: "sleep_consistency_pct", pick: (r) => r.sleep?.consistency },
+  { key: "hrv", group: "Vitals", label: "Heart rate variability", unit: "ms", format: "int", colorBy: "single", direction: "up", href: "/recovery", column: "hrv_ms", pick: (r) => r.metrics?.hrvMs },
+  { key: "rhr", group: "Vitals", label: "Resting heart rate", unit: "bpm", format: "int", colorBy: "single", direction: "down", href: "/recovery", column: "resting_hr_bpm", pick: (r) => r.metrics?.rhrBpm },
+  { key: "resp", group: "Vitals", label: "Respiratory rate", unit: "rpm", format: "decimal1", colorBy: "single", direction: "neutral", href: "/health/monitor", column: "respiratory_rate_rpm", pick: (r) => r.metrics?.respBpm },
+  { key: "stress", group: "Recovery & sleep", label: "Stress", format: "decimal1", colorBy: "stress", direction: "down", href: "/health/stress", column: "stress_avg", pick: (r) => r.stress?.average, provisional: (r) => !!r.stress?.provisional, partialToday: true },
+  { key: "steps", group: "Activity", label: "Steps", format: "grouped", colorBy: "single", direction: "up", href: "/strain", column: "steps", pick: (r) => r.metrics?.steps, partialToday: true },
+  { key: "weight", group: "Body", label: "Weight", unit: "kg", format: "decimal1", colorBy: "single", direction: "neutral", href: "/health/healthspan", column: "weight_kg", pick: (r) => r.metrics?.weightKg },
+  { key: "body_fat", group: "Body", label: "Body fat", unit: "%", format: "decimal1", colorBy: "single", direction: "down", href: "/health/healthspan", column: "body_fat_pct", pick: (r) => r.metrics?.bodyFatPct },
+];
+
+/** Every metric: Pulse's own first, then Google's extras from their catalogue, each in a picker section. */
 export const TREND_METRICS: readonly TrendMetric[] = [
-  { key: "recovery", label: "Recovery", unit: "%", format: "int", colorBy: "band", direction: "up", href: "/recovery", column: "recovery_pct", pick: (r) => r.recovery?.value, provisional: (r) => !!r.recovery?.provisional },
-  { key: "strain", label: "Strain", format: "decimal1", colorBy: "strain", direction: "neutral", href: "/strain", column: "strain", pick: (r) => (finite(r.s1?.effort) ? toStrain(r.s1.effort) : null), partialToday: true },
-  { key: "sleep", label: "Sleep performance", unit: "%", format: "int", colorBy: "sleep", direction: "up", href: "/sleep", column: "sleep_performance_pct", pick: (r) => r.sleep?.performance },
-  { key: "hours", label: "Hours of sleep", format: "duration", colorBy: "sleep", direction: "up", href: "/sleep", column: "sleep_minutes", pick: (r) => r.sleep?.main?.asleepMin },
-  { key: "consistency", label: "Sleep consistency", unit: "%", format: "int", colorBy: "sleep", direction: "up", href: "/sleep", column: "sleep_consistency_pct", pick: (r) => r.sleep?.consistency },
-  { key: "hrv", label: "Heart rate variability", unit: "ms", format: "int", colorBy: "single", direction: "up", href: "/recovery", column: "hrv_ms", pick: (r) => r.metrics?.hrvMs },
-  { key: "rhr", label: "Resting heart rate", unit: "bpm", format: "int", colorBy: "single", direction: "down", href: "/recovery", column: "resting_hr_bpm", pick: (r) => r.metrics?.rhrBpm },
-  { key: "resp", label: "Respiratory rate", unit: "rpm", format: "decimal1", colorBy: "single", direction: "neutral", href: "/health/monitor", column: "respiratory_rate_rpm", pick: (r) => r.metrics?.respBpm },
-  { key: "stress", label: "Stress", format: "decimal1", colorBy: "stress", direction: "down", href: "/health/stress", column: "stress_avg", pick: (r) => r.stress?.average, provisional: (r) => !!r.stress?.provisional, partialToday: true },
-  { key: "steps", label: "Steps", format: "grouped", colorBy: "single", direction: "up", href: "/strain", column: "steps", pick: (r) => r.metrics?.steps, partialToday: true },
+  ...CORE,
+  ...EXTRA_METRICS.map((m): TrendMetric => ({
+    key: m.key,
+    group: EXTRA_GROUP[m.key],
+    label: m.label,
+    ...("unit" in m && { unit: m.unit }),
+    format: m.format,
+    colorBy: "single",
+    direction: m.direction,
+    href: m.href,
+    column: columnOf(m.key, "unit" in m ? m.unit : undefined, m.format),
+    pick: (r) => r.extra[m.key],
+    ...("partialToday" in m && { partialToday: m.partialToday }),
+  })),
 ];
 
 export const parseTrendMetric = (raw: string | string[] | undefined): TrendMetric => {
