@@ -164,6 +164,7 @@ function MonthPanel({
                     context={context}
                     value={data?.get(day)?.[context] ?? null}
                     selected={day === selected}
+                    today={day === today}
                     disabled={dayDisabled(day, today, firstDay)}
                     tabStop={day === tabStop}
                     onSelect={onSelect}
@@ -177,7 +178,21 @@ function MonthPanel({
         </div>
       </div>
 
-      <Legend context={context} />
+      <div className="mt-2 flex min-h-11 items-center gap-3 px-3">
+        {/* Back to today from a past day or another month (spec §11 UX1). Bottom left: the thumb's side of a panel
+            that drops from the top. */}
+        {(selected !== today || month !== monthOf(today)) && (
+          <button
+            type="button"
+            aria-label="Back to today"
+            onClick={() => onSelect(today)}
+            className="relative -ml-1 h-8 touch-manipulation rounded-full bg-white/[0.08] px-3.5 text-[11px] leading-4 font-bold tracking-[0.1em] uppercase transition-[background-color,scale] duration-150 ease-standard outline-none after:absolute after:inset-x-0 after:-inset-y-1.5 hover:bg-white/[0.12] focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96]"
+          >
+            Today
+          </button>
+        )}
+        <Legend context={context} />
+      </div>
     </div>
   )
 }
@@ -208,6 +223,7 @@ function Day({
   context,
   value,
   selected,
+  today,
   disabled,
   tabStop,
   onSelect,
@@ -216,19 +232,21 @@ function Day({
   context: CalendarContext
   value: number | null
   selected: boolean
+  /** Today off the selected day gets a dashed ring, so a past day's month still shows where today is (spec §11 UX1). */
+  today: boolean
   disabled: boolean
   tabStop: boolean
   onSelect: (day: string) => void
 }) {
   const tone = disabled ? { text: NO_SCORE, dot: null } : dayTone(context, value)
-    return (
+  return (
     <span role="gridcell" aria-selected={selected} className="grid">
       <button
         type="button"
         data-day={day}
         tabIndex={tabStop ? 0 : -1}
         disabled={disabled}
-        aria-label={`${formatDay(day, DAY.long)}${value !== null && !disabled ? `, ${VALUE_TEXT[context](value)}` : ""}`}
+        aria-label={`${today ? "Today, " : ""}${formatDay(day, DAY.long)}${value !== null && !disabled ? `, ${VALUE_TEXT[context](value)}` : ""}`}
         onClick={() => onSelect(day)}
         className="group grid h-12 w-full touch-manipulation place-items-center outline-none [-webkit-tap-highlight-color:transparent]"
       >
@@ -237,6 +255,7 @@ function Day({
             "relative grid size-8 place-items-center rounded-full font-numeric text-[17px] leading-none font-bold tabular-nums transition-[background-color,scale] duration-150 ease-standard",
             "group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-ring group-active:scale-[0.96]",
             selected ? "bg-dial-track ring-2 ring-background" : "group-enabled:group-hover:bg-foreground/5",
+            today && !selected && "border border-dashed border-foreground/45",
             tone.text
           )}
         >
@@ -260,7 +279,7 @@ const LEGEND: Record<CalendarContext, { label: string; color: keyof typeof DATA_
 
 function Legend({ context }: { context: CalendarContext }) {
   return (
-    <ul className="mt-2 flex justify-end gap-3 px-3 text-xs leading-4 font-semibold tabular-nums">
+    <ul className="ml-auto flex gap-3 text-xs leading-4 font-semibold tabular-nums">
       {LEGEND[context].map(({ label, color }) => (
         <li key={label} className={cn("inline-flex items-center gap-1.5", DATA_COLORS[color].text)}>
           <span aria-hidden className={cn("size-1 rounded-full", DATA_COLORS[color].bg)} />
