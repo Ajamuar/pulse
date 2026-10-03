@@ -13,6 +13,20 @@ const nextConfig: NextConfig = {
   },
   // Lets another device on the LAN load the dev server (next dev only): DEV_ORIGINS=192.168.1.10,my-mac.local
   allowedDevOrigins: process.env.DEV_ORIGINS?.split(",").map((s) => s.trim()).filter(Boolean),
+  // No framing (clickjacking on the sign-in form), no MIME sniffing, and no full URLs in Referer to other sites.
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+        ],
+      },
+    ];
+  },
   // A second `next dev` (the e2e server) needs its own build dir: Next locks one dev server per dir.
   distDir: process.env.NEXT_DIST_DIR || ".next",
 };

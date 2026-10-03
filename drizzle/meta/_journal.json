@@ -71,6 +71,13 @@
       "when": 1791039257582,
       "tag": "0009_owner_name",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1791047521318,
+      "tag": "0010_password_account",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,7 @@
 import { Suspense } from "react"
 import { connection } from "next/server"
+import { redirect } from "next/navigation"
+import { currentSession } from "@/server/auth"
 import { AppShell } from "@/components/shells/AppShell"
 import { CheckInSheet } from "./journal/CheckIn"
 import { avatarSrc } from "@/server/avatar"
@@ -14,6 +16,8 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   // Request time only: the status, "today" and the config must never be frozen into a prerender
   // (and getConfig() throws at build time without an .env).
   await connection()
+  // The proxy is the main gate; this backs it up for any path its matcher leaves out.
+  if (!(await currentSession())) redirect("/login")
   // Fire and forget: the worker throttles itself; the page renders from what is already stored.
   requestSync()
   return (

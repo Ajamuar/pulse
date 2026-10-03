@@ -1,8 +1,9 @@
 // Sign-in session (U20): an HS256 JWT in an httpOnly cookie, signed with a per-instance secret
 // generated on first use and kept in the database. One user per instance, so the payload is just
-// who signed in: the Google owner, or a visitor of a demo instance.
+// who signed in: the Pulse account (src/server/account.ts), or a visitor of a demo instance.
 import { randomBytes } from "node:crypto";
 import { jwtVerify, SignJWT } from "jose";
+import { accountOf } from "./account";
 import type { Db } from "./db";
 import { instance } from "./db/schema";
 
@@ -31,15 +32,11 @@ export async function signSession(db: Db, s: Session, now = Date.now()): Promise
 }
 
 /**
- * The session in a cookie value, or null for missing, forged, expired or stale ones. A session is stale
- * when the instance has changed hands since: an owner session must still name the owner, and a demo
- * session only counts on a demo instance.
+ * The session in a cookie value, or null for missing, forged, expired or stale ones. An owner session must still
+ * name the Pulse account (a password change or reset rotates the secret, so older cookies fail the signature),
+ * and a demo session only counts on a demo instance.
  */
-export async function verifySession(
-  db: Db,
-  token: string | undefined,
-  o: { googleEnabled: boolean; ownerEmail: string | null; now?: number },
-): Promise<Session | null> {
+export async function verifySession(db: Db, token: string | undefined, o: { googleEnabled: boolean; now?: number }): Promise<Session | null> {
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, key(db), {
@@ -47,7 +44,7 @@ export async function verifySession(
       currentDate: o.now === undefined ? undefined : new Date(o.now),
     });
     if (payload.sub === "demo") return o.googleEnabled ? null : { kind: "demo" };
-    if (payload.sub === "owner" && typeof payload.email === "string" && o.googleEnabled && payload.email === owner(db, o.ownerEmail)) {
+    if (payload.sub === "owner" && typeof payload.email === "string" && o.googleEnabled && payload.email === accountOf(db)?.email) {
       return { kind: "owner", email: payload.email };
     }
   } catch {
@@ -56,22 +53,25 @@ export async function verifySession(
   return null;
 }
 
-/** OWNER_EMAIL when set, else the account that claimed the instance, else null. */
-export function owner(db: Db, ownerEmail: string | null): string | null {
-  return ownerEmail ?? instanceRow(db).ownerEmail;
-}
-
 /**
- * Whether `email` may sign in. With no OWNER_EMAIL, the first verified account claims the instance
- * (stored, so it holds across restarts); every later account is refused.
+ * CSRF guard for form posts and fetches to route handlers, the check Next.js runs for Server Actions: the browser's
+ * `Origin` must name the host the request came in on (`x-forwarded-host` behind a proxy or tunnel). Without an
+ * Origin, `Sec-Fetch-Site` must not say cross-site. A request with neither isn't from a browser page, so it can't
+ * ride a visitor's cookies.
  */
-export function claimOrCheckOwner(db: Db, email: string, ownerEmail: string | null): boolean {
-  const e = email.toLowerCase();
-  if (ownerEmail) return e === ownerEmail;
-  instanceRow(db);
-  // Conditional update: two first sign-ins racing can't both claim.
-  db.$client.prepare("update instance set owner_email = ? where id = 1 and owner_email is null").run(e);
-  return instanceRow(db).ownerEmail === e;
+export function sameOrigin(req: Request): boolean {
+  const host = (req.headers.get("x-forwarded-host") ?? req.headers.get("host"))?.split(",")[0].trim();
+  const origin = req.headers.get("origin");
+  if (origin && origin !== "null") {
+    try {
+      return !!host && new URL(origin).host === host;
+    } catch {
+      return false;
+    }
+  }
+  if (origin === "null") return false;
+  const site = req.headers.get("sec-fetch-site");
+  return site === null || site === "same-origin" || site === "none";
 }
 
 /** True over https, including behind a TLS-terminating proxy or tunnel. */

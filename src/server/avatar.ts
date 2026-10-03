@@ -20,6 +20,31 @@ export function setOwnerName(db: Db, name: string | null) {
   if (name) db.update(instance).set({ ownerName: name }).run();
 }
 
+/** The connected Google account's email, from the last Connect Google; Settings shows it. */
+export const connectedGoogleEmail = (db: Db): string | null => db.select({ e: instance.googleEmail }).from(instance).get()?.e ?? null;
+
+export function setGoogleEmail(db: Db, email: string) {
+  db.update(instance).set({ googleEmail: email }).run();
+}
+
+/** Synced and derived tables: everything a Google account brought in, and what was computed from it. */
+const SYNCED = [
+  "sync_state", "raw_payloads", "hr_samples", "steps_minutes", "daily_metrics", "sleep_segments", "sleep_sessions",
+  "exercises", "daily_values", "health_records", "intraday_dirty", "daily_scores", "intraday_series", "reports",
+] as const;
+
+/**
+ * Clears what the previous Google account synced, so a switch starts a fresh import and two people's data never
+ * mix. Journal entries, the profile, the dashboard and an uploaded avatar stay. ponytail: a sync already mid-run
+ * can still land a few of the old account's rows; the forced re-sync right after keeps that to the run in flight.
+ */
+export function forgetSyncedData(db: Db) {
+  db.$client.transaction(() => {
+    for (const t of SYNCED) db.$client.prepare(`DELETE FROM ${t}`).run();
+    db.update(instance).set({ ownerPicture: null, ownerName: null }).run();
+  })();
+}
+
 export const ownerName = (db: Db): string | null => db.select({ name: instance.ownerName }).from(instance).get()?.name ?? null;
 
 export function avatarSrc(db: Db): string | null {

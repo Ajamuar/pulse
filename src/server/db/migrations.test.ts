@@ -61,6 +61,8 @@ const MIGRATION_FIXTURES: string[] = [
     temp_sd_c = 0.18, rhr_range_low = 50, rhr_range_high = 58, hrv_range_low = 38.5, hrv_range_high = 66 where day = '2026-01-01';`,
   /* 0009_owner_name */ `
   update instance set owner_name = 'Test Owner';`,
+  /* 0010_password_account */ `
+  update instance set password_hash = 'scrypt$16384$8$5$c2FsdA$a2V5', google_email = 'fit@gmail.com';`,
 ];
 
 type Conn = Database.Database;

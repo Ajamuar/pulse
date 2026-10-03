@@ -1,6 +1,6 @@
 import { connection } from "next/server"
 import { currentSession } from "@/server/auth"
-import { avatarSrc, ownerName } from "@/server/avatar"
+import { avatarSrc, connectedGoogleEmail, ownerName } from "@/server/avatar"
 import { getDb } from "@/server/db"
 import { getSettings } from "@/server/queries/settings"
 import { DetailShell } from "@/components/shells/DetailShell"
@@ -33,6 +33,7 @@ export default async function SettingsPage() {
               name: session?.kind === "owner" ? ownerName(getDb()) : null,
               avatar,
               customPhoto: avatar?.startsWith("/avatar?") ?? false,
+              googleEmail: session?.kind === "owner" ? connectedGoogleEmail(getDb()) : null,
             }}
           />
         </>

@@ -7,9 +7,9 @@ you can open from your phone.
 ```mermaid
 flowchart TB
   demo[1. Demo on your laptop<br/>no Google account] --> google[2. Google Cloud project<br/>Health API, consent screen, OAuth client]
-  google --> local[3. Real data on localhost<br/>Sign in with Google, onboarding]
+  google --> local[3. Real data on localhost<br/>Create account, onboarding, Connect Google]
   local --> server[4. Docker on a server<br/>data in a volume]
-  server --> https[5. HTTPS hostname<br/>tunnel or reverse proxy, OWNER_EMAIL]
+  server --> https[5. HTTPS hostname<br/>tunnel or reverse proxy]
   https --> phone[Open it on your phone<br/>Install app]
 ```
 
@@ -62,13 +62,15 @@ In `.env`:
 GOOGLE_OAUTH_ENABLED=true
 GOOGLE_CLIENT_ID=...apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=...
-OWNER_EMAIL=you@gmail.com     # the Google account your Fitbit Air uses
 TZ=Asia/Kolkata               # your IANA time zone
 ```
 
-Restart `pnpm dev`, open <http://localhost:3000> and **Sign in with Google**. Allow every permission. Onboarding
-asks for your birth date and sex (Google doesn't share them); then the import of the last 180 days starts,
-and Settings shows its progress. Real data lives in `data/pulse.db`, apart from the demo.
+Restart `pnpm dev` and open <http://localhost:3000>. The first visit is **Create your account**: an email, a
+password and the one-time setup code the server printed in its terminal (`[auth] setup code: ABCD-EFGH`).
+Onboarding asks for your birth date and sex (Google doesn't share them). Then **Connect Google** on Home or in
+Settings, pick the account your Fitbit Air uses and allow every permission; the import of the last 180 days
+starts, and Settings shows its progress. To use another Google account later, Settings › Data source ›
+**Switch Google account** (data synced from the old account is removed; the journal stays). Real data lives in `data/pulse.db`, apart from the demo.
 
 ## 4. Run it with Docker
 
@@ -103,8 +105,8 @@ Pick one:
 Then:
 
 1. Add `https://<your-host>/oauth/callback` to the OAuth client (step 2.5).
-2. Set `OWNER_EMAIL` **before** the hostname is reachable. Without it, the first Google account to sign in
-   claims the instance.
+2. Create the account right after the first start. Creating it needs the one-time setup code from the server log
+   (`docker logs pulse`), so a stranger who finds the hostname first can't claim the instance.
 3. If the proxy rewrites the host, set `APP_URL=https://<your-host>` so the OAuth redirect uses it.
 4. Open the hostname on your phone, sign in, and use the browser's **Install app**.
 
@@ -118,7 +120,6 @@ with a list of what's wrong.
 | `GOOGLE_OAUTH_ENABLED` | no (false) | `false`: demo data; `true`: your Google Health data |
 | `TZ` | yes | Your IANA time zone; days are cut at your local midnight |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | with Google | The OAuth client from step 2 |
-| `OWNER_EMAIL` | strongly recommended | The only Google account allowed in |
 | `APP_URL` | no | Pins the OAuth redirect host behind a proxy |
 | `DATABASE_PATH` | no | Defaults to `data/demo.db` or `data/pulse.db` |
 | `AVATAR_URL` | no | A default avatar photo; your Google photo or an upload wins |
@@ -157,8 +158,8 @@ ls -1t "$dir"/pulse-*.db | tail -n +15 | xargs -r rm -f
 | Symptom | Fix |
 |---|---|
 | Google says `redirect_uri_mismatch` | The address you opened Pulse on has no matching redirect URI in the OAuth client. |
-| "This Pulse belongs to someone else" | You signed in with an account other than `OWNER_EMAIL` or the first one that claimed the instance. |
-| "No Google Health profile" | That Google account has no Fitbit data; sign in with the one in your Google Health app. |
+| Forgot the password | Open **Forgot password?** on the sign-in screen and enter the setup code from `docker logs pulse`. Every other device is signed out. |
+| "No Google Health profile" | That Google account has no Fitbit data. Settings › Data source › **Switch Google account** and pick the one in your Google Health app. |
 | Grant stops working after a week | The consent screen is still in Testing; set it to In production and sign in again. |
 | Server exits at boot with `Invalid configuration` | The message lists each bad variable. |
 

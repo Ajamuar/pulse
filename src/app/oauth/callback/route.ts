@@ -1,16 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { requestSession } from "@/server/auth";
 import { getConfig } from "@/server/config";
 import { getDb } from "@/server/db";
-import { setOwnerName, setOwnerPicture } from "@/server/avatar";
-import { claimOrCheckOwner, cookieOptions, isHttps, SESSION_COOKIE, signSession, verifySession } from "@/server/session";
+import { connectedGoogleEmail, forgetSyncedData, setGoogleEmail, setOwnerName, setOwnerPicture } from "@/server/avatar";
 import { appOrigin, consumeState, exchangeCode, GoogleError, redirectUri } from "@/server/sources/google/oauth";
 import { requestSync } from "@/server/worker";
 
 /**
- * Google's redirect back. A missing, unknown, reused or expired `state` is a 400 and touches nothing.
- * Signing in lands on Home (the proxy routes on to onboarding) with a session cookie, or back on
- * /login?error=<code>. An owner already signed in was reconnecting from Settings: back there with
- * `?oauth=connected` or `?oauth=<code>`.
+ * Google's redirect back after Connect Google. A missing, unknown, reused or expired `state` is a 400 and touches
+ * nothing; without a Pulse session it goes to /login. Lands on Settings with `?oauth=connected` or `?oauth=<code>`.
  */
 export async function GET(request: NextRequest) {
   const { google } = getConfig();
@@ -21,26 +19,20 @@ export async function GET(request: NextRequest) {
 
   const db = getDb();
   const origin = appOrigin(request, google.appUrl);
-  const signedIn = await verifySession(db, request.cookies.get(SESSION_COOKIE)?.value, { googleEnabled: true, ownerEmail: google.ownerEmail });
-  const back = (result: string) =>
-    NextResponse.redirect(signedIn ? `${origin}/settings?oauth=${encodeURIComponent(result)}` : `${origin}/login?error=${encodeURIComponent(result)}`, 302);
+  if (!(await requestSession(request))) return NextResponse.redirect(`${origin}/login`, 302);
+  const back = (result: string) => NextResponse.redirect(`${origin}/settings?oauth=${encodeURIComponent(result)}`, 302);
   const code = params.get("code");
   if (!code) return back("access_denied");
   try {
-    const { email, picture, name } = await exchangeCode(db, {
-      google,
-      redirectUri: redirectUri(origin),
-      code,
-      allow: (e) => claimOrCheckOwner(db, e, google.ownerEmail),
-    });
-    // Start the import now, not at the next timer tick: runs before the grant finished at once and armed the
-    // 5-minute gate. Fire-and-forget, so the redirect doesn't wait on the sync.
-    requestSync({ force: true });
+    const { email, picture, name } = await exchangeCode(db, { google, redirectUri: redirectUri(origin), code });
+    // Another Google account than the last one (or the first one recorded): what the old one synced is cleared.
+    if (connectedGoogleEmail(db) !== email) forgetSyncedData(db);
+    setGoogleEmail(db, email);
     setOwnerPicture(db, picture);
     setOwnerName(db, name);
-    const res = NextResponse.redirect(signedIn ? `${origin}/settings?oauth=connected` : `${origin}/`, 302);
-    res.cookies.set(SESSION_COOKIE, await signSession(db, { kind: "owner", email }), cookieOptions(isHttps(request)));
-    return res;
+    // Start the import now, not at the next timer tick. Fire-and-forget, so the redirect doesn't wait on the sync.
+    requestSync({ force: true });
+    return back("connected");
   } catch (err) {
     // GoogleError messages hold a status and code only; anything else is logged by name alone.
     console.error(`[oauth] callback failed: ${err instanceof GoogleError ? err.message : (err as Error)?.name}`);

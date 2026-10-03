@@ -244,14 +244,18 @@ export const reports = sqliteTable("reports", {
   data: json("data").notNull(),
 });
 
-/** Single row (id = 1): the session-signing secret, generated on first use, and the claimed owner. */
+/** Single row (id = 1): the session-signing secret, generated on first use, the Pulse account and the connected Google account. */
 export const instance = sqliteTable(
   "instance",
   {
     id: integer("id").primaryKey(),
     sessionSecret: text("session_secret").notNull(),
-    /** Lowercased Google email of the first account to sign in; null until claimed. OWNER_EMAIL overrides it. */
+    /** The Pulse account's lowercased email (sign-in), set on /setup; null until the account exists. */
     ownerEmail: text("owner_email"),
+    /** `scrypt$salt$key` (src/server/account.ts); null until the account exists. */
+    passwordHash: text("password_hash"),
+    /** The Google account the data comes from, from the ID token at each connect; switching it clears synced data. */
+    googleEmail: text("google_email"),
     /** The owner's Google profile photo URL, from the ID token at each sign-in. */
     ownerPicture: text("owner_picture"),
     /** The owner's Google display name (ID token `name`), shown above the email. */

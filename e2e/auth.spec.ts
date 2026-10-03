@@ -27,8 +27,7 @@ test("signed out: every screen goes to sign-in; the demo signs in and Sign out s
   await expect(page).toHaveURL(/\/login$/);
 });
 
-test("a failed Google sign-in explains itself", async ({ page }) => {
-  await page.goto("/login?error=access_denied");
-  // Next's route announcer is an alert too; pick ours by its text.
-  await expect(page.getByRole("alert").filter({ hasText: "Google sign-in was cancelled" })).toBeVisible();
+test("a demo instance has no account to set up: /setup goes to sign-in", async ({ page }) => {
+  await page.goto("/setup");
+  await expect(page).toHaveURL(/\/login$/);
 });

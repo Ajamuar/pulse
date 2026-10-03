@@ -21,7 +21,7 @@ const ROOT = process.cwd();
 const PUBLIC = [/^\/healthz$/, /^\/oauth\//, /^\/login(\/|$)/, /^\/logout$/];
 
 const demoCfg = parseConfig({ TZ: "UTC" });
-const googleCfg = parseConfig({ TZ: "UTC", GOOGLE_OAUTH_ENABLED: "true", GOOGLE_CLIENT_ID: "cid", GOOGLE_CLIENT_SECRET: "cs", OWNER_EMAIL: "me@example.com" });
+const googleCfg = parseConfig({ TZ: "UTC", GOOGLE_OAUTH_ENABLED: "true", GOOGLE_CLIENT_ID: "cid", GOOGLE_CLIENT_SECRET: "cs" });
 
 const files = (pattern: string) => fs.globSync(pattern, { cwd: ROOT }).filter((f) => !/\.test\.tsx?$/.test(f)).sort();
 const actionFiles = files("src/**/*.{ts,tsx}").filter((f) => /^\s*["']use server["']/.test(fs.readFileSync(path.join(ROOT, f), "utf8")));
@@ -148,6 +148,6 @@ describe("the public routes", () => {
     expect(res.status).toBe(303);
     expect(res.headers.get("location")).toBe("/");
     const token = res.headers.get("set-cookie")!.match(new RegExp(`^${SESSION_COOKIE}=([^;]+)`))![1];
-    expect(await verifySession(db, token, { googleEnabled: false, ownerEmail: null })).toEqual({ kind: "demo" });
+    expect(await verifySession(db, token, { googleEnabled: false })).toEqual({ kind: "demo" });
   });
 });

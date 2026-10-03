@@ -22,7 +22,7 @@ vi.mock("@/server/config", async (orig) => ({ ...(await orig<object>()), getConf
 vi.mock("@/server/db", async (orig) => ({ ...(await orig<object>()), getDb: () => h.db as Db }));
 
 const demoCfg = parseConfig({ TZ: "Asia/Kolkata" });
-const ownerCfg = parseConfig({ TZ: "Asia/Kolkata", GOOGLE_OAUTH_ENABLED: "true", GOOGLE_CLIENT_ID: "cid", GOOGLE_CLIENT_SECRET: "csecret", OWNER_EMAIL: "me@example.com" });
+const ownerCfg = parseConfig({ TZ: "Asia/Kolkata", GOOGLE_OAUTH_ENABLED: "true", GOOGLE_CLIENT_ID: "cid", GOOGLE_CLIENT_SECRET: "csecret" });
 const SECRETS = ["at-SECRET-access", "rt-SECRET-refresh"];
 
 let db: Db;
@@ -37,7 +37,7 @@ const noSecrets = (text: string) => {
 beforeAll(() => {
   db = h.db = seeded();
   db.insert(oauthTokens).values({ id: 1, accessToken: SECRETS[0], refreshToken: SECRETS[1], expiresAt: 1, scope: "s", updatedAt: 1 }).run();
-  db.insert(instance).values({ id: 1, sessionSecret: "instance-SECRET-0123456789abcdef", ownerEmail: "me@example.com" }).onConflictDoNothing().run();
+  db.insert(instance).values({ id: 1, sessionSecret: "instance-SECRET-0123456789abcdef", ownerEmail: "me@example.com", passwordHash: "scrypt$16384$8$5$c2FsdA$a2V5" }).onConflictDoNothing().run();
   secret = db.select().from(instance).get()!.sessionSecret;
   saveProfile(db, { birthDate: "1990-01-01", sex: "male", maxHr: null, heightCm: null });
   addTag(db, "=cmd", "=HYPERLINK(\"x\")");

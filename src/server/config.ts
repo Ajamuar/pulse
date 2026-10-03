@@ -23,8 +23,6 @@ const Env = z
     GOOGLE_CLIENT_ID: z.string().optional(),
     GOOGLE_CLIENT_SECRET: z.string().optional(),
     APP_URL: z.url().optional(),
-    /** The only Google account allowed in. Unset: the first account to sign in claims the instance. */
-    OWNER_EMAIL: z.email().optional(),
     /** The Home avatar photo: an absolute URL or a path under public/ ("/me.jpg"). */
     AVATAR_URL: z.string().optional(),
   })
@@ -58,7 +56,6 @@ export function parseConfig(env: Record<string, string | undefined>) {
           clientSecret: e.GOOGLE_CLIENT_SECRET!,
           /** Pins the OAuth redirect host (behind a proxy). Unset: the host the request came in on. */
           appUrl: e.APP_URL?.replace(/\/$/, "") ?? null,
-          ownerEmail: e.OWNER_EMAIL?.toLowerCase() ?? null,
         }
       : null,
   };

@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { requestSession } from "@/server/auth";
+import { sameOrigin } from "@/server/session";
 import { syncErrorText } from "@/server/queries/settings";
 import { syncAndWait } from "@/server/worker";
 
@@ -9,6 +10,7 @@ import { syncAndWait } from "@/server/worker";
  * POSTs carry no session (the cookie is SameSite=Lax), so they get the 401.
  */
 export async function POST(req: NextRequest) {
+  if (!sameOrigin(req)) return Response.json({ ok: false, error: "Cross-site request refused" }, { status: 403 });
   if (!(await requestSession(req))) return Response.json({ ok: false, error: "Signed out. Sign in again." }, { status: 401 });
   const r = await syncAndWait();
   return Response.json(r.ok ? { ok: true } : { ok: false, error: r.error ? syncErrorText(r.error) : "Sync failed" }, { headers: { "cache-control": "no-store" } });

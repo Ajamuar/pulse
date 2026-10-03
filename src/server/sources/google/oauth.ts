@@ -45,7 +45,7 @@ export const SCOPES = [
   "reproductive_health.writeonly",
 ].map((s) => `https://www.googleapis.com/auth/googlehealth.${s}`);
 
-/** Sign-in (U20) rides on the same consent: the ID token's verified email decides who may in. */
+/** The ID token's verified email names the connected Google account in Settings (and detects a switch). */
 // `profile` adds the photo (`picture`) to the ID token, for the avatar.
 export const LOGIN_SCOPES = ["openid", "email", "profile"];
 
@@ -191,16 +191,15 @@ function verifiedAccount(idToken: string | undefined, clientId: string): { email
 }
 
 /**
- * Exchanges an authorization code, checks the signed-in account with `allow`, and stores the grant in
- * the single `oauth_tokens` row, clearing any revocation. Returns the account's email and Google photo.
- * - An account `allow` refuses stores nothing and throws `not_owner`.
+ * Exchanges an authorization code and stores the grant in the single `oauth_tokens` row, clearing any
+ * revocation. Returns the Google account's email, photo and name.
  * - Without a refresh token (no consent screen), only the access token of a still-working grant is
  *   updated. With no such grant it stores nothing and throws `auth_revoked`: accepting it would give
  *   a connection that syncs for an hour and then stops.
  */
 export async function exchangeCode(
   db: Db,
-  o: { google: Google; redirectUri: string; code: string; allow: (email: string) => boolean } & Deps,
+  o: { google: Google; redirectUri: string; code: string } & Deps,
 ): Promise<{ email: string; picture: string | null; name: string | null }> {
   const { fetch: fetchFn = fetch, now = Date.now } = o;
   const r = await tokenRequest(
@@ -216,10 +215,8 @@ export async function exchangeCode(
   );
   if (!r.ok) throw new GoogleError(r.code, r.status, "token exchange");
   const account = verifiedAccount(r.idToken, o.google.clientId);
-  const { email } = account;
-  // Before the owner claim: an account without Google Health would claim the instance and then sync nothing.
+  // Before storing anything: an account without Google Health would connect and then sync nothing.
   await requireHealthProfile(fetchFn, r.accessToken);
-  if (!o.allow(email)) throw new GoogleError("not_owner");
   const t = Math.floor(now() / 1000);
   if (!r.refreshToken) {
     if (!hasGrant(db)) {

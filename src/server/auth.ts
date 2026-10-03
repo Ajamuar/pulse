@@ -7,19 +7,13 @@ import { SESSION_COOKIE, type Session, verifySession } from "./session";
 
 export async function currentSession(): Promise<Session | null> {
   const { google } = getConfig();
-  return verifySession(getDb(), (await cookies()).get(SESSION_COOKIE)?.value, {
-    googleEnabled: !!google,
-    ownerEmail: google?.ownerEmail ?? null,
-  });
+  return verifySession(getDb(), (await cookies()).get(SESSION_COOKIE)?.value, { googleEnabled: !!google });
 }
 
 /** The same check for a route handler, from the request's own cookie (as /oauth/callback does). */
 export function requestSession(req: { cookies: { get(name: string): { value: string } | undefined } }): Promise<Session | null> {
   const { google } = getConfig();
-  return verifySession(getDb(), req.cookies.get(SESSION_COOKIE)?.value, {
-    googleEnabled: !!google,
-    ownerEmail: google?.ownerEmail ?? null,
-  });
+  return verifySession(getDb(), req.cookies.get(SESSION_COOKIE)?.value, { googleEnabled: !!google });
 }
 
 export const SIGNED_OUT ={ ok: false as const, error: "Signed out. Sign in again." };

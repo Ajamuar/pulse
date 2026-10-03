@@ -3,7 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { parseConfig, type Config } from "@/server/config";
 import { openDb, type Db } from "@/server/db";
 import { saveProfile } from "@/server/profile";
-import { claimOrCheckOwner, SESSION_COOKIE, signSession } from "@/server/session";
+import { saveAccount } from "@/server/account";
+import { SESSION_COOKIE, signSession } from "@/server/session";
 import { config, proxy } from "./proxy";
 
 const h = vi.hoisted(() => ({ cfg: undefined as unknown, db: undefined as unknown }));
@@ -18,7 +19,7 @@ const go = async (path: string, cookie?: string) => {
   return res ? new URL(res.headers.get("location")!).pathname : "pass";
 };
 const owner = async () => {
-  claimOrCheckOwner(db, "me@example.com", null);
+  await saveAccount(db, "me@example.com", "correct horse battery");
   return signSession(db, { kind: "owner", email: "me@example.com" });
 };
 
@@ -28,7 +29,17 @@ beforeEach(() => {
 });
 
 describe("proxy", () => {
-  it("signed out: every screen goes to /login, and /login itself passes", async () => {
+  it("signed out with no account yet: every screen goes to /setup; /setup and /login pass", async () => {
+    expect(await go("/")).toBe("/setup");
+    expect(await go("/settings")).toBe("/setup");
+    expect(await go("/setup")).toBe("pass");
+    expect(await go("/login")).toBe("pass");
+    h.cfg = demo;
+    expect(await go("/")).toBe("/login"); // a demo instance has no account to set up
+  });
+
+  it("signed out once the account exists: every screen goes to /login, and /login itself passes", async () => {
+    await saveAccount(db, "me@example.com", "correct horse battery");
     expect(await go("/")).toBe("/login");
     expect(await go("/settings")).toBe("/login");
     expect(await go("/onboarding")).toBe("/login");
@@ -43,12 +54,13 @@ describe("proxy", () => {
     expect(await go("/", t)).toBe("pass");
     expect(await go("/onboarding", t)).toBe("/");
     expect(await go("/login", t)).toBe("/");
+    expect(await go("/setup", t)).toBe("/");
   });
 
   it("a demo session is only valid on a demo instance", async () => {
     saveProfile(db, { birthDate: "1990-01-01", sex: "male", maxHr: null, heightCm: null });
     const t = await signSession(db, { kind: "demo" });
-    expect(await go("/", t)).toBe("/login");
+    expect(await go("/", t)).toBe("/setup");
     h.cfg = demo;
     expect(await go("/", t)).toBe("pass");
   });
@@ -57,6 +69,6 @@ describe("proxy", () => {
     const re = new RegExp(`^${config.matcher[0]}$`);
     for (const p of ["/oauth/callback", "/oauth/start", "/healthz", "/_next/static/x.js", "/icon.svg", "/manifest.webmanifest", "/icons/oauth-logo-120.png"])
       expect(re.test(p), p).toBe(false);
-    for (const p of ["/", "/settings", "/login", "/onboarding", "/strain/2026-10-01"]) expect(re.test(p), p).toBe(true);
+    for (const p of ["/", "/settings", "/login", "/onboarding", "/strain/2026-10-01", "/activity/a.b", "/metric/x.json"]) expect(re.test(p), p).toBe(true);
   });
 });

@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { GoogleFit } from "@/components/brand/GoogleFit"
 import { Mark } from "@/components/brand/Mark"
-import { AvatarButtons, DisconnectButton, EditProfileButton } from "./SettingsClient"
+import { AvatarButtons, ChangePasswordButton, DisconnectButton, EditProfileButton, SwitchGoogleButton } from "./SettingsClient"
 import { CAPTION } from "@/components/metrics/primitives"
 
 const BODY = "max-w-[65ch] text-[15px] leading-[22px] text-pretty text-foreground-secondary"
@@ -22,7 +22,7 @@ const ROW_VALUE = "truncate text-right text-[15px] leading-[22px] text-foregroun
 /** The logo tile beside a row's name (account photo, data source mark). */
 const TILE = "grid size-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-white/[0.06]"
 
-export type SettingsAccount = { email: string | null; name?: string | null; avatar: string | null; customPhoto: boolean }
+export type SettingsAccount = { email: string | null; name?: string | null; avatar: string | null; customPhoto: boolean; googleEmail?: string | null }
 
 /** Who is signed in: photo, account, change photo, sign out (U20). Sign out is a plain form post, so it works before hydration. */
 export function Account({ account }: { account: SettingsAccount }) {
@@ -36,13 +36,14 @@ export function Account({ account }: { account: SettingsAccount }) {
         <div className="min-w-0 flex-1">
           <p className="truncate text-[15px] leading-[22px] font-semibold">{owner ? (account.name ?? account.email) : "Demo"}</p>
           <p className="truncate text-[13px] leading-[18px] text-muted-foreground">
-            {owner ? (account.name ? account.email : "Google account") : "Signed in to the demo"}
+            {owner ? (account.name ? account.email : "Pulse account") : "Signed in to the demo"}
           </p>
         </div>
       </div>
       <div className="mt-4 grid grid-cols-2 gap-2">
         {owner && <AvatarButtons customPhoto={account.customPhoto} />}
-        <form method="post" action="/logout" className={cn(!owner && "col-span-2")}>
+        {owner && <ChangePasswordButton />}
+        <form method="post" action="/logout" className="col-span-2">
           <Button type="submit" variant="outline" size="touch" className="w-full">
             Sign out
           </Button>
@@ -62,12 +63,12 @@ const SOURCE: Record<SettingsVM["source"]["status"], { line?: string; tone?: str
   not_linked: {
     line: "No Google Health profile",
     tone: "text-warning",
-    body: "This Google account has no Google Health profile, so there is no Fitbit data to read. Set up Google Health with this account (or move your Fitbit account to it), or disconnect and sign in with the account your Fitbit Air uses.",
+    body: "This Google account has no Google Health profile, so there is no Fitbit data to read. Set up Google Health with this account (or move your Fitbit account to it), or switch to the account your Fitbit Air uses.",
   },
   no_device: {
     line: "No Fitbit device",
     tone: "text-warning",
-    body: "This Google account has Google Health but no Fitbit device, so there is nothing to import. Pair your Fitbit Air in the Google Health app and sync again, or disconnect and sign in with the account it uses.",
+    body: "This Google account has Google Health but no Fitbit device, so there is nothing to import. Pair your Fitbit Air in the Google Health app and sync again, or switch to the account it uses.",
   },
   connected: {},
   revoked: { line: "Access revoked", tone: "text-recovery-red-text", body: "Google access was revoked or expired. Sync is paused until you reconnect." },
@@ -127,7 +128,7 @@ function DataTypes({ rows, now }: { rows: SettingsVM["sync"]; now: number }) {
  * Data source (spec §7.14): the source as one row (logo, name, last sync), its status only when something needs
  * doing, Sync now, and the per-type sync status folded underneath.
  */
-export function DataSource({ vm, now }: { vm: Pick<SettingsVM, "source" | "sync" | "import">; now: number }) {
+export function DataSource({ vm, now, googleEmail = null }: { vm: Pick<SettingsVM, "source" | "sync" | "import">; now: number; googleEmail?: string | null }) {
   const { source } = vm
   const s = SOURCE[source.status]
   const last = vm.sync.reduce<number | null>((m, r) => (r.lastSuccessAt && (!m || r.lastSuccessAt > m) ? r.lastSuccessAt : m), null)
@@ -169,6 +170,7 @@ export function DataSource({ vm, now }: { vm: Pick<SettingsVM, "source" | "sync"
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-[15px] leading-[22px] font-semibold">{source.label}</p>
+          {googleEmail && source.status !== "not_connected" && source.status !== "demo" && <p className="truncate text-[13px] leading-[18px] text-foreground-secondary">{googleEmail}</p>}
           <p className={cn("truncate text-[13px] leading-[18px] text-muted-foreground tabular-nums", s.tone)}>{line}</p>
         </div>
       </div>
@@ -195,7 +197,14 @@ export function DataSource({ vm, now }: { vm: Pick<SettingsVM, "source" | "sync"
           <Progress value={(vm.import.done / vm.import.total) * 100} aria-label="Import progress" className="h-1.5 bg-muted" />
         </div>
       )}
-      <div className="mt-4 grid grid-cols-2 gap-2">{actions}</div>
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        {actions}
+        {source.status !== "demo" && source.status !== "not_connected" && (
+          <div className="col-span-2">
+            <SwitchGoogleButton current={googleEmail} />
+          </div>
+        )}
+      </div>
       {source.status !== "demo" && vm.sync.length > 0 && <DataTypes rows={vm.sync} now={now} />}
     </SectionShell>
   )
@@ -242,7 +251,7 @@ export function SettingsView({ vm, now, account }: { vm: SettingsVM; now: number
   return (
     <div className="mx-auto flex w-full max-w-[640px] flex-col gap-3 md:gap-4">
       <Account account={account} />
-      <DataSource vm={vm} now={now} />
+      <DataSource vm={vm} now={now} googleEmail={account.googleEmail} />
       <Profile profile={vm.profile} />
     </div>
   )

@@ -10,7 +10,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { ResponsiveSheet } from "@/components/shells/ResponsiveSheet"
 import { ProfileForm, SaveButton, type ProfileDefaults } from "@/components/profile/ProfileForm"
 import type { Crop } from "@/lib/crop"
-import { disconnectGoogle } from "./actions"
+import { AuthField } from "@/components/auth/AuthForm"
+import { changePassword, disconnectGoogle } from "./actions"
 import { AvatarCropSheet, decodePhoto, encodeAvatar } from "./AvatarCropSheet"
 
 /** Landing back from Google with `?oauth=connected` or `?oauth=<code>` shows one toast, then drops the param. */
@@ -79,6 +80,77 @@ export function DisconnectButton() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </>
+  )
+}
+
+/**
+ * "Switch account": connect a different Google account. Its confirmation says what happens to the data the current
+ * account synced, because the callback clears it (journal, profile and dashboard stay).
+ */
+export function SwitchGoogleButton({ current }: { current: string | null }) {
+  const [open, setOpen] = React.useState(false)
+  return (
+    <>
+      <Button variant="secondary" size="touch" className="w-full" onClick={() => setOpen(true)}>
+        Switch Google account
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent showCloseButton={false} className="ring-1 ring-border">
+          <DialogHeader>
+            <DialogTitle>Switch Google account?</DialogTitle>
+            <DialogDescription>
+              {current ? `Pulse removes what it synced from ${current}` : "Pulse removes the data synced so far"} and imports the new account’s history. Your journal, profile and dashboard stay.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="secondary" size="touch" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button asChild size="touch">
+              {/* A plain anchor: it leaves the app for Google's account chooser. */}
+              <a href="/oauth/start?switch=1">Choose account</a>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  )
+}
+
+/** Settings › Account › Change password, in a sheet. Other devices are signed out when it saves. */
+export function ChangePasswordButton() {
+  const [open, setOpen] = React.useState(false)
+  const [pending, setPending] = React.useState(false)
+  const [error, setError] = React.useState<string | null>(null)
+  const submit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const form = new FormData(e.currentTarget)
+    setPending(true)
+    setError(null)
+    const r = await changePassword(String(form.get("current")), String(form.get("next"))).catch(() => ({ ok: false as const, error: "Couldn’t reach Pulse. Try again." }))
+    setPending(false)
+    if (!r.ok) return setError(r.error)
+    setOpen(false)
+    toast.success("Password changed. Other devices are signed out.")
+  }
+  return (
+    <>
+      <Button variant="secondary" size="touch" className="w-full" onClick={() => setOpen(true)}>
+        Change password
+      </Button>
+      <ResponsiveSheet open={open} onOpenChange={(o) => !pending && setOpen(o)} title="Change password" description="Other devices are signed out.">
+        <form onSubmit={submit} className="flex flex-col gap-5 px-4 pb-[max(env(safe-area-inset-bottom),16px)] md:px-6 md:pb-6">
+          <AuthField label="Current password" name="current" type="password" autoComplete="current-password" required />
+          <AuthField label="New password" name="next" type="password" autoComplete="new-password" required minLength={10} maxLength={256} hint="At least 10 characters." />
+          {error && (
+            <p role="alert" className="px-1 text-[13px] leading-[18px] font-medium text-recovery-red-text">
+              {error}
+            </p>
+          )}
+          <SaveButton pending={pending} label="Change password" />
+        </form>
+      </ResponsiveSheet>
     </>
   )
 }

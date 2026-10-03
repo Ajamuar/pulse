@@ -83,12 +83,11 @@ describe("state", () => {
 
 describe("exchangeCode", () => {
   /** `f` answers the token endpoint; the Google Health identity check answers `identity` (linked by default). */
-  const exchange = (f: typeof globalThis.fetch, allow: (email: string) => boolean = () => true, identity = () => json(200, { healthUserId: "u" })) =>
+  const exchange = (f: typeof globalThis.fetch, identity = () => json(200, { healthUserId: "u" })) =>
     exchangeCode(db, {
       google,
       redirectUri: "https://p.example/oauth/callback",
       code: "c0de",
-      allow,
       fetch: (async (url, init) => (String(url).endsWith("/users/me/identity") ? identity() : f(url, init))) as typeof fetch,
       now: () => NOW,
     });
@@ -144,30 +143,19 @@ describe("exchangeCode", () => {
     expect((await exchange(tokenStub(grant({ id_token: idToken({ name: "  Ada Lovelace " }) })))).name).toBe("Ada Lovelace");
   });
 
-  it("an account allow() refuses stores nothing and throws not_owner", async () => {
-    const allow = vi.fn(() => false);
-    await expectGoogleError(exchange(tokenStub(grant()), allow), "not_owner");
-    expect(allow).toHaveBeenCalledWith("me@example.com");
-    expect(row()).toBeUndefined();
-  });
-
-  it("an account without a Google Health profile is refused before allow(), storing nothing", async () => {
-    const allow = vi.fn(() => true);
+  it("an account without a Google Health profile is refused, storing nothing", async () => {
     const notLinked = () =>
       json(400, { error: { status: "FAILED_PRECONDITION", details: [{ reason: "ACCOUNT_NOT_LINKED", metadata: { redirect_uri: "https://fitbit.google.com/auth/signup" } }] } });
-    await expectGoogleError(exchange(tokenStub(grant()), allow, notLinked), "account_not_linked");
-    expect(allow).not.toHaveBeenCalled();
+    await expectGoogleError(exchange(tokenStub(grant()), notLinked), "account_not_linked");
     expect(row()).toBeUndefined();
-    // Any other identity failure (Google having a bad day) doesn't block sign-in.
-    expect((await exchange(tokenStub(grant()), allow, () => json(503, {}))).email).toBe("me@example.com");
+    // Any other identity failure (Google having a bad day) doesn't block connecting.
+    expect((await exchange(tokenStub(grant()), () => json(503, {}))).email).toBe("me@example.com");
   });
 
-  it("an unverified email, a missing ID token or one for another client is refused before allow()", async () => {
-    const allow = vi.fn(() => true);
-    await expectGoogleError(exchange(tokenStub(grant({ id_token: idToken({ email_verified: false }) })), allow), "email_unverified");
-    await expectGoogleError(exchange(tokenStub(grant({ id_token: undefined })), allow), "no_id_token");
-    await expectGoogleError(exchange(tokenStub(grant({ id_token: idToken({ aud: "other" }) })), allow), "no_id_token");
-    expect(allow).not.toHaveBeenCalled();
+  it("an unverified email, a missing ID token or one for another client is refused, storing nothing", async () => {
+    await expectGoogleError(exchange(tokenStub(grant({ id_token: idToken({ email_verified: false }) }))), "email_unverified");
+    await expectGoogleError(exchange(tokenStub(grant({ id_token: undefined }))), "no_id_token");
+    await expectGoogleError(exchange(tokenStub(grant({ id_token: idToken({ aud: "other" }) }))), "no_id_token");
     expect(row()).toBeUndefined();
   });
 
