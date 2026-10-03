@@ -17,7 +17,7 @@ type Meta = {
   title?: string
   /** Meta description, about 150 characters. */
   description?: string
-  /** Search phrases this page answers; used for the keyword plan, not as a meta tag. */
+  /** Search phrases this page answers: the keyword plan and the page's meta keywords. Generic terms only, no brands. */
   keywords?: string[]
   scale?: Scale
   shot?: Shot
@@ -27,7 +27,7 @@ type Meta = {
   faq?: Faq[]
 }
 
-export type Metric = ScoreDoc & Required<Pick<Meta, "slug" | "title" | "description">> & Omit<Meta, "slug" | "title" | "description"> & { appSlug: string }
+export type Metric = ScoreDoc & Required<Pick<Meta, "slug" | "title" | "description" | "keywords">> & Omit<Meta, "slug" | "title" | "description" | "keywords"> & { appSlug: string }
 
 const C = {
   green: "var(--recovery-green)",
@@ -155,7 +155,7 @@ const META: Record<string, Meta> = {
   "strain-target": {
     title: "Strain Target: a daily training range from your Recovery",
     description: "Pulse sets today's Strain range from your Recovery band and 28-day load, then caps fast ramp-ups with the acute:chronic workload ratio.",
-    keywords: ["how much should i train today", "strain target", "strain coach alternative"],
+    keywords: ["how much should i train today", "strain target", "daily strain goal"],
     shot: "phone-strain",
     sources: [S.gabbett2016, S.noop],
     related: ["strain", "recovery", "training-balance"],
@@ -243,7 +243,7 @@ const META: Record<string, Meta> = {
   "energy-bank": {
     title: "Energy Bank: an estimate of energy left in your day",
     description: "Pulse's Energy Bank starts from Recovery and sleep, then spends and recharges minute by minute from heart-rate load, stress and naps.",
-    keywords: ["body battery for fitbit", "energy bank", "body battery alternative"],
+    keywords: ["energy bank", "daily energy score", "energy level from heart rate"],
     scale: recoveryScale,
     shot: "laptop-home",
     sources: [S.edwards],
@@ -465,6 +465,7 @@ function merge(doc: ScoreDoc & Meta): Metric {
     slug: meta.slug ?? doc.slug,
     title: meta.title ?? `${doc.name}: how Pulse calculates it`,
     description: meta.description ?? doc.summary,
+    keywords: meta.keywords ?? [doc.name.toLowerCase(), `${doc.name.toLowerCase()} fitbit air`],
   }
 }
 

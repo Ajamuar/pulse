@@ -4,6 +4,15 @@ import { LICENSE_URL, REPO, SITE_NAME } from "../config"
 
 const strip = (html: string) => html.replace(/<[^>]+>/g, "")
 const abs = (path: string, site: URL) => new URL(path, site).href
+const org = (site: URL) => ({ "@id": abs("/#org", site) })
+
+/** On every page (Base.astro): the publisher and the site, which the other types refer to by @id. */
+export function siteGraph(site: URL) {
+  return [
+    { "@type": "Organization", "@id": abs("/#org", site), name: SITE_NAME, url: abs("/", site), sameAs: [REPO] },
+    { "@type": "WebSite", "@id": abs("/#website", site), name: SITE_NAME, url: abs("/", site), inLanguage: "en", publisher: org(site) },
+  ]
+}
 
 export function breadcrumbs(site: URL, items: { name: string; path: string }[]) {
   return {
@@ -34,6 +43,8 @@ export function softwareApp(site: URL, description: string) {
     offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
     sameAs: [REPO],
     screenshot: abs("/og.png", site),
+    author: org(site),
+    publisher: org(site),
   }
 }
 
@@ -47,7 +58,7 @@ export function article(site: URL, o: { type: "TechArticle" | "Article"; path: s
     dateModified: o.modified,
     inLanguage: "en",
     author: { "@type": "Organization", name: "Pulse contributors", url: REPO },
-    publisher: { "@type": "Organization", name: SITE_NAME, url: abs("/", site) },
+    publisher: org(site),
     about: { "@id": abs("/#app", site) },
     image: abs("/og.png", site),
   }

@@ -15,3 +15,16 @@
   Referrer-Policy: strict-origin-when-cross-origin
   X-Frame-Options: DENY
   Permissions-Policy: camera=(), microphone=(), geolocation=()
+
+# Search robots: every page is meant to be indexed (the meta robots tag says the same). Listed by path so the rule
+# covers the HTML only, and so the 404 page, served for unknown URLs, is never indexed.
+/
+  X-Robots-Tag: index, follow, max-image-preview:large
+/metrics/*
+  X-Robots-Tag: index, follow, max-image-preview:large
+/compare/*
+  X-Robots-Tag: index, follow, max-image-preview:large
+/glossary/
+  X-Robots-Tag: index, follow, max-image-preview:large
+/404.html
+  X-Robots-Tag: noindex

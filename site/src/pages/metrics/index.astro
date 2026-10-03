@@ -6,6 +6,7 @@ import { breadcrumbs } from "../../lib/schema"
 
 const title = "How Pulse scores your Fitbit Air data"
 const description = `Every score in Pulse, explained: what goes in, how it is weighted, what the bands mean and where it falls short. ${METRICS.length} metrics, with sources.`
+const keywords = ["fitbit air health scores", "how are recovery scores calculated", ...METRICS.slice(0, 8).map((m) => `${m.name.toLowerCase()} score`)]
 const fmt = (n: number, u = "") => `${n}${u}`
 const schema = [
   breadcrumbs(Astro.site!, [
@@ -19,7 +20,7 @@ const schema = [
 ]
 ---
 
-<Base title={title} description={description} schema={schema}>
+<Base title={title} description={description} schema={schema} keywords={keywords}>
   <header class="wrap head">
     <h1>Every score, in the open</h1>
     <p class="lede">

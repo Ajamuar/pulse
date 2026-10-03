@@ -4,8 +4,9 @@ import GetStarted from "../../components/GetStarted.astro"
 import { COMPARISONS } from "../../data/compare"
 import { breadcrumbs } from "../../lib/schema"
 
-const title = "Pulse compared: Fitbit Air, subscription wearables and Google Health Premium"
-const description = "Plain, dated comparisons for Fitbit Air owners: what the band does on its own, what Google Health Premium adds, how Pulse differs from a subscription recovery wearable."
+const title = "Pulse vs Fitbit Air, Google Health Premium and wearables"
+const description = "Dated comparisons for Fitbit Air owners: what the band does alone, what Google Health Premium adds, and how Pulse differs from a subscription wearable."
+const keywords = [...new Set(COMPARISONS.flatMap((c) => c.keywords.slice(0, 2)))]
 const schema = [
   breadcrumbs(Astro.site!, [
     { name: "Pulse", path: "/" },
@@ -14,7 +15,7 @@ const schema = [
 ]
 ---
 
-<Base title={title} description={description} schema={schema}>
+<Base title={title} description={description} schema={schema} keywords={keywords}>
   <header class="wrap head">
     <h1>Compare</h1>
     <p class="lede">Straight answers for Fitbit Air owners weighing their options. Every fact about another product is dated and links to its source.</p>

@@ -12,6 +12,8 @@ export type Comparison = {
   title: string
   h1: string
   description: string
+  /** Search phrases the page answers, for its meta keywords. Generic terms only, no competitor brands. */
+  keywords: string[]
   /** The direct answer, first thing on the page (under about 60 words). HTML allowed. */
   answer: string
   sections: Section[]
@@ -42,6 +44,7 @@ export const COMPARISONS: Comparison[] = [
     nav: "Fitbit Air recovery and strain",
     title: "Does the Fitbit Air have strain and recovery scores?",
     h1: "Does the Fitbit Air have strain and recovery scores?",
+    keywords: ["fitbit air recovery score", "does fitbit air track strain", "fitbit air strain score", "fitbit air readiness vs recovery"],
     description: "The Google Health app gives Fitbit Air owners Readiness and Cardio Load, not a 0-100% Recovery or a 0-21 Strain. How to get both, free and self-hosted.",
     answer:
       "Not in that form. The Google Health app gives Fitbit Air owners a Daily Readiness score and Cardio Load, but no 0-100% morning Recovery and no 0-21 daily Strain. Pulse computes both, with Sleep Performance, Pulse Age, Stress and Energy Bank, from the band's own data on a server you run.",
@@ -86,8 +89,9 @@ export const COMPARISONS: Comparison[] = [
   {
     slug: "pulse-vs-subscription-wearables",
     nav: "Pulse vs subscription wearables",
-    title: "Pulse vs subscription recovery wearables: scores, cost and data",
+    title: "Pulse vs subscription recovery wearables: cost and data",
     h1: "Pulse and subscription recovery wearables, compared",
+    keywords: ["recovery wearable without membership", "subscription recovery tracker alternative", "fitbit air vs recovery strap", "open source recovery app"],
     description: "Pulse on a Fitbit Air next to a recovery wearable sold with a membership: which scores each has, how you pay, where the data lives, and who each suits.",
     answer:
       "A subscription recovery wearable is a band, an app and a membership in one product. Pulse is free, open-source software that computes similar scores (Recovery, Strain, Sleep Performance, a biological-age estimate) from a Fitbit Air you already own, on a server you run. A membership works out of the box and comes with support; Pulse is for people who want no subscription and their data on their own machine.",
@@ -143,7 +147,8 @@ export const COMPARISONS: Comparison[] = [
     nav: "Without a subscription",
     title: "Recovery and strain tracking without a subscription",
     h1: "Recovery and strain tracking without a subscription",
-    description: "Open-source and subscription-free ways to get recovery, strain and sleep scores: Pulse for the Fitbit Air, noop for subscription recovery straps, Hælan and fitbit-grafana.",
+    keywords: ["recovery tracker no subscription", "strain tracking without subscription", "open source recovery app", "self-hosted fitness tracker"],
+    description: "Open-source, subscription-free ways to get recovery, strain and sleep scores: Pulse for the Fitbit Air, plus noop, Hælan and fitbit-grafana.",
     answer:
       "If you want recovery and strain scores with no monthly fee, the cheapest route is a band without a required subscription plus software that computes the scores. Pulse does this for the Fitbit Air, self-hosted and free for noncommercial use. Other open-source projects cover nearby needs.",
     sections: [
@@ -188,6 +193,7 @@ export const COMPARISONS: Comparison[] = [
     nav: "Google Health Premium",
     title: "Google Health Premium vs free vs Pulse for Fitbit Air",
     h1: "What Google Health Premium adds, and what Pulse adds",
+    keywords: ["google health premium", "fitbit air without subscription", "google health premium vs free", "fitbit air premium features"],
     description: "What a Fitbit Air does free, what Google Health Premium adds, and what Pulse computes on top, so you can decide what you need.",
     answer:
       "They do different jobs. Google Health Premium adds coaching and deeper insights inside the Google Health app. Pulse adds a separate set of scores (Recovery, Strain, Sleep Performance, Pulse Age, Energy Bank) computed from the same data on your own server. You can use either, both or neither.",

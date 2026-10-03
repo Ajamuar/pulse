@@ -12,6 +12,16 @@ const title = "Pulse: recovery and strain for Fitbit Air, self-hosted"
 const description =
   "Open-source, self-hosted app that turns your Fitbit Air's Google Health data into daily Recovery, Strain, Sleep, Pulse Age, Stress and Energy Bank scores."
 
+const keywords = [
+  "fitbit air recovery score",
+  "fitbit air strain",
+  "recovery and strain tracking",
+  "recovery tracker no subscription",
+  "open source recovery app",
+  "self-hosted fitness tracker",
+  "google health api",
+]
+
 const href = (appSlug: string) => {
   const m = metricByAppSlug(appSlug)
   return m ? metricPath(m) : "/metrics/"
@@ -105,7 +115,7 @@ const schema = [softwareApp(Astro.site!, description), faqPage(faq)]
 const R = 88
 ---
 
-<Base title={title} description={description} schema={schema}>
+<Base title={title} description={description} schema={schema} keywords={keywords}>
   <section class="hero" aria-labelledby="hero-h" data-observe>
     <svg class="beat" viewBox="0 0 1600 200" preserveAspectRatio="none" aria-hidden="true">
       <path class="beat-base" d="M0 130H520L540 112L556 130H760L782 46L806 168L824 130H1060L1080 112L1096 130H1600" pathLength="1"></path>

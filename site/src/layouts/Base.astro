@@ -5,6 +5,7 @@ import Wordmark from "../components/Wordmark.astro"
 import { REPO, SETUP_GUIDE, LICENSE_URL, SITE_NAME, UMAMI, CONTACT_EMAIL } from "../config"
 import { METRICS, metricPath } from "../data/metrics"
 import { COMPARISONS } from "../data/compare"
+import { siteGraph } from "../lib/schema"
 
 interface Props {
   title: string
@@ -14,12 +15,19 @@ interface Props {
   /** OG image path under public/, absolute from the site root. */
   ogImage?: string
   ogType?: "website" | "article"
+  /** Search phrases the page answers, for the keywords meta tag. */
+  keywords: string[]
+  /** Keep the page out of search results (the 404 page). */
+  noindex?: boolean
 }
-const { title, description, schema = [], ogImage = "/og.png", ogType = "website" } = Astro.props
+const { title, description, schema = [], ogImage = "/og.png", ogType = "website", keywords, noindex = false } = Astro.props
 const canonical = new URL(Astro.url.pathname, Astro.site)
 const og = new URL(ogImage, Astro.site)
-const fullTitle = Astro.url.pathname === "/" ? title : `${title} | ${SITE_NAME}`
-const ld = schema.length ? JSON.stringify({ "@context": "https://schema.org", "@graph": schema }) : null
+// The site name follows the page title only while the whole stays within about 60 characters, so it is never cut.
+const suffixed = `${title} | ${SITE_NAME}`
+const fullTitle = Astro.url.pathname === "/" || suffixed.length > 60 ? title : suffixed
+// Every page's graph names the publisher, so the pages' own types can point at it by @id.
+const ld = JSON.stringify({ "@context": "https://schema.org", "@graph": [...siteGraph(Astro.site!), ...schema] })
 const path = Astro.url.pathname
 const nav = [
   { href: "/metrics/", label: "Metrics" },
@@ -37,6 +45,10 @@ const nav = [
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{fullTitle}</title>
     <meta name="description" content={description} />
+    <meta name="keywords" content={keywords.join(", ")} />
+    <meta name="robots" content={noindex ? "noindex, follow" : "index, follow, max-image-preview:large"} />
+    <meta name="author" content="Pulse contributors" />
+    <meta name="publisher" content={SITE_NAME} />
     <link rel="canonical" href={canonical} />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="sitemap" href="/sitemap.xml" />
@@ -56,7 +68,7 @@ const nav = [
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={og} />
 
-    {ld && <script type="application/ld+json" set:html={ld} />}
+    <script type="application/ld+json" set:html={ld} />
     {UMAMI.src && UMAMI.websiteId && <script is:inline defer src={UMAMI.src} data-website-id={UMAMI.websiteId} />}
   </head>
   <body>
