@@ -173,43 +173,18 @@ flowchart LR
   V -.->|"page views, no cookies"| U[Self-hosted Umami]
 ```
 
-## Deploy: Cloudflare Pages
+## Deploy: Cloudflare (Workers static assets)
 
-The site lives at `https://pulse.portlabs.in`. The private app moves to another hostname; the two never share one.
+Live since 2026-10-03 at https://pulse.portlabs.in. Cloudflare Pages is now part of Workers, so the site deploys as a Worker with static assets only (`site/wrangler.jsonc`: no script, `not_found_handling: 404-page`, custom domain `pulse.portlabs.in`). Nothing runs per request; `public/_headers` sets caching.
 
-One-time setup, in the Cloudflare dashboard:
-
-1. **Workers & Pages → Create → Pages → Connect to Git**, and pick `adityaongit/pulse`. Production branch: `main`.
-2. **Build settings.** Framework preset: None. Root directory: the repo root (leave it empty).
-   - Build command: `cd site && pnpm install --frozen-lockfile && pnpm build`
-   - Build output directory: `site/dist`
-3. **Environment variables (Production and Preview):**
-
-   | Variable | Value | Why |
-   |---|---|---|
-   | `NODE_VERSION` | `24` | Astro 7 needs a current Node |
-   | `PNPM_VERSION` | `11.17.0` (the root `package.json` `packageManager`) | The build image installs this pnpm |
-   | `SKIP_DEPENDENCY_INSTALL` | `1` | Stops Pages from installing the app's dependencies at the repo root; the build command installs only `site/` |
-   | `SITE_URL` | leave unset in Production (the default is `https://pulse.portlabs.in`); set it to the preview URL in Preview if canonical links there matter | Canonicals, sitemap, OG tags |
-   | `PUBLIC_UMAMI_SRC`, `PUBLIC_UMAMI_WEBSITE_ID` | optional | Analytics (see Analytics) |
-
-4. **Build watch paths** (Settings → Builds): include `site/*`, `docs/screenshots/*` and `src/app/(app)/more/how-it-works/content.ts`, so app-only changes do not rebuild the site.
-5. **Custom domain:** Custom domains → Set up a domain → `pulse.portlabs.in`. The zone is already on Cloudflare, so Pages adds the CNAME and the certificate itself. If an older DNS record for that name exists (for example, the app's), remove or rename it first.
-6. After the first deploy: open `/`, `/metrics/recovery/` and `/sitemap.xml` on the new domain, check that the canonical link and `og:url` use `pulse.portlabs.in`, then submit the sitemap in Search Console.
-
-What the repo already provides:
-
-- `site/public/_headers` (copied to `dist/`): a year of `immutable` caching for `/_astro/*` (Astro hashes every CSS, JS, image and font file name), a day for `og.png` and the favicon, and `nosniff`, `Referrer-Policy`, `X-Frame-Options` and `Permissions-Policy` on every response. HTML gets Cloudflare's default (revalidated), so a deploy shows at once.
-- `dist/404.html` from `src/pages/404.astro`, which Pages serves for unknown paths.
-- No `_redirects` and no `wrangler.toml`: the site has never been served from another URL, and the Git integration needs no config file. Add `_redirects` the first time a published slug changes.
-
-```mermaid
-flowchart LR
-  M[push to main] --> B["Pages build<br/>cd site; pnpm install; pnpm build"]
-  B --> D[site/dist + _headers]
-  D --> E[Cloudflare edge]
-  E --> P[pulse.portlabs.in]
+```sh
+cd site
+pnpm install --frozen-lockfile
+pnpm build
+pnpm dlx wrangler@4 deploy   # needs `wrangler login` once
 ```
+
+Do not let wrangler "autoconfigure" the project: it adds the Astro Cloudflare adapter, KV and Images bindings, which a static site does not need. A custom domain fails while another DNS record holds the hostname (code 100117); delete that record first.
 
 ## Analytics
 
