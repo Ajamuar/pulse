@@ -46,6 +46,7 @@ import {
   type WorkoutKind,
   WORKOUTS,
 } from "./scenario";
+import { seedHeartRhythm } from "./heartRhythm";
 
 // ---------------------------------------------------------------------------------------------
 // Randomness and time
@@ -505,6 +506,7 @@ export function seedPull(db: Db, { now, timeZone, maxHr }: SeedOptions): { chang
     let changes = ensureDefaultTags(db);
     const from = synced === null ? 0 : Math.max(0, daysBetween(ctx.anchor, localDay(synced, timeZone)));
     for (let i = from; i <= daysBetween(ctx.anchor, today); i++) changes += writeDay(db, generateDay(ctx, i), now);
+    changes += seedHeartRhythm(db, ctx.anchor, timeZone, now);
 
     const state = { syncedThrough: now, lastAttemptAt: now, lastSuccessAt: now, lastError: null };
     db.insert(syncState).values({ type: "seed", ...state }).onConflictDoUpdate({ target: syncState.type, set: state }).run();
