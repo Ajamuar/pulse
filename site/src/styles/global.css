@@ -156,11 +156,16 @@ pre {
   font-weight: 600;
 }
 
-.shot-old {
-  border-radius: 12px;
-  outline: 1px solid rgb(255 255 255 / 0.1);
-  outline-offset: -1px;
-  box-shadow: 0 24px 60px rgb(0 0 0 / 0.5), 0 4px 12px rgb(0 0 0 / 0.35);
+/* Screenshots carry their own frame, margin and shadow (site/scripts/shots.mjs). */
+.shot {
+  width: 100%;
+}
+
+/* Pages cross-fade into each other where the browser supports it. */
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
 }
 
 .button {

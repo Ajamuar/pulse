@@ -114,7 +114,7 @@ const schema = [
               <ol class="sources">
                 {metric.sources.map((s) => (
                   <li>
-                    <a href={s.url}>{s.label}</a>
+                    {s.url ? <a href={s.url}>{s.label}</a> : s.label}
                   </li>
                 ))}
               </ol>
@@ -165,8 +165,8 @@ const schema = [
     padding-top: clamp(40px, 7vw, 88px);
   }
   .head.with-phone {
-    grid-template-columns: minmax(0, 1fr) 300px;
-    align-items: end;
+    grid-template-columns: minmax(0, 1fr) 280px;
+    align-items: center;
   }
   .crumbs a {
     color: var(--muted-foreground);
@@ -194,15 +194,19 @@ const schema = [
     margin-top: 40px;
     max-width: 560px;
   }
+  /* The top of the phone is enough to place the screen; the rest fades out so the header stays compact. */
   .head :global(.phone-shot) {
-    width: 300px;
-    margin-bottom: -96px;
+    width: 280px;
+    aspect-ratio: 466 / 700;
+    object-fit: cover;
+    object-position: top;
+    mask-image: linear-gradient(180deg, #000 72%, transparent);
   }
   .laptop {
     margin-top: 56px;
   }
   .body {
-    margin-top: clamp(64px, 10vw, 152px);
+    margin-top: clamp(56px, 7vw, 96px);
   }
   .laptop + .body {
     margin-top: 80px;
