@@ -53,6 +53,9 @@ const MIGRATION_FIXTURES: string[] = [
   /* 0006_google_extras */ `
   insert into daily_values (day, key, value) values ('2026-01-01', 'floors', 12);
   insert into health_records (id, kind, ts, day, data) values ('ecg1', 'ecg', 1767250800, '2026-01-01', '{"result":"normal"}');`,
+  /* 0007_logged_entries */ `
+  insert into logged_entries (id, type, ts, day, data, google_name, created_at)
+    values ('log1', 'hydration-log', 1767250800, '2026-01-01', '{"ml":250}', 'users/me/dataTypes/hydration-log/dataPoints/1', 1767250800);`,
 ];
 
 type Conn = Database.Database;
