@@ -1,5 +1,8 @@
 # AGENTS.md
 
+<!-- Whoop Design Guidelines -->
+https://developer.whoop.com/assets/files/WHOOP%20-%20Brand%20%20Design%20Guidelines-bdea3554e94b4ea09e68695b1e8dc8e7.pdf
+
 Guide for coding agents (and humans) working on Pulse: a self-hosted Next.js app that turns Fitbit Air data from the Google Health API into recovery, strain, sleep, Pulse Age, stress, Energy Bank and journal insights.
 
 ## Commands
