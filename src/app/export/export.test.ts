@@ -62,7 +62,16 @@ describe("/export/daily and /export/journal", () => {
     expect(res.headers.get("cache-control")).toBe("no-store");
     const text = await res.text();
     const lines = text.trimEnd().split("\r\n");
-    expect(lines[0]).toBe("day,recovery_pct,strain,sleep_performance_pct,sleep_minutes,sleep_consistency_pct,hrv_ms,resting_hr_bpm,respiratory_rate_rpm,stress_avg,steps");
+    expect(lines[0]).toBe(
+      "day,recovery_pct,strain,sleep_performance_pct,sleep_minutes,sleep_consistency_pct,hrv_ms,resting_hr_bpm,respiratory_rate_rpm,stress_avg,steps,weight_kg,body_fat_pct," +
+        "distance_km,floors,elevation_m,active_minutes,light_minutes,azm_minutes,active_calories_kcal,sedentary_minutes,avg_hr_bpm," +
+        "water_ml,calories_in_kcal,protein_g,carbs_g,fat_g,glucose_mg_dl,core_temp_c,swim_strokes",
+    );
+    // A seeded day has the activity extras, distance to the 10 m; nutrition stays empty.
+    const head = lines[0].split(",");
+    const seededDay = lines.find((l) => l.startsWith("2026-10-01,"))!.split(",");
+    expect(seededDay[head.indexOf("distance_km")]).toMatch(/^\d+\.\d{1,2}$/);
+    expect(seededDay[head.indexOf("water_ml")]).toBe("");
     expect(lines.length).toBeGreaterThanOrEqual(181);
     expect(lines[1]).toMatch(/^\d{4}-\d{2}-\d{2},/);
     noSecrets(text);

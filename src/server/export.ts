@@ -22,7 +22,8 @@ export function dailyTable(ctx: QueryCtx): Table {
   for (const [day, r] of loadDays(ctx, first, today)) {
     const values = TREND_METRICS.map((m) => {
       const v = m.partialToday && day === today ? null : m.pick(r);
-      return typeof v === "number" && Number.isFinite(v) ? Math.round(v * 10) / 10 : null;
+      const k = m.format === "decimal2" ? 100 : 10; // distance keeps its 10 m
+      return typeof v === "number" && Number.isFinite(v) ? Math.round(v * k) / k : null;
     });
     rows.push([day, ...values]);
   }
