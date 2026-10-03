@@ -73,6 +73,9 @@ sex and time zone. Then **Connect Google** on Home or in Settings, pick the acco
 every permission: the import of the last 180 days starts, and Settings shows its progress. Settings › Data source ›
 **Switch Google account** connects another one (data synced from the old account is removed; your journal stays).
 
+To try every screen on a real-data instance without connecting Google, `pnpm seed:demo` adds a demo account with 180
+days of generated data to your local database: sign in as `demo@pulse.local` / `pulse-demo-generated-data`.
+
 ## 4. Run it with Docker
 
 [`compose.yaml`](../compose.yaml) runs two containers: `pulse` (the app, published on `127.0.0.1:3000` only) and
