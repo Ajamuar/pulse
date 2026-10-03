@@ -22,7 +22,7 @@ test("1. morning check: Home → Recovery → drivers → back", async ({ page }
   const drivers = page.getByRole("region", { name: "What shaped it" });
   await expect(drivers).toBeInViewport();
   await expect(drivers.getByRole("listitem").first()).toContainText(/Recovery|effect/);
-  await page.getByRole("button", { name: "Back" }).click();
+  await page.getByRole("link", { name: "Back" }).click();
   await expect(page).toHaveURL(url(withDay("/", d)));
   await expect(page.getByRole("heading", { level: 1, name: "Home" })).toBeAttached();
 });
@@ -49,7 +49,7 @@ test("2. browse the past: calendar panel → a past day → ?d= carries into Rec
     await page.getByRole("link", { name }).click();
     await expect(page).toHaveURL(url(`${path}?d=${d}`));
     await expect(page.getByRole("button", { name: /Open calendar$/ })).not.toHaveAccessibleName(/^Today/);
-    await page.getByRole("button", { name: "Back" }).click();
+    await page.getByRole("link", { name: "Back" }).click();
     await expect(page).toHaveURL(url(`/?d=${d}`));
   }
 });
@@ -62,19 +62,19 @@ test("3. workout review: Strain → activity → HR and zones", async ({ page })
   await expect(page.getByRole("heading", { level: 1, name: "Running" })).toBeVisible();
   await expect(page.getByRole("region", { name: "Heart rate" }).getByRole("figure")).toBeVisible();
   await expect(page.getByRole("region", { name: "Time in zones" }).getByRole("listitem")).toHaveCount(5);
-  await page.getByRole("button", { name: "Back" }).click();
+  await page.getByRole("link", { name: "Back" }).click();
   await expect(page).toHaveURL(url(withDay("/strain", d)));
 });
 
 test("4. bedtime plan: Home's Tonight's sleep → the Sleep planner", async ({ page }) => {
   await page.goto("/");
-  const card = page.getByRole("region", { name: "Tonight's sleep" });
+  const card = page.getByRole("region", { name: "Tonight’s sleep" });
   await card.getByRole("radio", { name: /^Perform/ }).click();
   await expect(card.getByRole("radio", { name: /^Perform/ })).toBeChecked();
   await expect(card.getByRole("group", { name: /for perform$/ })).toBeVisible();
   await card.getByRole("link", { name: "Open Sleep Planner" }).click();
   await expect(page).toHaveURL(/\/sleep(\?d=[\d-]+)?#planner$/);
-  const planner = page.getByRole("region", { name: "Tonight's sleep" });
+  const planner = page.getByRole("region", { name: "Tonight’s sleep" });
   await expect(planner).toBeInViewport();
   for (const goal of ["Peak", "Perform", "Get by"]) await expect(planner.getByText(goal, { exact: true })).toBeVisible();
 });
@@ -111,7 +111,7 @@ test("6. illness week: Home alert → Health Monitor flags", async ({ page }) =>
   await page.getByRole("link", { name: "View Health Monitor" }).click();
   await expect(page).toHaveURL(url(withDay("/health/monitor", d)));
   await expect(page.getByRole("alert").filter({ hasText: "Possible illness signal" })).toBeVisible();
-  const readings = page.getByRole("region", { name: "Last night's readings" });
+  const readings = page.getByRole("region", { name: "Last night’s readings" });
   await expect(readings.getByRole("button", { name: /(Below|Above) / }).first()).toBeVisible();
 });
 
@@ -123,7 +123,7 @@ test("7. journal: check in with the round button or + → save → Insights show
   await expect(sheet).toBeVisible();
   await sheet.getByRole("radiogroup", { name: "Alcohol" }).getByRole("radio", { name: "Yes" }).click();
   await sheet.getByRole("radiogroup", { name: "Stretching" }).getByRole("radio", { name: "No" }).click();
-  await sheet.getByRole("button", { name: "Save" }).click();
+  await sheet.getByRole("button", { name: "Save check-in" }).click();
   await expect(page.getByText("Check-in saved")).toBeVisible();
   await expect(sheet).toBeHidden();
 
@@ -171,7 +171,7 @@ test("9. More hub: Trends and a metric switch, a custom behaviour in the check-i
   await page.getByRole("link", { name: /^Behaviours/ }).click();
   await expect(page).toHaveURL(url("/more/behaviours"));
   await page.getByLabel("Add a behaviour").fill(name);
-  await page.getByRole("button", { name: "Add", exact: true }).click();
+  await page.getByRole("button", { name: "Add behaviour", exact: true }).click();
   await expect(page.getByRole("switch", { name: `Show ${name} in the check-in` })).toBeChecked();
   await page.goto("/journal?checkin=1");
   const sheet = page.getByRole("dialog", { name: "Check in" });
@@ -187,8 +187,8 @@ test("9. More hub: Trends and a metric switch, a custom behaviour in the check-i
 test("Home header: dials, then scroll, then the ring row under a fixed top row", async ({ page }, info) => {
   test.skip(info.project.name !== "390", "the scroll-linked header is the phone layout");
   await page.goto(withDay("/", days().past));
-  const panel = page.locator("[data-state]").filter({ has: page.getByRole("navigation", { name: "Today's scores" }) });
-  const ringRow = page.getByRole("navigation", { name: "Today's scores" });
+  const panel = page.locator("[data-state]").filter({ has: page.getByRole("navigation", { name: "Today’s scores" }) });
+  const ringRow = page.getByRole("navigation", { name: "Today’s scores" });
   await expect(page.getByRole("link", { name: /^Recovery .*Open Recovery details$/ })).toBeInViewport();
   await expect(panel).toHaveAttribute("data-state", "top");
 

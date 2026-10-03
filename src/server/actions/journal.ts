@@ -29,7 +29,7 @@ export async function saveJournalEntry(input: z.input<typeof Entry>): Promise<Ac
   const r = Entry.safeParse(input);
   if (!r.success) return { ok: false, error: r.error.issues[0].message };
   const { day, tag, value } = r.data;
-  if (day > localToday()) return { ok: false, error: "Can't log a future day" };
+  if (day > localToday()) return { ok: false, error: "Can’t log a future day" };
   const db = getDb();
   if (!db.select().from(journalTags).where(eq(journalTags.tag, tag)).get()) return { ok: false, error: `Unknown tag: ${tag}` };
   if (value === null) db.delete(journalEntries).where(and(eq(journalEntries.day, day), eq(journalEntries.tag, tag))).run();

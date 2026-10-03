@@ -58,8 +58,23 @@ export function CheckIn({ day, dayLabel, tags, checkIn }: CheckInProps) {
   const [label, setLabel] = React.useState("")
   const [addError, setAddError] = React.useState<string | null>(null)
   const [adding, setAdding] = React.useState(false)
+  const input = React.useRef<HTMLInputElement>(null)
 
   const dirty = Object.keys(values).some((t) => values[t] !== checkIn.entries[t])
+
+  // Closing the sheet asks before discarding (Discard changes?); a reload or leaving the page asks the browser's way.
+  React.useEffect(() => {
+    if (!open || !dirty) return
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault()
+    window.addEventListener("beforeunload", warn)
+    return () => window.removeEventListener("beforeunload", warn)
+  }, [open, dirty])
+
+  // An invalid name keeps focus on the field, so the error under it is read out and fixable in place.
+  const invalid = (message: string) => {
+    setAddError(message)
+    input.current?.focus()
+  }
 
   const start = () => {
     setValues({ ...checkIn.entries })
@@ -107,13 +122,13 @@ export function CheckIn({ day, dayLabel, tags, checkIn }: CheckInProps) {
     e.preventDefault()
     const name = label.trim()
     if (!name) return
-    if (name.length > 32) return setAddError("Use 32 characters or fewer.")
+    if (name.length > 32) return invalid("Use 32 characters or fewer.")
     const key = name.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "")
-    if (tags.some((t) => t.tag === key || t.label.toLowerCase() === name.toLowerCase())) return setAddError("That behaviour already exists.")
+    if (tags.some((t) => t.tag === key || t.label.toLowerCase() === name.toLowerCase())) return invalid("That behaviour already exists.")
     setAdding(true)
     const r = await addCustomTag({ label: name }).catch(() => ({ ok: false as const, error: "network" }))
     setAdding(false)
-    if (!r.ok) return setAddError(r.error.startsWith("Tag already exists") ? "That behaviour already exists." : "Couldn't add it. Try again.")
+    if (!r.ok) return invalid(r.error.startsWith("Tag already exists") ? "That behaviour already exists." : "Couldn’t add it. Try again.")
     setAddError(null)
     setLabel("")
     // A new behaviour starts as "Yes": you add one because you just did it.
@@ -149,7 +164,7 @@ export function CheckIn({ day, dayLabel, tags, checkIn }: CheckInProps) {
         ) : (
           <div className="flex flex-1 flex-col gap-4">
             <p className="max-w-[65ch] text-[15px] leading-[22px] text-pretty text-foreground-secondary">
-              Log what you did today. Pulse compares it with tomorrow&apos;s Recovery.
+              Log what you did today. Pulse compares it with tomorrow’s Recovery.
             </p>
             <Button ref={trigger} size="touch" className="mt-auto w-full" onClick={start}>
               Check in
@@ -169,11 +184,11 @@ export function CheckIn({ day, dayLabel, tags, checkIn }: CheckInProps) {
           <>
             {saveError && (
               <Alert role="alert" className="border-0 bg-recovery-red/15 px-3 py-2">
-                <AlertDescription className="text-recovery-red-text">Couldn&apos;t save. Check your connection and try again.</AlertDescription>
+                <AlertDescription className="text-recovery-red-text">Couldn’t save. Check your connection and try again.</AlertDescription>
               </Alert>
             )}
             <Button size="sheet" onClick={save} disabled={saving} aria-live="polite">
-              {saving ? "Saving…" : "Save"}
+              {saving ? "Saving…" : "Save check-in"}
             </Button>
           </>
         }
@@ -223,7 +238,10 @@ export function CheckIn({ day, dayLabel, tags, checkIn }: CheckInProps) {
                   </Label>
                   <div className="flex gap-2">
                     <Input
+                      ref={input}
                       id="new-behaviour"
+                      name="behaviour"
+                      enterKeyHint="done"
                       value={label}
                       onChange={(e) => {
                         setLabel(e.target.value)
@@ -236,8 +254,9 @@ export function CheckIn({ day, dayLabel, tags, checkIn }: CheckInProps) {
                       aria-describedby={addError ? "new-behaviour-error" : undefined}
                       className="h-11 min-w-0 flex-1 text-base"
                     />
-                    <Button type="submit" variant="secondary" size="touch" disabled={adding || !label.trim()}>
-                      Add
+                    {/* "Add" fits beside the field on a phone; the name says what it adds (label in name). */}
+                    <Button type="submit" variant="secondary" size="touch" disabled={adding || !label.trim()} aria-label={adding ? undefined : "Add behaviour"}>
+                      {adding ? "Adding…" : "Add"}
                     </Button>
                   </div>
                   {addError && (
@@ -256,7 +275,7 @@ export function CheckIn({ day, dayLabel, tags, checkIn }: CheckInProps) {
         <DialogContent showCloseButton={false} className="ring-1 ring-border">
           <DialogHeader>
             <DialogTitle>Discard changes?</DialogTitle>
-            <DialogDescription>Your check-in for {dayLabel} isn&apos;t saved.</DialogDescription>
+            <DialogDescription>Your check-in for {dayLabel} isn’t saved.</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="secondary" size="touch" onClick={() => setConfirm(false)}>

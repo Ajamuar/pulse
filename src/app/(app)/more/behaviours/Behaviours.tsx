@@ -32,6 +32,12 @@ export function Behaviours({ vm }: { vm: BehavioursVM }) {
   const [label, setLabel] = React.useState("")
   const [addError, setAddError] = React.useState<string | null>(null)
   const [adding, setAdding] = React.useState(false)
+  const input = React.useRef<HTMLInputElement>(null)
+  // An invalid name keeps focus on the field, so the error under it is read out and fixable in place.
+  const invalid = (message: string) => {
+    setAddError(message)
+    input.current?.focus()
+  }
 
   const write = async (optimistic: Tag[], action: () => Promise<{ ok: boolean }>) => {
     const before = tags
@@ -39,7 +45,7 @@ export function Behaviours({ vm }: { vm: BehavioursVM }) {
     const r = await action().catch(() => ({ ok: false }))
     if (!r.ok) {
       setTags(before)
-      toast.error("Couldn't save. Try again.")
+      toast.error("Couldn’t save. Try again.")
       return
     }
     router.refresh()
@@ -63,12 +69,12 @@ export function Behaviours({ vm }: { vm: BehavioursVM }) {
     e.preventDefault()
     const name = label.trim()
     if (!name) return
-    if (name.length > 32) return setAddError("Use 32 characters or fewer.")
-    if (tags.some((t) => t.label.toLowerCase() === name.toLowerCase())) return setAddError("That behaviour already exists.")
+    if (name.length > 32) return invalid("Use 32 characters or fewer.")
+    if (tags.some((t) => t.label.toLowerCase() === name.toLowerCase())) return invalid("That behaviour already exists.")
     setAdding(true)
     const r = await addCustomTag({ label: name }).catch(() => ({ ok: false as const, error: "network" }))
     setAdding(false)
-    if (!r.ok) return setAddError(r.error.startsWith("Tag already exists") ? "That behaviour already exists." : "Couldn't add it. Try again.")
+    if (!r.ok) return invalid(r.error.startsWith("Tag already exists") ? "That behaviour already exists." : "Couldn’t add it. Try again.")
     setAddError(null)
     setLabel("")
     toast.success(`${name} added`)
@@ -96,7 +102,7 @@ export function Behaviours({ vm }: { vm: BehavioursVM }) {
                       <Label htmlFor={switchId} className="ml-1 min-w-0 flex-1 flex-col items-start gap-0 font-normal">
                         <span className={cn("text-[15px] leading-[22px] text-balance", t.hidden && "text-muted-foreground")}>{t.label}</span>
                         <span className="text-xs leading-4 font-medium text-muted-foreground tabular-nums">
-                          {t.hidden ? "Hidden" : t.answers ? `${t.answers} ${t.answers === 1 ? "day" : "days"} logged` : "Not logged yet"}
+                          {t.hidden ? "Hidden" : t.answers ? `${t.answers}\u00a0${t.answers === 1 ? "day" : "days"} logged` : "Not logged yet"}
                         </span>
                       </Label>
                       {group.length > 1 && (
@@ -124,7 +130,10 @@ export function Behaviours({ vm }: { vm: BehavioursVM }) {
                 </Label>
                 <div className="flex gap-2">
                   <Input
+                    ref={input}
                     id="new-behaviour"
+                    name="behaviour"
+                    enterKeyHint="done"
                     value={label}
                     onChange={(e) => {
                       setLabel(e.target.value)
@@ -137,7 +146,8 @@ export function Behaviours({ vm }: { vm: BehavioursVM }) {
                     aria-describedby={addError ? "new-behaviour-error" : undefined}
                     className="h-11 min-w-0 flex-1 text-base"
                   />
-                  <Button type="submit" variant="secondary" size="touch" disabled={adding || !label.trim()}>
+                  {/* "Add" fits beside the field on a phone; the name says what it adds (label in name). */}
+                  <Button type="submit" variant="secondary" size="touch" disabled={adding || !label.trim()} aria-label={adding ? undefined : "Add behaviour"}>
                     {adding ? "Adding…" : "Add"}
                   </Button>
                 </div>

@@ -80,7 +80,7 @@ describe("saveJournalEntry", () => {
   });
 
   it("rejects a future day", async () => {
-    expect(await saveJournalEntry({ day: "2026-10-04", tag: "alcohol", value: true })).toEqual({ ok: false, error: "Can't log a future day" });
+    expect(await saveJournalEntry({ day: "2026-10-04", tag: "alcohol", value: true })).toEqual({ ok: false, error: "Can’t log a future day" });
     expect(entries()).toEqual([]);
     expect(h.revalidate).not.toHaveBeenCalled();
     expect(h.requestSync).not.toHaveBeenCalled();

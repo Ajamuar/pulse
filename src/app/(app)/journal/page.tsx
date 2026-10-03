@@ -1,8 +1,7 @@
 import Link from "next/link"
-import { format, parseISO } from "date-fns"
 import { ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { dayLabel } from "@/lib/format"
+import { DAY, dayLabel, formatDay } from "@/lib/format"
 import { dayHref } from "@/lib/url"
 import { getJournal } from "@/server/queries/journal"
 import { DayStrip } from "@/components/metrics/DayStrip"
@@ -21,7 +20,7 @@ export const metadata = { title: "Journal" }
 export default async function JournalPage({ searchParams }: PageProps<"/journal">) {
   const { d, today } = await pageDay(searchParams as SearchParams, "/journal")
   const vm = getJournal(d)
-  const date = format(parseISO(d), "EEE, MMM d")
+  const date = formatDay(d, DAY.short)
 
   return (
     <PageShell title="Journal" dateSwitcher={{ mode: "day" }}>

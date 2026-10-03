@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { formatValue } from "@/lib/format"
 import { withParam } from "@/lib/url"
+import { useSheetParam } from "@/hooks/use-sheet-param"
 import type { ImpactMetricKey, JournalInsightsVM } from "@/server/queries/types"
 import { DriverList } from "@/components/metrics/DriverList"
 import { ResponsiveSheet } from "@/components/shells/ResponsiveSheet"
@@ -47,9 +48,11 @@ export function MetricToggle({ metric }: { metric: ImpactMetricKey }) {
 
 /** The impact list; a row opens its detail sheet. */
 export function ImpactList({ vm }: { vm: JournalInsightsVM }) {
-  const [open, setOpen] = React.useState<string | null>(null)
+  // `?behaviour=` deep-links the sheet; Back closes it.
+  const [open, setOpen] = useSheetParam("behaviour")
   const [last, setLast] = React.useState<JournalInsightsVM["items"][number] | null>(null)
-  const item = vm.items.find((i) => i.key === open) ?? last
+  const current = vm.items.find((i) => i.key === open)
+  const item = current ?? last
   const sd = vm.unit === "SD"
   const fx = (v: number, signed = true) => (sd ? `${formatValue(signed ? "signed1" : "decimal1", v)} SD` : `${formatValue(signed ? "signedInt" : "int", v)}%`)
   const avg = (v: number | null) => (v === null ? "--" : sd ? `${formatValue("signed1", v)} SD` : `${formatValue("int", v)}%`)
@@ -61,7 +64,7 @@ export function ImpactList({ vm }: { vm: JournalInsightsVM }) {
         variant="impact"
         unit={vm.unit}
         data={{ value: vm.items, reason: null, provisional: false }}
-        selectedKey={open ?? undefined}
+        selectedKey={current?.key}
         onSelect={(k) => {
           setOpen(k)
           setLast(vm.items.find((i) => i.key === k) ?? null)
@@ -69,7 +72,7 @@ export function ImpactList({ vm }: { vm: JournalInsightsVM }) {
         checkInHref="/journal?checkin=1"
         outcome={metricWord(vm.metric)}
       />
-      <ResponsiveSheet open={!!open} onOpenChange={(o) => !o && setOpen(null)} title={item?.label ?? "Behaviour"}>
+      <ResponsiveSheet open={!!current} onOpenChange={(o) => !o && setOpen(null)} title={item?.label ?? "Behaviour"}>
         {item && (
           <div className="space-y-4">
             <div>

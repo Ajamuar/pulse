@@ -42,7 +42,7 @@ describe("CheckIn", () => {
     expect(yes).toHaveAttribute("aria-checked", "true")
     fireEvent.click(yes)
     expect(yes).toHaveAttribute("aria-checked", "false")
-    fireEvent.click(screen.getByRole("button", { name: "Save" }))
+    fireEvent.click(screen.getByRole("button", { name: "Save check-in" }))
     await waitFor(() => expect(h.save).toHaveBeenCalledExactlyOnceWith({ day: "2026-10-02", tag: "alcohol", value: null }))
   })
 })
