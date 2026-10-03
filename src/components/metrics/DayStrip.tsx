@@ -47,7 +47,14 @@ function Strip({ indicator, days }: DayStripProps) {
   }
 
   React.useEffect(() => {
-    selected.current?.scrollIntoView({ inline: "center", block: "nearest", behavior: first.current || reduced ? "instant" : "smooth" })
+    // Centre the day inside the strip only: scrollIntoView also scrolled the page to a strip below the fold.
+    const el = selected.current
+    const vp = el?.closest<HTMLElement>("[data-slot=scroll-area-viewport]")
+    if (el && vp) {
+      const r = el.getBoundingClientRect()
+      const left = vp.scrollLeft + r.left - vp.getBoundingClientRect().left - (vp.clientWidth - r.width) / 2
+      vp.scrollTo({ left, behavior: first.current || reduced ? "instant" : "smooth" })
+    }
     first.current = false
   }, [value, reduced])
 
