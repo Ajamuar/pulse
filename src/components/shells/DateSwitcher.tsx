@@ -27,7 +27,8 @@ export type DateSwitcherProps = {
 const PRESS = "transition-[background-color,color,scale] duration-150 ease-standard outline-none focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96]"
 // 32 px visual, 44 px hit area (spec §4.3.1); the next chevron greys out on today.
 const STEP = cn(
-  "relative grid size-7 place-items-center rounded-full text-foreground after:absolute after:-inset-2 hover:bg-white/8 disabled:pointer-events-none disabled:text-foreground/35",
+  // Hover brightens the chevron only: a filled circle beside the label pill reads as a second, clashing pill.
+  "relative grid size-7 place-items-center rounded-full text-foreground/75 after:absolute after:-inset-2 hover:text-foreground disabled:pointer-events-none disabled:text-foreground/35",
   PRESS
 )
 const BARE_STEP = cn(
