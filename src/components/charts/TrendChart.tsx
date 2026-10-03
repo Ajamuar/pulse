@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { Bar, CartesianGrid, ComposedChart, LabelList, Line, ReferenceArea, ReferenceLine, XAxis, YAxis } from "recharts"
+import { Bar, CartesianGrid, Cell, ComposedChart, LabelList, Line, ReferenceArea, ReferenceLine, XAxis, YAxis } from "recharts"
 import { cn } from "@/lib/utils"
 import { DATA_COLORS, deltaTone, recoveryColor, STRESS_COLOR, stressLevel, type GoodDirection } from "@/lib/bands"
 import { DAY, dayLabel, formatDay, formatValue, spoken, type FormatKey } from "@/lib/format"
@@ -17,7 +17,15 @@ import { useOptionalShellCalendar } from "@/components/shells/ShellStatus"
 import { StatusChip, ValueUnit } from "@/components/metrics/primitives"
 import { AXIS, BAR_CURSOR, ChartFigure, GRID, LINE_CURSOR, TOOLTIP_CLASS, TooltipLine, useSeriesAnimation } from "./ChartFrame"
 
-export type TrendPoint = { date: string; value: number | null; provisional?: boolean }
+export type TrendPoint = {
+  date: string
+  value: number | null
+  provisional?: boolean
+  /** With `stack`: the parts of `value` by series key; null when the day has a total but no breakdown. */
+  parts?: Record<string, number> | null
+}
+/** One stacked part, bottom first. `color` is a CSS colour (a token's `var()`). */
+export type TrendSeries = { key: string; label: string; color: string }
 
 export type TrendChartProps = {
   /** Metric name for the chart summary ("Recovery"). */
@@ -43,6 +51,13 @@ export type TrendChartProps = {
   ranges?: readonly TrendRange[]
   /** A labelled horizontal line ("Your age" on Pulse Age history). */
   reference?: { y: number; label: string }
+  /**
+   * Draws each day's `parts` as stacked bars (W and M only) with a legend of the shown day's split; a day without parts
+   * draws its total in a neutral bar and the legend says it has no breakdown (Strain's calories, spec §11 CAL1).
+   */
+  stack?: readonly TrendSeries[]
+  /** `day`: the header shows the selected (last) day's value instead of the range average. */
+  headline?: "average" | "day"
 }
 
 const RANGE_ARIA: Record<TrendRange, string> = { w: "1 week", m: "1 month", "6m": "6 months", "1y": "1 year" }
@@ -50,6 +65,13 @@ const RANGE_PRIOR: Record<TrendRange, string> = { w: "vs. prior week", m: "vs. p
 const RANGE_WORD: Record<TrendRange, string> = { w: "week", m: "month", "6m": "6 months", "1y": "year" }
 const RANGE_LABEL: Record<TrendRange, string> = { w: "W", m: "M", "6m": "6M", "1y": "1Y" }
 const DEFAULT_RANGES: readonly TrendRange[] = ["w", "m", "6m"]
+/**
+ * A stacked day without a breakdown: its total as a dashed outline, so it never reads as a part, nor as today's
+ * faded running total.
+ */
+const UNSPLIT = "var(--muted-foreground)"
+const UNSPLIT_FILL = "rgb(255 255 255 / 0.04)"
+const unitText = (unit?: string) => (unit ? (unit === "%" ? "%" : `\u00a0${unit}`) : "")
 /** Three ranges sit beside the average; four (Trends) take their own full-width row above it, so the chip never wraps. */
 const headerClass = (ranges: readonly TrendRange[]) =>
   cn("mb-4 flex gap-3", ranges.length > 3 ? "flex-col-reverse" : "items-start justify-between")
@@ -86,13 +108,22 @@ function Trend({ points, p }: { points: TrendPoint[]; p: TrendChartProps }) {
     fill: pt.value === null ? undefined : colorFor(p.colorBy, pt.value),
     fillOpacity: pt.provisional ? 0.45 : 1,
     text: pt.value === null ? "" : formatValue(p.format, pt.value),
+    // Stacked: one key per part, and the total under `unsplit` on a day without a breakdown.
+    ...(p.stack && Object.fromEntries(p.stack.map((s) => [`part_${s.key}`, pt.parts?.[s.key] ?? null]))),
+    unsplit: p.stack && pt.value !== null && !pt.parts ? pt.value : null,
+    // The total over the stack's top bar: on the top part's bar for a split day, on the grey bar for the rest.
+    label_top: pt.parts && pt.value !== null ? formatValue(p.format, pt.value) : "",
+    label_unsplit: !pt.parts && pt.value !== null ? formatValue(p.format, pt.value) : "",
   }))
   const values = rows.map((r) => r.value).filter((v): v is number => v !== null)
   const avg = values.length ? values.reduce((a, b) => a + b, 0) / values.length : null
   const delta = p.deltas?.[range] ?? null
   const tone = delta === null || !p.direction || delta === 0 ? null : deltaTone(p.direction, delta, 0).tone
   const scrubbed = active !== null ? rows[active] : null
-  const line = range === "6m" || range === "1y"
+  const byDay = p.headline === "day"
+  // The day the header and legend describe: the scrubbed one, else the selected (last) day.
+  const shown = scrubbed ?? (byDay || p.stack ? (rows.at(-1) ?? null) : null)
+  const line = !p.stack && (range === "6m" || range === "1y")
   // A single-hue 6M line (Pulse Age, VO2 max, vitals) fits its data; bars always start at zero.
   const domain: [number | "auto", number | "auto"] =
     p.colorBy === "band" ? [0, 100] : p.colorBy === "stress" ? [0, 3] : line && p.colorBy === "single" ? ["auto", "auto"] : [0, "auto"]
@@ -109,8 +140,14 @@ function Trend({ points, p }: { points: TrendPoint[]; p: TrendChartProps }) {
         : rows.filter((r, i) => i > 0 && r.date.slice(0, 7) !== rows[i - 1].date.slice(0, 7)).map((r) => r.date)
   const tickFormat = (d: string) => formatDay(d, range === "w" ? { weekday: "narrow" } : range === "m" ? DAY.monthDay : { month: "short" })
 
+  const partAvg = (key: string) => {
+    const xs = rows.map((r) => r.parts?.[key]).filter((v): v is number => v != null)
+    return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null
+  }
   const summary = values.length
-    ? `${p.label} over the last ${RANGE_WORD[range]}: average ${spoken(formatValue(p.format, avg), p.unit)}, range ${formatValue(p.format, Math.min(...values))} to ${formatValue(p.format, Math.max(...values))}${rows.length - values.length ? `, ${rows.length - values.length} ${rows.length - values.length === 1 ? "day" : "days"} missing` : ""}.`
+    ? `${p.label} over the last ${RANGE_WORD[range]}: average ${spoken(formatValue(p.format, avg), p.unit)}, range ${formatValue(p.format, Math.min(...values))} to ${formatValue(p.format, Math.max(...values))}${rows.length - values.length ? `, ${rows.length - values.length} ${rows.length - values.length === 1 ? "day" : "days"} missing` : ""}.${
+        p.stack ? ` Average split: ${p.stack.map((s) => `${s.label} ${formatValue(p.format, partAvg(s.key))}`).join(", ")}.` : ""
+      }`
     : `No ${p.label} data in the last ${RANGE_WORD[range]}.`
 
   const changeRange = (v: string) => {
@@ -125,14 +162,15 @@ function Trend({ points, p }: { points: TrendPoint[]; p: TrendChartProps }) {
       <div className={headerClass(ranges)}>
         <div className="min-w-0" aria-live="polite">
           <p className="text-xs leading-4 font-bold tracking-[0.08em] text-muted-foreground uppercase tabular-nums">
-            {scrubbed ? dayLabel(scrubbed.date, today) : "Average"}
+            {scrubbed || byDay ? dayLabel(shown?.date ?? today, today) : "Average"}
           </p>
           <ValueUnit
-            value={formatValue(p.format, scrubbed ? scrubbed.value : avg)}
+            value={formatValue(p.format, scrubbed || byDay ? (shown?.value ?? null) : avg)}
             unit={p.unit}
             className="block font-numeric text-[28px] leading-8 font-bold"
           />
-          {!scrubbed && delta !== null && (
+          {p.stack && <StackLegend series={p.stack} point={shown} format={p.format} />}
+          {!scrubbed && !byDay && delta !== null && (
             <StatusChip
               tone={tone === "good" ? "optimal" : tone === "bad" ? "warning" : "neutral"}
               delta={delta > 0 ? "up" : delta < 0 ? "down" : "flat"}
@@ -206,15 +244,27 @@ function Trend({ points, p }: { points: TrendPoint[]; p: TrendChartProps }) {
                   indicator="line"
                   hideIndicator
                   labelFormatter={(_, payload) => dayLabel(String(payload?.[0]?.payload?.date ?? ""), today)}
-                  formatter={(_, __, item) => {
+                  formatter={(_, __, item, index) => {
                     const row = item.payload as (typeof rows)[number]
+                    // Stacked bars hand the formatter one item per drawn part; the day's lines are written once.
+                    if (index > 0) return null
                     return (
                       <div className="grid gap-1">
-                        <TooltipLine color={row.fill}>
+                        {p.stack &&
+                          row.parts &&
+                          [...p.stack].reverse().map((s) => (
+                            <TooltipLine key={s.key} color={s.color}>
+                              {s.label} {formatValue(p.format, row.parts?.[s.key])}
+                              {unitText(p.unit)}
+                            </TooltipLine>
+                          ))}
+                        <TooltipLine color={p.stack ? (row.parts ? undefined : UNSPLIT) : row.fill}>
+                          {p.stack && "Total "}
                           {row.text}
-                          {p.unit ? (p.unit === "%" ? "%" : `\u00a0${p.unit}`) : ""}
+                          {unitText(p.unit)}
                         </TooltipLine>
-                        {row.provisional && <span className="text-muted-foreground">Provisional</span>}
+                        {p.stack && !row.parts && <span className="text-muted-foreground">No breakdown</span>}
+                        {row.provisional && <span className="text-muted-foreground">{p.stack ? "So far" : "Provisional"}</span>}
                       </div>
                     )
                   }}
@@ -238,6 +288,23 @@ function Trend({ points, p }: { points: TrendPoint[]; p: TrendChartProps }) {
                 activeDot={{ r: 5, strokeWidth: 0 }}
                 {...anim}
               />
+            ) : p.stack ? (
+              [
+                ...p.stack.map((s, i) => ({ ...s, dataKey: `part_${s.key}`, label: i === p.stack!.length - 1 ? "label_top" : null })),
+                { key: "unsplit", dataKey: "unsplit", color: UNSPLIT_FILL, label: "label_unsplit", outline: true },
+              ].map((s) => (
+                <Bar key={s.key} dataKey={s.dataKey} stackId="day" fill={s.color} radius={s.label ? [3, 3, 0, 0] : 0} maxBarSize={28} {...anim}>
+                  {rows.map((r) => (
+                    <Cell
+                      key={r.date}
+                      fill={s.color}
+                      fillOpacity={r.fillOpacity}
+                      {...("outline" in s && { stroke: UNSPLIT, strokeDasharray: "3 2", strokeOpacity: r.fillOpacity })}
+                    />
+                  ))}
+                  {range === "w" && s.label && <LabelList dataKey={s.label} position="top" fill="var(--foreground)" fontSize={11} />}
+                </Bar>
+              ))
             ) : (
               <Bar dataKey="value" radius={[3, 3, 0, 0]} maxBarSize={28} {...anim}>
                 {range === "w" && <LabelList dataKey="text" position="top" fill="var(--foreground)" fontSize={11} />}
@@ -255,12 +322,35 @@ function Trend({ points, p }: { points: TrendPoint[]; p: TrendChartProps }) {
   )
 }
 
+/** The shown day's parts beside their swatches, top part first (the bars' order); a day without parts says so. */
+function StackLegend({ series, point, format }: { series: readonly TrendSeries[]; point: TrendPoint | null; format: FormatKey }) {
+  const parts = point?.parts
+  return (
+    <p className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs leading-4 font-medium text-muted-foreground">
+      {point?.value != null && !parts ? (
+        <span className="inline-flex items-center gap-1.5">
+          <span aria-hidden className="size-2 rounded-[2px] border border-dashed" style={{ borderColor: UNSPLIT }} />
+          No breakdown for this day
+        </span>
+      ) : (
+        [...series].reverse().map((s) => (
+          <span key={s.key} className="inline-flex items-center gap-1.5">
+            <span aria-hidden className="size-2 rounded-[2px]" style={{ background: s.color }} />
+            {s.label}
+            <span className="font-numeric font-semibold text-foreground-secondary tabular-nums">{formatValue(format, parts?.[s.key])}</span>
+          </span>
+        ))
+      )}
+    </p>
+  )
+}
+
 /** One metric over W, M or 6M (spec §5.5). The range lives in `?r=` (default `m`). */
 export function TrendChart(p: TrendChartProps) {
   return (
-    <MetricState metric={p.data} skeleton={<TrendChartSkeleton ranges={p.ranges} />} empty={<EmptyState body="No data in this range yet." />}>
+    <MetricState metric={p.data} skeleton={<TrendChartSkeleton ranges={p.ranges} day={p.headline === "day"} legend={!!p.stack} />} empty={<EmptyState body="No data in this range yet." />}>
       {(points) => (
-        <React.Suspense fallback={<TrendChartSkeleton ranges={p.ranges} />}>
+        <React.Suspense fallback={<TrendChartSkeleton ranges={p.ranges} day={p.headline === "day"} legend={!!p.stack} />}>
           <Trend points={points} p={p} />
         </React.Suspense>
       )}
@@ -271,19 +361,27 @@ export function TrendChart(p: TrendChartProps) {
 /**
  * `chip`: room for the change-vs-prior chip under the average, which charts with a prior period show.
  * `caption`: the baseline / target line under the plot. `ranges`: the toggle's ranges, as on the chart.
+ * `day`: the header names a day (`headline="day"`), so its label is a bar too. `legend`: a stacked chart's split line.
  */
 export function TrendChartSkeleton({
   chip = false,
   caption = false,
   ranges = DEFAULT_RANGES,
-}: { chip?: boolean; caption?: boolean; ranges?: readonly TrendRange[] } = {}) {
+  day = false,
+  legend = false,
+}: { chip?: boolean; caption?: boolean; ranges?: readonly TrendRange[]; day?: boolean; legend?: boolean } = {}) {
   // The header's real label and a disabled range toggle; bars for the numbers; the plot at its fixed height (spec §5.19).
   return (
     <div aria-hidden className="min-w-0">
       <div className={headerClass(ranges)}>
         <div className="min-w-0">
-          <p className="text-xs leading-4 font-bold tracking-[0.08em] text-muted-foreground uppercase">Average</p>
+          {day ? (
+            <SkeletonText className="w-[6ch] text-xs leading-4" />
+          ) : (
+            <p className="text-xs leading-4 font-bold tracking-[0.08em] text-muted-foreground uppercase">Average</p>
+          )}
           <SkeletonText className="w-[4ch] font-numeric text-[28px] leading-8 font-bold" />
+          {legend && <SkeletonText className="mt-1.5 w-40 text-xs leading-4" />}
           {chip && <Skeleton className="mt-1 h-6 w-28 rounded-md" />}
         </div>
         <div className={cn("flex shrink-0 gap-0.5 rounded-lg bg-muted p-0.5", ranges.length > 3 && "w-full")}>

@@ -84,6 +84,8 @@
   --color-stage-rem: var(--stage-rem);
   --color-stage-light: var(--stage-light);
   --color-stage-deep: var(--stage-deep);
+  --color-energy-active: var(--energy-active);
+  --color-energy-resting: var(--energy-resting);
 
   /* Materials (spec §2.6): glass chrome, the action button's rim, overlay dims */
   --color-glass-top: var(--glass-top);
@@ -224,6 +226,10 @@
   --stage-rem: #a6c3d7;
   --stage-light: #7ba1bb;
   --stage-deep: #48708c;
+
+  /* Calories burned, stacked: active (movement and workouts) in strain blue over resting in a quiet light grey */
+  --energy-active: #0093e7;
+  --energy-resting: #b9c3cc;
 
   /* Hatched track used by zone rows and impact rows: bg-(image:--pattern-hatch) */
   --pattern-hatch: repeating-linear-gradient(

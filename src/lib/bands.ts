@@ -19,6 +19,8 @@ export const DATA_COLORS = {
   "stage-rem": { bg: "bg-stage-rem", text: "text-stage-rem", css: "var(--stage-rem)" },
   "stage-light": { bg: "bg-stage-light", text: "text-stage-light", css: "var(--stage-light)" },
   "stage-deep": { bg: "bg-stage-deep", text: "text-stage-deep", css: "var(--stage-deep)" },
+  "energy-active": { bg: "bg-energy-active", text: "text-energy-active", css: "var(--energy-active)" },
+  "energy-resting": { bg: "bg-energy-resting", text: "text-energy-resting", css: "var(--energy-resting)" },
   "chart-5": { bg: "bg-chart-5", text: "text-chart-5", css: "var(--chart-5)" },
   muted: { bg: "bg-muted-foreground", text: "text-muted-foreground", css: "var(--muted-foreground)" },
 } as const;
