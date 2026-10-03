@@ -2,6 +2,7 @@ import Link from "next/link"
 import { format, parseISO } from "date-fns"
 import { CalendarRange, Check, ChevronRight, CircleAlert, Lightbulb, Maximize2, Moon, Plus, Sun, TriangleAlert } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { isDashboardKey } from "@/lib/dashboard"
 import { clock, formatValue, MISSING, rangeLabel } from "@/lib/format"
 import { reasonCopy } from "@/lib/reasons"
 import { dayHref } from "@/lib/url"
@@ -26,6 +27,7 @@ import { CARD_MATERIAL } from "@/components/ui/card"
 import { getHome } from "@/server/queries/home"
 import type { HomeVM, StressLevel } from "@/server/queries/types"
 import { pageDay, type SearchParams } from "../_lib/day"
+import { EditDashboard } from "../_lib/EditDashboard"
 import { HomeInsight } from "../_lib/HomeInsight"
 import { ENERGY_INFO, STRAIN_RECOVERY_INFO, TONIGHT_INFO } from "../_lib/info"
 import { TonightPlan } from "../_lib/TonightPlan"
@@ -221,7 +223,14 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
           </SectionShell>
         ),
         aside: (
-          <SectionShell variant="section" title="My Dashboard" aside="vs. 30-day average" className="xl:flex xl:h-full xl:flex-col">
+          <SectionShell
+            variant="section"
+            title="My Dashboard"
+            aside="vs. 30-day average"
+            // the reference app's pencil on the right of the section header opens the metric picker (spec §11 CD1).
+            action={<EditDashboard keys={vm.keyStats.map((s) => s.key).filter(isDashboardKey)} />}
+            className="xl:flex xl:h-full xl:flex-col"
+          >
             {/* One card per metric (V9, [latest-home-dashboard-1]). */}
             <ul className="space-y-2">
               {vm.keyStats.map((s) => (

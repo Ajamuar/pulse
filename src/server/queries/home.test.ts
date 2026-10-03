@@ -119,6 +119,25 @@ describe("getHome", () => {
     expect(morning.keyStats.find((s) => s.key === "hrv")!.metric.reason).toBe("awaiting_sleep_sync");
   });
 
+  it("orders My Dashboard as chosen, skipping unknown keys, and falls back to the default list", () => {
+    const set = (keys: string[]) => {
+      db.$client.prepare("delete from dashboard_metrics").run();
+      keys.forEach((k, i) => db.$client.prepare("insert into dashboard_metrics (key, position) values (?, ?)").run(k, i));
+    };
+    const keys = () => getHome(dayAt(179), ctxFor(db)).keyStats.map((s) => s.key);
+    const all = ["hrv", "rhr", "resp", "sleep", "calories", "steps", "spo2", "skin"];
+    try {
+      expect(keys()).toEqual(all);
+      set(["steps", "vo2max", "hrv"]);
+      expect(keys()).toEqual(["steps", "hrv"]);
+      expect(getHome(dayAt(179), ctxFor(db)).keyStats[0]).toMatchObject({ label: "Steps", href: "/strain", direction: "up" });
+      set(["vo2max"]);
+      expect(keys()).toEqual(all);
+    } finally {
+      set([]);
+    }
+  });
+
   it("switches the day banner from outlook to review at 17:00, and past days always review", () => {
     const at = (h: number) => Date.parse(`2026-10-02T${String(h).padStart(2, "0")}:00:00+05:30`) / 1000;
     const morning = getHome(dayAt(179), ctxFor(db, at(14))).outlook;

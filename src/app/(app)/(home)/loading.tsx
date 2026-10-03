@@ -1,5 +1,10 @@
+import { connection } from "next/server"
+import { getDb } from "@/server/db"
+import { dashboardKeys } from "@/server/queries/home"
 import { HomeSkeleton } from "../_lib/skeletons"
 
-export default function Loading() {
-  return <HomeSkeleton />
+export default async function Loading() {
+  // Request time: the skeleton has one row per chosen My Dashboard metric (a one-table read), never a build-time list.
+  await connection()
+  return <HomeSkeleton stats={dashboardKeys(getDb())} />
 }

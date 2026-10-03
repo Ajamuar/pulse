@@ -1,4 +1,6 @@
+import { DASHBOARD_KEYS, DASHBOARD_LABEL, type DashboardKey, isDashboardKey } from "@/lib/dashboard";
 import { hmm } from "@/lib/format";
+import type { Db } from "../db";
 import { addDays, localMinutes } from "../time";
 import { insightOf as recoveryInsight } from "./recovery";
 import { insightOf as sleepInsight } from "./sleep";
@@ -76,7 +78,7 @@ export function getHome(day: string, ctx: QueryCtx = defaultCtx()): HomeVM {
     activities: { title: isToday ? "Today's activities" : "Activities", items: timeline(ctx, row, day) },
     energyBank: energyBankVM(ctx, row, day, isToday),
     tonight: planVM(ctx, row, isToday),
-    keyStats: keyStats(rows, day, isToday),
+    keyStats: keyStats(rows, day, isToday, dashboardKeys(ctx.db)),
     weeklyTeaser: latestReport(ctx, "week"),
     outlook: outlookOf(ctx, row, { recovery, strain, target }, isToday),
     insights: isToday ? insightsOf(ctx, rows, row, day, { strain, target }) : [],
@@ -195,35 +197,42 @@ export function energyBankVM(ctx: QueryCtx, row: DayRow | undefined, day: string
   );
 }
 
-function keyStats(rows: Map<string, DayRow>, day: string, isToday: boolean): KeyStat[] {
+/** My Dashboard's chosen metrics in order. Keys no longer in the catalogue are skipped; none chosen means the default list. */
+export function dashboardKeys(db: Db): DashboardKey[] {
+  const keys = (db.$client.prepare("select key from dashboard_metrics order by position").pluck().all() as string[]).filter(isDashboardKey);
+  return keys.length ? keys : DASHBOARD_KEYS;
+}
+
+/** The dashboard rows for `keys`, in that order. */
+function keyStats(rows: Map<string, DayRow>, day: string, isToday: boolean, keys: DashboardKey[]): KeyStat[] {
   const row = rows.get(day);
   const m = row?.metrics;
   const rhr = (r: DayRow) => r.sessionRhr ?? r.metrics?.rhrBpm ?? null;
   const skin = (r: DayRow) => r.recovery?.inputs.skinTempDev ?? null;
   const stat = (
-    key: string,
-    label: string,
     pick: (r: DayRow) => number | null | undefined,
     metric: Metric<number>,
     unit: string | undefined,
     direction: KeyStat["direction"],
     href: string,
-  ): KeyStat => {
+  ) => {
     const { mean, sd } = priorStats(rows, day, pick);
-    return { key, label, metric, ...(unit && { unit }), average: mean, ...(sd !== undefined && { sd }), direction, href };
+    return { metric, ...(unit && { unit }), average: mean, ...(sd !== undefined && { sd }), direction, href };
   };
   const skinReason = m?.nightlyTempC != null ? "calibrating" : vitalReason(row, isToday);
   const dailyReason = !row?.s1 || row.s1.hrCount === 0 ? hrReason(row?.s1 ?? null) : "no_data";
-  return [
-    stat("hrv", "Heart rate variability", (r) => r.metrics?.hrvMs, maybe(m?.hrvMs, vitalReason(row, isToday, true)), "ms", "up", "/recovery"),
-    stat("rhr", "Resting heart rate", rhr, maybe(row && rhr(row), vitalReason(row, isToday)), "bpm", "down", "/recovery"),
-    stat("resp", "Respiratory rate", (r) => r.metrics?.respBpm, maybe(m?.respBpm, vitalReason(row, isToday)), "rpm", "neutral", "/health/monitor"),
-    stat("sleep", "Sleep performance", (r) => r.sleep?.performance, sleepMetric(row, isToday), "%", "up", "/sleep"),
-    stat("calories", "Calories", (r) => r.metrics?.calories, maybe(m?.calories, dailyReason), "kcal", "neutral", "/strain"),
-    stat("steps", "Steps", (r) => r.metrics?.steps, maybe(m?.steps, dailyReason), undefined, "up", "/strain"),
-    stat("spo2", "Blood oxygen", (r) => r.metrics?.spo2Pct, maybe(m?.spo2Pct, vitalReason(row, isToday)), "%", "up", "/health/monitor"),
-    stat("skin", "Skin temperature", skin, maybe(row && skin(row), skinReason), "°C", "toward_zero", "/health/monitor"),
-  ];
+  // Lazy: only the chosen metrics compute their 30-day averages.
+  const all: Record<DashboardKey, () => Omit<KeyStat, "key" | "label">> = {
+    hrv: () => stat((r) => r.metrics?.hrvMs, maybe(m?.hrvMs, vitalReason(row, isToday, true)), "ms", "up", "/recovery"),
+    rhr: () => stat(rhr, maybe(row && rhr(row), vitalReason(row, isToday)), "bpm", "down", "/recovery"),
+    resp: () => stat((r) => r.metrics?.respBpm, maybe(m?.respBpm, vitalReason(row, isToday)), "rpm", "neutral", "/health/monitor"),
+    sleep: () => stat((r) => r.sleep?.performance, sleepMetric(row, isToday), "%", "up", "/sleep"),
+    calories: () => stat((r) => r.metrics?.calories, maybe(m?.calories, dailyReason), "kcal", "neutral", "/strain"),
+    steps: () => stat((r) => r.metrics?.steps, maybe(m?.steps, dailyReason), undefined, "up", "/strain"),
+    spo2: () => stat((r) => r.metrics?.spo2Pct, maybe(m?.spo2Pct, vitalReason(row, isToday)), "%", "up", "/health/monitor"),
+    skin: () => stat(skin, maybe(row && skin(row), skinReason), "°C", "toward_zero", "/health/monitor"),
+  };
+  return keys.map((key) => ({ key, label: DASHBOARD_LABEL[key], ...all[key]() }));
 }
 
 /** The latest complete week or month with a report. */

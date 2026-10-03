@@ -1,7 +1,8 @@
 import { render, screen, within } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 import type { BehavioursVM } from "@/server/queries/types"
-import { Behaviours, moved } from "./Behaviours"
+import { moved } from "@/lib/utils"
+import { Behaviours } from "./Behaviours"
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }))
 vi.mock("@/server/actions/journal", () => ({ addCustomTag: vi.fn(), reorderBehaviours: vi.fn(), setBehaviourHidden: vi.fn() }))

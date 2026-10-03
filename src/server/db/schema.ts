@@ -143,6 +143,12 @@ export const journalTags = sqliteTable("journal_tags", {
   position: integer("position").notNull().default(0),
 });
 
+/** Home's My Dashboard as the owner chose it: the metric keys shown, in `position` order. No rows means the default list. */
+export const dashboardMetrics = sqliteTable("dashboard_metrics", {
+  key: text("key").primaryKey(),
+  position: integer("position").notNull(),
+});
+
 export const journalEntries = sqliteTable(
   "journal_entries",
   {

@@ -4,7 +4,7 @@ import * as React from "react"
 import { useRouter } from "next/navigation"
 import { ArrowDown, ArrowUp } from "lucide-react"
 import { toast } from "sonner"
-import { cn } from "@/lib/utils"
+import { cn, moved } from "@/lib/utils"
 import { TAG_GROUPS, tagIcon } from "@/lib/journal"
 import { addCustomTag, reorderBehaviours, setBehaviourHidden } from "@/server/actions/journal"
 import type { BehavioursVM } from "@/server/queries/types"
@@ -15,15 +15,6 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 
 type Tag = BehavioursVM["tags"][number]
-
-/** `tags` with the one at `i` swapped with its neighbour `by` (-1 up, +1 down). */
-export function moved<T>(tags: T[], i: number, by: -1 | 1): T[] {
-  const j = i + by
-  if (j < 0 || j >= tags.length) return tags
-  const next = [...tags]
-  ;[next[i], next[j]] = [next[j], next[i]]
-  return next
-}
 
 /**
  * More › Behaviours (U21): show or hide each behaviour on the check-in sheet, reorder it inside its group, add your

@@ -1,6 +1,7 @@
 // Route loading states (spec §5.19): the real shells and each section's own box with its static
 // titles and labels; only values are bars, so nothing moves when data arrives. Headers never skeleton.
 import { Fragment } from "react"
+import { DASHBOARD_KEYS, DASHBOARD_LABEL, type DashboardKey } from "@/lib/dashboard"
 import { IntradayHrChartSkeleton } from "@/components/charts/IntradayHrChart"
 import { EnergyBankChartSkeleton } from "@/components/charts/EnergyBankChart"
 import { TrendChartSkeleton } from "@/components/charts/TrendChart"
@@ -24,17 +25,6 @@ import { CAPTION, LABEL, LEGEND, STAT_ICON } from "./view"
 
 const rows = (n: number, Row: (i: number) => React.ReactNode) => Array.from({ length: n }, (_, i) => <Fragment key={i}>{Row(i)}</Fragment>)
 
-/** Home's My Dashboard rows, in the order getHome returns them (server/queries/home.ts keyStats). */
-const HOME_STATS: [string, string][] = [
-  ["hrv", "Heart rate variability"],
-  ["rhr", "Resting heart rate"],
-  ["resp", "Respiratory rate"],
-  ["sleep", "Sleep performance"],
-  ["calories", "Calories"],
-  ["steps", "Steps"],
-  ["spo2", "Blood oxygen"],
-  ["skin", "Skin temperature"],
-]
 const SUMMARY: Record<string, string[]> = {
   Strain: ["Strain Target", "Heart rate zones 1‑3", "Heart rate zones 4‑5", "Strength activity time", "Steps"],
   Sleep: ["Hours vs. needed", "Sleep consistency", "Sleep efficiency", "Restorative sleep"],
@@ -69,7 +59,8 @@ const ICON_SLOT = <span aria-hidden className="block size-8" />
 /** Home's 56 px gradient banner rows (day outlook, week in review). */
 const BannerSkeleton = () => <Skeleton className="h-14 rounded-2xl" />
 
-export function HomeSkeleton() {
+/** `stats`: My Dashboard's chosen metrics (getHome's order), so the skeleton has as many rows as the page will. */
+export function HomeSkeleton({ stats = DASHBOARD_KEYS }: { stats?: DashboardKey[] }) {
   return (
     <PageShell
       title="Home"
@@ -161,11 +152,11 @@ export function HomeSkeleton() {
           </SectionShell>
         ),
         aside: (
-          <SectionShell variant="section" title="My Dashboard" aside="vs. 30-day average" className="xl:flex xl:h-full xl:flex-col">
+          <SectionShell variant="section" title="My Dashboard" aside="vs. 30-day average" action={ICON_SLOT} className="xl:flex xl:h-full xl:flex-col">
             <ul aria-hidden className="space-y-2">
-              {HOME_STATS.map(([key, label]) => (
+              {stats.map((key) => (
                 <li key={key}>
-                  <KeyStatRowSkeleton variant="card" label={label} icon={STAT_ICON[key]} />
+                  <KeyStatRowSkeleton variant="card" label={DASHBOARD_LABEL[key]} icon={STAT_ICON[key]} />
                 </li>
               ))}
             </ul>
