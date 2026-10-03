@@ -64,6 +64,19 @@ describe("recompute on the 180-day seed", () => {
     expect(dump(bumped, "daily_scores")).toBe(dump(db, "daily_scores"));
   });
 
+  it("a time-zone change reruns stage 1 for every day and matches a from-scratch run in the new zone", () => {
+    const utc = { ...OPTS, timeZone: "UTC" };
+    const moved = copyDb(db);
+    recompute(moved, utc);
+    const rerun = lastRun.stage1Days;
+    const scratch = copyDb(db);
+    scratch.$client.exec("delete from daily_scores; delete from intraday_series; delete from reports");
+    recompute(scratch, utc);
+    expect(rerun).toEqual(days(scratch));
+    expect(dump(moved, "daily_scores")).toBe(dump(scratch, "daily_scores"));
+    expect(dump(moved, "intraday_series", "1, 2")).toBe(dump(scratch, "intraday_series", "1, 2"));
+  });
+
   it("is causal: a day later, every earlier day is unchanged", () => {
     const later = copyDb(db);
     seedPull(later, { now: NOW + DAY_S, timeZone: TZ, maxHr: PROFILE.maxHr });

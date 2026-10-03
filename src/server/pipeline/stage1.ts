@@ -22,6 +22,7 @@ function stage1Key(data: Data, day: string, opts: PipelineOptions) {
   return sha(
     JSON.stringify([
       SCORING_VERSION,
+      opts.timeZone, // the day's bounds come from it
       opts.profile.maxHr,
       data.metrics.get(day)?.rhrBpm ?? null,
       main ? [main.id, main.startTs, main.endTs] : null,
