@@ -1,7 +1,7 @@
 // Own algorithm (docs/algorithms/reports.md): ISO-week (Monday–Sunday) and calendar-month summaries of the
 // daily scores, with deltas against the previous period of the same kind.
 import { mean } from "../scoring/forecast";
-import { acwrSignal, type ReadinessDetail } from "../scoring/readiness";
+import { acwrBand, type ReadinessDetail } from "../scoring/readiness";
 import { band, type RecoveryBand } from "../scoring/recovery";
 import type { TagImpact } from "./journalImpact";
 
@@ -131,7 +131,7 @@ export function buildReport(period: string, rows: ReportDay[], impacts: TagImpac
     averages: avg,
     deltas,
     bands,
-    trainingBalance: lastAcwr == null ? null : { acwr: lastAcwr, status: acwrSignal(lastAcwr, 0, 0).detail },
+    trainingBalance: lastAcwr == null ? null : { acwr: lastAcwr, status: acwrBand(lastAcwr) },
     sleepConsistency: consistency.length ? mean(consistency) : null,
     topImpacts: impacts
       .filter((t) => t.effects.recovery.label === "positive" || t.effects.recovery.label === "negative")

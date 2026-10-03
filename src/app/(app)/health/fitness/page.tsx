@@ -17,7 +17,10 @@ import { LoadChart } from "./LoadChart"
 export const metadata = { title: "Fitness" }
 
 const BODY = "text-[15px] leading-[22px] text-pretty text-foreground-secondary"
-const NO_LOAD = "Training load needs 28 days of strain."
+// Both thresholds follow the pipeline: ACWR shows after 14 days of strain (readiness `minChronic`), fitness and fatigue
+// after 14 days in a row (training load `minimumDays`).
+const NO_LOAD = "Training load needs 14 days of strain."
+const NO_FFS = "Fitness, fatigue and form need 14 days of strain in a row."
 
 const INFO = {
   title: "About Fitness",
@@ -137,7 +140,7 @@ export default async function FitnessPage() {
         </SectionShell>,
         <SectionShell key="ffs" variant="card" title="Fitness, fatigue and form">
           {vm.loadReason ? (
-            <ReasonPlaceholder reason={vm.loadReason.reason} size="md" copy={NO_LOAD} />
+            <ReasonPlaceholder reason={vm.loadReason.reason} size="md" copy={NO_FFS} />
           ) : (
             <>
               <LoadChart load={vm.load} />

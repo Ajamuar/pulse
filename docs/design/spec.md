@@ -171,7 +171,7 @@ Every v1 data token is unchanged in value and meaning (recovery green / yellow /
 | `--dial-target` | `fill-dial-target` | `#5a5e61` | `#5A5E61` strain target arc [home-dials] | Strain Target range on the dial track |
 | `--destructive` | `*-destructive` | `#ff0026` | = recovery red | Destructive buttons and form errors (text uses `--recovery-red-text`) |
 
-**Unchanged rules from v1:** Energy Bank bands like Recovery; Health Monitor in range `--optimal`, out of range `--warning`, illness `--recovery-red`; training load 0.8-1.3 optimal, 1.3-1.5 warning, > 1.5 red, < 0.8 muted; hypnogram lanes `--stage-awake #e6edf2`, `--stage-rem #a6c3d7`, `--stage-light #7ba1bb`, `--stage-deep #48708c`; chart variables `--chart-1` … `--chart-5`, `--chart-grid`, `--chart-band`, `--chart-cursor` as v1.
+**Unchanged rules from v1:** Energy Bank bands like Recovery; Health Monitor in range `--optimal`, out of range `--warning`, illness `--recovery-red`; training load (`acwrBand`) 0.8 to under 1.3 optimal, 1.3 to under 1.5 warning, 1.5 and up red, < 0.8 muted; hypnogram lanes `--stage-awake #e6edf2`, `--stage-rem #a6c3d7`, `--stage-light #7ba1bb`, `--stage-deep #48708c`; chart variables `--chart-1` … `--chart-5`, `--chart-grid`, `--chart-band`, `--chart-cursor` as v1.
 
 **Pulse Age orb palette (new).** Four hue stops, each a rim / glow / particle / text quadruple, interpolated by §5.17's rule. Sampled across the radius of each capture:
 

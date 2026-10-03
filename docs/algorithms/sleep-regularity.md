@@ -8,8 +8,10 @@ The Sleep Regularity Index (SRI) measures how likely you are to be in the same s
 
 ```mermaid
 flowchart LR
-  S[Sleep sessions, main and naps] --> M[Minute grid over 7 days: asleep or awake]
-  C[Covered flag per day] --> P
+  S[Sleep sessions, main and naps] --> M[Minute grid over 7 noon-to-noon days: asleep or awake]
+  W[Minutes with HR per day] --> C{At least 720?}
+  C -->|yes| P
+  C -->|no| X[Day skipped]
   M --> P[Pairs t, t + 24 h where both days are covered]
   P --> SRI[SRI = −100 + 200 × share of pairs in the same state]
   SRI --> D[Display: max 0, SRI]
@@ -19,7 +21,7 @@ flowchart LR
 
 ## Formula
 
-1. Split the window into N days × 1,440 minutes, starting at `windowStart`, which is local midnight of the first day. Minute *m* starts at `windowStart + 60m` and is **asleep** when any session satisfies `start ≤ minute start < end`. Every other minute is **awake**.
+1. Split the window into N days × 1,440 minutes, starting at `windowStart`, which is local noon at the start of the first day. Each "day" runs noon to noon, so a night's sleep sits inside one day instead of straddling two. Minute *m* starts at `windowStart + 60m` and is **asleep** when any session satisfies `start ≤ minute start < end`. Every other minute is **awake**.
 2. For each day *d* from 0 to N − 2, and only when days *d* and *d* + 1 are both covered, compare each minute with the same minute 24 h later.
 3. SRI = −100 + 200 × (pairs in the same state ÷ pairs compared).
 4. When no pair of consecutive covered days exists, the result is null.
@@ -36,12 +38,12 @@ This is Phillips et al.'s definition, SRI = −100 + 200 / (M(N − 1)) · Σⱼ
 | Input | Unit | Notes |
 |---|---|---|
 | `sessions` | `{ start, end }`, unix seconds | Every sleep session that touches the window: main sleeps **and naps**. Parts outside the window are clipped. |
-| `windowStart` | unix seconds | Local midnight that starts the first day. For the score on day D, use midnight of D − 6. |
+| `windowStart` | unix seconds | Local noon that starts the first day. For the score on day D (the wake day), the pipeline uses noon of D − 7, so the last day ends at noon on D. |
 | `covered` | `boolean[]`, one per day | Defaults to 7 × `true`. Set a day to `false` when there is no data that day (band not worn), so its pairs are skipped rather than counted as awake. |
 
 **Naps count as sleep.** SRI is defined over every epoch of the 24 h day, and a nap is sleep at an irregular time, which is what SRI measures. UK Biobank's accelerometer SRI cannot tell naps apart either, so including them keeps us comparable to the SRI that Healthspan's curve was fitted on. The cost is that one nap lowers SRI by about (2 × nap minutes) ÷ (6 × 1,440) × 200, which is 2.8 points for a 1 h nap in a 7-day window.
 
-**What U10 should mark as covered.** A day is covered when it has worn-band data, for example any `hr_samples` that day. A worn day with no sleep at all is covered, and every one of its minutes counts as awake.
+**What counts as covered.** The pipeline (`sleepRegularity` in `src/server/pipeline.ts`) marks a noon-to-noon day covered when it has at least 720 minutes with heart rate, that is the band was worn for at least half of it: the afternoon of one calendar day (`hrMinutesPm`) plus the morning of the next (`hrMinutesAm`). A covered day with no sleep at all counts every minute as awake. A day with a few stray heart-rate minutes is skipped, so a mostly-unworn day cannot read as a night awake.
 
 ## Constants
 

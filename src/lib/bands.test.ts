@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { acwrBand, acwrSignal } from "@/core/scoring/readiness";
 import { acwrTone, deltaTone, dialColor, GOOD_DIRECTION, recoveryBand, stressLevel } from "./bands";
 
 describe("recoveryBand", () => {
@@ -54,5 +55,20 @@ describe("stress and training load", () => {
     expect(acwrTone(1.1)).toBe("optimal");
     expect(acwrTone(1.4)).toBe("warning");
     expect(acwrTone(1.6)).toBe("alert");
+  });
+  it("ACWR tone and the Reports band agree at the boundaries", () => {
+    const cases = [
+      [0.79, "neutral", "LOAD_RAMPING_DOWN"],
+      [0.8, "optimal", "LOAD_SWEET_SPOT"],
+      [1.29, "optimal", "LOAD_SWEET_SPOT"],
+      [1.3, "warning", "LOAD_BUILDING_FAST"],
+      [1.49, "warning", "LOAD_BUILDING_FAST"],
+      [1.5, "alert", "LOAD_SPIKING"],
+    ] as const;
+    for (const [acwr, tone, band] of cases) {
+      expect(acwrTone(acwr), String(acwr)).toBe(tone);
+      expect(acwrBand(acwr), String(acwr)).toBe(band);
+      expect(acwrSignal(acwr, 0, 0).detail, String(acwr)).toBe(band);
+    }
   });
 });

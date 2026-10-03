@@ -1231,11 +1231,11 @@ flowchart LR
 - No export reads `oauth_tokens` or `instance`. The backup copy deletes both and vacuums, so no free page still holds the session secret or the Google grant. A restored backup asks for sign-in and Google again.
 - CSV cells that start with `=`, `+`, `-` or `@` get a leading apostrophe (a custom behaviour's label is user input).
 
-**Follow-ups found while writing the explainers** (the explainers follow the code; these are not fixed here):
-- The Sleep info sheet (`SLEEP_INFO`) says the need includes yesterday's strain, debt and naps; Sleep Performance uses only the baseline need. Strain, debt and naps feed the Sleep Planner.
-- `docs/algorithms/sleep-regularity.md` describes midnight days and "any HR" coverage; the pipeline uses noon-to-noon periods and needs 720 minutes with HR.
-- At ACWR exactly 1.30 and 1.50, Fitness (`acwrTone`) and Reports (`acwrSignal`) use different words.
-- Fitness says "Training load needs 28 days of strain"; ACWR shows after 14.
+**Follow-ups found while writing the explainers** (the explainers follow the code; all four done 2026-10-03, see Deferred work):
+- Done: the Sleep info sheet (`SLEEP_INFO`) said the need includes yesterday's strain, debt and naps; Sleep Performance uses only the baseline need. Strain, debt and naps feed the Sleep Planner. The sheet now says so.
+- Done: `docs/algorithms/sleep-regularity.md` described midnight days and "any HR" coverage; the pipeline uses noon-to-noon periods and needs 720 minutes with HR. The doc now follows the pipeline (not a bug: noon-to-noon keeps a night in one period).
+- Done: at ACWR exactly 1.30 and 1.50, Fitness (`acwrTone`) and Reports (`acwrSignal`) used different words. Both now band through `acwrBand` (`src/core/scoring/readiness.ts`, noop's bands: 1.30 is building fast, 1.50 spiking).
+- Done: Fitness said "Training load needs 28 days of strain"; ACWR shows after 14 (noop's `minChronic`). The copy and the countdown now say 14, and Fitness, fatigue and form gets its own 14-days-in-a-row line.
 
 **Tests:** `src/server/queries/more.test.ts` (Trends, archive, Behaviours, More, Your data on a seeded temp DB), `src/server/actions/journal.test.ts` (hide, reorder, signed-out refusal), `src/app/export/export.test.ts` (formats, 401 and 403, no tokens or secret in any file or the backup bytes), `Behaviours.test.tsx`. E2E: the new routes are in the sweep; journey 9 opens More, switches a Trends metric and range, adds a custom behaviour and finds it in the check-in sheet, and downloads the CSV.
 

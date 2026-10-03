@@ -77,7 +77,8 @@ export const SLEEP_INFO: InfoContent = {
     <>
       <p>
         Sleep Performance compares the sleep you got with the sleep you needed, adjusted for consistency, efficiency and restorative sleep. Your
-        need is your personal baseline plus extra for yesterday&apos;s strain and any sleep debt, minus naps.
+        need is your personal baseline: the upper quartile of your last 28 nights, between 8 and 9.5 hours. Strain, sleep debt and naps change
+        tonight&apos;s need in the sleep planner, not this score.
       </p>
       <p>
         Sleep consistency is the Sleep Regularity Index: how closely your sleep and wake times match from one day to the next, over the last 7

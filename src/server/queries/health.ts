@@ -1,5 +1,7 @@
 // Health hub and its four detail screens (spec §7.6–7.10).
 import type { HealthspanContribution } from "@/core/algorithms/healthspan";
+import { minChronic } from "@/core/scoring/readiness";
+import { standardConfig } from "@/core/scoring/trainingLoad";
 import { acwrTone } from "@/lib/bands";
 import { weekOf } from "@/lib/url";
 import { addDays, daysBetween, fractionalYears, wall } from "../time";
@@ -401,7 +403,7 @@ export function getFitness(ctx: QueryCtx = defaultCtx()): FitnessVM {
   const tl = row?.trainingLoad;
   const effortDays = [...rows.values()].filter((r) => r.s1?.effort != null).length;
   const trainingLoad: Metric<NonNullable<FitnessVM["trainingLoad"]["value"]>> =
-    tl?.acwr != null ? ok({ acwr: tl.acwr, ...acwrStatus(tl.acwr) }) : none("calibrating", Math.max(1, 28 - effortDays));
+    tl?.acwr != null ? ok({ acwr: tl.acwr, ...acwrStatus(tl.acwr) }) : none("calibrating", Math.max(1, minChronic - effortDays));
   const load = Array.from({ length: 90 }, (_, k) => {
     const d = addDays(last, k - 89);
     const t = rows.get(d)?.trainingLoad;
@@ -414,6 +416,6 @@ export function getFitness(ctx: QueryCtx = defaultCtx()): FitnessVM {
     },
     trainingLoad,
     load,
-    loadReason: load.some((p) => p.ctl != null) ? null : { reason: "calibrating", nightsLeft: Math.max(1, 28 - (tl?.contiguousDays ?? 0)) },
+    loadReason: load.some((p) => p.ctl != null) ? null : { reason: "calibrating", nightsLeft: Math.max(1, standardConfig.minimumDays - (tl?.contiguousDays ?? 0)) },
   };
 }

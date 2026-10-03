@@ -22,7 +22,7 @@ export type ReadinessDetail =
   | "RHR_GOOD" | "RHR_WATCH" | "RHR_BAD"
   | "RESP_WATCH" | "RESP_BAD"
   | "NORMAL_RANGE"
-  | "LOAD_RAMPING_DOWN" | "LOAD_SWEET_SPOT" | "LOAD_BUILDING_FAST" | "LOAD_SPIKING"
+  | AcwrBand
   | "MONOTONY_WATCH";
 
 export type ReadinessEvidence =
@@ -102,13 +102,24 @@ function zSignal(
   return { key, flag, detail, evidence };
 }
 
-/** ACWR band: < 0.8 ramping down (watch), < 1.3 sweet spot (good), < 1.5 building fast (watch), else spiking (bad). */
+export type AcwrBand = "LOAD_RAMPING_DOWN" | "LOAD_SWEET_SPOT" | "LOAD_BUILDING_FAST" | "LOAD_SPIKING";
+
+/**
+ * The one ACWR banding (noop's): < 0.8 ramping down, [0.8, 1.3) sweet spot, [1.3, 1.5) building fast, ≥ 1.5 spiking.
+ * Readiness, Reports and Fitness all band through this, so 1.30 and 1.50 read the same everywhere.
+ */
+export function acwrBand(ratio: number): AcwrBand {
+  if (ratio < 0.8) return "LOAD_RAMPING_DOWN";
+  if (ratio < 1.3) return "LOAD_SWEET_SPOT";
+  if (ratio < 1.5) return "LOAD_BUILDING_FAST";
+  return "LOAD_SPIKING";
+}
+
+const ACWR_FLAG: Record<AcwrBand, ReadinessFlag> = { LOAD_RAMPING_DOWN: "watch", LOAD_SWEET_SPOT: "good", LOAD_BUILDING_FAST: "watch", LOAD_SPIKING: "bad" };
+
 export function acwrSignal(ratio: number, acute: number, chronic: number): ReadinessSignal {
-  const evidence: ReadinessEvidence = { kind: "trainingLoad", acute, chronic };
-  if (ratio < 0.8) return { key: "acwr", flag: "watch", detail: "LOAD_RAMPING_DOWN", evidence };
-  if (ratio < 1.3) return { key: "acwr", flag: "good", detail: "LOAD_SWEET_SPOT", evidence };
-  if (ratio < 1.5) return { key: "acwr", flag: "watch", detail: "LOAD_BUILDING_FAST", evidence };
-  return { key: "acwr", flag: "bad", detail: "LOAD_SPIKING", evidence };
+  const detail = acwrBand(ratio);
+  return { key: "acwr", flag: ACWR_FLAG[detail], detail, evidence: { kind: "trainingLoad", acute, chronic } };
 }
 
 function synthesize(signals: ReadinessSignal[], hasHistory: boolean): ReadinessLevel {

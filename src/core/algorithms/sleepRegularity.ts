@@ -12,7 +12,7 @@ const MIN_PER_DAY = 1440;
 /**
  * SRI on [−100, 100], or null when no pair of consecutive covered days exists.
  * @param sessions every sleep session (main sleep and naps), unix seconds; naps count as sleep.
- * @param windowStart unix seconds of the first day's local midnight.
+ * @param windowStart unix seconds where the first day starts (the pipeline uses local noon, so days run noon to noon).
  * @param covered one flag per day: false when the day has no data (band not worn), so its pairs are skipped.
  */
 export function sleepRegularityIndex(

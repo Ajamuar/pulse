@@ -1,5 +1,6 @@
 // Band and tone logic for data colour (spec §2.3, §5.0). Colour is a data channel: every helper
 // here returns a meaning first, and the token for it second.
+import { acwrBand, type AcwrBand } from "@/core/scoring/readiness";
 
 /** Data tokens. `bg`/`text` are literal class names so Tailwind sees them; `css` is for Recharts props. */
 export const DATA_COLORS = {
@@ -117,10 +118,7 @@ export const CHIP_TONE_CLASS: Record<ChipTone, string> = {
   neutral: "bg-secondary text-foreground-secondary",
 };
 
-/** Training load (ACWR): 0.8-1.3 optimal, 1.3-1.5 warning, above 1.5 alert, below 0.8 neutral. */
-export function acwrTone(acwr: number): ChipTone {
-  if (acwr > 1.5) return "alert";
-  if (acwr > 1.3) return "warning";
-  if (acwr >= 0.8) return "optimal";
-  return "neutral";
-}
+const ACWR_TONE: Record<AcwrBand, ChipTone> = { LOAD_RAMPING_DOWN: "neutral", LOAD_SWEET_SPOT: "optimal", LOAD_BUILDING_FAST: "warning", LOAD_SPIKING: "alert" };
+
+/** Training load (ACWR) chip tone from the shared `acwrBand`: below 0.8 neutral, [0.8, 1.3) optimal, [1.3, 1.5) warning, then alert. */
+export const acwrTone = (acwr: number): ChipTone => ACWR_TONE[acwrBand(acwr)];
