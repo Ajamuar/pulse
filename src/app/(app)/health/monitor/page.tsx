@@ -7,8 +7,12 @@ import { StatusChip } from "@/components/metrics/primitives"
 import { DetailShell } from "@/components/shells/DetailShell"
 import { SectionShell } from "@/components/shells/SectionShell"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { KeyStatRow } from "@/components/metrics/KeyStatRow"
+import { Card } from "@/components/ui/card"
+import { HeartRhythm } from "./HeartRhythm"
 import { VitalTiles } from "./VitalTiles"
 import { pageDay, type SearchParams } from "../../_lib/day"
+import { LEGEND, STAT_ICON } from "../../_lib/view"
 
 export const metadata = { title: "Health Monitor" }
 
@@ -30,6 +34,36 @@ const CHIP = {
   out: { tone: "warning", text: () => "Out of range" },
   illness: { tone: "alert", text: () => "Out of range" },
 } as const
+
+/**
+ * Weight and body fat, then blood glucose and core temperature once ever recorded: each the latest reading with its
+ * date, against the mean of the readings in the 30 days before it (docs/research/heart-rhythm-ui.md, placement).
+ */
+function Measurements({ rows }: { rows: MonitorVM["measurements"] }) {
+  return (
+    <Card className="gap-0 px-4 py-1 ring-0">
+      <div className="divide-y divide-border">
+        {rows.map((m) => (
+          <KeyStatRow
+            key={m.key}
+            variant="row"
+            icon={STAT_ICON[m.key]}
+            label={m.label}
+            caption={m.caption}
+            metric={m.metric}
+            unit={m.unit}
+            format={m.format}
+            average={m.average}
+            averageLabel="prior 30-day average"
+            sd={m.sd}
+            direction="neutral"
+          />
+        ))}
+      </div>
+      <p className={LEGEND}>Latest reading vs. the 30 days before it</p>
+    </Card>
+  )
+}
 
 function Count({ count }: { count: MonitorVM["count"] }) {
   const v = count.value
@@ -82,6 +116,17 @@ export default async function MonitorPage({ searchParams }: PageProps<"/health/m
         <SectionShell variant="section" title="Last night’s readings">
           <VitalTiles vitals={vm.vitals} />
         </SectionShell>
+      }
+      footer={
+        // the reference app's order below the vitals: heart rhythm (Heart Screener's place), then body measurements (spec §11 HM1).
+        <div className="grid grid-cols-1 items-start gap-8 xl:grid-cols-2 xl:gap-6">
+          <SectionShell variant="section" title="Heart rhythm">
+            <HeartRhythm rhythm={vm.heartRhythm} />
+          </SectionShell>
+          <SectionShell variant="section" title="Measurements">
+            <Measurements rows={vm.measurements} />
+          </SectionShell>
+        </div>
       }
     />
   )
