@@ -26,7 +26,7 @@ Status: **Shown** means visible on a screen; **Used** means it feeds a score but
 | Google type | What it is | Pulse | Where it goes |
 |---|---|---|---|
 | `steps` | Step counts per interval | **Shown** | Daily total (roll-up) on My Dashboard, Strain, Trends, Pulse Age. Per-minute counts gate stress |
-| `heart-rate` | HR samples | **Shown** | Strain, HR charts, zones, stress, Energy Bank. Band only: `HEALTH_CONNECT` points are dropped |
+| `heart-rate` | HR samples | **Shown** | Strain, HR charts, zones, stress, Energy Bank. Band only: `HEALTH_CONNECT` points are dropped. Google's daily average shows in Trends (Vitals) |
 | `sleep` | Sessions with stages | **Shown** | Sleep, Recovery, Sleep Planner, SRI |
 | `daily-resting-heart-rate` | Daily RHR | **Shown** | Recovery, My Dashboard, Pulse Age. The calculation method is stored, not shown |
 | `daily-heart-rate-variability` | Nightly average RMSSD | **Shown** | Recovery, My Dashboard. The deep-sleep RMSSD is stored, not shown. The non-REM HR is not stored |
@@ -35,33 +35,33 @@ Status: **Shown** means visible on a screen; **Used** means it feeds a score but
 | `daily-sleep-temperature-derivations` | Nightly skin temperature | **Shown** | Health Monitor, My Dashboard (deviation from Pulse's own baseline) |
 | `daily-vo2-max` | Daily cardio fitness | **Shown** | Fitness, Pulse Age (half weight) |
 | `run-vo2-max` | VO2max from runs | **Shown** | Fitness, Pulse Age |
-| `exercise` | Workouts | **Shown** | Activities: type, name, time, calories. Distance is stored, not shown. Splits are not stored |
-| `weight` | Weight | **Shown** | Health Monitor › Measurements (latest, date, vs. the 30 days before); lean mass (FFMI) in Pulse Age |
+| `exercise` | Workouts | **Shown** | Activities: type, name, time, calories, distance (rows and the activity screen) and pace for runs and walks. Splits are not stored |
+| `weight` | Weight | **Shown** | Health Monitor › Measurements (latest, date, vs. the 30 days before); Trends (Body) and the daily export; lean mass (FFMI) in Pulse Age |
 | `body-fat` | Body fat % | **Shown** | Same |
 | `vo2-max` | Generic VO2max | **Stored** | Probe only |
 | `total-calories` (roll-up) | Daily total kcal | **Shown** | My Dashboard, Strain |
-| `distance` | Distance per interval | No | |
-| `floors` | Floors climbed | No | |
-| `altitude` | Elevation gain | No | |
-| `active-zone-minutes` | Fitbit AZM | No | Pulse computes its own zone minutes from HR |
+| `distance` | Distance per interval | **Shown** | Daily total on Strain and Trends (Activity), export `distance_km` |
+| `floors` | Floors climbed | **Shown** | Strain, Trends (Activity) |
+| `altitude` | Elevation gain | **Shown** | Trends (Activity) |
+| `active-zone-minutes` | Fitbit AZM | **Shown** | Strain, Trends (Activity), beside Pulse's own zone minutes |
 | `time-in-heart-rate-zone` | Time per HR zone | No | Same |
 | `daily-heart-rate-zones` | The user's zone bounds | No | Pulse uses %HRmax zones |
-| `active-minutes` | Minutes by activity level | No | |
+| `active-minutes` | Minutes by activity level | **Shown** | Moderate + vigorous as Active minutes (Strain, Trends); light as Light activity (Trends) |
 | `activity-level` | Daily activity level | No | |
-| `sedentary-period` | Sedentary intervals | No | |
-| `active-energy-burned` | Active kcal | No | Only the total is fetched |
+| `sedentary-period` | Sedentary intervals | **Shown** | Daily total as Sedentary time (Trends) |
+| `active-energy-burned` | Active kcal | **Shown** | Strain, Trends (Activity) |
 | `basal-energy-burned` | BMR kcal | No | |
 | `heart-rate-variability` | HRV samples | No | Only the nightly average is fetched |
 | `oxygen-saturation` | SpO2 samples | No | Only the nightly average is fetched |
 | `respiratory-rate-sleep-summary` | Breathing rate per sleep stage | No | |
-| `core-body-temperature` | Core temperature | **Shown** | Daily average (`daily_values.core_temp`): Health Monitor › Measurements, once ever recorded |
-| `height` | Height | No | Asked in onboarding instead (deferred: read it from Google) |
-| `swim-lengths-data` | Swim strokes per length | No | |
+| `core-body-temperature` | Core temperature | **Shown** | Daily average (`daily_values.core_temp`): Health Monitor › Measurements once ever recorded; Trends (Vitals) |
+| `height` | Height | **Used** | Latest reading fills the profile height when the user gave none (Pulse Age lean mass) |
+| `swim-lengths-data` | Swim strokes per length | **Shown** | Daily stroke total in Trends (Activity) |
 | `electrocardiogram` | ECG readings | **Shown** | Result and average bpm (`health_records`, never the waveform): Health Monitor › Heart rhythm, latest, history and a detail sheet |
 | `irregular-rhythm-notification` | AFib alerts | **Shown** | Count and latest date: Health Monitor › Heart rhythm |
-| `blood-glucose` | Glucose readings | **Shown** | Daily average (`daily_values.glucose`): Health Monitor › Measurements, once ever recorded |
-| `hydration-log` | Water logged | No | |
-| `nutrition-log` | Meals and nutrients | No | |
+| `blood-glucose` | Glucose readings | **Shown** | Daily average (`daily_values.glucose`): Health Monitor › Measurements once ever recorded; Trends (Vitals) |
+| `hydration-log` | Water logged | **Shown** | Daily total in Trends (Nutrition) |
+| `nutrition-log` | Meals and nutrients | **Shown** | Daily kcal, protein, carbohydrates and fat in Trends (Nutrition) |
 | `food`, `food-measurement-unit` | Food database entries | No | |
 | `menstrual-period` | Cycle tracking | No | Scope requested |
 | `ovulation-test` | Ovulation test results | No | Scope requested |
@@ -70,7 +70,7 @@ Status: **Shown** means visible on a screen; **Used** means it feeds a score but
 
 ## What the Google Health app shows that Pulse doesn't
 
-These are the gaps a Fitbit Air user would notice, ordered by how often they come up:
+These are the gaps a Fitbit Air user would notice, ordered by how often they come up. Items 1 to 4 now show on Strain, Trends and the activity screens, and the hydration and food totals show in Trends (spec §11 EX1-EX4); the type table above has each status.
 
 1. **Distance, floors and active minutes**: the everyday activity numbers next to steps. Each is one roll-up type, and they fit beside Steps on Strain and My Dashboard.
 2. **Weight and body fat**: done, Health Monitor › Measurements.
