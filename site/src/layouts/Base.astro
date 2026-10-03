@@ -238,6 +238,19 @@ const nav = [
       padding: 0 9px;
     }
   }
+  /* The smallest phones: tighter links so the bar fits 320 px without a sideways scroll. */
+  @media (max-width: 360px) {
+    nav ul {
+      gap: 0;
+    }
+    .bar nav a {
+      padding: 0 6px;
+      font-size: 0.875rem;
+    }
+    .bar nav a.gh {
+      margin-left: 2px;
+    }
+  }
 
   .site-footer {
     margin-top: 120px;
