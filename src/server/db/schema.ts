@@ -263,3 +263,23 @@ export const profile = sqliteTable(
   },
   (t) => [check("profile_single_row", sql`${t.id} = 1`)],
 );
+
+/**
+ * What the owner logged in Pulse (water, food, weight, mood, symptoms, cycle), one row per Google data point.
+ * Moods, symptoms, periods and ovulation tests are write-only at Google, so this is their only copy Pulse can read;
+ * readable types come back through the sync, which owns their totals. `google_name` is the data point's name at
+ * Google (null: kept locally only, as in demo mode). `data` is per type (`LogData` in src/lib/log.ts).
+ */
+export const loggedEntries = sqliteTable(
+  "logged_entries",
+  {
+    id: text("id").primaryKey(),
+    type: text("type").notNull(),
+    ts: integer("ts").notNull(),
+    day: text("day").notNull(),
+    data: json("data").notNull(),
+    googleName: text("google_name"),
+    createdAt: integer("created_at").notNull(),
+  },
+  (t) => [index("logged_entries_ts").on(t.ts), index("logged_entries_day_type").on(t.day, t.type)],
+);
