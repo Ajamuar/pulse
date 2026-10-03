@@ -3,7 +3,7 @@ import type { HealthspanContribution } from "@/core/algorithms/healthspan";
 import { minChronic } from "@/core/scoring/readiness";
 import { standardConfig } from "@/core/scoring/trainingLoad";
 import { acwrTone } from "@/lib/bands";
-import { formatDay } from "@/lib/format";
+import { dayLabel, formatDay } from "@/lib/format";
 import { weekOf } from "@/lib/url";
 import { addDays, daysBetween, fractionalYears, wall } from "../time";
 import { illnessRaised, VITAL_LABEL } from "./home";
@@ -29,7 +29,10 @@ import {
 } from "./common";
 import type {
   ChipTone,
+  EcgReading,
   FitnessVM,
+  HeartRhythm,
+  Measurement,
   HealthHubVM,
   HealthspanContributor,
   HealthspanVM,
@@ -317,7 +320,80 @@ export function getMonitor(day: string, ctx: QueryCtx = defaultCtx(), preloaded?
     count,
     illness: hm && hm.reason === null && illnessRaised(hm) ? { level: hm.illness.level, score: hm.illness.score } : null,
     vitals,
+    heartRhythm: heartRhythm(ctx, day),
+    measurements: measurements(ctx, day, today),
   };
+}
+
+// ── Heart rhythm and measurements (docs/research/heart-rhythm-ui.md) ────────
+
+type EcgCopy = Pick<EcgReading, "label" | "tone" | "explanation">;
+/**
+ * Google's Electrocardiogram.ResultClassification in the Google Health app's words. Only AFib takes a colour, and
+ * a warning one, not red; every inconclusive state stays neutral. Unknown or unspecified codes read as "No result".
+ */
+export const ECG_RESULT: Record<string, EcgCopy> = {
+  NORMAL_SINUS_RHYTHM: { label: "Normal sinus rhythm", tone: "optimal", explanation: "Your heart rhythm appears normal and shows no signs of AFib." },
+  ATRIAL_FIBRILLATION: {
+    label: "Atrial fibrillation",
+    tone: "warning",
+    explanation: "This reading shows signs of atrial fibrillation (AFib), an irregular heart rhythm. Share it with your doctor.",
+  },
+  INCONCLUSIVE: { label: "Inconclusive", tone: "neutral", explanation: "This reading couldn’t be classified, often because of movement, a weak signal or another rhythm." },
+  INCONCLUSIVE_HIGH_HEART_RATE: {
+    label: "Inconclusive: high heart rate",
+    tone: "neutral",
+    explanation: "Your heart rate was over 120 bpm, too high to check your rhythm. Rest for a few minutes and try again.",
+  },
+  INCONCLUSIVE_LOW_HEART_RATE: { label: "Inconclusive: low heart rate", tone: "neutral", explanation: "Your heart rate was under 50 bpm, too low to check your rhythm." },
+  UNREADABLE: { label: "Poor recording", tone: "neutral", explanation: "The signal was too noisy to read. Try again sitting still with your arm resting on a table." },
+  NOT_ANALYZED: { label: "Not analyzed", tone: "neutral", explanation: "This recording was saved but not classified, so it has no rhythm result." },
+};
+const NO_RESULT: EcgCopy = { label: "No result", tone: "neutral", explanation: "No rhythm result came with this recording." };
+
+function heartRhythm(ctx: QueryCtx, day: string): HeartRhythm {
+  type Row = { id: string; ts: number; day: string; data: string };
+  const q = ctx.db.$client.prepare("select id, ts, day, data from health_records where kind = ? and day <= ? order by ts desc");
+  const rows = (kind: "ecg" | "irn") => q.all(kind, day) as Row[];
+  const ecg = rows("ecg").map((r): EcgReading => {
+    const d = JSON.parse(r.data) as { result?: string; avgBpm?: number | null };
+    const result = d.result ?? "RESULT_CLASSIFICATION_UNSPECIFIED";
+    return { id: r.id, at: ms(r.ts), day: r.day, time: wall(r.ts, ctx.timeZone).time.slice(0, 5), result, ...(ECG_RESULT[result] ?? NO_RESULT), avgBpm: finite(d.avgBpm) ? d.avgBpm : null };
+  });
+  const irn = rows("irn");
+  return { ecg, irn: { count: irn.length, latestAt: irn[0] ? ms(irn[0].ts) : null, latestDay: irn[0]?.day ?? null } };
+}
+
+const MEASUREMENTS = [
+  { key: "weight", label: "Weight", unit: "kg", format: "decimal1", from: "daily_metrics", col: "weight_kg", always: true },
+  { key: "body_fat", label: "Body fat", unit: "%", format: "decimal1", from: "daily_metrics", col: "body_fat_pct", always: true },
+  { key: "glucose", label: "Blood glucose", unit: "mg/dL", format: "int", from: "daily_values", col: "glucose", always: false },
+  { key: "core_temp", label: "Core temperature", unit: "°C", format: "decimal1", from: "daily_values", col: "core_temp", always: false },
+] as const;
+
+function measurements(ctx: QueryCtx, day: string, today: string): Measurement[] {
+  const c = ctx.db.$client;
+  const out: Measurement[] = [];
+  for (const m of MEASUREMENTS) {
+    // Columns and keys are the constants above, never input.
+    const src = m.from === "daily_metrics" ? `select day, ${m.col} value from daily_metrics where ${m.col} is not null` : `select day, value from daily_values where key = '${m.col}'`;
+    if (!m.always && !c.prepare(`select 1 from (${src}) limit 1`).get()) continue;
+    const latest = c.prepare(`select day, value from (${src}) where day <= ? order by day desc limit 1`).get(day) as { day: string; value: number } | undefined;
+    const prior = latest ? (c.prepare(`select value from (${src}) where day >= ? and day < ?`).pluck().all(addDays(latest.day, -30), latest.day) as number[]) : [];
+    const { mean, sd } = meanSd(prior);
+    out.push({
+      key: m.key,
+      label: m.label,
+      unit: m.unit,
+      format: m.format,
+      metric: latest ? ok(latest.value) : none("no_data"),
+      average: mean,
+      sd,
+      direction: "neutral",
+      caption: latest ? dayLabel(latest.day, today) : undefined,
+    });
+  }
+  return out;
 }
 
 // ── Stress Monitor ──────────────────────────────────────────────────────────

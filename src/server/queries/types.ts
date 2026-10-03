@@ -275,7 +275,35 @@ export type MonitorVM = {
   count: Metric<{ inRange: number; total: number; status: "within" | "out" | "illness"; outOfRange: number }>;
   illness: { level: string; score: number } | null;
   vitals: Vital[];
+  heartRhythm: HeartRhythm;
+  /** Weight and body fat always; blood glucose and core temperature only once the owner has ever had one. */
+  measurements: Measurement[];
 };
+
+/** One ECG reading. `result` is Google's ResultClassification; `label`, `tone` and `explanation` are its copy. */
+export type EcgReading = {
+  id: string;
+  /** Epoch ms. */
+  at: number;
+  day: string;
+  /** Local "HH:mm". */
+  time: string;
+  result: string;
+  label: string;
+  tone: ChipTone;
+  explanation: string;
+  avgBpm: number | null;
+};
+
+/** Heart-rhythm records up to the selected day. */
+export type HeartRhythm = {
+  /** Newest first. */
+  ecg: EcgReading[];
+  irn: { count: number; /** Epoch ms of the newest. */ latestAt: number | null; latestDay: string | null };
+};
+
+/** The latest reading on or before the selected day, against the mean of readings in the 30 days before it. */
+export type Measurement = KeyStat & { format: FormatKey };
 
 export type StressVM = {
   day: string;
