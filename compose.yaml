@@ -35,8 +35,9 @@ services:
     # Uses ~100-150 MB. The V8 heap is 50% of this limit (Dockerfile), so raising it grows the heap too.
     mem_limit: 384m
     ports:
-      # Loopback only: put a tunnel or an HTTPS reverse proxy on this machine in front of it.
-      - "127.0.0.1:3000:3000"
+      # Loopback only: put a tunnel or an HTTPS reverse proxy on this machine in front of it. PULSE_PORT in .env picks
+      # the host port (default 3000) when another app on the machine already uses 3000.
+      - "127.0.0.1:${PULSE_PORT:-3000}:3000"
 
 volumes:
   pulse-pg:
