@@ -37,7 +37,7 @@ export function MetricToggle({ metric }: { metric: ImpactMetricKey }) {
         <ToggleGroupItem
           key={m.key}
           value={m.key}
-          className="h-10 min-w-11 rounded-md! px-3 text-[13px] font-bold tracking-[0.06em] text-muted-foreground uppercase transition-[background-color,color] duration-150 ease-standard hover:bg-transparent hover:text-foreground data-[state=on]:bg-secondary data-[state=on]:text-foreground"
+          className="h-10 min-w-11 rounded-md! px-3 text-[13px] font-bold tracking-[0.1em] text-muted-foreground uppercase transition-[background-color,color] duration-150 ease-standard hover:bg-transparent hover:text-foreground data-[state=on]:bg-secondary data-[state=on]:text-foreground"
         >
           {m.label}
         </ToggleGroupItem>

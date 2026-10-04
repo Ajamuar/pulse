@@ -35,10 +35,10 @@ const buttonVariants = cva(
         "icon-lg": "size-9",
         // Pulse touch sizes (spec §5.0): every text button in content and sheets, and every icon button.
         touch:
-          "h-11 gap-2 rounded-xl px-4 text-[13px] font-bold tracking-[0.06em] uppercase [&_svg:not([class*='size-'])]:size-5",
+          "h-11 gap-2 rounded-xl px-4 text-[13px] font-bold tracking-[0.1em] uppercase [&_svg:not([class*='size-'])]:size-5",
         "icon-touch": "size-11 rounded-full [&_svg:not([class*='size-'])]:size-5",
         // Sheet footer pills (spec §3.4 "Sheet primary button", [latest-sheet-edit-1]).
-        sheet: "h-14 w-full gap-2 rounded-full px-6 text-[15px] font-bold tracking-[0.08em] uppercase [&_svg:not([class*='size-'])]:size-5",
+        sheet: "h-14 w-full gap-2 rounded-full px-6 text-[15px] font-bold tracking-[0.1em] uppercase [&_svg:not([class*='size-'])]:size-5",
       },
     },
     defaultVariants: {

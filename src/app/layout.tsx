@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Barlow, Figtree } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
+import { ThemeColor } from "@/components/shells/ThemeColor";
+import { THEME_SCRIPT } from "@/lib/theme";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 
@@ -36,23 +38,32 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#1a1e21",
-  colorScheme: "dark",
+  // First paint only; ThemeColor follows the theme and the page's ground from there. Values mirror --theme-color.
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f6f8f9" },
+    { media: "(prefers-color-scheme: dark)", color: "#1d2529" },
+  ],
+  colorScheme: "dark light",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`dark ${figtree.variable} ${barlow.variable} h-full scroll-pt-[calc(120px+env(safe-area-inset-top))] scroll-pb-[110px] antialiased md:scroll-pb-24`}
+      suppressHydrationWarning
+      className={`${figtree.variable} ${barlow.variable} h-full scroll-pt-[calc(120px+env(safe-area-inset-top))] scroll-pb-[110px] antialiased md:scroll-pb-24`}
     >
       <head>
+        {/* Settings › Appearance (system, light or dark, per device). Inline and first in <head>, so the class is on <html>
+            before anything paints: next/script's beforeInteractive is queued and ran after first paint (a dark flash). */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
         {/* Next's own manifest link omits crossorigin outside Vercel previews; child layouts set manifest: null. */}
         <link rel="manifest" href="/manifest.webmanifest" crossOrigin="use-credentials" />
       </head>
       <body className="flex min-h-full flex-col">
         <TooltipProvider>{children}</TooltipProvider>
-        <Toaster theme="dark" />
+        <Toaster />
+        <ThemeColor />
       </body>
     </html>
   );

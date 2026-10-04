@@ -11,7 +11,7 @@ export function UserAvatar({ src, className }: { src: string | null | undefined;
       src={src}
       alt=""
       referrerPolicy="no-referrer"
-      className={cn("block size-full rounded-full object-cover outline-1 -outline-offset-1 outline-white/10", className)}
+      className={cn("block size-full rounded-full object-cover outline-1 -outline-offset-1 outline-foreground/10", className)}
     />
   ) : (
     <CircleUserRound aria-hidden strokeWidth={1.5} className={cn("size-full text-foreground", className)} />

@@ -1,4 +1,3 @@
-import type { Viewport } from "next"
 import { Rabbit, Turtle } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { AGE_LABEL, formatValue, MISSING } from "@/lib/format"
@@ -16,8 +15,6 @@ import { pageDay, type SearchParams } from "../../_lib/day"
 import { CAPTION } from "@/components/metrics/primitives"
 
 export const metadata = { title: "Healthspan" }
-// The browser bar matches the page's darker ground (spec §11 M3).
-export const viewport: Viewport = { themeColor: "#101518" }
 
 const INFO = {
   title: "About Healthspan",

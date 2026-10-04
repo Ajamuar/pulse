@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { GoogleFit } from "@/components/brand/GoogleFit"
 import { Mark } from "@/components/brand/Mark"
-import { AvatarButtons, ChangePasswordButton, DeleteAccountButton, DisconnectButton, EditProfileButton, SwitchGoogleButton } from "./SettingsClient"
+import { AvatarButtons, ChangePasswordButton, DeleteAccountButton, DisconnectButton, EditProfileButton, SwitchGoogleButton, ThemePicker } from "./SettingsClient"
 import { CAPTION } from "@/components/metrics/primitives"
 
 const BODY = "max-w-[65ch] text-[15px] leading-[22px] text-pretty text-foreground-secondary"
@@ -19,7 +19,7 @@ const ROW = "flex min-h-13 items-center justify-between gap-3 py-2"
 const ROW_LABEL = "text-[15px] leading-[22px]"
 const ROW_VALUE = "truncate text-right text-[15px] leading-[22px] text-foreground-secondary tabular-nums"
 /** The logo tile beside a row's name (account photo, data source mark). */
-const TILE = "grid size-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-white/[0.06]"
+const TILE = "grid size-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-foreground/[0.06]"
 
 export type SettingsAccount = {
   email: string | null
@@ -187,7 +187,7 @@ export function DataSource({ vm, now, googleEmail = null }: { vm: Pick<SettingsV
       </div>
       {s.body && <p className={cn(BODY, "mt-3")}>{s.body}</p>}
       {source.needsPermissions && (
-        <div role="note" aria-labelledby="permissions-title" className="mt-4 rounded-xl bg-white/[0.04] p-4">
+        <div role="note" aria-labelledby="permissions-title" className="mt-4 rounded-xl bg-foreground/[0.04] p-4">
           <p id="permissions-title" className="flex items-center gap-2 text-[15px] leading-[22px] font-semibold">
             <TriangleAlert aria-hidden className="size-4 shrink-0 text-warning" strokeWidth={2} />
             Pulse needs new permissions
@@ -255,7 +255,7 @@ export function Profile({ profile }: { profile: SettingsVM["profile"] }) {
 }
 
 /**
- * Settings body: configuration only (U21): Account, Data source (with sync), Profile, as one 640 px column at every
+ * Settings body: configuration only (U21): Account, Data source (with sync), Profile, Appearance, as one 640 px column at every
  * width. About, reports, exports and help live in More.
  */
 export function SettingsView({ vm, now, account }: { vm: SettingsVM; now: number; account: SettingsAccount }) {
@@ -264,6 +264,10 @@ export function SettingsView({ vm, now, account }: { vm: SettingsVM; now: number
       <Account account={account} />
       <DataSource vm={vm} now={now} googleEmail={account.googleEmail} />
       <Profile profile={vm.profile} />
+      <SectionShell variant="card" level={2} id="appearance" title="Appearance">
+        <ThemePicker />
+        <p className="mt-2 text-[13px] leading-[18px] text-pretty text-muted-foreground">System follows this device’s light or dark setting.</p>
+      </SectionShell>
       {/* Last and quiet: the one irreversible action sits below everything, away from the everyday controls. */}
       {!account.demo && account.email !== null && (
         <div className="flex justify-center pt-6 pb-2">

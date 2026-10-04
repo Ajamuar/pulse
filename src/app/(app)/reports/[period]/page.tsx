@@ -24,7 +24,7 @@ const MONTH = /^\d{4}-\d{2}$/
 const STEP =
   "relative grid size-9 place-items-center rounded-full text-foreground transition-[background-color,scale] duration-150 ease-standard outline-none after:absolute after:-inset-1 hover:bg-accent focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96] aria-disabled:pointer-events-none aria-disabled:opacity-40"
 const SEGMENT =
-  "inline-flex h-10 min-w-11 items-center justify-center rounded-md px-3 text-[13px] font-bold tracking-[0.06em] uppercase transition-[background-color,color] duration-150 ease-standard outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+  "inline-flex h-10 min-w-11 items-center justify-center rounded-md px-3 text-[13px] font-bold tracking-[0.1em] uppercase transition-[background-color,color] duration-150 ease-standard outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
 
 export async function generateMetadata({ params }: PageProps<"/reports/[period]">) {
   const { period } = await params
@@ -227,7 +227,7 @@ export default async function ReportPage({ params }: PageProps<"/reports/[period
                         className="-mx-2 flex min-h-16 items-center gap-3 rounded-lg px-2 py-2 transition-[background-color] duration-150 ease-standard outline-none hover:bg-accent focus-visible:ring-3 focus-visible:ring-ring/50 active:bg-accent"
                       >
                         <span aria-hidden className="min-w-0 flex-1">
-                          <span className="block text-xs leading-4 font-bold tracking-[0.08em] uppercase">{b.label}</span>
+                          <span className="block text-xs leading-4 font-bold tracking-[0.1em] uppercase">{b.label}</span>
                           <span className={cn(CAPTION, "mt-1 block tabular-nums")}>{formatDay(b.day, DAY.short)}</span>
                         </span>
                         <span aria-hidden className="flex items-center gap-4">

@@ -52,7 +52,7 @@ function Wheel({ label, items, index, onIndex }: { label: string; items: string[
           go(index + step)
         }
       }}
-      className="relative h-(--wheel) [mask-image:linear-gradient(rgb(0_0_0/0.35),black_45%,black_55%,rgb(0_0_0/0.35))] snap-y snap-mandatory overflow-y-auto overscroll-contain rounded-lg py-[calc((var(--wheel)-40px)/2)] outline-none [scrollbar-width:none] focus-visible:ring-2 focus-visible:ring-foreground/70 [&::-webkit-scrollbar]:hidden"
+      className="relative h-(--wheel) [mask-image:linear-gradient(color-mix(in_srgb,var(--foreground)_35%,transparent),var(--foreground)_45%,var(--foreground)_55%,color-mix(in_srgb,var(--foreground)_35%,transparent))] snap-y snap-mandatory overflow-y-auto overscroll-contain rounded-lg py-[calc((var(--wheel)-40px)/2)] outline-none [scrollbar-width:none] focus-visible:ring-2 focus-visible:ring-foreground/70 [&::-webkit-scrollbar]:hidden"
     >
       {items.map((item, i) => (
         <div
@@ -118,12 +118,12 @@ export function BirthDatePicker({ id, name, defaultValue, invalid, describedBy }
         >
           <div className="relative grid grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1.2fr)] gap-1 px-2 pt-1">
             {/* The selection band behind the centre row. */}
-            <div aria-hidden className="pointer-events-none absolute inset-x-2 top-[calc(50%+2px)] h-10 -translate-y-1/2 rounded-lg bg-white/8" />
+            <div aria-hidden className="pointer-events-none absolute inset-x-2 top-[calc(50%+2px)] h-10 -translate-y-1/2 rounded-lg bg-foreground/8" />
             <Wheel label="Month" items={MONTHS} index={m - 1} onIndex={(i) => set(y, i + 1, d)} />
             <Wheel label="Day" items={days} index={Math.min(d, days.length) - 1} onIndex={(i) => set(y, m, i + 1)} />
             <Wheel label="Year" items={years} index={Math.max(0, years.indexOf(String(y)))} onIndex={(i) => set(OLDEST + i, m, d)} />
           </div>
-          <div className="flex items-center justify-between gap-3 border-t border-white/6 py-1.5 pr-1.5 pl-4">
+          <div className="flex items-center justify-between gap-3 border-t border-foreground/6 py-1.5 pr-1.5 pl-4">
             <span className="truncate text-[13px] leading-[18px] text-muted-foreground">Scroll or tap to pick</span>
             <Button
               type="button"

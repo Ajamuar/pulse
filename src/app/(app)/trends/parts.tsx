@@ -39,7 +39,7 @@ export function MetricPicker({ current, r }: { current?: TrendMetricKey; r?: str
                 scroll={false}
                 aria-current={g === group ? "true" : undefined}
                 className={cn(
-                  "inline-flex h-9 items-center rounded-md px-3 text-xs font-bold tracking-[0.08em] whitespace-nowrap text-muted-foreground uppercase transition-[background-color,color] duration-150 ease-standard hover:text-foreground",
+                  "inline-flex h-9 items-center rounded-md px-3 text-xs font-bold tracking-[0.1em] whitespace-nowrap text-muted-foreground uppercase transition-[background-color,color] duration-150 ease-standard hover:text-foreground",
                   "aria-[current=true]:bg-secondary aria-[current=true]:text-foreground",
                   FOCUS
                 )}
@@ -60,8 +60,8 @@ export function MetricPicker({ current, r }: { current?: TrendMetricKey; r?: str
                 scroll={false}
                 aria-current={m.key === current ? "page" : undefined}
                 className={cn(
-                  "inline-flex h-10 items-center rounded-full bg-muted px-4 text-[13px] font-bold tracking-[0.06em] text-muted-foreground uppercase transition-[background-color,color,scale] duration-150 ease-standard hover:text-foreground active:scale-[0.96]",
-                  "aria-[current=page]:bg-foreground aria-[current=page]:text-primary-foreground",
+                  "inline-flex h-10 items-center rounded-full bg-muted px-4 text-[13px] font-bold tracking-[0.1em] text-muted-foreground uppercase transition-[background-color,color,scale] duration-150 ease-standard hover:text-foreground active:scale-[0.96]",
+                  "aria-[current=page]:bg-foreground aria-[current=page]:text-background",
                   FOCUS
                 )}
               >

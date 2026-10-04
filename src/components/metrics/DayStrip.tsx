@@ -88,7 +88,7 @@ function Strip({ indicator, days }: DayStripProps) {
               aria-label={label}
               // Sized by its contents with 8 px above and below, so the badge sits fully inside the lit tile (SYM1):
               // 60 px with the recovery bar, 72 px with the journal badge.
-              className="h-auto w-11 flex-col justify-center gap-1 rounded-xl px-0 py-2 transition-[background-color,scale] duration-150 ease-standard hover:bg-white/6 active:scale-[0.96] data-[state=on]:bg-white/10"
+              className="h-auto w-11 flex-col justify-center gap-1 rounded-xl px-0 py-2 transition-[background-color,scale] duration-150 ease-standard hover:bg-foreground/6 active:scale-[0.96] data-[state=on]:bg-foreground/10"
             >
               <span aria-hidden className="text-[11px] leading-3 font-semibold text-muted-foreground">
                 {formatDay(day.date, { weekday: "narrow" })}

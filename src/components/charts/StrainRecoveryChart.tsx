@@ -103,16 +103,16 @@ export function StrainRecoveryChart({ points, today, grow }: { points: StrainRec
         <Bar
           yAxisId="r"
           dataKey="hl"
-          fill="rgb(255 255 255 / 0.06)"
+          fill="color-mix(in srgb, var(--foreground) 6%, transparent)"
           isAnimationActive={false}
           tooltipType="none"
           shape={(b: { x?: number; y?: number; width?: number; height?: number }) =>
-            b.height ? <rect x={b.x} y={b.y} width={b.width} height={b.height + 44} rx={6} fill="rgb(255 255 255 / 0.06)" /> : <g />
+            b.height ? <rect x={b.x} y={b.y} width={b.width} height={b.height + 44} rx={6} fill="color-mix(in srgb, var(--foreground) 6%, transparent)" /> : <g />
           }
         />
         <ChartTooltip
           isAnimationActive={false}
-          cursor={{ fill: "rgb(255 255 255 / 0.04)" }}
+          cursor={{ fill: "color-mix(in srgb, var(--foreground) 4%, transparent)" }}
           allowEscapeViewBox={{ x: false, y: false }}
           wrapperStyle={{ pointerEvents: "none" }}
           content={

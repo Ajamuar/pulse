@@ -12,8 +12,8 @@ export type ProfileDefaults = { birthDate: string; sex: "male" | "female" | null
 const noSubscribe = () => () => {}
 
 const FIELD =
-  "h-13 w-full min-w-0 rounded-xl bg-field px-4 text-[17px] leading-6 text-foreground tabular-nums outline-none transition-[box-shadow] duration-150 ease-standard placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-foreground/70 aria-invalid:ring-2 aria-invalid:ring-recovery-red-text [color-scheme:dark]"
-const LABEL = "text-xs leading-4 font-bold tracking-[0.08em] text-foreground-secondary uppercase"
+  "h-13 w-full min-w-0 rounded-xl bg-field px-4 text-[17px] leading-6 text-foreground tabular-nums outline-none transition-[box-shadow] duration-150 ease-standard placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-foreground/70 aria-invalid:ring-2 aria-invalid:ring-recovery-red-text"
+const LABEL = "text-xs leading-4 font-bold tracking-[0.1em] text-foreground-secondary uppercase"
 const HINT = "text-[13px] leading-[18px] text-muted-foreground text-pretty"
 const ERROR = "text-[13px] leading-[18px] font-medium text-recovery-red-text"
 

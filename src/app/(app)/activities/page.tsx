@@ -15,9 +15,9 @@ import { CAPTION } from "../_lib/view"
 export const metadata = { title: "Activities", description: "Every workout, newest first, grouped by day with its Strain." }
 
 const KIND_LABEL: Record<ActivityKind, string> = { run: "Runs", ride: "Rides", walk: "Walks", strength: "Strength", workout: "Workouts" }
-const STAT_LABEL = "text-xs leading-4 font-bold tracking-[0.08em] text-foreground-secondary uppercase"
+const STAT_LABEL = "text-xs leading-4 font-bold tracking-[0.1em] text-foreground-secondary uppercase"
 const PILL =
-  "grid h-9 shrink-0 place-items-center rounded-full px-4 text-xs font-bold tracking-[0.08em] uppercase outline-none transition-[background-color,color] duration-150 ease-standard focus-visible:ring-3 focus-visible:ring-ring/50"
+  "grid h-9 shrink-0 place-items-center rounded-full px-4 text-xs font-bold tracking-[0.1em] uppercase outline-none transition-[background-color,color] duration-150 ease-standard focus-visible:ring-3 focus-visible:ring-ring/50"
 
 type Query = { days: number; kind: ActivityKind | null }
 const href = ({ days, kind }: Query) => {
@@ -61,7 +61,7 @@ export default async function ActivitiesPage({ searchParams }: PageProps<"/activ
                   replace
                   scroll={false}
                   aria-current={kind === k ? "page" : undefined}
-                  className={cn(PILL, kind === k ? "bg-secondary text-foreground" : "text-muted-foreground hover:bg-white/[0.06] hover:text-foreground")}
+                  className={cn(PILL, kind === k ? "bg-secondary text-foreground" : "text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground")}
                 >
                   {k ? KIND_LABEL[k] : "All"}
                 </Link>
@@ -79,7 +79,7 @@ export default async function ActivitiesPage({ searchParams }: PageProps<"/activ
               href={href({ days: days + ACTIVITY_PAGE_DAYS, kind })}
               replace
               scroll={false}
-              className="mx-auto grid h-11 place-items-center rounded-full px-5 text-xs font-bold tracking-[0.08em] text-foreground/85 uppercase outline-none transition-[background-color,color] duration-150 ease-standard hover:bg-white/[0.06] hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="mx-auto grid h-11 place-items-center rounded-full px-5 text-xs font-bold tracking-[0.1em] text-foreground/85 uppercase outline-none transition-[background-color,color] duration-150 ease-standard hover:bg-foreground/[0.06] hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
             >
               Show older
             </Link>

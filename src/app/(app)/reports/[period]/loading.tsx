@@ -31,7 +31,7 @@ export default function Loading() {
             <Skeleton className="h-9 w-[168px] rounded-full bg-secondary" />
             <div className="inline-flex gap-0.5 rounded-lg bg-muted p-0.5">
               {["Week", "Month"].map((l) => (
-                <span key={l} className="inline-flex h-10 min-w-11 items-center px-3 text-[13px] font-bold tracking-[0.06em] text-muted-foreground uppercase">
+                <span key={l} className="inline-flex h-10 min-w-11 items-center px-3 text-[13px] font-bold tracking-[0.1em] text-muted-foreground uppercase">
                   {l}
                 </span>
               ))}

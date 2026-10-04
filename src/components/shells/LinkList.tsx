@@ -26,7 +26,7 @@ export const LIST_GRID = "flex flex-col gap-6 xl:grid xl:grid-cols-2 xl:items-st
 /** the reference app's section label over a group of rows [latest-settings-1] (spec §11 F22): 13 px caps, tracking 0.1em. */
 export const GROUP_LABEL = "px-1 text-[13px] leading-4 font-bold tracking-[0.1em] text-foreground/85 uppercase"
 const ROW = "flex min-h-14 items-center gap-3 px-4 py-2"
-const ROW_LABEL = "text-xs leading-4 font-bold tracking-[0.08em] uppercase"
+const ROW_LABEL = "text-xs leading-4 font-bold tracking-[0.1em] uppercase"
 
 /**
  * the reference app's settings rows (spec §7.14 v2): a caps group label, then one 56 px card per row with an icon, a caps label

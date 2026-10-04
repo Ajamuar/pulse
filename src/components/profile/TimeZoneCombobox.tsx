@@ -206,7 +206,7 @@ export function TimeZoneCombobox({
                 onClick={() => pick(z)}
                 className={cn(
                   "flex h-12 cursor-pointer snap-start items-center gap-3 rounded-lg px-3 transition-[background-color] duration-100",
-                  i === active ? "bg-white/8" : "bg-transparent",
+                  i === active ? "bg-foreground/8" : "bg-transparent",
                 )}
               >
                 <span className="min-w-0 flex-1 truncate text-[15px] leading-5">

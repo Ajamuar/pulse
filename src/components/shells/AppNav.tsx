@@ -40,7 +40,7 @@ function Lens({ index, axis, className }: { index: number; axis: "x" | "y"; clas
       aria-hidden
       style={{ "--tab": index } as React.CSSProperties}
       className={cn(
-        "pointer-events-none absolute bg-radial-[ellipse_at_50%_115%] from-white/16 via-white/5 via-55% to-white/[0.02] transition-[translate,opacity] duration-150 ease-standard motion-reduce:transition-none",
+        "pointer-events-none absolute bg-radial-[ellipse_at_50%_115%] from-foreground/16 via-foreground/5 via-55% to-foreground/[0.02] transition-[translate,opacity] duration-150 ease-standard motion-reduce:transition-none",
         axis === "x" ? "translate-x-[calc(var(--tab)*100%)]" : "translate-y-[calc(var(--tab)*(100%+4px))]",
         index < 0 && "opacity-0",
         className
@@ -80,7 +80,7 @@ function Rail({ current }: { current: number }) {
       <Link
         href="/"
         aria-label="Pulse home"
-        className="mb-5 grid size-10 place-items-center rounded-full transition-[background-color,scale] duration-150 ease-standard outline-none hover:bg-white/8 focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96]"
+        className="mb-5 grid size-10 place-items-center rounded-full transition-[background-color,scale] duration-150 ease-standard outline-none hover:bg-foreground/8 focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96]"
       >
         <span aria-hidden>
           <Mark className="size-6" />
@@ -147,7 +147,7 @@ function Sidebar({ current, pathname }: { current: number; pathname: string }) {
         <Lens index={tab} axis="y" className="inset-x-0 top-0 h-12 rounded-full" />
         {TABS.map((t, i) => item(TAB_ROOT[t.tab], t.label, t.icon, i === tab))}
       </ul>
-      <div aria-hidden className="mx-3 my-2 h-px bg-white/8" />
+      <div aria-hidden className="mx-3 my-2 h-px bg-foreground/8" />
       <ul className="flex flex-col gap-1">{extra.map((e) => item(e.href, e.label, e.icon, pathname.startsWith(e.match), pathname.startsWith(e.match)))}</ul>
       <div className="mt-auto space-y-3">
         <React.Suspense>

@@ -53,8 +53,8 @@ export function useSeriesAnimation() {
 export const GRID = { vertical: false, stroke: "var(--chart-grid)" } as const
 export const AXIS = { tickLine: false, axisLine: false, tickMargin: 8 } as const
 export const LINE_CURSOR = { stroke: "var(--chart-cursor)", strokeWidth: 1 }
-export const BAR_CURSOR = { fill: "rgb(255 255 255 / 0.05)" }
-export const TOOLTIP_CLASS = "rounded-xl border-0 bg-popover shadow-overlay ring-1 ring-white/10"
+export const BAR_CURSOR = { fill: "color-mix(in srgb, var(--foreground) 5%, transparent)" }
+export const TOOLTIP_CLASS = "rounded-xl border-0 bg-popover shadow-overlay ring-1 ring-foreground/10"
 
 /** One tooltip line: a colour tick and text. */
 export function TooltipLine({ color, children }: { color?: string; children: React.ReactNode }) {

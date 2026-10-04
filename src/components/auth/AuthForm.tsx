@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { AUTH_LINK, AuthAlert } from "./AuthHero"
 
 // The reference app's caps labels over filled dark fields: 48 px tall, 16 px text (no iOS zoom), a 12 px radius.
-const LABEL = "text-xs leading-4 font-bold tracking-[0.08em] text-foreground-secondary uppercase"
+const LABEL = "text-xs leading-4 font-bold tracking-[0.1em] text-foreground-secondary uppercase"
 const INPUT =
   "h-12 w-full min-w-0 rounded-xl bg-secondary px-4 text-[16px] leading-6 text-foreground outline-none ring-1 ring-transparent transition-[box-shadow,background-color] duration-150 ease-standard placeholder:text-muted-foreground hover:bg-accent focus-visible:bg-accent focus-visible:ring-ring focus-visible:ring-[3px] aria-invalid:ring-recovery-red/60"
 
