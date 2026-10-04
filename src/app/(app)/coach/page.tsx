@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto"
 import { connection } from "next/server"
 import { notFound } from "next/navigation"
 import { providerLabel, providerOptions } from "@/server/coach/options"
-import { coachAccess, coachSetup, listChats, loadChat } from "@/server/coach/store"
+import { coachAccess, coachSetup, groupChats, listChats, loadChat } from "@/server/coach/store"
 import { userCtx } from "@/server/queries/common"
 import { DetailShell } from "@/components/shells/DetailShell"
 import { Coach } from "./Coach"
@@ -16,7 +16,7 @@ export const metadata = { title: "Coach" }
  */
 export default async function CoachPage({ searchParams }: { searchParams: Promise<{ c?: string; q?: string }> }) {
   await connection()
-  const { db, userId } = await userCtx()
+  const { db, userId, now, timeZone } = await userCtx()
   if (!(await coachAccess(db, userId))) notFound()
   const [setup, chats, { c, q }] = await Promise.all([coachSetup(db, userId), listChats(db, userId), searchParams])
 
@@ -45,7 +45,7 @@ export default async function CoachPage({ searchParams }: { searchParams: Promis
   return (
     <DetailShell
       title="Coach"
-      primary={<Coach key={id} id={id} initial={saved ?? []} chats={chats} prefill={(q ?? "").slice(0, 500)} providerLabel={providerLabel(setup.provider)} />}
+      primary={<Coach key={id} id={id} initial={saved ?? []} groups={groupChats(chats, now, timeZone)} prefill={(q ?? "").slice(0, 500)} providerLabel={providerLabel(setup.provider)} />}
     />
   )
 }

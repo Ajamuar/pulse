@@ -4,9 +4,10 @@
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { createInvite, deleteAccount, isAdmin, isOwnerEmail, revokeInvite, setRole, setSignupMode, SIGNUP_MODES, type SignupMode } from "../admin";
+import { createInvite, deleteAccount, isAdmin, isOwnerEmail, resetPassword, revokeInvite, setRole, setSignupMode, signOutEverywhere, SIGNUP_MODES, type SignupMode } from "../admin";
 import { currentUser, SIGNED_OUT } from "../auth";
 import { COACH_MODES, setCoachAllowed, setCoachMode, type CoachMode } from "../coach/store";
+import { DEFAULTS, maxFor, saveText } from "../coach/texts";
 import { getConfig } from "../config";
 import { getDb } from "../db";
 import { user } from "../db/schema";
@@ -61,6 +62,22 @@ export async function setCoachAllowedAction(userId: number, allowed: boolean): P
   return DONE;
 }
 
+/**
+ * Saves a new version of one piece of the coach's wording (instructions, a tool or a parameter description). Restore
+ * and reset save the old or default text as a new version, so the history only ever grows.
+ */
+export async function saveCoachTextAction(key: string, body: string): Promise<ActionResult> {
+  const me = await admin();
+  if (typeof me !== "number") return me;
+  if (!Object.hasOwn(DEFAULTS, key)) return { ok: false, error: "Unknown text." };
+  const text = String(body).replace(/\r\n/g, "\n").trim();
+  if (!text) return { ok: false, error: "Write something, or reset to the default." };
+  if (text.length > maxFor(key)) return { ok: false, error: `Keep it under ${maxFor(key)} characters.` };
+  await saveText(getDb(), key, text, me);
+  revalidatePath("/admin/coach");
+  return DONE;
+}
+
 /** A new invite link's token, shown once; the page builds `/signup?invite=<token>` from it. */
 export async function createInviteAction(label: string): Promise<ActionResult<string>> {
   const me = await admin();
@@ -86,6 +103,34 @@ export async function setRoleAction(userId: number, role: "user" | "admin"): Pro
   await setRole(getDb(), userId, role);
   revalidatePath("/admin");
   return DONE;
+}
+
+/** Signs another account out on every device. Your own sessions are managed from Settings. */
+export async function signOutEverywhereAction(userId: number): Promise<ActionResult<number>> {
+  const me = await admin();
+  if (typeof me !== "number") return me;
+  if (userId === me) return { ok: false, error: "Sign yourself out from Settings." };
+  if (!(await changeable(userId))) return UNKNOWN;
+  const n = await signOutEverywhere(getDb(), userId);
+  revalidatePath("/admin/people");
+  return { ok: true, data: n };
+}
+
+/**
+ * Sets a temporary password for another account and signs it out everywhere; returns the password, shown once.
+ * Owners (ADMIN_EMAILS) only: whoever sets a password can sign in as that person and see their health data, the
+ * same power as the server's reset-password script, which only the owner can run.
+ */
+export async function resetPasswordAction(userId: number): Promise<ActionResult<string>> {
+  const me = await admin();
+  if (typeof me !== "number") return me;
+  const caller = await currentUser();
+  if (!caller || !isOwnerEmail(caller.email)) return { ok: false, error: "Only an owner (ADMIN_EMAILS) can reset passwords." };
+  if (userId === me) return { ok: false, error: "Change your own password from Settings." };
+  if (!(await changeable(userId))) return UNKNOWN;
+  const temp = await resetPassword(getDb(), userId);
+  revalidatePath("/admin/people");
+  return { ok: true, data: temp };
 }
 
 /** Deletes another account and all its data. Your own goes from Settings; an admin is made a member first. */

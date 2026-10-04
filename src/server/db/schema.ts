@@ -478,6 +478,22 @@ export const coachSettings = pgTable("coach_settings", {
   updatedAt: ts("updated_at").notNull(),
 });
 
+/**
+ * The coach's wording as edited in the admin dashboard (src/server/coach/texts.ts): one row per saved version of a
+ * key (`instructions`, `tool.<name>`, `tool.<name>.<param>`); the newest row per key is in use. Server-wide.
+ */
+export const coachPrompts = pgTable(
+  "coach_prompts",
+  {
+    id: serial("id").primaryKey(),
+    key: text("key").notNull(),
+    body: text("body").notNull(),
+    createdBy: integer("created_by").references(() => user.id, { onDelete: "set null" }),
+    createdAt: ts("created_at").notNull(),
+  },
+  (t) => [index("coach_prompts_key").on(t.key, t.id)],
+);
+
 /** Coach chats: the AI SDK's UIMessage[] as validated and saved by /api/coach. */
 export const coachChats = pgTable(
   "coach_chats",

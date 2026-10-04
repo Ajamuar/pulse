@@ -6,6 +6,7 @@ import { z } from "zod";
 import { requestUser } from "@/server/auth";
 import { coachInstructions } from "@/server/coach/instructions";
 import { allowRequest, coachModel, loadChat, saveChat } from "@/server/coach/store";
+import { coachTexts } from "@/server/coach/texts";
 import { coachTools } from "@/server/coach/tools";
 import { getDb } from "@/server/db";
 import { ctxOf } from "@/server/queries/common";
@@ -34,7 +35,8 @@ export async function POST(req: Request) {
   const ctx = await ctxOf(db, user.userId).catch(() => null);
   if (!ctx) return fail(409, "profile");
 
-  const tools = coachTools(ctx);
+  const texts = await coachTexts(db); // the admin dashboard's wording, read per request
+  const tools = coachTools(ctx, texts);
   const previous = (await loadChat(db, user.userId, id)) ?? [];
   const messages = await validateUIMessages({ messages: [...previous, body.data.message as UIMessage], tools }).catch(() => null);
   if (!messages) return fail(400, "bad_request");
@@ -42,7 +44,7 @@ export async function POST(req: Request) {
   const started = Date.now();
   const result = streamText({
     model: m.model,
-    instructions: coachInstructions(ctx),
+    instructions: coachInstructions(ctx, texts),
     messages: await convertToModelMessages(messages.slice(-HISTORY)),
     tools,
     stopWhen: isStepCount(6),

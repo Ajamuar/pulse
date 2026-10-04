@@ -16,6 +16,7 @@ import { getStrain } from "../queries/strain";
 import { getStress } from "../queries/health";
 import { getTrends, TREND_METRICS, type TrendMetricKey } from "../queries/trends";
 import { addDays } from "../time";
+import { defaultTexts, type Texts } from "./texts";
 
 const round = (v: number, dp = 0) => Math.round(v * 10 ** dp) / 10 ** dp;
 
@@ -25,11 +26,12 @@ export function num(m: Metric<number>, dp = 0) {
   return { value: round(m.value, dp), ...(m.provisional && { provisional: true }) };
 }
 
-const Day = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/)
-  .optional()
-  .describe("Local day YYYY-MM-DD; omit for today");
+const Day = (description: string) =>
+  z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional()
+    .describe(description);
 
 /** The day asked for, clamped to [first day with data, today]: never a future day. */
 async function dayOf(ctx: QueryCtx, day: string | undefined) {
@@ -73,17 +75,20 @@ export async function dayDigest(ctx: QueryCtx, day: string) {
   };
 }
 
-/** The tool set for one signed-in user. */
-export function coachTools(ctx: QueryCtx) {
+/**
+ * The tool set for one signed-in user. `t` gives each description: the admin dashboard's current wording, else the
+ * default in texts.ts. Parameter types and what each tool reads are fixed here.
+ */
+export function coachTools(ctx: QueryCtx, t: Texts = defaultTexts) {
   return {
     get_day: tool({
-      description: "Recovery (with what moved it), sleep, strain (with today's target) and stress for one day.",
-      inputSchema: z.object({ day: Day }),
+      description: t("tool.get_day"),
+      inputSchema: z.object({ day: Day(t("tool.get_day.day")) }),
       execute: async ({ day }) => dayDigest(ctx, await dayOf(ctx, day)),
     }),
     get_trend: tool({
-      description: "Averages of one metric: last 7 and 30 days (and 6 months, 1 year) against the period before each.",
-      inputSchema: z.object({ metric: z.enum(TREND_METRICS.map((m) => m.key) as [TrendMetricKey, ...TrendMetricKey[]]) }),
+      description: t("tool.get_trend"),
+      inputSchema: z.object({ metric: z.enum(TREND_METRICS.map((m) => m.key) as [TrendMetricKey, ...TrendMetricKey[]]).describe(t("tool.get_trend.metric")) }),
       execute: async ({ metric }) => {
         const t = await getTrends(metric, ctx);
         const meta = TREND_METRICS.find((m) => m.key === metric)!;
@@ -96,8 +101,8 @@ export function coachTools(ctx: QueryCtx) {
       },
     }),
     get_activities: tool({
-      description: "Workouts in the last N days: name, day, minutes, strain (0-21), distance.",
-      inputSchema: z.object({ days: z.number().int().min(1).max(90).default(14) }),
+      description: t("tool.get_activities"),
+      inputSchema: z.object({ days: z.number().int().min(1).max(90).default(14).describe(t("tool.get_activities.days")) }),
       execute: async ({ days }) => {
         const a = await getActivities(days, ctx);
         return a.groups.flatMap((g) =>
@@ -112,8 +117,8 @@ export function coachTools(ctx: QueryCtx) {
       },
     }),
     get_journal_impacts: tool({
-      description: "How logged behaviours (alcohol, late meal, ...) relate to recovery, HRV or sleep, from the user's own check-ins.",
-      inputSchema: z.object({ outcome: z.enum(["recovery", "hrv", "sleep"]).default("recovery") }),
+      description: t("tool.get_journal_impacts"),
+      inputSchema: z.object({ outcome: z.enum(["recovery", "hrv", "sleep"]).default("recovery").describe(t("tool.get_journal_impacts.outcome")) }),
       execute: async ({ outcome }) => {
         const j = await getJournalInsights(outcome, ctx);
         return {
@@ -125,8 +130,8 @@ export function coachTools(ctx: QueryCtx) {
       },
     }),
     get_health: tool({
-      description: "Health Monitor vitals (in or out of the user's range, illness signal), Pulse Age, VO2 max and training load.",
-      inputSchema: z.object({ day: Day }),
+      description: t("tool.get_health"),
+      inputSchema: z.object({ day: Day(t("tool.get_health.day")) }),
       execute: async ({ day }) => {
         const d = await dayOf(ctx, day);
         const [mon, hub] = await Promise.all([getMonitor(d, ctx), getHealthHub(ctx)]);
@@ -141,8 +146,8 @@ export function coachTools(ctx: QueryCtx) {
       },
     }),
     get_report: tool({
-      description: "The latest weekly or monthly report: averages, training balance, best and worst day.",
-      inputSchema: z.object({ kind: z.enum(["week", "month"]).default("week") }),
+      description: t("tool.get_report"),
+      inputSchema: z.object({ kind: z.enum(["week", "month"]).default("week").describe(t("tool.get_report.kind")) }),
       execute: async ({ kind }) => {
         const more = await getMore(ctx);
         const latest = kind === "week" ? more.latestWeek : more.latestMonth;
@@ -161,7 +166,7 @@ export function coachTools(ctx: QueryCtx) {
       },
     }),
     get_profile: tool({
-      description: "Age, sex, max heart rate and time zone. Never the name or email.",
+      description: t("tool.get_profile"),
       inputSchema: z.object({}),
       execute: async () => {
         const p = ctx.profile;

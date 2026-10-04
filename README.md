@@ -29,7 +29,7 @@ The database is created and migrated on boot, and the sync worker starts once (`
 
 Every variable is listed and explained in [`.env.example`](.env.example). It is validated at startup, and the server exits on invalid config.
 
-- `DATA_SOURCE=google` switches to real data from the Google Health API. It needs `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` and `BETTER_AUTH_SECRET`. People sign up with a name, username, email and password (better-auth), sign in with the username or the email, and connect their own Google account from inside Pulse. Sign-up is invite-only by default: set `ADMIN_EMAILS` to your email, create your account, then invite people from More › Admin ([setup guide](docs/setup.md#accounts-admins-and-invites)).
+- `DATA_SOURCE=google` switches to real data from the Google Health API. It needs `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` and `BETTER_AUTH_SECRET`. People sign up with a name, username, email and password (better-auth), sign in with the username or the email, and connect their own Google account from inside Pulse. Sign-up is invite-only by default: set `ADMIN_EMAILS` to your email, create your account, then invite people from the admin dashboard at `/admin` ([setup guide](docs/setup.md#accounts-admins-and-invites)).
 - The first sign-in asks for your birth date and sex (onboarding). Settings › Profile edits them.
 
 ## Deploy

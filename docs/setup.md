@@ -116,27 +116,41 @@ Then:
    verified, so whoever signs up first with it owns the server. Once any account exists, an `ADMIN_EMAILS`
    address can't be used to sign up at all.
    Already running Pulse? Set `ADMIN_EMAILS` to the email of your existing account and restart.
-4. Use the browser's **Install app**, then invite people from **More › Admin** (see below).
+4. Use the browser's **Install app**, then open the admin dashboard at `/admin` to invite people (see below).
 
 ## Accounts, admins and invites
 
-Admins open **More › Admin** (`/admin`). An admin is either:
+The admin dashboard lives at **`/admin`**, apart from the app (it isn't linked from the app's menus). Anyone else
+gets a 404 there. An admin is either:
 
-- an **owner**: an email in `ADMIN_EMAILS`. Owners are changed only in `.env`, never from the panel. To add a
+- an **owner**: an email in `ADMIN_EMAILS`. Owners are changed only in `.env`, never from the dashboard. To add a
   second owner, let them create their account first (with an invite), then add their email and restart. Listing
   an email that has no account doesn't hold it open: sign-up with it is refused.
-- an account an admin promoted with **Make admin**.
+- an account an admin switched on as **Admin** in its panel.
 
-The panel has three parts:
+The dashboard's pages:
 
-- **Sign-up**: who can create an account. **Invite only** is the default, **Open** lets anyone in, and **Closed**
-  lets nobody in. The switch works at once, with no restart. `SIGNUP` in `.env` sets the mode only until an admin
-  picks one in the panel. Owners can always sign up.
-- **Invites**: **Create link** makes a one-time link (`/signup?invite=…`) that expires after 7 days. The link is
-  shown once; only its hash is stored. Revoke an unused link to stop it working.
-- **Accounts**: everyone on the server, with when they joined, when they were last active and whether Google is
-  connected. No health data. An admin can make or remove admins and delete a member's account with all its data.
-  An admin must be made a member before their account can be deleted. Your own account goes from Settings.
+- **Overview**: how many people, how active, sign-ups per week, open invites, and how access is set.
+- **People**: everyone on the server: role, when they joined and were last active, Google, coach set-up. Search and
+  filter. **Delete** is on each row; **Manage** opens a person's panel:
+  - **Admin** and **AI coach** switches.
+  - **Sign out everywhere** ends every session.
+  - **Reset password** (owners only) sets a temporary password, shown once, and signs them out everywhere. It is
+    owner-only because whoever sets a password can sign in as that person and see their health data, the same
+    power as `scripts/reset-password.mjs` on the server.
+  - **Delete account** removes the account and all its data. An admin must be switched to member first. Your own
+    account goes from Settings.
+  No page shows anyone's health data.
+- **Invites**: **Create invite link** makes a one-time link (`/signup?invite=…`) that expires after 7 days. The link
+  is shown once; only its hash is stored. **Revoke** an open link to stop it working.
+- **Access**: **Sign-up** (Invite only, the default; Open to anyone; Closed) and who can use the **AI coach**. Both
+  apply at once, with no restart. `SIGNUP` in `.env` sets sign-up only until an admin picks one here.
+- **AI coach**: the coach's instructions and each tool's description and parameter descriptions, one at a time.
+  Every save is a new version (history with restore, and reset to the default). Only wording is editable: what a
+  tool reads and its parameter types stay in code.
+
+To try the dashboard locally with people in it, run `pnpm seed:people` (development only): a dozen sample accounts
+(password `pulse-sample-person`) and open, used and expired invites.
 
 ```mermaid
 flowchart TD
@@ -158,7 +172,7 @@ any other client all go through it.
 ## AI coach
 
 The coach (`/coach`, the round **P** button) answers questions about a person's own Pulse data. It is off until an
-admin picks **Everyone** or **Chosen** in **More › Admin › Coach**. **Chosen** shows a Coach switch on each account;
+admin picks **Everyone** or **Chosen people** in the admin dashboard (`/admin/access`). With **Chosen people**, each person's panel in **People** has a Coach switch;
 owners always have it.
 
 Each person brings their own key, so the server pays nothing for anyone's use. On first open, the coach explains what

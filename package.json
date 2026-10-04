@@ -12,7 +12,8 @@
     "test:watch": "vitest",
     "e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
-    "seed:demo": "tsx --env-file-if-exists=.env scripts/seed-demo-user.mts"
+    "seed:demo": "tsx --env-file-if-exists=.env scripts/seed-demo-user.mts",
+    "seed:people": "tsx --env-file-if-exists=.env scripts/seed-people.mts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "4.0.71",

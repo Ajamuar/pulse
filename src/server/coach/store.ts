@@ -8,6 +8,7 @@ import type { Db } from "../db";
 import { coachChats, coachSettings, serverSettings, user } from "../db/schema";
 import { decryptKey, encryptKey } from "./crypto";
 import { mockModel } from "./mock";
+import { daysBetween, localDay } from "../time";
 import { localModel, providerOf } from "./providers";
 
 const now = () => Math.floor(Date.now() / 1000);
@@ -113,6 +114,25 @@ export async function listChats(db: Db, userId: number): Promise<ChatRow[]> {
     .where(eq(coachChats.userId, userId))
     .orderBy(desc(coachChats.updatedAt))
     .limit(50);
+}
+
+export type ChatGroup = { label: "Today" | "Yesterday" | "Previous 7 days" | "Earlier"; chats: ChatRow[] };
+
+/** Chats grouped by recency in the user's own time zone (server-side, so the page and the browser agree). */
+export function groupChats(chats: ChatRow[], now: number, timeZone: string): ChatGroup[] {
+  const today = localDay(now, timeZone);
+  const label = (s: number): ChatGroup["label"] => {
+    const gap = daysBetween(localDay(s, timeZone), today);
+    return gap <= 0 ? "Today" : gap === 1 ? "Yesterday" : gap <= 7 ? "Previous 7 days" : "Earlier";
+  };
+  const out: ChatGroup[] = [];
+  for (const c of chats) {
+    const l = label(c.updatedAt);
+    const g = out.find((x) => x.label === l);
+    if (g) g.chats.push(c);
+    else out.push({ label: l, chats: [c] });
+  }
+  return out;
 }
 
 export async function loadChat(db: Db, userId: number, id: string): Promise<UIMessage[] | null> {

@@ -4,10 +4,11 @@ import { eq } from "drizzle-orm";
 import { isAdmin, listAccounts, listInvites, signupMode } from "../admin";
 import { parseConfig, type Config } from "../config";
 import type { Db } from "../db";
-import { user } from "../db/schema";
+import { account, session, user } from "../db/schema";
 import { addUser, freshDb, USER } from "../testing";
 import { coachAccess, coachMode } from "../coach/store";
-import { createInviteAction, deleteAccountAction, revokeInviteAction, setCoachAllowedAction, setCoachModeAction, setRoleAction, setSignupModeAction } from "./admin";
+import { coachTexts, textHistory } from "../coach/texts";
+import { createInviteAction, deleteAccountAction, resetPasswordAction, revokeInviteAction, saveCoachTextAction, setCoachAllowedAction, setCoachModeAction, setRoleAction, setSignupModeAction, signOutEverywhereAction } from "./admin";
 
 const h = vi.hoisted(() => ({ db: undefined as unknown, cfg: undefined as unknown, user: null as unknown }));
 vi.mock("../auth", async (orig) => ({ ...(await orig<object>()), currentUser: async () => h.user }));
@@ -88,6 +89,45 @@ it("deletes a member, but not yourself, an owner or an admin", async () => {
   expect(await deleteAccountAction(other)).toEqual({ ok: false, error: "Remove admin from this account first." });
   expect(await deleteAccountAction(member)).toEqual(DONE);
   expect(await db.select().from(user).where(eq(user.id, member))).toEqual([]);
+});
+
+it("reset password: owners only, never themselves or another owner; the old sessions end", async () => {
+  // USER is a promoted admin, not an owner.
+  expect(await resetPasswordAction(member)).toEqual({ ok: false, error: "Only an owner (ADMIN_EMAILS) can reset passwords." });
+  h.user = { userId: owner, email: "owner@pulse.test", name: "O", username: null, image: null };
+  expect((await resetPasswordAction(owner)).ok).toBe(false);
+  await db.insert(session).values({ token: "t-member", userId: member, expiresAt: new Date(Date.now() + 86_400_000), updatedAt: new Date() });
+  const r = await resetPasswordAction(member);
+  expect(r.ok && r.data).toMatch(/^[\w-]{16}$/);
+  expect(await db.select().from(session).where(eq(session.userId, member))).toEqual([]);
+  const [cred] = await db.select({ password: account.password }).from(account).where(eq(account.userId, member));
+  expect(cred.password).toBeTruthy();
+  expect(cred.password).not.toContain(r.ok ? r.data : "");
+});
+
+it("sign out everywhere: admins, on others only, and owners are left alone", async () => {
+  await db.insert(session).values([
+    { token: "a", userId: member, expiresAt: new Date(Date.now() + 86_400_000), updatedAt: new Date() },
+    { token: "b", userId: member, expiresAt: new Date(Date.now() + 86_400_000), updatedAt: new Date() },
+  ]);
+  expect(await signOutEverywhereAction(USER)).toEqual({ ok: false, error: "Sign yourself out from Settings." });
+  expect(await signOutEverywhereAction(owner)).toEqual({ ok: false, error: "Unknown account." });
+  expect(await signOutEverywhereAction(member)).toEqual({ ok: true, data: 2 });
+  as(member);
+  expect(await signOutEverywhereAction(owner)).toEqual(NOT_ADMIN);
+});
+
+it("coach wording: only admins save it, only known keys, never empty or too long; each save is a version", async () => {
+  as(member);
+  expect(await saveCoachTextAction("instructions", "Be brief.")).toEqual(NOT_ADMIN);
+  as(USER);
+  expect(await saveCoachTextAction("tool.delete_everything", "x")).toEqual({ ok: false, error: "Unknown text." });
+  expect((await saveCoachTextAction("tool.get_day", "   ")).ok).toBe(false);
+  expect((await saveCoachTextAction("tool.get_day", "x".repeat(601))).ok).toBe(false);
+  expect(await saveCoachTextAction("tool.get_day", "  One day's numbers.  ")).toEqual(DONE);
+  expect(await saveCoachTextAction("tool.get_day", "Back again.")).toEqual(DONE);
+  expect((await coachTexts(db))("tool.get_day")).toBe("Back again.");
+  expect((await textHistory(db)).map((v) => v.body)).toEqual(["Back again.", "One day's numbers."]);
 });
 
 it("coach access: only admins set the mode or pick accounts, and owners aren't changed", async () => {

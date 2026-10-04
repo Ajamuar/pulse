@@ -3,11 +3,14 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { eq } from "drizzle-orm";
 import type { UIMessage } from "ai";
+import { z } from "zod";
 import { parseConfig, type Config } from "../config";
 import type { Db } from "../db";
 import { coachSettings, user } from "../db/schema";
 import { addUser, ctxFor, freshDb, seeded, USER } from "../testing";
 import { allowRequest, coachAccess, coachModel, coachSetup, listChats, loadChat, saveChat, saveProvider, setCoachAllowed, setCoachMode, setConsent, titleOf } from "./store";
+import { coachInstructions } from "./instructions";
+import { coachTexts, DEFAULTS, saveText, TOOL_DOCS } from "./texts";
 import { coachTools, dayDigest } from "./tools";
 
 const h = vi.hoisted(() => ({ cfg: undefined as unknown }));
@@ -122,5 +125,33 @@ describe("tools over seeded data", () => {
     expect(d.recovery.value).toBeNull();
     expect(d.strain.value === null || d.strain.value === 0).toBe(true);
     expect(USER).not.toBe(other);
+  });
+});
+
+describe("editable wording (admin dashboard)", () => {
+  it("every tool and parameter in code has wording in texts.ts, and nothing extra", () => {
+    const tools = coachTools(ctxFor(undefined as never));
+    expect(Object.keys(TOOL_DOCS).sort()).toEqual(Object.keys(tools).sort());
+    for (const [name, t] of Object.entries(tools)) {
+      const shape = (t.inputSchema as unknown as { shape: Record<string, unknown> }).shape;
+      expect(Object.keys(TOOL_DOCS[name].params).sort(), name).toEqual(Object.keys(shape).sort());
+    }
+  });
+
+  it("the newest saved version wins, for the instructions and for tool and parameter descriptions", async () => {
+    h.cfg = google();
+    const db = await freshDb();
+    expect((await coachTexts(db))("tool.get_day")).toBe(DEFAULTS["tool.get_day"]);
+    await saveText(db, "tool.get_day", "First edit", USER);
+    await saveText(db, "tool.get_day", "Second edit", USER);
+    await saveText(db, "tool.get_day.day", "Which day", USER);
+    await saveText(db, "instructions", "Coach for {{timeZone}} on {{today}}.", USER);
+    const t = await coachTexts(db);
+    const tools = coachTools(ctxFor(db), t);
+    expect(tools.get_day.description).toBe("Second edit");
+    // What the model receives: the JSON Schema the AI SDK builds from the tool.
+    expect(JSON.stringify(z.toJSONSchema(tools.get_day.inputSchema as z.ZodType))).toContain("Which day");
+    expect(coachInstructions(ctxFor(db), t)).toBe("Coach for Asia/Kolkata on 2026-10-02.");
+    expect(t("tool.get_trend")).toBe(DEFAULTS["tool.get_trend"]);
   });
 });

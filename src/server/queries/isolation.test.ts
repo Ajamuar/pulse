@@ -219,7 +219,9 @@ describe("screen queries are scoped to one user", () => {
   it("user 1's settings and shell still read user 1's own sync rows and grant", async () => {
     const g = { ...ctxFor(db), mode: "google" as const };
     expect((await getSettings(g)).source.status).toBe("not_connected");
-    expect((await getShellStatus(g)).connection).toBe("not_connected");
+    // User 1 has seeded data and no Google grant of their own, so the shell shows it as demo data (seed:demo
+    // accounts, 34d2c67), not the intruder's revoked grant.
+    expect(await getShellStatus(g)).toMatchObject({ mode: "demo", connection: "connected" });
     expect((await getSettings(ctxFor(db))).sync).toEqual([expect.objectContaining({ key: "seed", status: "ok", error: null })]);
   });
 });

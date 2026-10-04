@@ -61,7 +61,8 @@ test("3. workout review: Strain → activity → HR and zones", async ({ page })
   await expect(page).toHaveURL(/\/activity\/[^/]+$/);
   await expect(page.getByRole("heading", { level: 1, name: "Running" })).toBeVisible();
   await expect(page.getByRole("region", { name: "Heart rate" }).getByRole("figure")).toBeVisible();
-  await expect(page.getByRole("region", { name: "Time in zones" }).getByRole("listitem")).toHaveCount(5);
+  // Google's four named zones: Light, Moderate, Vigorous, Peak (853da01).
+  await expect(page.getByRole("region", { name: "Time in zones" }).getByRole("listitem")).toHaveCount(4);
   await page.getByRole("link", { name: "Back" }).click();
   await expect(page).toHaveURL(url(withDay("/strain", d)));
 });
@@ -162,12 +163,14 @@ test("9. More hub: Trends and a metric switch, a custom behaviour in the check-i
   await page.getByRole("link", { name: /^Trends/ }).click();
   await expect(page).toHaveURL(url("/trends"));
   await expect(page.getByRole("heading", { level: 2, name: "Recovery" })).toBeVisible();
-  await page.getByRole("navigation", { name: "Metric" }).getByRole("link", { name: "Heart rate variability" }).click();
+  // The picker is grouped (137f7c6): a section first, then the metric in it.
+  await page.getByRole("navigation", { name: "Metric section" }).getByRole("link", { name: "Vitals" }).click();
+  await page.getByRole("navigation", { name: "Vitals metric" }).getByRole("link", { name: "Heart rate variability" }).click();
   await expect(page).toHaveURL(url("/trends?metric=hrv"));
   await expect(page.getByRole("heading", { level: 2, name: "Heart rate variability" })).toBeVisible();
   await page.getByRole("radio", { name: "1 year" }).click();
   await expect(page).toHaveURL(/\/trends\?metric=hrv&r=1y$/);
-  await expect(page.getByRole("navigation", { name: "Metric" }).getByRole("link", { name: "Heart rate variability" })).toHaveAttribute("aria-current", "page");
+  await expect(page.getByRole("navigation", { name: "Vitals metric" }).getByRole("link", { name: "Heart rate variability" })).toHaveAttribute("aria-current", "page");
 
   const name = `Plunge ${info.project.name} ${Date.now() % 1e6}`;
   await page.goto("/more");

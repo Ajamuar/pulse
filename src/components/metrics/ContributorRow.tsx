@@ -46,7 +46,8 @@ function Header({ p, value, right }: { p: Common; value: number | null; right?: 
   return (
     <span className="flex items-center gap-3">
       {p.icon && <span className="grid size-5 shrink-0 place-items-center text-muted-foreground [&_svg]:size-5 [&_svg]:stroke-[1.75]">{p.icon}</span>}
-      <span className={cn(LABEL, "line-clamp-2 min-w-0 flex-1")}>{p.label}</span>
+      {/* Wraps, never clamps: at 0.1em caps tracking "Light and moderate zones" takes three lines on a 361 px phone. */}
+      <span className={cn(LABEL, "min-w-0 flex-1 text-balance")}>{p.label}</span>
       <span className="flex shrink-0 items-center gap-2">
         <ValueUnit
           value={formatValue(p.format, value)}
