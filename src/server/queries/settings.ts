@@ -234,15 +234,18 @@ export async function getShellStatus(ctx: QueryCtx): Promise<ShellStatusVM> {
   const [all, first, streak] = await Promise.all([syncRows(ctx), firstDay(ctx), getWearStreak(ctx)]);
   // The device check is account state (connection below), not a sync that succeeded or failed.
   // Core types only: an optional type, or a retired job's leftover row (rhr/hrv personal ranges), never turns the dot red.
-  const rows = all.filter((r) => (ctx.mode === "demo" ? r.type === "seed" : CORE_TYPES.has(r.type)));
+  const auth = ctx.mode === "google" ? await authState(ctx, all) : "connected";
+  // A test account filled by seed:demo never connects Google: it reads as demo data, not "Connect Google".
+  const mode = auth === "not_connected" && all.some((r) => r.type === "seed") ? "demo" : ctx.mode;
+  const rows = all.filter((r) => (mode === "demo" ? r.type === "seed" : CORE_TYPES.has(r.type)));
   const successes = rows.map((r) => r.lastSuccessAt).filter((s): s is number => s != null);
   const lastSuccessAt = successes.length ? Math.max(...successes) * 1000 : null;
-  const stale = lastSuccessAt == null || ctx.now * 1000 - lastSuccessAt > STALE_MS;
+  // Seeded data on a Google instance isn't refreshed, so it's never "behind".
+  const stale = mode !== ctx.mode ? false : lastSuccessAt == null || ctx.now * 1000 - lastSuccessAt > STALE_MS;
   const error = rows.some((r) => r.lastError);
-  const auth = ctx.mode === "google" ? await authState(ctx, all) : "connected";
-  const progress = ctx.mode === "google" && auth === "connected" ? importProgress(rows) : null;
+  const progress = mode === "google" && auth === "connected" ? importProgress(rows) : null;
   const connection: ShellStatusVM["connection"] =
-    ctx.mode === "demo"
+    mode === "demo"
       ? "connected"
       : auth === "not_connected" || auth === "not_linked" || auth === "no_device"
         ? auth
@@ -254,7 +257,7 @@ export async function getShellStatus(ctx: QueryCtx): Promise<ShellStatusVM> {
               ? "stale"
               : "connected";
   return {
-    mode: ctx.mode,
+    mode,
     sync: { state: workerRunning(ctx.userId) ? "syncing" : error ? "error" : stale ? "stale" : "ok", lastSuccessAt },
     connection,
     ...(progress && { importProgress: progress }),

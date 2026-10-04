@@ -128,7 +128,7 @@ export function SyncStatus({ variant = "header" }: { variant?: "header" | "icon"
           </div>
           <ChevronRight aria-hidden className="ml-auto size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
         </Link>
-        {s.mode === "demo" && <p className="-mt-2 px-4 pb-3 text-[13px] leading-[18px] text-muted-foreground">Generated data, refreshed every 15 minutes.</p>}
+        {s.mode === "demo" && <p className="-mt-2 px-4 pb-3 text-[13px] leading-[18px] text-muted-foreground">Generated data, not from a device.</p>}
         {/* Settings is one tap away in the sidebar and in More; the popover only does the one thing. */}
         <div className="border-t border-white/[0.06] p-3">
           <SyncNowButton size="sm" className="w-full" />
