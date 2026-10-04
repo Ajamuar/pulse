@@ -14,6 +14,7 @@ const env = {
   BETTER_AUTH_SECRET: "e2e-only-secret-0123456789abcdefghijklmnop",
   NEXT_DIST_DIR: ".next/e2e",
   PORT: String(PORT),
+  APP_URL: `http://localhost:${PORT}`,
 };
 
 // The onboarding journey needs a demo with no profile. The main server seeds one at sign-in, and its
@@ -113,6 +114,7 @@ export default defineConfig({
         ...env,
         DATABASE_URL: e2eUrl(ONBOARDING_DB),
         PORT: String(ONBOARDING_PORT),
+        APP_URL: `http://localhost:${ONBOARDING_PORT}`,
         // next dev locks its build dir, so dev needs a second one; next start reads the main build.
         NEXT_DIST_DIR: process.env.E2E_PROD ? env.NEXT_DIST_DIR : ".next/e2e-onboarding",
         E2E_NO_DEMO_PROFILE: "1",
@@ -138,6 +140,7 @@ export default defineConfig({
         PULSE_E2E: "1", // lets COACH_MOCK run on the production build CI tests (E2E_PROD)
         DATABASE_URL: e2eUrl(ADMIN_DB),
         PORT: String(ADMIN_PORT),
+        APP_URL: `http://localhost:${ADMIN_PORT}`, // beats a local .env's APP_URL, which fails sign-up with "Invalid origin"
         NEXT_DIST_DIR: process.env.E2E_PROD ? env.NEXT_DIST_DIR : ".next/e2e-admin",
       },
       reuseExistingServer: false,
