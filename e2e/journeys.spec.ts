@@ -29,9 +29,12 @@ test("1. morning check: Home → Recovery → drivers → back", async ({ page }
 
 test("2. browse the past: calendar panel → a past day → ?d= carries into Recovery, Strain, Sleep", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: /Open calendar$/ }).click();
   const panel = page.getByRole("dialog");
-  await expect(panel).toBeVisible();
+  // On a fast production build the first click can land before hydration and do nothing: click until it opens.
+  await expect(async () => {
+    await page.getByRole("button", { name: /Open calendar$/ }).click();
+    await expect(panel).toBeVisible({ timeout: 1000 });
+  }).toPass({ timeout: 15_000 });
   await panel.getByRole("button", { name: "Previous month" }).click();
   // The 15th of last month: always seeded, always in the past.
   const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));

@@ -1,4 +1,6 @@
-// The Postgres pipeline scores the demo database exactly as the SQLite build did (snapshot in __parity__).
+// The Postgres pipeline scores the demo database exactly as the snapshot in __parity__ records. It first proved the
+// port reproduced the SQLite build (8e93863); re-recorded 2026-10-04 when the seed moved to day-index keys (the
+// demo's inputs changed, not the scorers).
 import { expect, it } from "vitest";
 import { rows, sql } from "../db";
 import { seeded, USER } from "../testing";

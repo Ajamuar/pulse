@@ -46,7 +46,9 @@ const Env = z
     };
     if (!!e.COACH_LOCAL_URL !== !!e.COACH_LOCAL_MODEL)
       ctx.addIssue({ code: "custom", path: [e.COACH_LOCAL_URL ? "COACH_LOCAL_MODEL" : "COACH_LOCAL_URL"], message: "set COACH_LOCAL_URL and COACH_LOCAL_MODEL together" });
-    if (e.COACH_MOCK && process.env.NODE_ENV === "production") ctx.addIssue({ code: "custom", path: ["COACH_MOCK"], message: "is for tests only, never in production" });
+    // Refused in production, except the e2e suite's production build (E2E_PROD), which also sets PULSE_E2E=1.
+    if (e.COACH_MOCK && process.env.NODE_ENV === "production" && process.env.PULSE_E2E !== "1")
+      ctx.addIssue({ code: "custom", path: ["COACH_MOCK"], message: "is for tests only, never in production" });
     if (e.DATA_SOURCE === "google") {
       need(["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"], "when DATA_SOURCE=google");
       // Real accounts: sessions must be signed with a secret of your own. Not checked at build time (no .env there).

@@ -37,7 +37,7 @@ export const illnessSeverity = (i: number) => ILLNESS_SEVERITY[i - SCENARIO.illn
 
 /** Peak effects of illness, alcohol and meditation on the next night. */
 export const EFFECTS = {
-  illness: { hrv: -0.25, rhr: 6, resp: 1.5, tempC: 0.6, spo2: -2.6 },
+  illness: { hrv: -0.25, rhr: 8, resp: 1.5, tempC: 0.6, spo2: -3 },
   alcohol: { hrv: 0.88, rhr: 3, resp: 0.3, tempC: 0.15 },
   meditation: { hrv: 1.05 },
 };

@@ -135,6 +135,7 @@ export default defineConfig({
         GOOGLE_CLIENT_SECRET: "e2e-client-secret",
         ADMIN_EMAILS: E2E_OWNER,
         COACH_MOCK: "true", // the coach journey answers with the scripted model (src/server/coach/mock.ts)
+        PULSE_E2E: "1", // lets COACH_MOCK run on the production build CI tests (E2E_PROD)
         DATABASE_URL: e2eUrl(ADMIN_DB),
         PORT: String(ADMIN_PORT),
         NEXT_DIST_DIR: process.env.E2E_PROD ? env.NEXT_DIST_DIR : ".next/e2e-admin",

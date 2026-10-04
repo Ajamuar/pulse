@@ -23,17 +23,8 @@ if (cmd === "reset") {
   const run = before
     ? (await c.query("select max(day)::text as run from exercises where type = 'RUNNING' and day < $1::date", [before])).rows[0].run
     : null;
-  // The first day Home raises the illness alert (home.ts illnessRaised). The generated data follows the seed's
-  // start date, so which day of the illness week crosses the line varies with the calendar.
-  const illness = (
-    await c.query(
-      `select min(day)::text as illness from daily_scores where health_monitor->>'reason' is null and (
-         health_monitor->'illness'->>'level' = 'raised' or (health_monitor->'illness'->>'level' = 'alreadyUnwell'
-         and (health_monitor->'illness'->>'score')::numeric >= 50 and (health_monitor->'illness'->>'signalCount')::int >= 2))`,
-    )
-  ).rows[0].illness;
   await c.end();
-  process.stdout.write(JSON.stringify({ first, run, illness }));
+  process.stdout.write(JSON.stringify({ first, run }));
 } else {
   throw new Error(`unknown command: ${cmd}`);
 }

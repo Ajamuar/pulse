@@ -7,7 +7,7 @@ const PG = process.env.E2E_PG_ADMIN_URL ?? "postgres://pulse:pulse@localhost:543
 /** DATABASE_URL for an e2e database on the same server. */
 export const e2eUrl = (db: string) => Object.assign(new URL(PG), { pathname: `/${db}` }).toString();
 const query = (db: string, before?: string) =>
-  JSON.parse(execFileSync("node", ["e2e/db.mjs", "days", db, ...(before ? [before] : [])], { encoding: "utf8" })) as { first: string; run: string | null; illness: string | null };
+  JSON.parse(execFileSync("node", ["e2e/db.mjs", "days", db, ...(before ? [before] : [])], { encoding: "utf8" })) as { first: string; run: string | null };
 
 export type DayKey = "today" | "past" | "calibrating" | "illness" | "bandOff";
 export const DAY_KEYS: DayKey[] = ["today", "past", "calibrating", "illness", "bandOff"];
@@ -26,7 +26,7 @@ let cached: Record<DayKey, string | null> | undefined;
  */
 export function days(): Record<DayKey, string | null> {
   if (cached) return cached;
-  const { first, illness } = query(E2E_DB);
+  const { first } = query(E2E_DB);
   const at = (i: number) => addDays(first, i);
   // The latest run before the band-off: Strain lists it, so journeys and the sweep find an activity there.
   const { run } = query(E2E_DB, at(SCENARIO.bandOff.day));
@@ -34,8 +34,8 @@ export function days(): Record<DayKey, string | null> {
     today: null,
     past: run, // after the illness, before the band-off: an ordinary scored day with a run
     calibrating: at(2), // inside SCENARIO.calibratingDays
-    // The first day the data raises the illness alert (it shifts with the seed's start date), else peak severity.
-    illness: illness ?? at(SCENARIO.illness.start + 2),
+
+    illness: at(SCENARIO.illness.start + 2), // peak severity: the alert is raised (the seed is keyed by day index)
     bandOff: at(SCENARIO.bandOff.day + 1),
   };
   return cached;

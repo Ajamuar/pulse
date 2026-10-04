@@ -1,7 +1,8 @@
 // Seed source (KTD2, KTD3): a deterministic demo person written straight into the normalized tables.
 //
 // Every day is a pure function of (anchor day, day index, time zone, max HR). Randomness comes from
-// mulberry32 keyed by the date and a stream name, so any day regenerates identically. Each pull
+// mulberry32 keyed by the day index and a stream name, so any day regenerates identically and the scenario (an
+// illness week, a band-off day) looks the same whatever date the seed starts on. Each pull
 // regenerates the days from the last sync to "now" and inserts only what has happened by then, with
 // insert-or-ignore, so a later tick adds rows and never changes earlier ones. Everything is per user: the
 // demo instance seeds its one demo user (ensureDemoUser), tests seed theirs.
@@ -58,9 +59,12 @@ import { seedHeartRhythm } from "./heartRhythm";
 // ---------------------------------------------------------------------------------------------
 // Randomness and time
 
-/** One stream per (day, purpose), so extra draws in one never move another. */
-function rng(day: string, stream: string) {
-  const next = mulberry32(hash(`${day}:${stream}`));
+/**
+ * One stream per (day index, purpose), so extra draws in one never move another. Keyed by the index, not the date:
+ * the scenario then reads the same whenever the seed starts (the illness week always raises its alert).
+ */
+function rng(i: number, stream: string) {
+  const next = mulberry32(hash(`${i}:${stream}`));
   return {
     u: (lo = 0, hi = 1) => lo + (hi - lo) * next(),
     /** About N(0, 1), bounded to ±3.5 (Irwin–Hall), so clamps rarely bind. */
@@ -97,7 +101,7 @@ function behaviour(ctx: Ctx, i: number) {
   const day = dayOf(ctx, i);
   const weekday = weekdayOf(day);
   const weekend = isWeekend(weekday);
-  const r = rng(day, "behaviour");
+  const r = rng(i, "behaviour");
   const tags = Object.fromEntries(DEFAULT_JOURNAL_TAGS.map(({ tag }) => [tag, r.chance(TAG_ODDS[tag])])) as Record<Tag, boolean>;
   if (weekday === 5 || weekday === 6) tags.alcohol ||= r.chance(ALCOHOL_WEEKEND_ODDS);
   if (illnessSeverity(i) > 0) tags.alcohol = false;
@@ -138,7 +142,7 @@ function sleepStages(r: Rng, bed: number, wake: number, restless: number, alcoho
   plan("awake", r.u(4, 14) + 10 * restless);
   for (let k = 0; planned < total; k++) {
     const deep = Math.max(0, 34 - 9 * k) * r.u(0.7, 1.2);
-    const rem = Math.min(35, 8 + 7 * k) * r.u(0.75, 1.25) * (alcohol && k < 2 ? 0.5 : 1);
+    const rem = Math.min(35, 8 + 7 * k) * r.u(0.75, 1.25) * (alcohol && k < 2 ? 0.75 : 1);
     const light = r.u(85, 100) - deep - rem;
     plan("light", light * 0.6);
     plan("deep", deep);
@@ -164,7 +168,7 @@ function sleepStages(r: Rng, bed: number, wake: number, restless: number, alcoho
 function night(ctx: Ctx, i: number) {
   if (isBandOffNight(i)) return null;
   const day = dayOf(ctx, i);
-  const r = rng(day, "night");
+  const r = rng(i, "night");
   const prev = behaviour(ctx, i - 1);
   const alcohol = prev.tags.alcohol;
   const sev = illnessSeverity(i);
@@ -267,7 +271,7 @@ function googleDerived(ctx: Ctx, i: number, rhr: number) {
 function nap(ctx: Ctx, i: number) {
   if (isBandOffDay(i)) return null;
   const day = dayOf(ctx, i);
-  const r = rng(day, "nap");
+  const r = rng(i, "nap");
   const sev = illnessSeverity(i);
   const odds = sev >= 0.5 ? 0.9 : isShortSleep(i) ? 0.6 : isWeekend(weekdayOf(day)) ? 0.15 : 0.06;
   if (!r.chance(odds)) return null;
@@ -313,7 +317,7 @@ export function generateDay(ctx: Ctx, i: number) {
   const start = localMidnight(day, ctx.timeZone);
   const end = localMidnight(addDays(day, 1), ctx.timeZone);
   const n = (end - start) / 60;
-  const r = rng(day, "day");
+  const r = rng(i, "day");
   const b = behaviour(ctx, i);
   const lastNight = night(ctx, i);
   const tonight = night(ctx, i + 1);
@@ -466,7 +470,7 @@ export function generateDay(ctx: Ctx, i: number) {
   const run = exerciseRows.findLast((e) => e.type === "RUNNING");
   const weighAt = (lastNight?.wake ?? at(ctx, i, 7.5)) + 20 * 60;
   // Its own stream, so these draws move nothing else.
-  const x = rng(day, "extras");
+  const x = rng(i, "extras");
   return {
     day,
     start,

@@ -82,8 +82,9 @@ jobs:
         if: steps.browsers.outputs.cache-hit == 'true'
       # Demo mode against a production build on its own port and throwaway Postgres database (playwright.config.ts);
       # no secrets needed. CI runs the phone (361) and laptop (1440) widths, plus the onboarding journey on its
-      # profile-less second server; local `pnpm e2e` sweeps all five.
-      - run: pnpm e2e --project=setup --project=361 --project=1440 --project=onboarding
+      # profile-less second server, and the admin dashboard and coach on their Google-mode server; local `pnpm e2e`
+      # sweeps all five widths.
+      - run: pnpm e2e --project=setup --project=361 --project=1440 --project=onboarding --project=admin
         env:
           CI: "true"
           E2E_PROD: "1"
