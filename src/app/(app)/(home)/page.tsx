@@ -43,7 +43,7 @@ const STRESS_TONE: Record<StressLevel, { chip: string; text: string; word: strin
 const CHIP_BOX = "grid h-7 min-w-7 shrink-0 place-items-center rounded-md px-1"
 /** The 48 px secondary button at a card's foot ("+ Add activity", "Behaviour insights") [latest-home-collapsed-1]. */
 const CARD_BUTTON =
-  "mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-secondary text-[13px] leading-4 font-bold tracking-[0.08em] uppercase transition-[background-color,scale] duration-150 ease-standard outline-none hover:bg-accent focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96]"
+  "mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-secondary text-[13px] leading-4 font-bold tracking-[0.1em] uppercase transition-[background-color,scale] duration-150 ease-standard outline-none hover:bg-accent focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96]"
 /** The 56 px gradient banner rows: day outlook / review and week in review (spec §7.1 7a, 10). */
 const BANNER =
   "flex h-14 w-full items-center gap-3 rounded-2xl px-4 text-left shadow-card transition-[filter,scale] duration-150 ease-standard outline-none hover:brightness-110 focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96]"
@@ -176,7 +176,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
                 aria-label={vm.isToday ? "Add to today" : `Add to ${formatDay(d, DAY.short)}`}
                 // the reference app's "+" is a ~34 pt white tile with a soft top-light, centred on the title, about 15 pt above
                 // the first card [latest-home-collapsed-1]; the hit area grows to 44 px without moving it.
-                className="relative grid size-[34px] place-items-center rounded-[10px] bg-linear-to-b from-white to-zinc-200 text-primary-foreground shadow-sm transition-[scale,filter] duration-150 ease-standard outline-none after:absolute after:-inset-[5px] hover:brightness-95 focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96]"
+                className="relative grid size-[34px] place-items-center rounded-[10px] bg-linear-to-b from-primary to-primary/85 text-primary-foreground shadow-sm transition-[scale,filter] duration-150 ease-standard outline-none after:absolute after:-inset-[5px] hover:brightness-95 focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96]"
               >
                 <Plus aria-hidden className="size-5" strokeWidth={2.25} />
               </SheetTrigger>
@@ -327,14 +327,14 @@ function JournalWeek({ vm, at }: { vm: HomeVM; at: (href: string) => string }) {
                 href={dayHref("/journal", w.day, vm.today)}
                 aria-label={`${formatDay(w.day, DAY.long)}: ${w.done ? "checked in" : "no check-in"}`}
                 aria-current={current ? "date" : undefined}
-                className="flex min-h-16 flex-col items-center justify-center gap-2 rounded-lg transition-[background-color] duration-150 ease-standard outline-none hover:bg-white/5 focus-visible:ring-3 focus-visible:ring-ring/50 active:bg-accent"
+                className="flex min-h-16 flex-col items-center justify-center gap-2 rounded-lg transition-[background-color] duration-150 ease-standard outline-none hover:bg-foreground/5 focus-visible:ring-3 focus-visible:ring-ring/50 active:bg-accent"
               >
-                <span aria-hidden className={cn("text-xs leading-4 font-bold tracking-[0.08em] uppercase", current ? "text-foreground" : "text-muted-foreground")}>
+                <span aria-hidden className={cn("text-xs leading-4 font-bold tracking-[0.1em] uppercase", current ? "text-foreground" : "text-muted-foreground")}>
                   {formatDay(w.day, { weekday: "short" })}
                 </span>
                 <span
                   aria-hidden
-                  className={cn("grid size-7 place-items-center rounded-full", w.done ? "bg-optimal text-background" : "ring-1 ring-white/25 ring-inset")}
+                  className={cn("grid size-7 place-items-center rounded-full", w.done ? "bg-optimal text-background" : "ring-1 ring-foreground/25 ring-inset")}
                 >
                   {w.done && <Check className="size-4" strokeWidth={3} />}
                 </span>
@@ -374,7 +374,7 @@ function MonitorAlert({ alert, href }: { alert: NonNullable<HomeVM["monitorAlert
         </p>
         <Link
           href={href}
-          className="relative inline-flex items-center gap-0.5 rounded-md text-xs leading-4 font-bold tracking-[0.08em] text-foreground uppercase no-underline! outline-none after:absolute after:-inset-x-2 after:-inset-y-3.5 hover:text-foreground-secondary focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="relative inline-flex items-center gap-0.5 rounded-md text-xs leading-4 font-bold tracking-[0.1em] text-foreground uppercase no-underline! outline-none after:absolute after:-inset-x-2 after:-inset-y-3.5 hover:text-foreground-secondary focus-visible:ring-3 focus-visible:ring-ring/50"
         >
           View Health Monitor
           <ChevronRight aria-hidden className="size-3.5" strokeWidth={2} />

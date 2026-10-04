@@ -7,8 +7,9 @@
 /* The marketing site is a separate project; keep its markup out of the app's CSS. */
 @source not "../../site";
 
-/* Theme tokens only. Values are sampled from docs/design/reference (see docs/design/spec.md §2).
-   Dark only: the `dark` class on <html> stays so shadcn's dark: variants apply. */
+/* Theme tokens only: no component or rule outside this file's token blocks writes a colour. Values are sampled
+   from docs/design/reference (see docs/design/spec.md §2). Dark is the default (:root); the theme script (src/lib/theme.ts) puts `dark` or
+   `light` on <html> (Settings › Appearance), and :root.light below overrides the surfaces and the data colours. */
 @custom-variant dark (&:is(.dark *));
 /* Components that blur content could opt out with this; the glass tokens already turn opaque (spec §2.6). */
 @custom-variant reduced-transparency (@media (prefers-reduced-transparency: reduce));
@@ -99,10 +100,13 @@
   --color-action-face: var(--action-face);
   --color-dim: var(--dim);
   --color-dim-strong: var(--dim-strong);
-  --shadow-card: inset 0 1px 0 var(--card-edge);
+  --shadow-card: inset 0 1px 0 var(--card-edge), var(--card-shadow);
   --shadow-sheet: inset 0 1px 0 var(--sheet-edge);
   --shadow-glass: inset 0 1px 0 var(--glass-edge), var(--glass-shadow);
-  --shadow-overlay: 0 8px 24px rgb(0 0 0 / 0.45);
+  --shadow-overlay: var(--overlay-shadow);
+  --shadow-thumb: var(--thumb-shadow);
+  --color-on-media: var(--on-media);
+  --color-media-ground: var(--media-ground);
 
   /* Radius scale (spec §2.4): chips 8, rows 10, buttons 12, cards 16, info card 24, sheets 28 */
   --radius-sm: 0.25rem;
@@ -142,11 +146,13 @@
   --radius: 0.625rem;
 
   /* Ground: vertical gradient top -> mid -> bottom, fixed to the viewport (spec §2.1, C2) */
-  --background-top: #262e33;
-  --background-mid: #1b2024;
-  --background: #0f1113;
+  /* The reference brand's background gradient ends on #101518; the top is kept darker than its #283339 (user, 2026-10-04). */
+  --background-top: #1d2529;
+  --background-mid: #151b1f;
+  --background: #101518;
+  /* The browser bar (ThemeColor syncs the meta tag): the top of the ground in use. */
+  --theme-color: var(--background-top);
   --ground: linear-gradient(180deg, var(--background-top) 0, var(--background-mid) 270px, var(--background) 740px);
-  --ground-health: radial-gradient(120% 55% at 50% 0, #0f2c2a 0, transparent 70%), linear-gradient(180deg, #0a0b0c 0, #14171c 60%);
   --ground-healthspan: linear-gradient(#101518, #101518);
   /* The ground in use; a shell's data-ground attribute swaps it (base layer below). Headers paint the same value. */
   --page-ground: var(--ground);
@@ -154,15 +160,16 @@
   --foreground-secondary: #babac0;
 
   /* Surfaces */
-  --card: #2b2f32;
-  --card-top: #2f3337;
-  --card-hover: #33383c;
+  --card: #232629;
+  --card-top: #272a2d;
+  --card-hover: #2c3033;
   --card-foreground: #ffffff;
   --popover: #252c32;
   --popover-top: #2a373f;
   --popover-foreground: #ffffff;
-  --primary: #ffffff;
-  --primary-foreground: #0f1113;
+  /* Calls to action: the reference brand's teal, with ink on it, in both themes. */
+  --primary: #00f19f;
+  --primary-foreground: #101518;
   --secondary: #3b4244;
   --secondary-foreground: #ffffff;
   --muted: #22282c;
@@ -179,7 +186,7 @@
   --ring: #ffffff;
 
   /* Recovery bands (>= 67 green, 34-66 yellow, <= 33 red) */
-  --recovery-green: #19ec06;
+  --recovery-green: #16ec06;
   --recovery-yellow: #ffde00;
   --recovery-red: #ff0026;
   --recovery-red-text: #ff5a6a;
@@ -195,8 +202,11 @@
   --optimal: #00f19f;
   --warning: #ffa722;
 
+  /* Recovery blue: recovery data without a valuation (single-series vitals charts, low stress) */
+  --recovery-blue: #67aee6;
+
   /* Stress 0-3 (low < 1, medium 1-2, high >= 2) */
-  --stress-low: #67aee6;
+  --stress-low: var(--recovery-blue);
   --stress-medium: #00f19f;
   --stress-high: #ffa722;
 
@@ -219,7 +229,7 @@
   --chart-2: #00f19f;
   --chart-3: #7ba1bb;
   --chart-4: #ffa722;
-  --chart-5: #67aee6;
+  --chart-5: var(--recovery-blue);
 
   /* Hypnogram lanes: sleep-blue ramp, lighter = lighter sleep */
   --stage-awake: #e6edf2;
@@ -256,11 +266,166 @@
   --dim-strong: rgb(0 0 0 / 0.85);
   --card-edge: rgb(255 255 255 / 0.06);
   --sheet-edge: rgb(255 255 255 / 0.14);
+  --selection: rgb(255 255 255 / 0.25);
+  --card-shadow: 0 0 #0000;
+  --thumb-shadow: 0 1px 3px rgb(0 0 0 / 0.4);
+  --overlay-shadow: 0 8px 24px rgb(0 0 0 / 0.45);
+  /* Over photos and media (the avatar crop ring): white in both themes. */
+  --on-media: #ffffff;
+  --media-ground: #000000;
+
+  /* Pulse Age orb (docs/design/orb.md): rim hues by age delta, read by the canvas at runtime (it redraws on a theme
+     change). Dark: a black core, particles added with light (lighter), brightened toward white. Light overrides below. */
+  --orb-green: #4cd48c;
+  --orb-cyan: #7cc4d4;
+  --orb-blue: #5888c0;
+  --orb-blue-2: #5e8cc0;
+  --orb-olive: #6a8452;
+  --orb-orange: #d4843a;
+  --orb-amber: #c8862e;
+  --orb-empty: #5c6268;
+  --orb-core: #000000;
+  /* The tone highlights mix toward (rim line, particles): white on dark. */
+  --orb-highlight: #ffffff;
+  /* Particle tint: rim hue × this (>1 brighter on dark), and how particles composite. */
+  --orb-lift: 1.3;
+  /* How far particles mix toward the highlight. */
+  --orb-sparkle: 0.12;
+  --orb-blend: lighter;
+  --orb-delta-text: #7ec6e4;
+  /* Numerals and label on the orb's dark body, in both themes. */
+  --orb-text: #ffffff;
+  --orb-text-muted: #999ea3;
+
+  /* Streak flame: a red-orange body lit toward its tip, an orange-yellow core. */
+  --flame-tip: #ff8a52;
+  --flame-body: #ff6538;
+  --flame-edge: #ee4e33;
+  --flame-core-top: #ffc56e;
+  --flame-core-bottom: #ff9862;
+}
+
+/* Light theme: the reference brand's light surfaces (white cards on a cool grey page, #101518 ink, teal pill
+   actions) with its data colours deepened just enough to read on white. */
+:root.light {
+  color-scheme: light;
+  --background-top: #f6f8f9;
+  --background-mid: #eff2f4;
+  --background: #e9edf0;
+  --ground-healthspan: linear-gradient(#eef1f3, #eef1f3);
+  --foreground: #101518;
+  --foreground-secondary: #49535a;
+
+  --card: #ffffff;
+  --card-top: #ffffff;
+  --card-hover: #f5f7f8;
+  --card-foreground: #101518;
+  --popover: #ffffff;
+  --popover-top: #ffffff;
+  --popover-foreground: #101518;
+  --primary: #00f19f;
+  --primary-foreground: #101518;
+  --secondary: #e4e8eb;
+  --secondary-foreground: #101518;
+  --muted: #eef1f3;
+  --muted-foreground: #646e75;
+  --accent: #dde2e6;
+  --accent-foreground: #101518;
+  --inset: #eef1f3;
+  --sheet: #ffffff;
+  --sheet-bottom: #f6f8f9;
+  --field: #edf0f2;
+  --border: rgb(16 21 24 / 0.1);
+  --input: rgb(16 21 24 / 0.16);
+  --ring: #101518;
+
+  --recovery-green: #12c805;
+  --recovery-yellow: #e5c300;
+  --recovery-red: #f20024;
+  --recovery-red-text: #d7001f;
+  --strain: #0093e7;
+  --strain-text: #0077bf;
+  --strain-deep: #0d48be;
+  --sleep: #6690ad;
+  --sleep-deep: #39597b;
+  --optimal: #00b377;
+  --warning: #d97900;
+  --recovery-blue: #3f92d3;
+  --stress-low: var(--recovery-blue);
+  --stress-medium: #00b377;
+  --stress-high: #d97900;
+  --coach: #4f6fe0;
+  --insight-from: #e6e2fb;
+  --insight-to: #dceef7;
+  --banner-from: #e9e8f7;
+  --banner-to: #e3ecf3;
+  --outlook-from: #f3ebdf;
+  --outlook-to: #e2ebf2;
+
+  --dial-track: #e2e6e9;
+  --dial-target: #b3bbc1;
+  --chart-grid: rgb(16 21 24 / 0.08);
+  --chart-band: rgb(16 21 24 / 0.04);
+  --chart-cursor: rgb(16 21 24 / 0.35);
+  --chart-1: #0093e7;
+  --chart-2: #00b377;
+  --chart-3: #6690ad;
+  --chart-4: #d97900;
+  --chart-5: var(--recovery-blue);
+  --stage-awake: #b9cad7;
+  --stage-rem: #8eafc6;
+  --stage-light: #6690ad;
+  --stage-deep: #3c6482;
+  --energy-active: #0093e7;
+  --energy-resting: #c9d1d8;
+  --pattern-hatch: repeating-linear-gradient(-45deg, rgb(16 21 24 / 0.08) 0 1.5px, transparent 1.5px 5px);
+
+  --glass-top: rgb(255 255 255 / 0.82);
+  --glass-bottom: rgb(246 248 249 / 0.9);
+  --glass-edge: rgb(255 255 255 / 0.9);
+  --glass-rim: rgb(16 21 24 / 0.06);
+  --glass-lens: rgb(16 21 24 / 0.05);
+  --glass-shadow: 0 10px 30px rgb(16 21 24 / 0.12), 0 2px 6px rgb(16 21 24 / 0.08);
+  --glass-action-top: rgb(240 241 252 / 0.9);
+  --glass-action-bottom: rgb(230 233 248 / 0.94);
+  --action-face: #eef0fb;
+  --dim: rgb(16 21 24 / 0.45);
+  --dim-strong: rgb(16 21 24 / 0.7);
+  --card-edge: rgb(255 255 255 / 0);
+  --sheet-edge: rgb(16 21 24 / 0.06);
+  --selection: rgb(16 21 24 / 0.16);
+  --card-shadow: 0 1px 2px rgb(16 21 24 / 0.05), 0 0 0 1px rgb(16 21 24 / 0.05);
+  --thumb-shadow: 0 1px 3px rgb(16 21 24 / 0.3);
+  --overlay-shadow: 0 8px 24px rgb(16 21 24 / 0.14);
+
+  /* A light orb: a pale core, deeper rim hues, particles painted over (not added) in their pure rim hue. */
+  --orb-green: #23a865;
+  --orb-cyan: #3d9cb3;
+  --orb-blue: #3e6fae;
+  --orb-blue-2: #4373b0;
+  --orb-olive: #5a7a3c;
+  --orb-orange: #cc7125;
+  --orb-amber: #bb7418;
+  --orb-empty: #9aa3aa;
+  --orb-core: #f8fafb;
+  --orb-highlight: #101518;
+  --orb-lift: 1;
+  --orb-sparkle: 0;
+  --orb-blend: source-over;
+  --orb-delta-text: #2a7fa6;
+  --orb-text: #101518;
+  --orb-text-muted: #646e75;
+}
+:root:has([data-ground="healthspan"]) {
+  --theme-color: #101518;
+}
+:root.light:has([data-ground="healthspan"]) {
+  --theme-color: #eef1f3;
 }
 
 /* No backdrop-filter, or the user asks for less transparency: the glass reads as its sampled solids. */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  :root {
+  :root:not(.light) {
     --glass-top: #22272d;
     --glass-bottom: #181d21;
     --glass-action-top: #232735;
@@ -268,7 +433,7 @@
   }
 }
 @media (prefers-reduced-transparency: reduce) {
-  :root {
+  :root:not(.light) {
     --glass-top: #22272d;
     --glass-bottom: #181d21;
     --glass-action-top: #232735;
@@ -279,9 +444,6 @@
 
 /* The one page-level background switch (spec §2.1). Unlayered, like the :root tokens it overrides: inside
    @layer base it lost to them and no shell's ground ever applied (spec §11 M3). */
-:root:has([data-ground="health"]) {
-  --page-ground: var(--ground-health);
-}
 :root:has([data-ground="healthspan"]) {
   --page-ground: var(--ground-healthspan);
 }
@@ -322,7 +484,7 @@
     background: var(--page-ground);
   }
   ::selection {
-    background-color: rgb(255 255 255 / 0.25);
+    background-color: var(--selection);
   }
   /* Recharts 3 draws each chart layer (bars, reference lines, dials) as <g tabindex="-1">, so a tap or click on a
      mark focuses that <g>, and Chromium's SVG UA sheet outlines any focused SVG element on :focus, ignoring

@@ -49,12 +49,15 @@ function zones(): Zone[] {
   return cached
 }
 
-const describe = (id: string) => {
+/** "Kolkata, Asia (GMT+5:30)" for a zone id. */
+export const describeZone = (id: string) => {
   const z = zones().find((x) => x.id === canonicalZone(id))
   return z ? `${z.city}, ${z.region} (${z.offset})` : id
 }
 
 const MAX_SHOWN = 80
+/** One option row, px (h-12); the list snaps to whole rows. */
+const ZONE_ROW = 48
 
 /**
  * A searchable time zone picker (ARIA combobox): type a city, region or offset, pick with the arrow keys and
@@ -89,7 +92,8 @@ export function TimeZoneCombobox({
     const words = query.toLowerCase().split(/\s+/).filter(Boolean)
     const all = zones()
     const hit = words.length ? all.filter((z) => words.every((w) => z.search.includes(w))) : all
-    return hit.slice(0, MAX_SHOWN)
+    // Unfiltered, every zone, so the list can open on the chosen one wherever it sorts.
+    return words.length ? hit.slice(0, MAX_SHOWN) : hit
   }, [open, query])
 
   const show = (next: boolean) => {
@@ -97,7 +101,7 @@ export function TimeZoneCombobox({
     setQuery("")
     if (next) {
       const at = zones().findIndex((z) => z.id === canonicalZone(value))
-      setActive(Math.max(0, Math.min(at, MAX_SHOWN - 1)))
+      setActive(Math.max(0, at))
     }
   }
   const pick = (z: Zone) => {
@@ -107,7 +111,11 @@ export function TimeZoneCombobox({
     input.current?.focus()
   }
 
-  // Keep the active option in view while arrowing through the list.
+  // Opening puts the chosen zone in the list's middle row (of three), whole rows only; arrowing then keeps the active one in view.
+  React.useLayoutEffect(() => {
+    if (open && list.current) list.current.scrollTop = Math.max(0, active - 1) * ZONE_ROW
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only on open
+  }, [open])
   React.useEffect(() => {
     if (open) list.current?.querySelector(`[data-index="${active}"]`)?.scrollIntoView({ block: "nearest" })
   }, [active, open])
@@ -144,8 +152,8 @@ export function TimeZoneCombobox({
           aria-activedescendant={open && matches[active] ? `${id}-opt-${matches[active].id}` : undefined}
           autoComplete="off"
           spellCheck={false}
-          placeholder={value ? describe(value) : "Search a city or region"}
-          value={open ? query : value ? describe(value) : ""}
+          placeholder={open || !value ? "Search city or GMT offset" : describeZone(value)}
+          value={open ? query : value ? describeZone(value) : ""}
           onFocus={() => !open && show(true)}
           onClick={() => !open && show(true)}
           onChange={(e) => {
@@ -182,7 +190,7 @@ export function TimeZoneCombobox({
           role="listbox"
           aria-label="Time zones"
           onMouseDown={(e) => e.preventDefault()}
-          className="max-h-72 overflow-y-auto overscroll-contain rounded-xl bg-secondary p-1 shadow-[0_8px_24px_rgb(0_0_0/0.35)] [scrollbar-width:thin]"
+          className="max-h-[152px] snap-y scroll-pt-1 overflow-y-auto overscroll-contain rounded-xl bg-field p-1 [scrollbar-width:thin] motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-top-1"
         >
           {matches.length === 0 && <li className="px-3 py-3 text-[15px] leading-5 text-muted-foreground">No time zone matches “{query}”.</li>}
           {matches.map((z, i) => {
@@ -197,13 +205,13 @@ export function TimeZoneCombobox({
                 onMouseMove={() => setActive(i)}
                 onClick={() => pick(z)}
                 className={cn(
-                  "flex min-h-12 cursor-pointer items-center gap-3 rounded-lg px-3 py-2 transition-[background-color] duration-100",
-                  i === active ? "bg-accent" : "bg-transparent",
+                  "flex h-12 cursor-pointer snap-start items-center gap-3 rounded-lg px-3 transition-[background-color] duration-100",
+                  i === active ? "bg-foreground/8" : "bg-transparent",
                 )}
               >
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[15px] leading-5 font-semibold text-foreground">{z.city}</span>
-                  <span className="block truncate text-[13px] leading-[18px] text-muted-foreground">{z.region}</span>
+                <span className="min-w-0 flex-1 truncate text-[15px] leading-5">
+                  <span className={cn("text-foreground", selected ? "font-semibold" : "font-medium")}>{z.city}</span>
+                  <span className="text-muted-foreground"> · {z.region}</span>
                 </span>
                 <span className="shrink-0 font-numeric text-[13px] leading-[18px] text-foreground-secondary tabular-nums">{z.offset}</span>
                 <Check aria-hidden className={cn("size-4 shrink-0 text-foreground", selected ? "opacity-100" : "opacity-0")} strokeWidth={2.25} />

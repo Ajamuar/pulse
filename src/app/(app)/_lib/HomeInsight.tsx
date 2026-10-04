@@ -47,13 +47,13 @@ export function HomeInsight({ items }: { items: HomeInsightItem[] }) {
             type="button"
             onClick={() => setI((k) => (k + 1) % n)}
             aria-label={`Next insight (${i + 1} of ${n})`}
-            className="absolute top-2 right-2 flex h-12 w-6 flex-col items-center justify-center gap-1 rounded-lg bg-white/8 text-foreground transition-[background-color,scale] duration-150 ease-standard outline-none after:absolute after:-inset-x-2.5 after:-inset-y-0.5 hover:bg-white/12 focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96]"
+            className="absolute top-2 right-2 flex h-12 w-6 flex-col items-center justify-center gap-1 rounded-lg bg-foreground/8 text-foreground transition-[background-color,scale] duration-150 ease-standard outline-none after:absolute after:-inset-x-2.5 after:-inset-y-0.5 hover:bg-foreground/12 focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96]"
           >
             <Check aria-hidden className="size-4" strokeWidth={2.25} />
             <span className="font-numeric text-[13px] leading-4 font-semibold text-foreground-secondary tabular-nums">{n - i}</span>
           </button>
         ) : (
-          <span aria-hidden className="absolute top-2 right-2 flex h-12 w-6 flex-col items-center justify-center gap-1 rounded-lg bg-white/8">
+          <span aria-hidden className="absolute top-2 right-2 flex h-12 w-6 flex-col items-center justify-center gap-1 rounded-lg bg-foreground/8">
             <Check className="size-4" strokeWidth={2.25} />
             <span className="font-numeric text-[13px] leading-4 font-semibold text-foreground-secondary tabular-nums">1</span>
           </span>

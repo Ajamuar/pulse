@@ -77,7 +77,7 @@ export default async function ActivityPage({ params }: PageProps<"/activity/[id]
   )
 }
 
-const STAT_LABEL = "text-xs leading-4 font-bold tracking-[0.08em] text-foreground-secondary uppercase"
+const STAT_LABEL = "text-xs leading-4 font-bold tracking-[0.1em] text-foreground-secondary uppercase"
 
 /** the reference app's activity hero [latest-activity-1]: a left-aligned stat pair at 34 px (spec §11 F14), activity strain in blue and the duration. */
 function Hero({ vm }: { vm: ActivityVM }) {

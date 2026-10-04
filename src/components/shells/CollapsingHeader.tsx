@@ -34,7 +34,7 @@ function Stat({ stat }: { stat?: HeaderStat }) {
       <span className={cn("font-numeric text-xl leading-6 font-bold tabular-nums", stat.tone === "optimal" ? "text-optimal" : stat.tone === "warning" ? "text-warning" : "text-foreground")}>
         {stat.value}
       </span>
-      <span className="text-xs leading-4 font-bold tracking-[0.08em] text-balance text-muted-foreground uppercase">{stat.label}</span>
+      <span className="text-xs leading-4 font-bold tracking-[0.1em] text-balance text-muted-foreground uppercase">{stat.label}</span>
     </p>
   )
 }

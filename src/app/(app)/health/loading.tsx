@@ -14,7 +14,7 @@ const Chip = () => <Skeleton className="h-6 w-24 rounded-md" />
  */
 export default function Loading() {
   return (
-    <PageShell loading title="Health" ground="health">
+    <PageShell loading title="Health">
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-2 xl:gap-4">
         <SectionShell variant="card" level={2} title="Healthspan" href="/health/healthspan" className="xl:col-span-2">
           <div aria-hidden className="flex flex-col gap-6 xl:grid xl:grid-cols-2 xl:items-center xl:gap-8">

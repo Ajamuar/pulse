@@ -87,7 +87,7 @@ export function HomeSkeleton({ stats = DASHBOARD_DEFAULT }: { stats?: DashboardK
                   <SkeletonText className="w-full text-[15px] leading-5" />
                   <SkeletonText className="w-2/3 text-[15px] leading-5 xl:hidden" />
                   <SkeletonText className="w-1/2 text-[15px] leading-5 md:hidden" />
-                  <span className="absolute top-2 right-2 h-12 w-6 rounded-lg bg-white/8" />
+                  <span className="absolute top-2 right-2 h-12 w-6 rounded-lg bg-foreground/8" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3 xl:col-start-2 xl:row-start-1 xl:grid-cols-1 xl:gap-4">
@@ -119,7 +119,7 @@ export function HomeSkeleton({ stats = DASHBOARD_DEFAULT }: { stats?: DashboardK
                   {rows(7, () => (
                     <div className="flex min-h-16 flex-col items-center justify-center gap-2">
                       <SkeletonText className={`${LABEL} w-[3ch]`} />
-                      <span className="size-7 rounded-full ring-1 ring-white/25 ring-inset" />
+                      <span className="size-7 rounded-full ring-1 ring-foreground/25 ring-inset" />
                     </div>
                   ))}
                 </div>

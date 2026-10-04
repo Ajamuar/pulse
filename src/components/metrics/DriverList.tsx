@@ -51,7 +51,7 @@ function sentence(i: DriverItem, variant: DriverListProps["variant"], unit: Driv
 function Header({ variant, unit, provisional }: { variant: DriverListProps["variant"]; unit: DriverListProps["unit"]; provisional: boolean }) {
   const [left, mid, right] = variant === "recovery" ? ["Lowered", "Points", "Raised"] : ["Hurts", unit === "SD" ? "Impact (SD)" : "% Impact", "Helps"]
   return (
-    <div aria-hidden className="mb-2 grid grid-cols-[1fr_auto_1fr] items-center gap-2 text-xs leading-4 font-bold tracking-[0.08em] uppercase">
+    <div aria-hidden className="mb-2 grid grid-cols-[1fr_auto_1fr] items-center gap-2 text-xs leading-4 font-bold tracking-[0.1em] uppercase">
       <span className="flex items-center gap-2 text-warning">
         <span className="grid size-4 place-items-center rounded-sm bg-warning/20">
           <ChevronDown className="size-3" strokeWidth={2.5} />
@@ -97,7 +97,7 @@ function Item({ i, max, p }: { i: DriverItem; max: number; p: DriverListProps })
           </span>
         ) : (
           <span className="flex items-baseline justify-between gap-3">
-            <span className="min-w-0 text-xs leading-4 font-bold tracking-[0.08em] text-pretty uppercase">{i.label}</span>
+            <span className="min-w-0 text-xs leading-4 font-bold tracking-[0.1em] text-pretty uppercase">{i.label}</span>
             {value}
           </span>
         )}

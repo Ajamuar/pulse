@@ -54,7 +54,7 @@ function ViewSwitch({ view }: { view: View }) {
       scroll={false}
       aria-current={view === v ? "page" : undefined}
       className={cn(
-        "grid h-10 flex-1 place-items-center rounded-md text-[13px] font-bold tracking-[0.08em] uppercase outline-none transition-[background-color,color] duration-150 ease-standard focus-visible:ring-3 focus-visible:ring-ring/50",
+        "grid h-10 flex-1 place-items-center rounded-md text-[13px] font-bold tracking-[0.1em] uppercase outline-none transition-[background-color,color] duration-150 ease-standard focus-visible:ring-3 focus-visible:ring-ring/50",
         view === v ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground"
       )}
     >
@@ -104,7 +104,7 @@ export default async function ReportsPage({ searchParams }: PageProps<"/reports"
                 href="/reports?all=1"
                 replace
                 scroll={false}
-                className="mx-auto grid h-11 place-items-center rounded-full px-5 text-xs font-bold tracking-[0.08em] text-foreground/85 uppercase outline-none transition-[background-color,color] duration-150 ease-standard hover:bg-white/[0.06] hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+                className="mx-auto grid h-11 place-items-center rounded-full px-5 text-xs font-bold tracking-[0.1em] text-foreground/85 uppercase outline-none transition-[background-color,color] duration-150 ease-standard hover:bg-foreground/[0.06] hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
               >
                 Show earlier weeks
               </Link>

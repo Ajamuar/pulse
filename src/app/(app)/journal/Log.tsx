@@ -54,7 +54,7 @@ const TYPE_ICON: Record<LogType, LucideIcon> = {
 
 /** A selectable chip, as the check-in's Yes/No toggles: white when on. */
 const CHIP =
-  "h-11 rounded-full border-border px-4 text-[15px] font-medium transition-[background-color,color,border-color] duration-150 ease-standard data-[state=on]:border-foreground data-[state=on]:bg-foreground data-[state=on]:text-primary-foreground"
+  "h-11 rounded-full border-border px-4 text-[15px] font-medium transition-[background-color,color,border-color] duration-150 ease-standard data-[state=on]:border-foreground data-[state=on]:bg-foreground data-[state=on]:text-background"
 const FIELD = "h-11 text-base tabular-nums"
 const NUM = /^\d+([.,]\d+)?$/
 

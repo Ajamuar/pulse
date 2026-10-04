@@ -2,7 +2,8 @@
 
 import * as React from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { Camera, KeyRound, Pencil } from "lucide-react"
+import { Camera, KeyRound, Monitor, Moon, Pencil, Sun } from "lucide-react"
+import { useTheme } from "@/hooks/use-theme"
 import { toast } from "sonner"
 import { uploadAvatar } from "@/server/actions/avatar"
 import { Button } from "@/components/ui/button"
@@ -205,7 +206,7 @@ export function DeleteAccountButton() {
     <>
       <Button
         variant="ghost"
-        className="h-10 rounded-full px-4 text-[13px] font-semibold text-muted-foreground hover:bg-white/[0.06] hover:text-recovery-red-text"
+        className="h-10 rounded-full px-4 text-[13px] font-semibold text-muted-foreground hover:bg-foreground/[0.06] hover:text-recovery-red-text"
         onClick={() => setOpen(true)}
       >
         Delete account
@@ -260,7 +261,7 @@ export function EditProfileButton({ defaults }: { defaults: ProfileDefaults }) {
         variant="ghost"
         aria-label="Edit profile"
         onClick={() => setOpen(true)}
-        className="-my-2 h-9 gap-1.5 rounded-full px-3 text-[13px] font-semibold text-foreground-secondary hover:bg-white/[0.06] hover:text-foreground"
+        className="-my-2 h-9 gap-1.5 rounded-full px-3 text-[13px] font-semibold text-foreground-secondary hover:bg-foreground/[0.06] hover:text-foreground"
       >
         <Pencil aria-hidden strokeWidth={2} className="size-3.5" />
         Edit
@@ -337,5 +338,42 @@ export function AvatarButtons() {
       </Button>
       <AvatarCropSheet photo={photo} open={cropping} pending={pending} error={error} onCancel={() => setCropping(false)} onUse={use} />
     </div>
+  )
+}
+
+const THEMES = [
+  { value: "system", label: "System", Icon: Monitor },
+  { value: "light", label: "Light", Icon: Sun },
+  { value: "dark", label: "Dark", Icon: Moon },
+] as const
+
+/**
+ * Appearance: system, light or dark, as a radio group styled like the profile's segmented control. Kept per device
+ * (stored locally), so a phone can follow the system while a laptop stays dark.
+ */
+export function ThemePicker() {
+  const { theme, setTheme } = useTheme()
+  return (
+    <fieldset>
+      <legend className="sr-only">Theme</legend>
+      <div className="grid grid-cols-3 gap-1 rounded-[14px] bg-field p-1">
+        {THEMES.map(({ value, label, Icon }) => (
+          <label key={value} className="relative">
+            <input
+              type="radio"
+              name="theme"
+              value={value}
+              checked={theme === value}
+              onChange={() => setTheme(value)}
+              className="peer sr-only"
+            />
+            <span className="flex h-11 cursor-pointer items-center justify-center gap-2 rounded-[10px] text-[15px] font-semibold text-foreground-secondary transition-[background-color,color,scale] duration-150 ease-standard select-none active:scale-[0.96] peer-checked:bg-foreground peer-checked:text-background peer-focus-visible:ring-2 peer-focus-visible:ring-foreground/70">
+              <Icon aria-hidden className="size-4" strokeWidth={2} />
+              {label}
+            </span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
   )
 }

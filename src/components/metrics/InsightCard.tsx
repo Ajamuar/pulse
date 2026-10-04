@@ -27,7 +27,7 @@ export function InsightCard({ title, body, action }: InsightCardProps) {
             href={action.href}
             // An in-page anchor replaces the entry, so Back still leaves the screen in one press (spec §8, journey 1).
             replace={action.href.startsWith("#")}
-            className="relative mt-auto inline-flex items-center gap-1.5 self-start rounded-md text-xs leading-4 font-bold tracking-[0.08em] text-coach uppercase underline-offset-4 outline-none after:absolute after:-inset-x-1 after:-inset-y-3.5 hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="relative mt-auto inline-flex items-center gap-1.5 self-start rounded-md text-xs leading-4 font-bold tracking-[0.1em] text-coach uppercase underline-offset-4 outline-none after:absolute after:-inset-x-1 after:-inset-y-3.5 hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
           >
             {action.label}
             <ArrowRight aria-hidden className="size-3.5" strokeWidth={2} />

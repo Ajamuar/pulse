@@ -8,7 +8,7 @@ import { TAG_COPY, type MetricTag } from "@/lib/reasons"
 // Small shared marks used by every kit component (spec §5.0). One look per meaning.
 
 /** Shared type styles: the uppercase small label and the muted caption. */
-export const LABEL = "text-xs leading-4 font-bold tracking-[0.08em] uppercase"
+export const LABEL = "text-xs leading-4 font-bold tracking-[0.1em] uppercase"
 export const CAPTION = "text-xs leading-4 font-medium text-muted-foreground"
 
 export type TagKind = keyof typeof TAG_COPY | "so_far" | "partial_week" | "partial_month" | "estimate"
@@ -27,7 +27,7 @@ export function Tag({ kind, className }: { kind: TagKind; className?: string }) 
     <Badge
       variant="outline"
       className={cn(
-        "h-5 rounded-full border-border px-2 text-[11px] font-bold tracking-[0.06em] text-foreground-secondary uppercase",
+        "h-5 rounded-full border-border px-2 text-[11px] font-bold tracking-[0.1em] text-foreground-secondary uppercase",
         className
       )}
     >

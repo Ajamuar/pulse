@@ -84,7 +84,7 @@ export function HypnogramChart({ night }: { night: HypnogramNight }) {
             />
           }
         />
-        <Line dataKey="lane" type="stepAfter" stroke="rgb(255 255 255 / 0.25)" strokeWidth={1.5} dot={false} activeDot={false} {...anim} />
+        <Line dataKey="lane" type="stepAfter" stroke="color-mix(in srgb, var(--foreground) 25%, transparent)" strokeWidth={1.5} dot={false} activeDot={false} {...anim} />
         {STAGES.map((st) => (
           <Line
             key={st}

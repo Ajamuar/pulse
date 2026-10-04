@@ -34,7 +34,7 @@ function ActionLink({ label, href }: { label: string; href: string }) {
   return (
     <Link
       href={href}
-      className="relative inline-flex items-center gap-0.5 rounded-md text-xs leading-4 font-bold tracking-[0.08em] text-foreground-secondary uppercase transition-[color] duration-150 ease-standard outline-none after:absolute after:-inset-x-2 after:-inset-y-3.5 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+      className="relative inline-flex items-center gap-0.5 rounded-md text-xs leading-4 font-bold tracking-[0.1em] text-foreground-secondary uppercase transition-[color] duration-150 ease-standard outline-none after:absolute after:-inset-x-2 after:-inset-y-3.5 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
     >
       {label}
       <ChevronRight aria-hidden className="size-3.5" strokeWidth={2} />
@@ -78,7 +78,7 @@ export function SectionShell({ variant, title, info, action, aside, href, level,
   const header = (
     <div className="mb-3 flex min-h-6 items-center justify-between gap-2">
       {/* 12 px caps, the reference app's card title ("HEALTH MONITOR" 116 pt on one line) [latest-home-top-2], [latest-home-collapsed-3] (spec §11 F7). */}
-      <H id={headingId} className="min-w-0 text-xs leading-4 font-bold tracking-[0.08em] text-balance uppercase">
+      <H id={headingId} className="min-w-0 text-xs leading-4 font-bold tracking-[0.1em] text-balance uppercase">
         {title}
       </H>
       <div className="flex shrink-0 items-center gap-2">

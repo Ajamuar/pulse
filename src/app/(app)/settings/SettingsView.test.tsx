@@ -75,7 +75,7 @@ describe("Settings view", () => {
     expect(within(source()).queryByRole("link")).not.toBeInTheDocument()
     expect(screen.getByText(/DATA_SOURCE=google/)).toBeInTheDocument()
     expect(screen.queryByRole("region", { name: "About" })).not.toBeInTheDocument()
-    expect(screen.getAllByRole("region").map((r) => r.getAttribute("aria-labelledby"))).toEqual(["account-title", "source-title", "profile-title"])
+    expect(screen.getAllByRole("region").map((r) => r.getAttribute("aria-labelledby"))).toEqual(["account-title", "source-title", "profile-title", "appearance-title"])
   })
 
   it("profile is editable and the account can sign out with a plain form post", () => {

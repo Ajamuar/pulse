@@ -184,14 +184,14 @@ export function AvatarCropSheet({ photo, open, pending, error, onCancel, onUse }
         onPointerUp={up}
         onPointerCancel={up}
         onKeyDown={key}
-        className="relative mx-auto aspect-square w-full max-w-[400px] cursor-grab touch-none overflow-hidden rounded-xl bg-black outline-none select-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring/70 active:cursor-grabbing"
+        className="relative mx-auto aspect-square w-full max-w-[400px] cursor-grab touch-none overflow-hidden rounded-xl bg-media-ground outline-none select-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring/70 active:cursor-grabbing"
       >
         <canvas ref={canvas} aria-hidden className="size-full" />
         {/* The mask: everything outside the circle dimmed, a hairline on the circle's edge. */}
         <div
           aria-hidden
           style={{ inset: INSET }}
-          className="pointer-events-none absolute rounded-full shadow-[0_0_0_9999px_rgb(0_0_0/0.6)] ring-1 ring-white/50"
+          className="pointer-events-none absolute rounded-full shadow-[0_0_0_9999px_var(--dim)] ring-1 ring-on-media/50"
         />
       </div>
       <div className="mx-auto mt-3 flex max-w-[400px] items-center gap-3 text-muted-foreground">

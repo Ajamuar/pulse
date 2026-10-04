@@ -122,7 +122,7 @@ function Switcher({ mode, calendar, placement = "body", narrow = false }: DateSw
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <div className={cn("inline-flex items-center", bare ? "gap-1" : "h-[30px] rounded-full bg-white/[0.04] p-px")}>
+      <div className={cn("inline-flex items-center", bare ? "gap-1" : "h-[30px] rounded-full bg-foreground/[0.04] p-px")}>
         <button type="button" className={bare ? BARE_STEP : cn(STEP, narrow && NARROW_STEP)} aria-label={`Previous ${unit}`} disabled={atStart} onClick={() => by(-step)}>
           <ChevronLeft aria-hidden className={bare ? "size-4" : "size-[18px]"} strokeWidth={2.25} />
         </button>
@@ -135,7 +135,7 @@ function Switcher({ mode, calendar, placement = "body", narrow = false }: DateSw
               PRESS,
               bare
                 ? "relative h-9 min-w-28 rounded-full px-2 text-center after:absolute after:inset-x-0 after:-inset-y-1 text-xs leading-4 font-bold tracking-[0.1em] whitespace-nowrap uppercase tabular-nums hover:text-foreground-secondary"
-                : cn(LABEL, "relative h-7 min-w-24 rounded-full bg-white/[0.08] px-4 text-center after:absolute after:inset-x-0 after:-inset-y-2 hover:bg-white/[0.12]", narrow && NARROW_LABEL)
+                : cn(LABEL, "relative h-7 min-w-24 rounded-full bg-foreground/[0.08] px-4 text-center after:absolute after:inset-x-0 after:-inset-y-2 hover:bg-foreground/[0.12]", narrow && NARROW_LABEL)
             )}
           >
             {text}
@@ -160,7 +160,7 @@ function Switcher({ mode, calendar, placement = "body", narrow = false }: DateSw
 /** the reference app's date pill (spec §4.3). Reads `?d=`; changes it with router.replace. */
 export function DateSwitcher(props: DateSwitcherProps) {
   return (
-    <React.Suspense fallback={<div aria-hidden className={cn(props.placement === "header" ? "h-9 w-44" : "h-[30px] w-40 rounded-full bg-white/[0.04]", props.narrow && "max-[400px]:w-32")} />}>
+    <React.Suspense fallback={<div aria-hidden className={cn(props.placement === "header" ? "h-9 w-44" : "h-[30px] w-40 rounded-full bg-foreground/[0.04]", props.narrow && "max-[400px]:w-32")} />}>
       <Switcher {...props} />
     </React.Suspense>
   )

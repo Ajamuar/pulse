@@ -73,7 +73,7 @@ export function TimelineRow({
     >
       <span className={cn(CHIP, chipClass)}>{chip}</span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[15px] leading-5 font-bold tracking-[0.06em] uppercase">{name}</span>
+        <span className="block truncate text-[15px] leading-5 font-bold tracking-[0.1em] uppercase">{name}</span>
         {caption && <span className="block truncate text-xs leading-4 font-medium text-muted-foreground">{caption}</span>}
       </span>
       <span className="shrink-0 text-right font-numeric text-xs leading-4 font-medium text-foreground-secondary tabular-nums">

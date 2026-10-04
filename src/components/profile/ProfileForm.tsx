@@ -5,15 +5,15 @@ import { cn } from "@/lib/utils"
 import { saveProfileAction, type ProfileFormState } from "@/server/actions/profile"
 import { Button } from "@/components/ui/button"
 import { BirthDatePicker } from "./BirthDatePicker"
-import { canonicalZone, TimeZoneCombobox } from "./TimeZoneCombobox"
+import { canonicalZone, describeZone, TimeZoneCombobox } from "./TimeZoneCombobox"
 
 export type ProfileDefaults = { birthDate: string; sex: "male" | "female" | null; maxHr: number | null; heightCm: number | null; timeZone: string | null }
 
 const noSubscribe = () => () => {}
 
 const FIELD =
-  "h-13 w-full min-w-0 rounded-xl bg-field px-4 text-[17px] leading-6 text-foreground tabular-nums outline-none transition-[box-shadow] duration-150 ease-standard placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-foreground/70 aria-invalid:ring-2 aria-invalid:ring-recovery-red-text [color-scheme:dark]"
-const LABEL = "text-xs leading-4 font-bold tracking-[0.08em] text-foreground-secondary uppercase"
+  "h-13 w-full min-w-0 rounded-xl bg-field px-4 text-[17px] leading-6 text-foreground tabular-nums outline-none transition-[box-shadow] duration-150 ease-standard placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-foreground/70 aria-invalid:ring-2 aria-invalid:ring-recovery-red-text"
+const LABEL = "text-xs leading-4 font-bold tracking-[0.1em] text-foreground-secondary uppercase"
 const HINT = "text-[13px] leading-[18px] text-muted-foreground text-pretty"
 const ERROR = "text-[13px] leading-[18px] font-medium text-recovery-red-text"
 
@@ -46,15 +46,12 @@ function Field({ id, label, hint, error, optional, children }: { id: string; lab
 export function ProfileForm({
   defaults,
   onboarding = false,
-  startYear,
   onSaved,
   footer,
 }: {
   defaults: ProfileDefaults
   /** First run: only what nothing else can supply (birth date, sex). Height and max HR wait for Settings. */
   onboarding?: boolean
-  /** The year the empty date picker opens on (from Google's age). */
-  startYear?: number
   onSaved?: () => void
   footer: (pending: boolean) => React.ReactNode
 }) {
@@ -66,14 +63,16 @@ export function ProfileForm({
   // No saved zone (onboarding): the browser's own. Empty on the server, so the first client render still matches it.
   const browserZone = React.useSyncExternalStore(noSubscribe, () => canonicalZone(Intl.DateTimeFormat().resolvedOptions().timeZone), () => "")
   const [edited, setTimeZone] = React.useState<string | null>(null)
+  // Onboarding shows the detected zone as one line; Change opens the picker. An error opens it too.
+  const [zoneOpen, setZoneOpen] = React.useState(!onboarding)
   const timeZone = edited ?? defaults.timeZone ?? browserZone
   const described = (id: keyof NonNullable<typeof f>) => ({ "aria-invalid": !!f?.[id] || undefined, "aria-describedby": `${id}-${f?.[id] ? "error" : "hint"}` })
 
   return (
     <form action={action} className="flex flex-col gap-6" noValidate>
       {onboarding && <input type="hidden" name="onboarding" value="1" />}
-      <Field id="birthDate" label="Birth date" hint="Sets your age for heart rate zones, sleep need and Pulse Age." error={f?.birthDate}>
-        <BirthDatePicker id="birthDate" name="birthDate" defaultValue={defaults.birthDate} startYear={startYear} invalid={!!f?.birthDate} describedBy={described("birthDate")["aria-describedby"]} />
+      <Field id="birthDate" label="Birth date" hint="For heart rate zones, sleep need and Pulse Age." error={f?.birthDate}>
+        <BirthDatePicker id="birthDate" name="birthDate" defaultValue={defaults.birthDate} invalid={!!f?.birthDate} describedBy={described("birthDate")["aria-describedby"]} />
       </Field>
 
       <fieldset className="flex flex-col gap-2" aria-describedby={f?.sex ? "sex-error" : "sex-hint"}>
@@ -99,14 +98,32 @@ export function ProfileForm({
           </p>
         ) : (
           <p id="sex-hint" className={HINT}>
-            Sex at birth. The fitness and Pulse Age reference ranges differ by sex.
+            Sex at birth. Reference ranges differ by sex.
           </p>
         )}
       </fieldset>
 
-      <Field id="timeZone" label="Time zone" hint="Where you live. Your days start at midnight here." error={f?.timeZone}>
-        <TimeZoneCombobox id="timeZone" name="timeZone" value={timeZone} onChange={setTimeZone} className={FIELD} {...described("timeZone")} />
-      </Field>
+      {zoneOpen || !timeZone || f?.timeZone ? (
+        <Field id="timeZone" label="Time zone" hint="Where you live. Your days start at midnight here." error={f?.timeZone}>
+          <TimeZoneCombobox id="timeZone" name="timeZone" value={timeZone} onChange={setTimeZone} className={FIELD} {...described("timeZone")} />
+        </Field>
+      ) : (
+        <div className="flex items-center gap-3 rounded-xl bg-field py-2 pr-2 pl-4">
+          <input type="hidden" name="timeZone" value={timeZone} />
+          <p className="min-w-0 flex-1">
+            <span className={cn(LABEL, "block")}>Time zone</span>
+            <span className="block truncate text-[15px] leading-5 text-foreground">{describeZone(timeZone)}</span>
+          </p>
+          <Button type="button" variant="ghost" size="sm" onClick={() => {
+              setZoneOpen(true)
+              // Focus opens the list, so Change is one tap.
+              requestAnimationFrame(() => document.getElementById("timeZone")?.focus())
+            }}
+            aria-label="Change time zone">
+            Change
+          </Button>
+        </div>
+      )}
 
       {!onboarding && (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-4">

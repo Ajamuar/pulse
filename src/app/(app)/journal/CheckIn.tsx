@@ -24,7 +24,7 @@ import { Label } from "@/components/ui/label"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 
 const ITEM =
-  "h-11 min-w-14 rounded-lg px-3 text-[13px] font-bold tracking-[0.06em] uppercase transition-[background-color,color] duration-150 ease-standard"
+  "h-11 min-w-14 rounded-lg px-3 text-[13px] font-bold tracking-[0.1em] uppercase transition-[background-color,color] duration-150 ease-standard"
 export const TAG_CLASS = "h-7 rounded-full px-3 text-[13px] font-semibold"
 
 type Values = Record<string, number | undefined>
@@ -294,7 +294,7 @@ export function CheckInSheet() {
                         </ToggleGroupItem>
                         <ToggleGroupItem
                           value="yes"
-                          className={cn(ITEM, "data-[state=on]:border-foreground data-[state=on]:bg-foreground data-[state=on]:text-primary-foreground")}
+                          className={cn(ITEM, "data-[state=on]:border-foreground data-[state=on]:bg-foreground data-[state=on]:text-background")}
                         >
                           Yes
                         </ToggleGroupItem>

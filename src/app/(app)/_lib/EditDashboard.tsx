@@ -93,7 +93,7 @@ export function EditDashboard({ keys, defaults, empty = [] }: EditDashboardProps
         size="icon"
         aria-label="Edit My Dashboard"
         onClick={start}
-        className="relative rounded-full text-foreground-secondary after:absolute after:-inset-1.5 hover:bg-white/[0.06] hover:text-foreground"
+        className="relative rounded-full text-foreground-secondary after:absolute after:-inset-1.5 hover:bg-foreground/[0.06] hover:text-foreground"
       >
         <Pencil aria-hidden strokeWidth={1.75} className="size-[18px]" />
       </Button>
@@ -198,7 +198,7 @@ export function EditDashboard({ keys, defaults, empty = [] }: EditDashboardProps
                       <span className="block text-[15px] leading-[22px] text-balance">{m.label}</span>
                       {noData.has(m.key) && <span className="block text-xs leading-4 font-medium text-muted-foreground">No data yet</span>}
                     </span>
-                    <span aria-hidden className="grid size-6 shrink-0 place-items-center rounded-full bg-foreground text-primary-foreground">
+                    <span aria-hidden className="grid size-6 shrink-0 place-items-center rounded-full bg-foreground text-background">
                       <Plus className="size-3.5" strokeWidth={2.5} />
                     </span>
                   </button>

@@ -64,7 +64,7 @@ export function CalendarPanel(props: CalendarPanelProps) {
       <DialogPrimitive.Overlay
         className={cn(
           REGION,
-          "bottom-0 bg-black/65 duration-200 ease-standard data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0"
+          "bottom-0 bg-dim duration-200 ease-standard data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0"
         )}
       />
       <DialogPrimitive.Content
@@ -186,7 +186,7 @@ function MonthPanel({
             type="button"
             aria-label="Back to today"
             onClick={() => onSelect(today)}
-            className="relative h-8 touch-manipulation rounded-full bg-white/[0.08] px-3.5 text-[11px] leading-4 font-bold tracking-[0.1em] uppercase transition-[background-color,scale] duration-150 ease-standard outline-none after:absolute after:inset-x-0 after:-inset-y-1.5 hover:bg-white/[0.12] focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96]"
+            className="relative h-8 touch-manipulation rounded-full bg-foreground/[0.08] px-3.5 text-[11px] leading-4 font-bold tracking-[0.1em] uppercase transition-[background-color,scale] duration-150 ease-standard outline-none after:absolute after:inset-x-0 after:-inset-y-1.5 hover:bg-foreground/[0.12] focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96]"
           >
             Today
           </button>
@@ -205,7 +205,7 @@ function ChevronButton({ dir, disabled, onClick }: { dir: "prev" | "next"; disab
       aria-label={dir === "prev" ? "Previous month" : "Next month"}
       disabled={disabled}
       onClick={onClick}
-      className="grid size-11 touch-manipulation place-items-center rounded-full text-foreground transition-[background-color,color,scale] duration-150 ease-standard outline-none enabled:hover:bg-white/8 focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96] disabled:text-foreground/50"
+      className="grid size-11 touch-manipulation place-items-center rounded-full text-foreground transition-[background-color,color,scale] duration-150 ease-standard outline-none enabled:hover:bg-foreground/8 focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96] disabled:text-foreground/50"
     >
       <Icon aria-hidden className="size-8" strokeWidth={1.5} />
     </button>

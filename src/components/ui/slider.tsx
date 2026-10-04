@@ -12,13 +12,13 @@ function Slider({ className, "aria-label": label, ...props }: React.ComponentPro
       className={cn("relative flex h-11 w-full touch-none items-center select-none data-disabled:opacity-50", className)}
       {...props}
     >
-      <SliderPrimitive.Track data-slot="slider-track" className="relative h-1 grow overflow-hidden rounded-full bg-white/15">
+      <SliderPrimitive.Track data-slot="slider-track" className="relative h-1 grow overflow-hidden rounded-full bg-foreground/15">
         <SliderPrimitive.Range data-slot="slider-range" className="absolute h-full bg-foreground" />
       </SliderPrimitive.Track>
       <SliderPrimitive.Thumb
         data-slot="slider-thumb"
         aria-label={label}
-        className="relative block size-5 rounded-full bg-foreground shadow-[0_1px_3px_rgb(0_0_0/0.4)] outline-none after:absolute after:-inset-3 focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="relative block size-5 rounded-full bg-foreground shadow-thumb outline-none after:absolute after:-inset-3 focus-visible:ring-3 focus-visible:ring-ring/50"
       />
     </SliderPrimitive.Root>
   )

@@ -49,7 +49,7 @@ function ringLabel(key: MiniRingVariant, label: string, value: number | null) {
 
 /**
  * the reference app's streak flame: the emoji-like two-tone fire, a red-orange body lit toward its tip with an orange-yellow core
- * (sampled from the user's capture: tip #ff784c, body #ff6538, edge #ee4e33, core #ff9862). Sized by the row's --u.
+ * (the --flame-* tokens, sampled from the user's capture). Sized by the row's --u.
  */
 function StreakFlame() {
   const id = React.useId()
@@ -57,13 +57,13 @@ function StreakFlame() {
     <svg aria-hidden viewBox="0 0 20 24" className="h-[calc(var(--u)*20px)] w-auto shrink-0">
       <defs>
         <linearGradient id={`${id}-body`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#ff8a52" />
-          <stop offset="0.45" stopColor="#ff6538" />
-          <stop offset="1" stopColor="#ee4e33" />
+          <stop offset="0" style={{ stopColor: "var(--flame-tip)" }} />
+          <stop offset="0.45" style={{ stopColor: "var(--flame-body)" }} />
+          <stop offset="1" style={{ stopColor: "var(--flame-edge)" }} />
         </linearGradient>
         <linearGradient id={`${id}-core`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#ffc56e" />
-          <stop offset="1" stopColor="#ff9862" />
+          <stop offset="0" style={{ stopColor: "var(--flame-core-top)" }} />
+          <stop offset="1" style={{ stopColor: "var(--flame-core-bottom)" }} />
         </linearGradient>
       </defs>
       <path
@@ -88,7 +88,7 @@ function Streak() {
       title="Days in a row with your band worn"
       // Starts under the avatar (its 3 px page-colour ring plus 16 of its 40 px), so the avatar sits on the pill's left
       // end (spec §11 M6). Every size is a multiple of --u, which the row steps down on narrow phones (M4, M6).
-      className="-ml-[calc(var(--u)*19px)] inline-flex h-[calc(var(--u)*36px)] shrink-0 items-center gap-[calc(var(--u)*10px)] rounded-full bg-white/[0.045] pr-[calc(var(--u)*12px)] pl-[calc(var(--u)*32px)]"
+      className="-ml-[calc(var(--u)*19px)] inline-flex h-[calc(var(--u)*36px)] shrink-0 items-center gap-[calc(var(--u)*10px)] rounded-full bg-foreground/[0.045] pr-[calc(var(--u)*12px)] pl-[calc(var(--u)*32px)]"
     >
       <StreakFlame />
       <span className="font-numeric text-[length:calc(var(--u)*17px)] leading-none font-bold tabular-nums">{streak.days}</span>
@@ -352,7 +352,7 @@ export function HomeHeader({ rings }: { rings?: HeaderRings }) {
                         <MiniRing variant={key} value={value} />
                       </span>
                       {/* 11 px, the reference app's ring-row label ("RECOVERY" 62 pt wide) [latest-home-sticky-header-user-2025] (spec §11 F5); below 380 px the tracking tightens so "Recovery" clears the Strain ring down to 320 px. */}
-                      <span data-ring-label={key} className="text-[11px] leading-4 font-bold tracking-[0.1em] uppercase max-[380px]:tracking-[0.06em]">
+                      <span data-ring-label={key} className="text-[11px] leading-4 font-bold tracking-[0.1em] uppercase max-[380px]:tracking-[0.1em]">
                         {label}
                       </span>
                     </Link>

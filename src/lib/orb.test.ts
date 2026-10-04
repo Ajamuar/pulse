@@ -1,5 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { blobRadius, noise2, ORB, orbColors, particleCount, rng } from "./orb";
+import { blobRadius, cssMix, hexRGB, noise2, ORB, orbColors as colors, particleCount, rng, type RGB, type Token } from "./orb";
+
+// The canvas resolves tokens from globals.css; here a fixed table with the same hues stands in.
+const TOKENS: Record<string, RGB> = {
+  "--orb-green": [76, 212, 140],
+  "--orb-cyan": [124, 196, 212],
+  "--orb-blue": [88, 136, 192],
+  "--orb-blue-2": [94, 140, 192],
+  "--orb-olive": [106, 132, 82],
+  "--orb-orange": [212, 132, 58],
+  "--orb-amber": [200, 134, 46],
+  "--orb-empty": [92, 98, 104],
+};
+const rgb = (t: Token) => TOKENS[t];
+const orbColors = (d: number | null) => colors(d, rgb);
 
 const first = ORB.stops[0];
 const last = ORB.stops[ORB.stops.length - 1];
@@ -7,15 +21,15 @@ const teal = ORB.stops.find((s) => s.at === 0)!;
 
 describe("orbColors", () => {
   it("is green at and below the younger end", () => {
-    expect(orbColors(first.at)).toEqual({ top: first.top, bottom: first.bottom });
+    expect(orbColors(first.at)).toEqual({ top: rgb(first.top), bottom: rgb(first.bottom) });
     expect(orbColors(-12)).toEqual(orbColors(first.at));
   });
   it("is amber at and above the older end", () => {
-    expect(orbColors(last.at)).toEqual({ top: last.top, bottom: last.bottom });
+    expect(orbColors(last.at)).toEqual({ top: rgb(last.top), bottom: rgb(last.bottom) });
     expect(orbColors(9.4)).toEqual(orbColors(last.at));
   });
   it("is teal at zero", () => {
-    expect(orbColors(0)).toEqual({ top: teal.top, bottom: teal.bottom });
+    expect(orbColors(0)).toEqual({ top: rgb(teal.top), bottom: rgb(teal.bottom) });
   });
   it("splits blue over warm in between (mixed references)", () => {
     const { top, bottom } = orbColors(1.8);
@@ -28,8 +42,19 @@ describe("orbColors", () => {
     a.forEach((v, i) => expect(Math.abs(v - b[i])).toBeLessThan(0.01));
   });
   it("is grey with no result", () => {
-    expect(orbColors(null)).toEqual({ top: ORB.empty, bottom: ORB.empty });
+    expect(orbColors(null)).toEqual({ top: rgb(ORB.empty), bottom: rgb(ORB.empty) });
     expect(orbColors(Number.NaN)).toEqual(orbColors(null));
+  });
+});
+
+describe("token helpers", () => {
+  it("parses a hex token value", () => {
+    expect(hexRGB(" #4cd48c")).toEqual([76, 212, 140]);
+    expect(hexRGB("oops")).toEqual([0, 0, 0]);
+  });
+  it("writes the CSS mix the server fallback paints", () => {
+    expect(cssMix(["--orb-cyan", "--orb-cyan"], 0.5)).toBe("var(--orb-cyan)");
+    expect(cssMix(["--orb-blue", "--orb-amber"], 0.25)).toBe("color-mix(in srgb, var(--orb-blue), var(--orb-amber) 25%)");
   });
 });
 

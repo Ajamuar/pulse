@@ -68,7 +68,7 @@ const STRAIN_LG = "text-[40cqi]"
 // Trims each text box to cap height and baseline, so the cqi gaps between rows are the visible gaps.
 const TRIM = "leading-none [text-box:trim-both_cap_alphabetic]"
 
-const DIAL_LABEL = "text-xs leading-4 font-bold tracking-[0.08em] uppercase"
+const DIAL_LABEL = "text-xs leading-4 font-bold tracking-[0.1em] uppercase"
 const STATUS_LIT = { poor: "bg-warning", sufficient: "bg-foreground-secondary", optimal: "bg-optimal" } as const
 const TRACK = "var(--dial-track)"
 // Every current ring opens with a 4° gap each side of 12 o'clock ([latest-recovery-1], [latest-home-top-1]).

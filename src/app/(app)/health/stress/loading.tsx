@@ -6,7 +6,7 @@ import { DetailShell } from "@/components/shells/DetailShell"
 import { SectionShell } from "@/components/shells/SectionShell"
 import { Skeleton, SkeletonText } from "@/components/ui/skeleton"
 
-const LABEL = "text-xs leading-4 font-bold tracking-[0.08em] uppercase"
+const LABEL = "text-xs leading-4 font-bold tracking-[0.1em] uppercase"
 
 /**
  * Stress Monitor loading (spec §7.9, §5.19): the date row, the gauge with the insight beside it on laptop, the day's

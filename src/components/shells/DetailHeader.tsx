@@ -72,7 +72,7 @@ export function DetailHeaderRow({
       variant="ghost"
       size="icon-touch"
       // Close dismisses a screen opened over the tabs (Settings); from 768 px the sidebar is the way out, so it hides but keeps its slot.
-      className={cn("hover:bg-white/8", dismiss === "close" && "md:invisible")}
+      className={cn("hover:bg-foreground/8", dismiss === "close" && "md:invisible")}
     >
       <Link href={parent} aria-label={dismiss === "close" ? "Close" : "Back"} onClick={back}>
         <Icon aria-hidden strokeWidth={1.75} className={dismiss === "close" ? "size-6" : "size-[26px]"} />
@@ -123,7 +123,7 @@ export function DetailHeaderRow({
             <>
               <h1 className={cn(HEADER_TITLE, "max-w-full truncate")}>{title}</h1>
               {/* Caps and tracked, the reference app's "NEXT UPDATE IN 7 DAYS" [latest-age-orb-cyan-1] (spec §11 F15). */}
-              {subtitle && <p className="max-w-full truncate text-[11px] leading-4 font-semibold tracking-[0.06em] text-muted-foreground uppercase">{subtitle}</p>}
+              {subtitle && <p className="max-w-full truncate text-[11px] leading-4 font-semibold tracking-[0.1em] text-muted-foreground uppercase">{subtitle}</p>}
             </>
           )}
         </div>

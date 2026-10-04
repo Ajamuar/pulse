@@ -4,26 +4,28 @@ import { lerp } from "./collapse";
 
 export type RGB = readonly [number, number, number];
 
-/** A colour stop: `at` is Pulse Age minus chronological age, in years. Rim colour at the top and bottom of the orb. */
-type Stop = { at: number; top: RGB; bottom: RGB };
+/** A theme token name, e.g. `--orb-green` (globals.css holds every colour). */
+export type Token = `--${string}`;
+/** A colour stop: `at` is Pulse Age minus chronological age, in years. Rim colour tokens at the top and bottom of the orb. */
+type Stop = { at: number; top: Token; bottom: Token };
 
 /**
- * Every tunable in one place. Hues are the brightest rim pixels sampled with PIL from
- * docs/design/reference/latest-age-orb-*.jpg (see orb.md for which file gave which).
+ * Every tunable in one place. Hues are tokens in globals.css (`--orb-*`), the brightest rim pixels sampled with PIL
+ * from docs/design/reference/latest-age-orb-*.jpg (see orb.md for which file gave which).
  */
 export const ORB = {
   stops: [
-    { at: -3, top: [0x4c, 0xd4, 0x8c], bottom: [0x4c, 0xd4, 0x8c] }, // green-1/2: 6.6 and 10.5 younger
-    { at: -1, top: [0x7c, 0xc4, 0xd4], bottom: [0x7c, 0xc4, 0xd4] }, // cyan-1: 1.0 younger
-    { at: 0, top: [0x7c, 0xc4, 0xd4], bottom: [0x7c, 0xc4, 0xd4] }, // neutral holds the same teal
-    { at: 0.8, top: [0x58, 0x88, 0xc0], bottom: [0x6a, 0x84, 0x52] }, // mixed-1: 0.8 older, blue over olive
-    { at: 1.8, top: [0x5e, 0x8c, 0xc0], bottom: [0xd4, 0x84, 0x3a] }, // mixed-2: 1.8 older, blue over orange
-    { at: 3, top: [0xc8, 0x86, 0x2e], bottom: [0xc8, 0x86, 0x2e] }, // amber-1: 5.6 older
+    { at: -3, top: "--orb-green", bottom: "--orb-green" }, // green-1/2: 6.6 and 10.5 younger
+    { at: -1, top: "--orb-cyan", bottom: "--orb-cyan" }, // cyan-1: 1.0 younger
+    { at: 0, top: "--orb-cyan", bottom: "--orb-cyan" }, // neutral holds the same teal
+    { at: 0.8, top: "--orb-blue", bottom: "--orb-olive" }, // mixed-1: 0.8 older, blue over olive
+    { at: 1.8, top: "--orb-blue-2", bottom: "--orb-orange" }, // mixed-2: 1.8 older, blue over orange
+    { at: 3, top: "--orb-amber", bottom: "--orb-amber" }, // amber-1: 5.6 older
   ] satisfies Stop[],
   /** No result: a dim grey orb. */
-  empty: [0x5c, 0x62, 0x68] as RGB,
-  /** Delta line inside the orb: pale cyan (#7EC6E4 in amber-1, cyan-1, mixed-1), mint (`text-optimal`, #1EDE9C in green-2) once the orb is green. */
-  deltaText: "#7ec6e4",
+  empty: "--orb-empty" as Token,
+  /** Delta line inside the orb: pale cyan (amber-1, cyan-1, mixed-1), mint (`text-optimal`) once the orb is green. */
+  deltaText: "--orb-delta-text" as Token,
   greenText: -2,
   /** Rim fill = edge colour × this; particles and the edge line are brighter tints. */
   fillShade: 0.68,
@@ -62,17 +64,33 @@ export const mixRGB = (a: RGB, b: RGB, t: number): RGB => [lerp(a[0], b[0], t), 
 export const shadeRGB = (c: RGB, k: number): RGB => [Math.min(255, c[0] * k), Math.min(255, c[1] * k), Math.min(255, c[2] * k)];
 export const css = (c: RGB, a = 1) => `rgb(${Math.round(c[0])} ${Math.round(c[1])} ${Math.round(c[2])} / ${a})`;
 
-/** Rim colours for a Pulse Age delta (years older is positive). `null` gives the grey empty orb. */
-export function orbColors(delta: number | null): { top: RGB; bottom: RGB } {
-  if (delta === null || !Number.isFinite(delta)) return { top: ORB.empty, bottom: ORB.empty };
+/** "#rrggbb" (a token's value) as RGB; anything else reads as black. */
+export function hexRGB(hex: string): RGB {
+  const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})/i.exec(hex.trim());
+  return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : [0, 0, 0];
+}
+
+/** The two stops around a Pulse Age delta and how far between them; `null` (no result) is the empty orb. */
+export function orbStops(delta: number | null): { top: [Token, Token]; bottom: [Token, Token]; t: number } {
+  if (delta === null || !Number.isFinite(delta)) return { top: [ORB.empty, ORB.empty], bottom: [ORB.empty, ORB.empty], t: 0 };
   const s = ORB.stops;
   const d = clamp(delta, s[0].at, s[s.length - 1].at);
   const i = Math.max(0, s.findIndex((x) => x.at >= d) - 1);
   const a = s[i];
   const b = s[Math.min(i + 1, s.length - 1)];
   const t = b.at === a.at ? 0 : (d - a.at) / (b.at - a.at);
-  return { top: mixRGB(a.top, b.top, t), bottom: mixRGB(a.bottom, b.bottom, t) };
+  return { top: [a.top, b.top], bottom: [a.bottom, b.bottom], t };
 }
+
+/** Rim colours for a Pulse Age delta (years older is positive), with `rgb` resolving a token. */
+export function orbColors(delta: number | null, rgb: (token: Token) => RGB): { top: RGB; bottom: RGB } {
+  const { top, bottom, t } = orbStops(delta);
+  return { top: mixRGB(rgb(top[0]), rgb(top[1]), t), bottom: mixRGB(rgb(bottom[0]), rgb(bottom[1]), t) };
+}
+
+/** The same mix as CSS, for the server-rendered fallback: `var(a)` blended toward `var(b)` by t. */
+export const cssMix = ([a, b]: [Token, Token], t: number) =>
+  t === 0 || a === b ? `var(${a})` : `color-mix(in srgb, var(${a}), var(${b}) ${Math.round(t * 1000) / 10}%)`;
 
 /** Integer hash to [0, 1). */
 function hash2(x: number, y: number) {

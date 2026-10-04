@@ -1,10 +1,11 @@
 "use client"
 
 import { useEffect, useRef } from "react"
+import { useTheme } from "@/hooks/use-theme"
 import { cn } from "@/lib/utils"
 import { AGE_LABEL, formatValue } from "@/lib/format"
 import { reasonCopy, type ReasonCode } from "@/lib/reasons"
-import { blobRadius, css, easeOutCubic, mixRGB, ORB, orbColors, particleCount, rng, shadeRGB, type RGB } from "@/lib/orb"
+import { blobRadius, css, cssMix, easeOutCubic, hexRGB, mixRGB, ORB, orbColors, orbStops, particleCount, rng, shadeRGB, type RGB, type Token } from "@/lib/orb"
 import { ageDelta } from "@/app/(app)/health/format"
 import { MetricTags } from "@/components/metrics/primitives"
 import { ReasonPlaceholder } from "@/components/metrics/ReasonPlaceholder"
@@ -32,8 +33,8 @@ const BANDS = 8
 const STEPS = 128
 const ENTER = "motion-safe:transition-[opacity,filter,translate] motion-safe:duration-700 motion-safe:ease-[cubic-bezier(0.16,1,0.3,1)] motion-safe:starting:translate-y-1 motion-safe:starting:opacity-0 motion-safe:starting:blur-[4px]"
 
-const WHITE: RGB = [255, 255, 255]
-const bright = (c: RGB) => mixRGB(shadeRGB(c, 1.3), WHITE, 0.12)
+/** A colour token's value, read where the orb is drawn (globals.css holds every colour). */
+const tokenRGB = (el: Element, token: Token): RGB => hexRGB(getComputedStyle(el).getPropertyValue(token))
 
 function offscreen(px: number, dpr: number) {
   const c = document.createElement("canvas")
@@ -66,13 +67,17 @@ export function AgeOrb({ age, deltaYears, provisional = false, size: sizeProp, r
   const boxRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const fallbackRef = useRef<HTMLDivElement>(null)
+  // The orb's tokens differ by theme; a theme change redraws it.
+  const { resolvedTheme } = useTheme()
 
   const has = age !== null && deltaYears !== null
   const delta = has ? deltaYears : null
   const small = size < 160
   const d = delta !== null ? ageDelta(delta) : null
   const same = d !== null && delta !== null && formatValue("decimal1", Math.abs(delta)) === "0.0"
-  const { top, bottom } = orbColors(delta)
+  const stops = orbStops(delta)
+  const top = cssMix(stops.top, stops.t)
+  const bottom = cssMix(stops.bottom, stops.t)
   const r = reasonCopy(reason)
 
   const label = has
@@ -85,7 +90,17 @@ export function AgeOrb({ age, deltaYears, provisional = false, size: sizeProp, r
     const ctx = canvas?.getContext("2d")
     if (!canvas || !box || !ctx) return // No canvas: the CSS fallback stays.
 
-    const { top, bottom } = orbColors(delta)
+    const rgb = (token: Token) => tokenRGB(box, token)
+    const { top, bottom } = orbColors(delta, rgb)
+    const style = getComputedStyle(box)
+    const HIGHLIGHT = rgb("--orb-highlight")
+    const CORE = rgb("--orb-core")
+    const LIFT = Number.parseFloat(style.getPropertyValue("--orb-lift")) || 1.3
+    const BLEND: GlobalCompositeOperation = style.getPropertyValue("--orb-blend").trim() === "source-over" ? "source-over" : "lighter"
+    // Below 1 a tone fades toward the core (black on dark, so the same as darkening); above 1 it brightens.
+    const tone = (c: RGB, k: number) => (k <= 1 ? mixRGB(CORE, c, k) : shadeRGB(c, k))
+    const SPARKLE = Number.parseFloat(style.getPropertyValue("--orb-sparkle"))
+    const bright = (c: RGB) => mixRGB(shadeRGB(c, LIFT), HIGHLIGHT, Number.isFinite(SPARKLE) ? SPARKLE : 0.12)
     const dim = delta === null ? 0.55 : 1
     const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches
     const dpr = Math.min(window.devicePixelRatio || 1, ORB.maxDpr)
@@ -99,15 +114,15 @@ export function AgeOrb({ age, deltaYears, provisional = false, size: sizeProp, r
     // Static layers, built once: the body (rim colour fading to a black core) and the outer glow.
     const fill = (g: CanvasRenderingContext2D, k: number, a = 1) => {
       const lin = g.createLinearGradient(0, cy - R, 0, cy + R)
-      lin.addColorStop(0, css(shadeRGB(top, k), a))
-      lin.addColorStop(1, css(shadeRGB(bottom, k), a))
+      lin.addColorStop(0, css(tone(top, k), a))
+      lin.addColorStop(1, css(tone(bottom, k), a))
       return lin
     }
     const [body, bg] = offscreen(W, dpr)
     bg.fillStyle = fill(bg, ORB.fillShade)
     bg.fillRect(0, 0, W, W)
     const core = bg.createRadialGradient(cx, cy, 0, cx, cy, R * 1.04)
-    for (const [at, a] of [[0, 1], [0.42, 1], [0.6, 0.72], [0.76, 0.38], [0.9, 0.12], [1, 0]]) core.addColorStop(at, `rgb(0 0 0 / ${a})`)
+    for (const [at, a] of [[0, 1], [0.42, 1], [0.6, 0.72], [0.76, 0.38], [0.9, 0.12], [1, 0]]) core.addColorStop(at, css(CORE, a))
     bg.fillStyle = core
     bg.fillRect(0, 0, W, W)
 
@@ -116,15 +131,15 @@ export function AgeOrb({ age, deltaYears, provisional = false, size: sizeProp, r
     gg.fillRect(0, 0, W, W)
     gg.globalCompositeOperation = "destination-in"
     const halo = gg.createRadialGradient(cx, cy, R * 0.8, cx, cy, R * 1.36)
-    for (const [at, a] of [[0, 0.36], [0.35, 0.22], [0.6, 0.07], [1, 0]]) halo.addColorStop(at, `rgb(0 0 0 / ${a * dim})`)
+    for (const [at, a] of [[0, 0.36], [0.35, 0.22], [0.6, 0.07], [1, 0]]) halo.addColorStop(at, css(CORE, a * dim))
     gg.fillStyle = halo
     gg.fillRect(0, 0, W, W)
 
     // Inner rim light: stacked clipped strokes, widest faintest, so the band brightens toward the edge with no step.
     const rim = [0.24, 0.16, 0.1, 0.06, 0.03].map((w, i) => [R * w, fill(ctx, 1 + i * 0.04, (0.07 + i * 0.03) * dim)] as const)
     const lin = ctx.createLinearGradient(0, cy - R, 0, cy + R)
-    lin.addColorStop(0, css(mixRGB(top, WHITE, 0.22), 0.85 * dim))
-    lin.addColorStop(1, css(mixRGB(bottom, WHITE, 0.22), 0.85 * dim))
+    lin.addColorStop(0, css(mixRGB(top, HIGHLIGHT, 0.22), 0.85 * dim))
+    lin.addColorStop(1, css(mixRGB(bottom, HIGHLIGHT, 0.22), 0.85 * dim))
 
     const tint = Array.from({ length: BANDS }, (_, b) => bright(mixRGB(top, bottom, b / (BANDS - 1))))
     const sprites = [tint.map((c) => sprite(c, false)), tint.map((c) => sprite(c, true))]
@@ -213,7 +228,7 @@ export function AgeOrb({ age, deltaYears, provisional = false, size: sizeProp, r
       ctx!.strokeStyle = lin
       ctx!.stroke(path)
 
-      ctx!.globalCompositeOperation = "lighter"
+      ctx!.globalCompositeOperation = BLEND
       const lift = (1 + 0.3 * gather) * dim
       for (let i = 0; i < n; i++) {
         const e = easeOutCubic((t - P.delay[i]) / fly)
@@ -313,7 +328,7 @@ export function AgeOrb({ age, deltaYears, provisional = false, size: sizeProp, r
       box.removeEventListener("pointermove", move)
       for (const type of ["pointerup", "pointercancel", "pointerleave"] as const) box.removeEventListener(type, up)
     }
-  }, [delta, size, small, compact])
+  }, [delta, size, small, compact, resolvedTheme])
 
   return (
     <div
@@ -328,10 +343,11 @@ export function AgeOrb({ age, deltaYears, provisional = false, size: sizeProp, r
           width: size,
           height: size,
           "--s": `${size}px`,
-          "--orb-top": css(shadeRGB(top, ORB.fillShade)),
-          "--orb-bottom": css(shadeRGB(bottom, ORB.fillShade)),
-          "--orb-edge": css(mixRGB(top, WHITE, 0.22), has ? 0.85 : 0.45),
-          "--orb-glow": css(top, has ? 0.35 : 0.15),
+          // The canvas's shading as CSS mixes of the same tokens, for the server render and no-canvas fallback.
+          "--orb-top": `color-mix(in srgb, ${top} ${ORB.fillShade * 100}%, var(--orb-core))`,
+          "--orb-bottom": `color-mix(in srgb, ${bottom} ${ORB.fillShade * 100}%, var(--orb-core))`,
+          "--orb-edge": `color-mix(in srgb, color-mix(in srgb, ${top} 78%, var(--orb-highlight)) ${has ? 85 : 45}%, transparent)`,
+          "--orb-glow": `color-mix(in srgb, ${top} ${has ? 35 : 15}%, transparent)`,
         } as React.CSSProperties
       }
     >
@@ -340,7 +356,7 @@ export function AgeOrb({ age, deltaYears, provisional = false, size: sizeProp, r
         aria-hidden
         className={cn(
           "absolute inset-[5%] rounded-[48%_52%_47%_53%/53%_47%_53%_47%] ring-1 ring-(--orb-edge)",
-          "bg-[radial-gradient(closest-side,#000_48%,transparent_104%),linear-gradient(var(--orb-top),var(--orb-bottom))]",
+          "bg-[radial-gradient(closest-side,var(--orb-core)_48%,transparent_104%),linear-gradient(var(--orb-top),var(--orb-bottom))]",
           "shadow-[0_0_calc(var(--s)*0.12)_var(--orb-glow)]",
           !has && "opacity-60"
         )}
@@ -351,7 +367,7 @@ export function AgeOrb({ age, deltaYears, provisional = false, size: sizeProp, r
           className={cn(
             "font-numeric leading-none font-bold tracking-[-0.01em] tabular-nums motion-safe:delay-200",
             small ? "text-[calc(var(--s)*0.25)]" : "text-[calc(18px+var(--s)*0.07)]",
-            !has && "text-muted-foreground",
+            has ? "text-(--orb-text)" : "text-(--orb-text-muted)",
             !compact && ENTER
           )}
         >
@@ -359,7 +375,7 @@ export function AgeOrb({ age, deltaYears, provisional = false, size: sizeProp, r
         </span>
         <span
           className={cn(
-            "font-bold tracking-[0.08em] text-muted-foreground uppercase motion-safe:delay-300",
+            "font-bold tracking-[0.1em] text-(--orb-text-muted) uppercase motion-safe:delay-300",
             small ? "mt-0.5 text-[max(9px,calc(var(--s)*0.09))] leading-none" : "mt-1.5 text-[calc(7px+var(--s)*0.023)] leading-tight",
             !compact && ENTER
           )}
@@ -368,8 +384,8 @@ export function AgeOrb({ age, deltaYears, provisional = false, size: sizeProp, r
         </span>
         {!small && d && (
           <span
-            className={cn("mt-2.5 text-[calc(8px+var(--s)*0.024)] leading-tight font-semibold tabular-nums motion-safe:delay-400", delta! <= ORB.greenText ? "text-optimal" : same && "text-foreground-secondary", ENTER)}
-            style={delta! > ORB.greenText && !same ? { color: ORB.deltaText } : undefined}
+            className={cn("mt-2.5 text-[calc(8px+var(--s)*0.024)] leading-tight font-semibold tabular-nums motion-safe:delay-400", delta! <= ORB.greenText ? "text-optimal" : same && "text-(--orb-text-muted)", ENTER)}
+            style={delta! > ORB.greenText && !same ? { color: `var(${ORB.deltaText})` } : undefined}
           >
             {d.text}
           </span>

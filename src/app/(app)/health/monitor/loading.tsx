@@ -18,7 +18,7 @@ export default function Loading() {
       hero={
         <div aria-hidden className="flex flex-col items-center gap-3 py-4 text-center">
           <SkeletonText className="w-[2.5ch] font-numeric text-[64px] leading-none font-bold md:text-[72px]" />
-          <p className="text-xs leading-4 font-bold tracking-[0.08em] uppercase">Metrics within range</p>
+          <p className="text-xs leading-4 font-bold tracking-[0.1em] uppercase">Metrics within range</p>
           <Skeleton className="h-6 w-28 rounded-md" />
         </div>
       }

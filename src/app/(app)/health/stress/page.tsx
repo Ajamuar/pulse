@@ -64,7 +64,7 @@ function TotalDay({ l, day }: { l: NonNullable<StressVM["levels"]["value"]>; day
   if (!total) return <EmptyState body={EMPTY} />
   return (
     <div className="space-y-4">
-      <p className="text-xs leading-4 font-bold tracking-[0.08em] uppercase">
+      <p className="text-xs leading-4 font-bold tracking-[0.1em] uppercase">
         {day} stress{l.typical && <span className="text-muted-foreground"> vs. typical {l.weekday}</span>}
       </p>
       <div className="space-y-1.5">
@@ -77,7 +77,7 @@ function TotalDay({ l, day }: { l: NonNullable<StressVM["levels"]["value"]>; day
             <p aria-hidden className={cn("font-numeric text-xl leading-6 font-bold tabular-nums", k.text)}>
               {hmm(l[k.key])}
             </p>
-            <p aria-hidden className="mt-1 text-xs leading-4 font-bold tracking-[0.08em] uppercase">
+            <p aria-hidden className="mt-1 text-xs leading-4 font-bold tracking-[0.1em] uppercase">
               {k.word}
             </p>
             {l.typical && (

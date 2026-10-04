@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { AUTH_LINK, AuthAlert } from "./AuthHero"
 
 // The reference app's caps labels over filled dark fields: 48 px tall, 16 px text (no iOS zoom), a 12 px radius.
-const LABEL = "text-xs leading-4 font-bold tracking-[0.08em] text-foreground-secondary uppercase"
+const LABEL = "text-xs leading-4 font-bold tracking-[0.1em] text-foreground-secondary uppercase"
 const INPUT =
   "h-12 w-full min-w-0 rounded-xl bg-secondary px-4 text-[16px] leading-6 text-foreground outline-none ring-1 ring-transparent transition-[box-shadow,background-color] duration-150 ease-standard placeholder:text-muted-foreground hover:bg-accent focus-visible:bg-accent focus-visible:ring-ring focus-visible:ring-[3px] aria-invalid:ring-recovery-red/60"
 
@@ -202,9 +202,9 @@ export function SignupForm({ invite }: { invite?: string }) {
     }
   }
   return (
-    <form ref={formRef} onSubmit={submit} className="flex flex-col gap-5">
+    <form ref={formRef} onSubmit={submit} className="flex flex-col gap-4">
       {error && <AuthAlert>{error}</AuthAlert>}
-      <AuthField label="Name" name="name" autoComplete="name" required maxLength={100} autoFocus error={fields.name} />
+      <AuthField label="Name" name="name" autoComplete="name" enterKeyHint="next" required maxLength={100} autoFocus error={fields.name} />
       <AuthField
         label="Username"
         name="username"
@@ -217,10 +217,11 @@ export function SignupForm({ invite }: { invite?: string }) {
         maxLength={30}
         pattern="[A-Za-z0-9_.]{3,30}"
         title="3–30 letters, numbers, _ or ."
-        hint="3–30 characters: letters, numbers, _ and . (saved in lowercase)."
+        enterKeyHint="next"
+        hint="Letters, numbers, _ and . (3–30)"
         error={fields.username}
       />
-      <AuthField label="Email" name="email" type="email" autoComplete="email" autoCapitalize="none" spellCheck={false} required error={fields.email} />
+      <AuthField label="Email" name="email" type="email" autoComplete="email" enterKeyHint="next" autoCapitalize="none" spellCheck={false} required error={fields.email} />
       <AuthField
         label="Password"
         name="password"
@@ -229,10 +230,11 @@ export function SignupForm({ invite }: { invite?: string }) {
         required
         minLength={10}
         maxLength={128}
+        enterKeyHint="go"
         hint="At least 10 characters."
         error={fields.password}
       />
-      <AuthSubmit pending={pending} label="Create account" pendingLabel="Creating account…" className="mt-3" />
+      <AuthSubmit pending={pending} label="Create account" pendingLabel="Creating account…" className="mt-2" />
     </form>
   )
 }

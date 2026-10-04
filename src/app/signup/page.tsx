@@ -7,7 +7,7 @@ import { currentUser } from "@/server/auth"
 import { getConfig } from "@/server/config"
 import { getDb } from "@/server/db"
 import { SignupForm } from "@/components/auth/AuthForm"
-import { AUTH_FOOTNOTE, AUTH_LINK, AuthHero } from "@/components/auth/AuthHero"
+import { AUTH_FOOTNOTE, AUTH_LINK } from "@/components/auth/AuthHero"
 import { AuthShell } from "@/components/shells/AuthShell"
 
 // The invite token is in this page's URL: never send it on as a Referer.
@@ -36,10 +36,17 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
       </Link>
     </p>
   )
+  // No hero: on a phone the four fields and the button fit above the keyboard's fold.
+  const heading = (title: string, body: string) => (
+    <>
+      <h1 className="text-[28px] leading-[34px] font-bold tracking-[-0.02em] text-balance">{title}</h1>
+      <p className="mt-2 text-[16px] leading-6 text-pretty text-foreground-secondary">{body}</p>
+    </>
+  )
   const notice = (title: string, body: string) => (
     <AuthShell align="top">
-      <AuthHero compact title={title} body={body} />
-      <div className="mt-8">{signIn}</div>
+      {heading(title, body)}
+      <div className="mt-7">{signIn}</div>
     </AuthShell>
   )
 
@@ -53,12 +60,11 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
 
   return (
     <AuthShell align="top">
-      <AuthHero
-        compact
-        title="Create your account"
-        body={first && mode !== "open" ? "This server has no accounts yet. Use the admin email set in ADMIN_EMAILS." : "Your data stays on this server, visible only to you."}
-      />
-      <div className="mt-8 space-y-5 pb-[max(env(safe-area-inset-bottom),24px)]">
+      {heading(
+        "Create your account",
+        first && mode !== "open" ? "This server has no accounts yet. Use the admin email set in ADMIN_EMAILS." : "Your data stays on this server, visible only to you.",
+      )}
+      <div className="mt-7 space-y-5 pb-[max(env(safe-area-inset-bottom),24px)]">
         <SignupForm invite={valid ? invite : undefined} />
         {signIn}
       </div>

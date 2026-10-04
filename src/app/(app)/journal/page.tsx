@@ -73,7 +73,7 @@ export default async function JournalPage({ searchParams }: PageProps<"/journal"
                         aria-label={`${dayLabel(h.day, today)}: ${h.yes.length ? h.yes.join(", ") : "no behaviours"}`}
                         className="-mx-2 flex min-h-13 items-center gap-3 rounded-lg px-2 py-2 transition-[background-color] duration-150 ease-standard outline-none hover:bg-accent focus-visible:ring-3 focus-visible:ring-ring/50 active:bg-accent aria-[current=date]:bg-accent/60"
                       >
-                        <span className="w-28 shrink-0 text-xs leading-4 font-bold tracking-[0.08em] uppercase tabular-nums">{dayLabel(h.day, today)}</span>
+                        <span className="w-28 shrink-0 text-xs leading-4 font-bold tracking-[0.1em] uppercase tabular-nums">{dayLabel(h.day, today)}</span>
                         <span aria-hidden className="flex min-w-0 flex-1 flex-wrap justify-end gap-1.5">
                           {shown.map((y) => (
                             <Badge key={y} variant="secondary" className={TAG_CLASS}>
@@ -93,7 +93,7 @@ export default async function JournalPage({ searchParams }: PageProps<"/journal"
                 <Link
                   href={historyHref}
                   scroll={false}
-                  className="-mx-2 mb-1 grid h-11 place-items-center rounded-lg border-t border-border text-xs font-bold tracking-[0.08em] text-foreground/85 uppercase outline-none transition-[background-color,color] duration-150 ease-standard hover:bg-accent hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+                  className="-mx-2 mb-1 grid h-11 place-items-center rounded-lg border-t border-border text-xs font-bold tracking-[0.1em] text-foreground/85 uppercase outline-none transition-[background-color,color] duration-150 ease-standard hover:bg-accent hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
                 >
                   {allHistory ? "Show last week" : "Show 30 days"}
                 </Link>
