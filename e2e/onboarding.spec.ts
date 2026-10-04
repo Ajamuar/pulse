@@ -8,13 +8,13 @@ test("first run: sign in, pick a birth date and sex, Save and continue lands on 
   await expect(page).toHaveURL(/\/onboarding$/);
   await expect(page.getByRole("heading", { level: 1, name: "Two things Google doesn’t share" })).toBeVisible();
 
-  // Birth date: year grid, then month, then day.
+  // Birth date: the field opens three wheels; tapping a row picks it.
   const field = page.getByRole("button", { name: "Birth date" });
   await expect(field).toHaveText("Choose your birth date");
   await field.click();
-  await page.getByRole("button", { name: "1990", exact: true }).click();
-  await page.getByRole("button", { name: "Jun", exact: true }).click();
-  await page.getByRole("dialog").getByText("15", { exact: true }).click();
+  await page.getByRole("listbox", { name: "Year" }).getByRole("option", { name: "1990", exact: true }).click();
+  await page.getByRole("listbox", { name: "Month" }).getByRole("option", { name: "June", exact: true }).click();
+  await page.getByRole("listbox", { name: "Day" }).getByRole("option", { name: "15", exact: true }).click();
   await expect(field).toHaveText("June 15, 1990");
 
   await page.getByText("Female", { exact: true }).click();

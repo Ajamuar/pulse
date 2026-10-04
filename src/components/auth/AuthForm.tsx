@@ -190,9 +190,9 @@ export function SignupForm() {
     }
   }
   return (
-    <form ref={formRef} onSubmit={submit} className="flex flex-col gap-5">
+    <form ref={formRef} onSubmit={submit} className="flex flex-col gap-4">
       {error && <AuthAlert>{error}</AuthAlert>}
-      <AuthField label="Name" name="name" autoComplete="name" required maxLength={100} autoFocus error={fields.name} />
+      <AuthField label="Name" name="name" autoComplete="name" enterKeyHint="next" required maxLength={100} autoFocus error={fields.name} />
       <AuthField
         label="Username"
         name="username"
@@ -205,10 +205,11 @@ export function SignupForm() {
         maxLength={30}
         pattern="[A-Za-z0-9_.]{3,30}"
         title="3–30 letters, numbers, _ or ."
-        hint="3–30 characters: letters, numbers, _ and . (saved in lowercase)."
+        enterKeyHint="next"
+        hint="Letters, numbers, _ and . (3–30)"
         error={fields.username}
       />
-      <AuthField label="Email" name="email" type="email" autoComplete="email" autoCapitalize="none" spellCheck={false} required error={fields.email} />
+      <AuthField label="Email" name="email" type="email" autoComplete="email" enterKeyHint="next" autoCapitalize="none" spellCheck={false} required error={fields.email} />
       <AuthField
         label="Password"
         name="password"
@@ -217,10 +218,11 @@ export function SignupForm() {
         required
         minLength={10}
         maxLength={128}
+        enterKeyHint="go"
         hint="At least 10 characters."
         error={fields.password}
       />
-      <AuthSubmit pending={pending} label="Create account" pendingLabel="Creating account…" className="mt-3" />
+      <AuthSubmit pending={pending} label="Create account" pendingLabel="Creating account…" className="mt-2" />
     </form>
   )
 }

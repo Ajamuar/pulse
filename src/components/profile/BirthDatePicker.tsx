@@ -1,176 +1,146 @@
 "use client"
 
 import * as React from "react"
-import { format, parseISO } from "date-fns"
+import { CalendarDays } from "lucide-react"
 import { DAY, formatDay } from "@/lib/format"
-import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
-const MONTHS = Array.from({ length: 12 }, (_, i) => formatDay(`2026-${String(i + 1).padStart(2, "0")}`, { month: "short" }))
-/** Where the year grid opens when nothing is picked yet: the middle of the likely range. */
-const START_YEAR = 1995
+const MONTHS = Array.from({ length: 12 }, (_, i) => formatDay(`2026-${String(i + 1).padStart(2, "0")}`, { month: "long" }))
 const OLDEST = 1920
+/** Where the year wheel rests before anything is picked: the middle of the likely range. */
+const START_YEAR = 1995
+const ROW = 40
+const VISIBLE = 3
 
-const CELL =
-  "grid h-11 place-items-center rounded-xl text-[15px] font-semibold tabular-nums transition-[background-color,color,scale] duration-150 ease-standard outline-none hover:bg-white/8 focus-visible:ring-2 focus-visible:ring-foreground/70 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-35"
-const PICKED = "bg-foreground text-background hover:bg-foreground"
-
-const iso = (d: Date) => format(d, "yyyy-MM-dd")
+const pad = (n: number) => String(n).padStart(2, "0")
+const daysIn = (year: number, month: number) => new Date(year, month + 1, 0).getDate()
 
 /**
- * A birth date picker (U19): the field opens a popover that starts on a year grid (decades back is the
- * common case), then months, then days. The day view's caption returns to the years. The value is posted
- * through a hidden input, so it works inside a plain server-action form.
+ * One wheel column: a scroll-snap list whose centred row is the value. Scrolling, tapping a row, or the arrow keys
+ * (it is a listbox) all pick. `data-vaul-no-drag` keeps a phone drawer from treating the scroll as a swipe.
  */
-export function BirthDatePicker({
-  id,
-  name,
-  defaultValue,
-  invalid,
-  describedBy,
-  startYear = START_YEAR,
-}: {
-  id: string
-  name: string
-  defaultValue: string
-  invalid?: boolean
-  describedBy?: string
-  /** The year an empty picker opens on. */
-  startYear?: number
-}) {
-  const today = React.useMemo(() => new Date(), [])
-  const youngest = today.getFullYear() - 13
-  const [value, setValue] = React.useState(defaultValue)
-  const picked = value ? parseISO(value) : undefined
-  const [open, setOpen] = React.useState(false)
-  const [view, setView] = React.useState<"year" | "month" | "day">(picked ? "day" : "year")
-  const [month, setMonth] = React.useState<Date>(picked ?? new Date(startYear, 0, 1))
-  const year = month.getFullYear()
-
-  const onOpenChange = (o: boolean) => {
-    setOpen(o)
-    if (o) {
-      setView(picked ? "day" : "year")
-      setMonth(picked ?? new Date(startYear, 0, 1))
-    }
+function Wheel({ label, items, index, onIndex }: { label: string; items: string[]; index: number; onIndex: (i: number) => void }) {
+  const ref = React.useRef<HTMLDivElement>(null)
+  const id = React.useId()
+  // Follow outside changes (open, a shorter month) without fighting the user's own scroll.
+  React.useLayoutEffect(() => {
+    const el = ref.current
+    if (el && Math.round(el.scrollTop / ROW) !== index) el.scrollTop = index * ROW
+  }, [index, items.length])
+  const go = (i: number) => {
+    const next = Math.max(0, Math.min(items.length - 1, i))
+    ref.current?.scrollTo({ top: next * ROW, behavior: "smooth" })
+    onIndex(next)
   }
-
-  // Scroll the year grid so the year in view is centred when it opens.
-  const yearsRef = React.useRef<HTMLDivElement>(null)
-  React.useEffect(() => {
-    if (view !== "year") return
-    yearsRef.current?.querySelector<HTMLElement>(`[data-year="${year}"]`)?.scrollIntoView({ block: "center" })
-  }, [view, year])
-
-  const years = Array.from({ length: youngest - OLDEST + 1 }, (_, i) => youngest - i)
-
   return (
-    <Popover open={open} onOpenChange={onOpenChange}>
-      <input type="hidden" name={name} value={value} />
-      <PopoverTrigger asChild>
-        <button
-          id={id}
-          type="button"
-          data-invalid={invalid || undefined}
-          aria-describedby={describedBy}
+    <div
+      ref={ref}
+      role="listbox"
+      tabIndex={0}
+      aria-label={label}
+      aria-activedescendant={`${id}-${index}`}
+      data-vaul-no-drag
+      onScroll={(e) => {
+        const i = Math.max(0, Math.min(items.length - 1, Math.round(e.currentTarget.scrollTop / ROW)))
+        if (i !== index) onIndex(i)
+      }}
+      onKeyDown={(e) => {
+        const step = { ArrowDown: 1, ArrowUp: -1, PageDown: 5, PageUp: -5 }[e.key]
+        if (step) {
+          e.preventDefault()
+          go(index + step)
+        }
+      }}
+      className="relative h-(--wheel) [mask-image:linear-gradient(rgb(0_0_0/0.35),black_45%,black_55%,rgb(0_0_0/0.35))] snap-y snap-mandatory overflow-y-auto overscroll-contain rounded-lg py-[calc((var(--wheel)-40px)/2)] outline-none [scrollbar-width:none] focus-visible:ring-2 focus-visible:ring-foreground/70 [&::-webkit-scrollbar]:hidden"
+    >
+      {items.map((item, i) => (
+        <div
+          key={item}
+          id={`${id}-${i}`}
+          role="option"
+          aria-selected={i === index}
+          onClick={() => go(i)}
           className={cn(
-            "flex h-13 w-full min-w-0 items-center justify-between gap-3 rounded-xl bg-field px-4 text-left text-[17px] leading-6 tabular-nums outline-none transition-[box-shadow] duration-150 ease-standard focus-visible:ring-2 focus-visible:ring-foreground/70 data-invalid:ring-2 data-invalid:ring-recovery-red-text",
-            !picked && "text-muted-foreground",
+            "flex h-10 cursor-pointer snap-center items-center justify-center text-[17px] tabular-nums transition-[color] duration-150 ease-standard select-none",
+            i === index ? "font-semibold text-foreground" : "text-muted-foreground",
           )}
         >
-          {value ? formatDay(value, { ...DAY.full, month: "long" }) : "Choose your birth date"}
-          <CalendarDays aria-hidden className="size-5 shrink-0 text-foreground-secondary" strokeWidth={1.75} />
-        </button>
-      </PopoverTrigger>
-      <PopoverContent align="start" className="w-(--radix-popover-trigger-width) min-w-[272px] gap-2 p-3">
-        <div className="flex h-10 items-center justify-between gap-2">
-          <button
-            type="button"
-            onClick={() => setView(view === "year" ? (picked ? "day" : "year") : "year")}
-            className="flex h-10 items-center gap-1 rounded-lg px-2 text-[15px] font-bold outline-none hover:bg-white/8 focus-visible:ring-2 focus-visible:ring-foreground/70"
-            aria-label={view === "year" ? "Years" : `Choose year, ${formatDay(iso(month), DAY.monthYear)}`}
-          >
-            {view === "year" ? "Year" : view === "month" ? year : formatDay(iso(month), DAY.monthYear)}
-            {view !== "year" && <ChevronDown aria-hidden className="size-4" strokeWidth={2.25} />}
-          </button>
-          {view === "day" && (
-            <div className="flex">
-              <Button type="button" variant="ghost" size="icon-lg" aria-label="Previous month" onClick={() => setMonth(new Date(year, month.getMonth() - 1, 1))}>
-                <ChevronLeft aria-hidden />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-lg"
-                aria-label="Next month"
-                disabled={year === youngest && month.getMonth() === 11}
-                onClick={() => setMonth(new Date(year, month.getMonth() + 1, 1))}
-              >
-                <ChevronRight aria-hidden />
-              </Button>
-            </div>
-          )}
+          {item}
         </div>
+      ))}
+    </div>
+  )
+}
 
-        {view === "year" && (
-          <div ref={yearsRef} className="grid max-h-72 grid-cols-4 gap-1 overflow-y-auto overscroll-contain [scrollbar-width:thin]">
-            {years.map((y) => (
-              <button
-                key={y}
-                type="button"
-                data-year={y}
-                className={cn(CELL, picked?.getFullYear() === y && PICKED)}
-                onClick={() => {
-                  setMonth(new Date(y, month.getMonth(), 1))
-                  setView("month")
-                }}
-              >
-                {y}
-              </button>
-            ))}
+/**
+ * A birth date picker (U19): the field opens three wheels (month, day, year) inline under it, so nothing floats
+ * over the form and it works the same inside a sheet. The value posts through a hidden input as yyyy-MM-dd.
+ */
+export function BirthDatePicker({ id, name, defaultValue, invalid, describedBy }: { id: string; name: string; defaultValue: string; invalid?: boolean; describedBy?: string }) {
+  const youngest = React.useMemo(() => new Date().getFullYear() - 13, [])
+  const years = React.useMemo(() => Array.from({ length: youngest - OLDEST + 1 }, (_, i) => String(OLDEST + i)), [youngest])
+  const [value, setValue] = React.useState(defaultValue)
+  const [open, setOpen] = React.useState(false)
+  const field = React.useRef<HTMLButtonElement>(null)
+  const [y, m, d] = value ? value.split("-").map(Number) : [START_YEAR, 1, 1]
+  const days = Array.from({ length: daysIn(y, m - 1) }, (_, i) => String(i + 1))
+  const set = (year: number, month: number, day: number) => setValue(`${year}-${pad(month)}-${pad(Math.min(day, daysIn(year, month - 1)))}`)
+
+  return (
+    <div className="flex flex-col gap-2">
+      <input type="hidden" name={name} value={value} />
+      <button
+        ref={field}
+        id={id}
+        type="button"
+        aria-expanded={open}
+        aria-controls={`${id}-wheels`}
+        data-invalid={invalid || undefined}
+        aria-describedby={describedBy}
+        onClick={() => setOpen((o) => !o)}
+        className={cn(
+          "flex h-13 w-full min-w-0 items-center justify-between gap-3 rounded-xl bg-field px-4 text-left text-[17px] leading-6 tabular-nums outline-none transition-[box-shadow] duration-150 ease-standard focus-visible:ring-2 focus-visible:ring-foreground/70 data-invalid:ring-2 data-invalid:ring-recovery-red-text",
+          open && "ring-2 ring-foreground/70",
+          !value && "text-muted-foreground",
+        )}
+      >
+        {value ? formatDay(value, { ...DAY.full, month: "long" }) : "Choose your birth date"}
+        <CalendarDays aria-hidden className="size-5 shrink-0 text-foreground-secondary" strokeWidth={1.75} />
+      </button>
+      {open && (
+        <div
+          id={`${id}-wheels`}
+          role="group"
+          aria-label="Birth date"
+          style={{ "--wheel": `${ROW * VISIBLE}px` } as React.CSSProperties}
+          className="overflow-hidden rounded-xl bg-field motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-top-1"
+        >
+          <div className="relative grid grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1.2fr)] gap-1 px-2 pt-1">
+            {/* The selection band behind the centre row. */}
+            <div aria-hidden className="pointer-events-none absolute inset-x-2 top-[calc(50%+2px)] h-10 -translate-y-1/2 rounded-lg bg-white/8" />
+            <Wheel label="Month" items={MONTHS} index={m - 1} onIndex={(i) => set(y, i + 1, d)} />
+            <Wheel label="Day" items={days} index={Math.min(d, days.length) - 1} onIndex={(i) => set(y, m, i + 1)} />
+            <Wheel label="Year" items={years} index={Math.max(0, years.indexOf(String(y)))} onIndex={(i) => set(OLDEST + i, m, d)} />
           </div>
-        )}
-
-        {view === "month" && (
-          <div className="grid grid-cols-3 gap-1">
-            {MONTHS.map((m, i) => (
-              <button
-                key={m}
-                type="button"
-                className={cn(CELL, picked && picked.getFullYear() === year && picked.getMonth() === i && PICKED)}
-                onClick={() => {
-                  setMonth(new Date(year, i, 1))
-                  setView("day")
-                }}
-              >
-                {m}
-              </button>
-            ))}
+          <div className="flex items-center justify-between gap-3 border-t border-white/6 py-1.5 pr-1.5 pl-4">
+            <span className="truncate text-[13px] leading-[18px] text-muted-foreground">Scroll or tap to pick</span>
+            <Button
+              type="button"
+              size="sm"
+              className="rounded-full px-5"
+              onClick={() => {
+                // Done keeps what the wheels show, even if they were never moved.
+                set(y, m, d)
+                setOpen(false)
+                field.current?.focus()
+              }}
+            >
+              Done
+            </Button>
           </div>
-        )}
-
-        {view === "day" && (
-          <Calendar
-            mode="single"
-            month={month}
-            onMonthChange={setMonth}
-            selected={picked}
-            onSelect={(d) => {
-              if (!d) return
-              setValue(iso(d))
-              setOpen(false)
-            }}
-            hideNavigation
-            showOutsideDays={false}
-            disabled={{ after: new Date(youngest, 11, 31) }}
-            classNames={{ month_caption: "hidden" }}
-            className="w-full bg-transparent p-0 [--cell-size:--spacing(9)]"
-          />
-        )}
-      </PopoverContent>
-    </Popover>
+        </div>
+      )}
+    </div>
   )
 }
