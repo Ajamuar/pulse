@@ -33,7 +33,10 @@ ok() { printf '  \033[32m✓\033[0m %s\n' "$*"; }
 die() { printf '  \033[31m✗ %s\033[0m\n' "$*" >&2; exit 1; }
 
 cd "$(git rev-parse --show-toplevel)"
-compose() { docker compose -f "$COMPOSE_FILE" "$@"; }
+# compose.override.yaml (gitignored) holds this machine's own additions, e.g. joining a tunnel's Docker network.
+compose() {
+  if [ -f compose.override.yaml ]; then docker compose -f "$COMPOSE_FILE" -f compose.override.yaml "$@"; else docker compose -f "$COMPOSE_FILE" "$@"; fi
+}
 
 step "Pre-flight"
 [ -f "$COMPOSE_FILE" ] || die "$COMPOSE_FILE not found (set COMPOSE_FILE)"

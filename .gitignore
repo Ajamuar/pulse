@@ -51,3 +51,6 @@ npm-debug.log*
 /site/.astro/
 /backups/
 /build-scripts/
+
+# This machine's compose additions (scripts/deploy.sh loads it when present)
+compose.override.yaml

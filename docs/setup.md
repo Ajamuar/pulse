@@ -226,6 +226,23 @@ list of what's wrong.
 
 Each user's time zone is set in onboarding and Settings › Profile, not in the environment.
 
+### Sharing the machine with other apps
+
+- **Port clash.** Pulse publishes `127.0.0.1:3000`. If another app already holds host port 3000, set `PULSE_PORT`
+  (any free port) in `.env`; the app inside the container keeps 3000.
+- **Tunnel by container name.** If your tunnel runs in Docker and routes to `http://pulse:3000`, Pulse must join the
+  tunnel's network. Put that in a `compose.override.yaml` next to `compose.yaml` (gitignored; `scripts/deploy.sh`
+  loads it), so every deploy keeps it:
+
+  ```yaml
+  services:
+    pulse:
+      networks: [default, proxy]
+  networks:
+    proxy:
+      external: true
+  ```
+
 ## Keeping it running
 
 - **Update:** `scripts/deploy.sh` dumps Postgres, resets the checkout to `origin/main`, rebuilds, waits for the
