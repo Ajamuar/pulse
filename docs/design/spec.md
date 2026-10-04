@@ -109,11 +109,10 @@ Sampling: dominant-colour and median probes with PIL on the full-resolution capt
 
 | Token (CSS var) | Tailwind | Value | Sampled from | Use |
 |---|---|---|---|---|
-| `--background-top` | `bg-background-top` | `#262e33` | v1; `#242b32` at the top of [latest-home-sticky-header-user-2025] | Ground gradient start |
-| `--background-mid` | (gradient stop) | `#1b2024` | v1; `#1d252a` at 150 pt [latest-home-sticky-header-user-2025] | Ground stop at 270 px |
+| `--background-top` | `bg-background-top` | `#1a1e21` (was `#262e33`, darkened 2026-10-04) | v1; `#242b32` at the top of [latest-home-sticky-header-user-2025] | Ground gradient start |
+| `--background-mid` | (gradient stop) | `#121517` (was `#1b2024`) | v1; `#1d252a` at 150 pt [latest-home-sticky-header-user-2025] | Ground stop at 270 px |
 | `--background` | `bg-background` | `#0f1113` | v1 | Ground below 740 px; manifest `background_color` |
 | `--ground` | `bg-(image:--ground)` | `linear-gradient(180deg, var(--background-top) 0, var(--background-mid) 270px, var(--background) 740px)` | as v1 | The fixed page ground and the header fill (§4.3) |
-| `--ground-health` | `bg-(image:--ground-health)` | `radial-gradient(120% 55% at 50% 0, #0f2c2a 0, transparent 70%), linear-gradient(180deg, #0a0b0c 0, #14171c 60%)` | `#0b3625` / `#112a2e` top centre, `#090909` → `#14171c` edges [latest-health-tab-1], [latest-age-orb-mixed-2] | Health hub ground (C13) |
 | `--ground-healthspan` | `bg-(image:--ground-healthspan)` | `linear-gradient(#101518, #101518)` | `#000000` around the orb [latest-age-orb-amber-1], `#101518` lower and in the collapsed band [latest-healthspan-collapsed-1] (M3) | Healthspan detail ground; the collapsed band paints the same value |
 | `--card` | `bg-card` | `#2b2f32` | v1; `#2b2e33` Daily Outlook, `#2c3236` activities card [latest-home-sticky-header-user-2025] | Every card |
 | `--card-top` | `from-card-top` | `#2f3337` | `#2c2f34` top hairline over `#252a2d` body [latest-recovery-1]; cards lighten 2-4 % toward their top edge | Top stop of the card's vertical gradient (§2.6) |

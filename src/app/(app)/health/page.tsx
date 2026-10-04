@@ -213,12 +213,12 @@ function Fitness({ m }: { m: HealthHubVM["fitness"] }) {
   )
 }
 
-/** Health hub `/health` (spec §7.6): today's values on the teal-glow ground; each card links to its detail screen. */
+/** Health hub `/health` (spec §7.6): today's values ; each card links to its detail screen. */
 export default async function HealthPage() {
   await connection()
   const vm = await getHealthHub(await userCtx())
   return (
-    <PageShell title="Health" ground="health">
+    <PageShell title="Health">
       <HealthCards>
         <SectionShell variant="card" level={2} title="Healthspan" href="/health/healthspan" className="xl:col-span-2">
           <Healthspan m={vm.healthspan} />

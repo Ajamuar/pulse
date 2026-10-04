@@ -26,8 +26,6 @@ export type PageShellProps = {
   slots?: HomeSlots
   /** For `layout="home"`: the day's scores for the collapsing header's ring row (spec §4.3). */
   rings?: HeaderRings
-  /** Page ground (spec §2.1): the Health hub has a teal glow. */
-  ground?: "default" | "health"
   /** A route's loading.tsx: the skeleton is aria-hidden, so this says "Loading…" to screen readers instead. */
   loading?: boolean
   children?: React.ReactNode
@@ -41,9 +39,9 @@ export const LoadingStatus = ({ title }: { title: string }) => (
 )
 
 /** Tab roots: Home, Health, Journal, More (spec §4.5). */
-export function PageShell({ title, dateSwitcher, actions, layout = "stack", slots, rings, ground, loading, children }: PageShellProps) {
+export function PageShell({ title, dateSwitcher, actions, layout = "stack", slots, rings, loading, children }: PageShellProps) {
   return (
-    <div data-ground={ground === "health" ? "health" : undefined}>
+    <div>
       {layout === "home" ? <HomeHeader rings={rings} /> : <TitleHeader title={title} dateSwitcher={dateSwitcher} />}
       <div className={CONTENT_COLUMN} aria-busy={loading || undefined}>
         {loading && <LoadingStatus title={title} />}

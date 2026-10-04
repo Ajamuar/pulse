@@ -142,11 +142,10 @@
   --radius: 0.625rem;
 
   /* Ground: vertical gradient top -> mid -> bottom, fixed to the viewport (spec §2.1, C2) */
-  --background-top: #262e33;
-  --background-mid: #1b2024;
-  --background: #0f1113;
+  --background-top: #1a1e21;
+  --background-mid: #121517;
+  --background: #0a0b0c;
   --ground: linear-gradient(180deg, var(--background-top) 0, var(--background-mid) 270px, var(--background) 740px);
-  --ground-health: radial-gradient(120% 55% at 50% 0, #0f2c2a 0, transparent 70%), linear-gradient(180deg, #0a0b0c 0, #14171c 60%);
   --ground-healthspan: linear-gradient(#101518, #101518);
   /* The ground in use; a shell's data-ground attribute swaps it (base layer below). Headers paint the same value. */
   --page-ground: var(--ground);
@@ -154,9 +153,9 @@
   --foreground-secondary: #babac0;
 
   /* Surfaces */
-  --card: #2b2f32;
-  --card-top: #2f3337;
-  --card-hover: #33383c;
+  --card: #232629;
+  --card-top: #272a2d;
+  --card-hover: #2c3033;
   --card-foreground: #ffffff;
   --popover: #252c32;
   --popover-top: #2a373f;
@@ -279,9 +278,6 @@
 
 /* The one page-level background switch (spec §2.1). Unlayered, like the :root tokens it overrides: inside
    @layer base it lost to them and no shell's ground ever applied (spec §11 M3). */
-:root:has([data-ground="health"]) {
-  --page-ground: var(--ground-health);
-}
 :root:has([data-ground="healthspan"]) {
   --page-ground: var(--ground-healthspan);
 }
