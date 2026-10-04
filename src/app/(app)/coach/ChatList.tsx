@@ -5,8 +5,8 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Ellipsis, MessageSquarePlus } from "lucide-react"
 import { toast } from "sonner"
-import { deleteChatAction } from "@/server/actions/coach"
-import type { ChatGroup, ChatRow } from "@/server/coach/store"
+import { deleteChatAction, moreChatsAction } from "@/server/actions/coach"
+import type { ChatCursor, ChatGroup, ChatRow } from "@/server/coach/store"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -78,22 +78,63 @@ function ChatItem({ chat, current }: { chat: ChatRow; current: boolean }) {
  * The coach's chats (spec §7.21): New chat on top, then the chats grouped by recency. Beside the conversation on
  * laptop, and its own page (/coach/chats) on smaller screens.
  */
-export function ChatList({ groups, current, className, showNew = true }: { groups: ChatGroup[]; current: string | null; className?: string; showNew?: boolean }) {
+/**
+ * Starts a fresh chat. A button, not a link: on /coach already, a link to /coach changes nothing, so this navigates
+ * and refreshes, and the server hands out a new chat id every time.
+ */
+export function NewChatButton({ label, className }: { label?: boolean; className?: string }) {
+  const router = useRouter()
+  const start = () => {
+    router.push("/coach")
+    router.refresh()
+  }
+  return label ? (
+    <Button type="button" variant="ghost" onClick={start} className={cn("h-10 justify-start gap-2.5 rounded-xl px-3 text-[14px] font-semibold ring-1 ring-border hover:bg-foreground/[0.04]", className)}>
+      <MessageSquarePlus aria-hidden className="size-[18px]" strokeWidth={1.75} />
+      New chat
+    </Button>
+  ) : (
+    <Button type="button" variant="ghost" size="icon-touch" aria-label="New chat" onClick={start} className={cn("text-foreground-secondary hover:text-foreground", className)}>
+      <MessageSquarePlus aria-hidden strokeWidth={1.75} />
+    </Button>
+  )
+}
+
+/** Appends a page's groups to what is shown, joining a group that continues across the page break. */
+function merge(shown: ChatGroup[], more: ChatGroup[]): ChatGroup[] {
+  const out = shown.map((g) => ({ ...g, chats: [...g.chats] }))
+  for (const g of more) {
+    const last = out.at(-1)
+    if (last?.label === g.label) last.chats.push(...g.chats)
+    else out.push(g)
+  }
+  return out
+}
+
+/**
+ * The coach's chats (spec §7.21): New chat on top, then the chats grouped by recency, CHAT_PAGE (30) at a time with
+ * "Show older chats" for the next page. Beside the conversation on laptop, its own page (/coach/chats) below that.
+ */
+export function ChatList({ groups: first, next: firstNext, current, className, showNew = true }: { groups: ChatGroup[]; next: ChatCursor | null; current: string | null; className?: string; showNew?: boolean }) {
+  const [more, setMore] = React.useState<{ groups: ChatGroup[]; next: ChatCursor | null } | null>(null)
+  const [pending, start] = React.useTransition()
+  const groups = more ? merge(first, more.groups) : first
+  const next = more ? more.next : firstNext
+  const loadMore = () =>
+    start(async () => {
+      if (!next) return
+      const r = await moreChatsAction(next).catch(() => ({ ok: false as const, error: "Couldn’t reach Pulse. Try again." }))
+      if (!r.ok) return void toast.error(r.error)
+      setMore({ groups: merge(more?.groups ?? [], r.data.groups), next: r.data.next })
+    })
   return (
     <nav aria-label="Chats" className={cn("flex flex-col gap-4", className)}>
-      {showNew && (
-      <Button asChild variant="ghost" className="h-10 justify-start gap-2.5 rounded-xl px-3 text-[14px] font-semibold ring-1 ring-border hover:bg-foreground/[0.04]">
-        <Link href="/coach">
-          <MessageSquarePlus aria-hidden className="size-[18px]" strokeWidth={1.75} />
-          New chat
-        </Link>
-      </Button>
-      )}
+      {showNew && <NewChatButton label />}
       {groups.length === 0 ? (
         <p className="px-3 text-[14px] leading-5 text-pretty text-muted-foreground">Your chats appear here. They’re saved on this server, visible only to you.</p>
       ) : (
-        groups.map((g) => (
-          <section key={g.label} aria-label={g.label}>
+        groups.map((g, i) => (
+          <section key={`${g.label}-${i}`} aria-label={g.label}>
             <h2 className="px-3 pb-1 text-[13px] leading-[18px] font-medium text-muted-foreground">{g.label}</h2>
             <ul>
               {g.chats.map((c) => (
@@ -102,6 +143,11 @@ export function ChatList({ groups, current, className, showNew = true }: { group
             </ul>
           </section>
         ))
+      )}
+      {next && (
+        <Button type="button" variant="ghost" disabled={pending} onClick={loadMore} aria-busy={pending || undefined} className="h-10 rounded-lg text-[14px] font-medium text-foreground-secondary hover:text-foreground">
+          {pending ? "Loading…" : "Show older chats"}
+        </Button>
       )}
     </nav>
   )

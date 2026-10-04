@@ -18,7 +18,7 @@ export default async function CoachPage({ searchParams }: { searchParams: Promis
   await connection()
   const { db, userId, now, timeZone } = await userCtx()
   if (!(await coachAccess(db, userId))) notFound()
-  const [setup, chats, { c, q }] = await Promise.all([coachSetup(db, userId), listChats(db, userId), searchParams])
+  const [setup, { chats, next }, { c, q }] = await Promise.all([coachSetup(db, userId), listChats(db, userId), searchParams])
 
   if (!setup.consent || !setup.provider)
     return (
@@ -45,7 +45,7 @@ export default async function CoachPage({ searchParams }: { searchParams: Promis
   return (
     <DetailShell
       title="Coach"
-      primary={<Coach key={id} id={id} initial={saved ?? []} groups={groupChats(chats, now, timeZone)} prefill={(q ?? "").slice(0, 500)} providerLabel={providerLabel(setup.provider)} />}
+      primary={<Coach key={id} id={id} initial={saved ?? []} groups={groupChats(chats, now, timeZone)} next={next} prefill={(q ?? "").slice(0, 500)} providerLabel={providerLabel(setup.provider)} />}
     />
   )
 }

@@ -30,7 +30,7 @@ function DownloadLink({ href, label }: { href: string; label: string }) {
 export default async function YourDataPage() {
   await connection()
   const ctx = await userCtx()
-  const [vm, coach] = await Promise.all([getYourData(ctx), listChats(ctx.db, ctx.userId).then((c) => c.length > 0)])
+  const [vm, coach] = await Promise.all([getYourData(ctx), listChats(ctx.db, ctx.userId).then((r) => r.chats.length > 0)])
   const since = vm.first ? ` since ${formatDay(vm.first, DAY.full)}` : ""
 
   return (

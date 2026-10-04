@@ -6,7 +6,7 @@ import type { UIMessage } from "ai";
 import { z } from "zod";
 import { parseConfig, type Config } from "../config";
 import type { Db } from "../db";
-import { coachSettings, user } from "../db/schema";
+import { coachChats, coachSettings, user } from "../db/schema";
 import { addUser, ctxFor, freshDb, seeded, USER } from "../testing";
 import { allowRequest, coachAccess, coachModel, coachSetup, listChats, loadChat, saveChat, saveProvider, setCoachAllowed, setCoachMode, setConsent, titleOf } from "./store";
 import { coachInstructions } from "./instructions";
@@ -67,14 +67,29 @@ describe("access, keys and chats", () => {
     await saveChat(db, member, "chat-0001", [msg("m1", "user", "Why is my recovery low today?"), msg("m2", "assistant", "…")]);
     expect(await loadChat(db, member, "chat-0001")).toHaveLength(2);
     expect(await loadChat(db, owner, "chat-0001")).toBeNull();
-    expect(await listChats(db, owner)).toEqual([]);
-    expect((await listChats(db, member))[0].title).toBe("Why is my recovery low today?");
+    expect((await listChats(db, owner)).chats).toEqual([]);
+    expect((await listChats(db, member)).chats[0].title).toBe("Why is my recovery low today?");
     expect(titleOf([msg("a", "user", "x".repeat(80))])).toHaveLength(60);
     // Deleting the account takes its chats and key with it.
     await setConsent(db, member, true);
     await db.delete(user).where(eq(user.id, member));
     expect(await loadChat(db, member, "chat-0001")).toBeNull();
     expect(await coachSetup(db, member)).toEqual({ provider: null, model: null, last4: null, consent: false });
+  });
+
+  it("chats page 30 at a time, newest first, with no chat skipped or repeated even when times tie", async () => {
+    for (let i = 0; i < 35; i++)
+      await db.insert(coachChats).values({ userId: member, id: `chat-${String(i).padStart(4, "0")}`, title: `Chat ${i}`, messages: [], createdAt: 1000, updatedAt: 1000 + Math.floor(i / 3) });
+    const first = await listChats(db, member);
+    expect(first.chats).toHaveLength(30);
+    expect(first.next).not.toBeNull();
+    const second = await listChats(db, member, first.next!);
+    expect(second.chats).toHaveLength(5);
+    expect(second.next).toBeNull();
+    const ids = [...first.chats, ...second.chats].map((c) => c.id);
+    expect(new Set(ids).size).toBe(35);
+    expect(ids[0]).toBe("chat-0034");
+    expect((await listChats(db, owner)).chats).toEqual([]);
   });
 
   it("the per-minute guard allows 10 requests a minute per user", () => {

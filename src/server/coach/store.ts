@@ -1,6 +1,6 @@
 // The coach's stored state: who may use it (admin panel), each user's provider, key and consent, and their chats.
 // Every per-user read and write filters on user_id. The API key is encrypted (crypto.ts) and never leaves the server.
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, lt, or } from "drizzle-orm";
 import type { LanguageModel, UIMessage } from "ai";
 import { isOwnerEmail } from "../admin";
 import { getConfig } from "../config";
@@ -107,13 +107,28 @@ export async function coachModel(db: Db, userId: number): Promise<{ model: Langu
 
 export type ChatRow = { id: string; title: string; updatedAt: number };
 
-export async function listChats(db: Db, userId: number): Promise<ChatRow[]> {
-  return db
+/** Chats per page in the chat list ("Show older chats" loads the next). */
+export const CHAT_PAGE = 30;
+
+/** Where the next page starts: the last chat shown (newest first, ties broken by id). */
+export type ChatCursor = { updatedAt: number; id: string };
+
+/** One page of chats, newest first, after `before` when given; `next` is the cursor for the page after, if any. */
+export async function listChats(db: Db, userId: number, before?: ChatCursor): Promise<{ chats: ChatRow[]; next: ChatCursor | null }> {
+  const rows = await db
     .select({ id: coachChats.id, title: coachChats.title, updatedAt: coachChats.updatedAt })
     .from(coachChats)
-    .where(eq(coachChats.userId, userId))
-    .orderBy(desc(coachChats.updatedAt))
-    .limit(50);
+    .where(
+      and(
+        eq(coachChats.userId, userId),
+        before && or(lt(coachChats.updatedAt, before.updatedAt), and(eq(coachChats.updatedAt, before.updatedAt), lt(coachChats.id, before.id))),
+      ),
+    )
+    .orderBy(desc(coachChats.updatedAt), desc(coachChats.id))
+    .limit(CHAT_PAGE + 1);
+  const chats = rows.slice(0, CHAT_PAGE);
+  const last = chats.at(-1);
+  return { chats, next: rows.length > CHAT_PAGE && last ? { updatedAt: last.updatedAt, id: last.id } : null };
 }
 
 export type ChatGroup = { label: "Today" | "Yesterday" | "Previous 7 days" | "Earlier"; chats: ChatRow[] };

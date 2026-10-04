@@ -6,7 +6,8 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { currentUser, SIGNED_OUT } from "../auth";
 import { providerOf } from "../coach/providers";
-import { coachAccess, deleteAllChats, deleteChat, modelFor, removeProvider, saveProvider, setConsent } from "../coach/store";
+import { coachAccess, deleteAllChats, deleteChat, groupChats, listChats, modelFor, removeProvider, saveProvider, setConsent, type ChatCursor, type ChatGroup } from "../coach/store";
+import { ctxOf } from "../queries/common";
 import { getConfig } from "../config";
 import { getDb } from "../db";
 import type { ActionResult } from "./journal";
@@ -70,6 +71,21 @@ export async function removeProviderAction(): Promise<ActionResult> {
   await removeProvider(getDb(), me.userId);
   revalidatePath("/settings");
   return DONE;
+}
+
+const Cursor = z.object({ updatedAt: z.number().int().nonnegative(), id: z.string().max(64) });
+
+/** The next page of chats after `cursor`, grouped by recency in the user's time zone. */
+export async function moreChatsAction(cursor: z.input<typeof Cursor>): Promise<ActionResult<{ groups: ChatGroup[]; next: ChatCursor | null }>> {
+  const me = await currentUser();
+  if (!me) return SIGNED_OUT;
+  const c = Cursor.safeParse(cursor);
+  if (!c.success) return { ok: false, error: "Couldn’t load older chats." };
+  const db = getDb();
+  const ctx = await ctxOf(db, me.userId).catch(() => null);
+  if (!ctx) return { ok: false, error: "Couldn’t load older chats." };
+  const { chats, next } = await listChats(db, me.userId, c.data);
+  return { ok: true, data: { groups: groupChats(chats, ctx.now, ctx.timeZone), next } };
 }
 
 export async function deleteChatAction(id: string): Promise<ActionResult> {

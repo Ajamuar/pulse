@@ -13,6 +13,7 @@ export default async function ChatsPage() {
   const ctx = await userCtx()
   const { db, userId, now } = ctx
   if (!(await coachAccess(db, userId))) notFound()
-  const groups = groupChats(await listChats(db, userId), now, ctx.timeZone)
-  return <DetailShell title="Chats" backHref="/coach" primary={<ChatList groups={groups} current={null} className="mx-auto w-full max-w-[640px]" />} />
+  const { chats, next } = await listChats(db, userId)
+  const groups = groupChats(chats, now, ctx.timeZone)
+  return <DetailShell title="Chats" backHref="/coach" primary={<ChatList groups={groups} next={next} current={null} className="mx-auto w-full max-w-[640px]" />} />
 }

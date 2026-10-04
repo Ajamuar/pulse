@@ -5,10 +5,10 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useChat } from "@ai-sdk/react"
 import { DefaultChatTransport, type UIMessage } from "ai"
-import { ArrowUp, History, MessageSquarePlus, PanelLeftClose, PanelLeftOpen, Square } from "lucide-react"
+import { ArrowUp, History, PanelLeftClose, PanelLeftOpen, Settings2, Square } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { dayDigest } from "@/server/coach/tools"
-import type { ChatGroup } from "@/server/coach/store"
+import type { ChatCursor, ChatGroup } from "@/server/coach/store"
 import { Mark } from "@/components/brand/Mark"
 import type { MiniRingVariant } from "@/components/metrics/MiniRing"
 import { DATA_COLORS, dialColor } from "@/lib/bands"
@@ -17,7 +17,7 @@ import { UserAvatar } from "@/components/shells/UserAvatar"
 import { SheetTrigger } from "@/components/shells/SheetTrigger"
 import { GLASS } from "@/components/shells/AppNav"
 import { Button } from "@/components/ui/button"
-import { ChatList } from "./ChatList"
+import { ChatList, NewChatButton } from "./ChatList"
 import { Prose } from "./Prose"
 
 type DayDigest = Awaited<ReturnType<typeof dayDigest>>
@@ -198,7 +198,7 @@ const CHIP =
  * messages on the ground with the user's in a bubble, tool results as Pulse cards, and the composer pinned to the
  * bottom of the chat column. Sends only the newest message; the server holds the history.
  */
-export function Coach({ id, initial, groups, prefill, providerLabel }: { id: string; initial: UIMessage[]; groups: ChatGroup[]; prefill: string; providerLabel: string }) {
+export function Coach({ id, initial, groups, next, prefill, providerLabel }: { id: string; initial: UIMessage[]; groups: ChatGroup[]; next: ChatCursor | null; prefill: string; providerLabel: string }) {
   const router = useRouter()
   const { avatar } = useShellStatus()
   const [input, setInput] = React.useState(prefill)
@@ -240,10 +240,12 @@ export function Coach({ id, initial, groups, prefill, providerLabel }: { id: str
   const chatCount = groups.reduce((n, g) => n + g.chats.length, 0)
   const listOpen = usePanelOpen()
   const ICON_BTN = "text-foreground-secondary hover:text-foreground"
-  const newChat = (
-    <Button asChild variant="ghost" size="icon-touch" aria-label="New chat" className={ICON_BTN}>
-      <Link href="/coach">
-        <MessageSquarePlus aria-hidden strokeWidth={1.75} />
+  const newChat = <NewChatButton />
+  // Provider, key, chats and turning the coach off live in Settings › Coach.
+  const settings = (
+    <Button asChild variant="ghost" size="icon-touch" aria-label="Coach settings" className={ICON_BTN}>
+      <Link href="/settings#coach">
+        <Settings2 aria-hidden strokeWidth={1.75} />
       </Link>
     </Button>
   )
@@ -259,13 +261,14 @@ export function Coach({ id, initial, groups, prefill, providerLabel }: { id: str
               <h2 className="text-[15px] font-semibold">Chats</h2>
               <span className="flex items-center">
                 {newChat}
+                {settings}
                 <Button variant="ghost" size="icon-touch" aria-label="Hide chats" aria-expanded onClick={() => setPanelOpen(false)} className={ICON_BTN}>
                   <PanelLeftClose aria-hidden strokeWidth={1.75} />
                 </Button>
               </span>
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto p-2">
-              <ChatList groups={groups} current={initial.length ? id : null} showNew={false} />
+              <ChatList groups={groups} next={next} current={initial.length ? id : null} showNew={false} />
             </div>
           </div>
         </aside>
@@ -286,7 +289,11 @@ export function Coach({ id, initial, groups, prefill, providerLabel }: { id: str
             </Button>
           )}
         </span>
-        {(messages.length > 0 || !listOpen) && <span className={cn(listOpen && "xl:hidden")}>{newChat}</span>}
+        {/* With the panel open (laptop) its header carries New chat and settings; otherwise they sit here. */}
+        <span className={cn("flex items-center", listOpen && "xl:hidden")}>
+          {(messages.length > 0 || !listOpen) && newChat}
+          {settings}
+        </span>
       </div>
 
       {messages.length === 0 ? (
