@@ -14,10 +14,38 @@ import { ctxOf } from "@/server/queries/common";
 /** History sent to the model: the newest messages only (the whole chat is still saved). */
 const HISTORY = 20;
 
-const Body = z.object({
-  id: z.string().regex(/^[\w-]{8,64}$/),
-  message: z.object({ id: z.string(), role: z.literal("user"), parts: z.array(z.unknown()).min(1).max(20) }).passthrough(),
-});
+/**
+ * One request per turn: the chat id and the newest user message (the server holds the history). `trigger` and
+ * `messageId` are useChat's: `submit-message` with a `messageId` is an edit of that (saved) user message, which drops it
+ * and everything after; `regenerate-message` answers `message` again, dropping what followed it.
+ */
+const Body = z
+  .object({
+    id: z.string().regex(/^[\w-]{8,64}$/),
+    message: z.object({ id: z.string().min(1).max(100), role: z.literal("user"), parts: z.array(z.unknown()).min(1).max(20) }).passthrough(),
+    trigger: z.enum(["submit-message", "regenerate-message"]).default("submit-message"),
+    messageId: z.string().min(1).max(100).optional(),
+  })
+  .strict();
+
+/**
+ * The saved history this turn builds on, or null when the request names a message the chat doesn't have.
+ * - A new message: everything saved.
+ * - An edit: everything before the edited user message (it must be one, and the replacement carries its id).
+ * - A regenerate: everything before `message` if it was saved (a retry after a failed first send was not); the
+ *   `messageId` (the answer being replaced, when given) must belong to the chat.
+ */
+function historyFor(saved: UIMessage[], b: Pick<z.infer<typeof Body>, "message" | "trigger" | "messageId">): UIMessage[] | null {
+  const at = (id: string) => saved.findIndex((m) => m.id === id);
+  if (b.trigger === "submit-message") {
+    if (b.messageId === undefined) return saved;
+    const i = at(b.messageId);
+    return b.messageId === b.message.id && i >= 0 && saved[i].role === "user" ? saved.slice(0, i) : null;
+  }
+  if (b.messageId !== undefined && at(b.messageId) < 0) return null;
+  const i = at(b.message.id);
+  return i >= 0 ? saved.slice(0, i) : saved;
+}
 
 const fail = (status: number, error: string) => Response.json({ error }, { status });
 
@@ -37,7 +65,8 @@ export async function POST(req: Request) {
 
   const texts = await coachTexts(db); // the admin dashboard's wording, read per request
   const tools = coachTools(ctx, texts);
-  const previous = (await loadChat(db, user.userId, id)) ?? [];
+  const previous = historyFor((await loadChat(db, user.userId, id)) ?? [], body.data);
+  if (!previous) return fail(400, "bad_request");
   const messages = await validateUIMessages({ messages: [...previous, body.data.message as UIMessage], tools }).catch(() => null);
   if (!messages) return fail(400, "bad_request");
 

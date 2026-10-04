@@ -74,9 +74,9 @@ function TabBar({ current }: { current: number }) {
 }
 
 /** Tablet rail, 88 px, floating (inferred, I2): the tab bar turned on its side. */
-function Rail({ current }: { current: number }) {
+function Rail({ current, wide }: { current: number; wide: boolean }) {
   return (
-    <nav aria-label="Primary" className={cn(GLASS, "fixed inset-y-3 left-3 z-30 hidden w-[88px] flex-col items-center rounded-[28px] py-4 md:flex xl:hidden")}>
+    <nav aria-label="Primary" className={cn(GLASS, "fixed inset-y-3 left-3 z-30 hidden w-[88px] flex-col items-center rounded-[28px] py-4 md:flex", !wide && "xl:hidden")}>
       <Link
         href="/"
         aria-label="Pulse home"
@@ -235,10 +235,13 @@ export function AppNav() {
   const pathname = usePathname()
   const index = TABS.findIndex((t) => t.tab === tabForPath(pathname))
   const root = ROOTS.has(pathname)
+  // The coach keeps the rail on laptop too: its chats panel sits beside it, and two full sidebars read as one too many.
+  const railOnly = pathname === "/coach"
   return (
     <>
-      <Rail current={index} />
-      <Sidebar current={index} pathname={pathname} />
+      {/* No tab is current on the coach (tabForPath files it under Home); the Coach button is where you are. */}
+      <Rail current={pathname.startsWith("/coach") ? -1 : index} wide={railOnly} />
+      {!railOnly && <Sidebar current={index} pathname={pathname} />}
       <div className="pointer-events-none fixed inset-x-3 bottom-[max(calc(env(safe-area-inset-bottom)-6px),12px)] z-30 flex touch-manipulation justify-end gap-2 *:pointer-events-auto md:hidden">
         {root && (
           <div className="flex min-w-0 flex-1">

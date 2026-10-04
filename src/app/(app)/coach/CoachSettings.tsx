@@ -25,6 +25,11 @@ export function CoachSettings({ setup, providers, providerLabel }: { setup: Coac
   const [open, setOpen] = React.useState(false)
   const [pending, start] = React.useTransition()
   const [confirm, setConfirm] = React.useState<null | "chats" | "off">(null)
+  // A client navigation to /settings#coach (the coach's settings buttons) scrolls to the hash while the route's
+  // loading skeleton is up, which has no #coach, so it lands at the top. Once this section mounts, finish the jump.
+  React.useEffect(() => {
+    if (window.location.hash === "#coach") document.getElementById("coach")?.scrollIntoView({ block: "start" })
+  }, [])
   const act = (p: () => Promise<ActionResult>, ok: string, done?: () => void) =>
     start(async () => {
       const r = await p().catch((): ActionResult => ({ ok: false, error: "Couldn’t reach Pulse. Try again." }))
@@ -72,15 +77,15 @@ export function CoachSettings({ setup, providers, providerLabel }: { setup: Coac
               </div>
             )}
           </div>
-          {/* One row of three: change the provider, clear the chats, or turn the coach off. */}
-          <div className="mt-4 grid grid-cols-3 gap-2">
-            <Button variant="secondary" size="touch" className="px-1.5 text-[12px] tracking-[0.03em]" onClick={() => setOpen(true)} disabled={pending}>
-              {setup.provider ? "Change" : "Add key"}
+          {/* Change the provider full width; clear the chats or turn the coach off side by side, like the account card. */}
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <Button variant="secondary" size="touch" className="col-span-2" onClick={() => setOpen(true)} disabled={pending}>
+              {setup.provider ? "Change provider" : "Add key"}
             </Button>
-            <Button variant="outline" size="touch" className="px-1.5 text-[12px] tracking-[0.03em]" disabled={pending} onClick={() => setConfirm("chats")}>
+            <Button variant="outline" size="touch" disabled={pending} onClick={() => setConfirm("chats")}>
               Delete chats
             </Button>
-            <Button variant="outline" size="touch" className="px-1.5 text-[12px] tracking-[0.03em]" disabled={pending} onClick={() => setConfirm("off")}>
+            <Button variant="outline" size="touch" disabled={pending} onClick={() => setConfirm("off")}>
               Turn off
             </Button>
           </div>

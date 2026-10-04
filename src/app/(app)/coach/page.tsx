@@ -11,6 +11,13 @@ import { Consent, ProviderForm } from "./CoachSetup"
 export const metadata = { title: "Coach" }
 
 /**
+ * From 1280 px the app nav stays the 88 px rail here (AppNav), so the frame gives back the sidebar's extra width
+ * (256 − 112 px); the chats panel (Coach.tsx, fixed beside the rail) then takes 272 px expanded or 64 px collapsed,
+ * plus a 12 px gap, and the header and conversation centre in what is left.
+ */
+const FRAME = "xl:-ml-[144px] xl:has-data-[chats=closed]:pl-[76px] xl:has-data-[chats=open]:pl-[284px]"
+
+/**
  * Coach `/coach` (spec §7.21): consent, then a provider and key (BYOK), then the chat. `?c=` opens a past chat,
  * `?q=` fills the composer without sending. Only for users an admin gave coach access; anyone else gets a 404.
  */
@@ -22,30 +29,34 @@ export default async function CoachPage({ searchParams }: { searchParams: Promis
 
   if (!setup.consent || !setup.provider)
     return (
-      <DetailShell
-        title="Coach"
-        primary={
-          <div className="mx-auto w-full max-w-[560px] pb-10">
-            {!setup.consent ? (
-              <Consent />
-            ) : (
-              <div className="space-y-4">
-                <h2 className="text-[22px] leading-7 font-bold text-balance">Connect your AI provider</h2>
-                <p className="text-[15px] leading-[22px] text-pretty text-foreground-secondary">The coach runs on your own account with a provider, so you pay them directly for what you use.</p>
-                <ProviderForm providers={providerOptions()} current={setup} />
-              </div>
-            )}
-          </div>
-        }
-      />
+      <div className={FRAME}>
+        <DetailShell
+          title="Coach"
+          primary={
+            <div className="mx-auto w-full max-w-[560px] pb-10">
+              {!setup.consent ? (
+                <Consent />
+              ) : (
+                <div className="space-y-4">
+                  <h2 className="text-[22px] leading-7 font-bold text-balance">Connect your AI provider</h2>
+                  <p className="text-[15px] leading-[22px] text-pretty text-foreground-secondary">The coach runs on your own account with a provider, so you pay them directly for what you use.</p>
+                  <ProviderForm providers={providerOptions()} current={setup} />
+                </div>
+              )}
+            </div>
+          }
+        />
+      </div>
     )
 
   const saved = c && /^[\w-]{8,64}$/.test(c) ? await loadChat(db, userId, c) : null
   const id = saved ? c! : randomUUID()
   return (
-    <DetailShell
-      title="Coach"
-      primary={<Coach key={id} id={id} initial={saved ?? []} groups={groupChats(chats, now, timeZone)} next={next} prefill={(q ?? "").slice(0, 500)} providerLabel={providerLabel(setup.provider)} />}
-    />
+    <div className={FRAME}>
+      <DetailShell
+        title="Coach"
+        primary={<Coach key={id} id={id} initial={saved ?? []} groups={groupChats(chats, now, timeZone)} next={next} prefill={(q ?? "").slice(0, 500)} providerLabel={providerLabel(setup.provider)} />}
+      />
+    </div>
   )
 }

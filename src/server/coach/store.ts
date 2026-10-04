@@ -167,7 +167,8 @@ export async function saveChat(db: Db, userId: number, id: string, messages: UIM
   await db
     .insert(coachChats)
     .values({ userId, id, title: titleOf(messages), messages, createdAt: at, updatedAt: at })
-    .onConflictDoUpdate({ target: [coachChats.userId, coachChats.id], set: { messages, updatedAt: at } });
+    // The title follows the first question, so editing it renames the chat.
+    .onConflictDoUpdate({ target: [coachChats.userId, coachChats.id], set: { title: titleOf(messages), messages, updatedAt: at } });
 }
 
 export async function deleteChat(db: Db, userId: number, id: string): Promise<void> {

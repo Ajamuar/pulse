@@ -1,27 +1,51 @@
 import * as React from "react"
 
+const BULLET = /^\s*[-*•] /
+const NUMBERED = /^\s*\d+[.)] /
+
 /**
- * The coach's answer text: paragraphs, "- " bullets and **bold**, nothing else (the instructions ask for exactly
- * that). Built from strings into React elements, so model output is never parsed as HTML.
+ * The coach's answer text: paragraphs, "- " or "1. " lists and **bold**, nothing else (the instructions ask for
+ * that). A list may follow its lead-in line inside one block ("Here is the plan:\n- …"). Built from strings into React
+ * elements, so model output is never parsed as HTML.
  */
 export function Prose({ text }: { text: string }) {
-  const blocks = text.trim().split(/\n{2,}/)
-  return (
-    <div className="space-y-3 text-[16px] leading-6 text-pretty text-foreground">
-      {blocks.map((block, i) => {
-        const lines = block.split("\n").filter((l) => l.trim())
-        if (lines.length && lines.every((l) => /^\s*[-*•] /.test(l)))
-          return (
-            <ul key={i} className="list-disc space-y-1 pl-5 marker:text-muted-foreground">
-              {lines.map((l, j) => (
-                <li key={j}>{inline(l.replace(/^\s*[-*•] /, ""))}</li>
+  const out: React.ReactNode[] = []
+  text
+    .trim()
+    .split(/\n{2,}/)
+    .forEach((block, i) => {
+      // Runs of consecutive lines of one kind: a paragraph, a bullet list or a numbered list.
+      let run: { kind: "p" | "ul" | "ol"; lines: string[] } | null = null
+      const flush = (j: number) => {
+        if (!run) return
+        const key = `${i}-${j}`
+        if (run.kind === "p") out.push(<p key={key}>{inline(run.lines.join(" "))}</p>)
+        else {
+          const List = run.kind
+          out.push(
+            <List key={key} className={List === "ul" ? "list-disc space-y-1.5 pl-5 marker:text-muted-foreground" : "list-decimal space-y-1.5 pl-6 marker:text-muted-foreground marker:tabular-nums"}>
+              {run.lines.map((l, k) => (
+                <li key={k} className="pl-1">
+                  {inline(l.replace(List === "ul" ? BULLET : NUMBERED, ""))}
+                </li>
               ))}
-            </ul>
+            </List>,
           )
-        return <p key={i}>{inline(lines.join(" "))}</p>
-      })}
-    </div>
-  )
+        }
+        run = null
+      }
+      block
+        .split("\n")
+        .filter((l) => l.trim())
+        .forEach((l, j) => {
+          const kind = BULLET.test(l) ? "ul" : NUMBERED.test(l) ? "ol" : "p"
+          if (run?.kind !== kind) flush(j)
+          run ??= { kind, lines: [] }
+          run.lines.push(l.trim())
+        })
+      flush(-1)
+    })
+  return <div className="space-y-3 text-[15px] leading-6 text-pretty text-foreground">{out}</div>
 }
 
 /** `**bold**` spans; an unclosed `**` (mid-stream) stays as text. */

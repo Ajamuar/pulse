@@ -32,18 +32,23 @@ function ChatItem({ chat, current }: { chat: ChatRow; current: boolean }) {
         href={`/coach?c=${chat.id}`}
         aria-current={current ? "page" : undefined}
         className={cn(
-          "flex min-h-10 items-center rounded-lg py-2 pr-11 pl-3 text-[14px] leading-5 outline-none transition-[background-color,color] duration-150 ease-standard focus-visible:ring-3 focus-visible:ring-ring/50",
-          current ? "bg-foreground/[0.06] font-medium text-foreground" : "text-foreground-secondary hover:bg-foreground/[0.04] hover:text-foreground",
+          "flex min-h-10 items-center rounded-full py-2 pr-11 pl-4 text-[14px] leading-5 font-medium outline-none transition-[background-color,color] duration-150 ease-standard focus-visible:ring-3 focus-visible:ring-ring/50 pointer-coarse:min-h-12 pointer-fine:pr-4 pointer-fine:group-focus-within/chat:pr-11 pointer-fine:group-hover/chat:pr-11",
+          // The nav's tones, and its active lens (AppNav Lens): a soft pool of light brightest at the row's lower edge.
+          current
+            ? "bg-radial-[ellipse_at_50%_115%] from-foreground/16 via-foreground/5 via-55% to-foreground/[0.02] text-foreground"
+            : "text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground-secondary",
         )}
       >
-        <span className="line-clamp-2 text-pretty">{chat.title}</span>
+        <span className="truncate" title={chat.title}>
+          {chat.title}
+        </span>
       </Link>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button
             type="button"
             aria-label={`Options for “${chat.title}”`}
-            className="absolute top-1/2 right-1 grid size-9 -translate-y-1/2 place-items-center rounded-lg text-muted-foreground opacity-100 outline-none transition-[opacity,background-color] duration-150 ease-standard hover:bg-foreground/[0.06] hover:text-foreground focus-visible:opacity-100 focus-visible:ring-3 focus-visible:ring-ring/50 aria-expanded:opacity-100 pointer-fine:opacity-0 pointer-fine:group-hover/chat:opacity-100"
+            className="absolute top-1/2 right-1 grid size-8 -translate-y-1/2 place-items-center rounded-full pointer-coarse:size-10 text-muted-foreground opacity-100 outline-none transition-[opacity,background-color] duration-150 ease-standard hover:bg-foreground/[0.06] hover:text-foreground focus-visible:opacity-100 focus-visible:ring-3 focus-visible:ring-ring/50 aria-expanded:opacity-100 pointer-fine:opacity-0 pointer-fine:group-hover/chat:opacity-100"
           >
             <Ellipsis aria-hidden className="size-4" />
           </button>
@@ -75,10 +80,6 @@ function ChatItem({ chat, current }: { chat: ChatRow; current: boolean }) {
 }
 
 /**
- * The coach's chats (spec §7.21): New chat on top, then the chats grouped by recency. Beside the conversation on
- * laptop, and its own page (/coach/chats) on smaller screens.
- */
-/**
  * Starts a fresh chat. A button, not a link: on /coach already, a link to /coach changes nothing, so this navigates
  * and refreshes, and the server hands out a new chat id every time.
  */
@@ -89,8 +90,17 @@ export function NewChatButton({ label, className }: { label?: boolean; className
     router.refresh()
   }
   return label ? (
-    <Button type="button" variant="ghost" onClick={start} className={cn("h-10 justify-start gap-2.5 rounded-xl px-3 text-[14px] font-semibold ring-1 ring-border hover:bg-foreground/[0.04]", className)}>
-      <MessageSquarePlus aria-hidden className="size-[18px]" strokeWidth={1.75} />
+    // A nav row (AppNav's sidebar items): quiet until hovered.
+    <Button
+      type="button"
+      variant="ghost"
+      onClick={start}
+      className={cn(
+        "h-12 w-full justify-start gap-3 rounded-full px-4 text-[15px] leading-5 font-semibold text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground-secondary dark:hover:bg-foreground/[0.04]",
+        className,
+      )}
+    >
+      <MessageSquarePlus aria-hidden className="size-6" strokeWidth={1.6} />
       New chat
     </Button>
   ) : (
@@ -128,15 +138,15 @@ export function ChatList({ groups: first, next: firstNext, current, className, s
       setMore({ groups: merge(more?.groups ?? [], r.data.groups), next: r.data.next })
     })
   return (
-    <nav aria-label="Chats" className={cn("flex flex-col gap-4", className)}>
+    <nav aria-label="Chats" className={cn("flex flex-col gap-5", className)}>
       {showNew && <NewChatButton label />}
       {groups.length === 0 ? (
-        <p className="px-3 text-[14px] leading-5 text-pretty text-muted-foreground">Your chats appear here. They’re saved on this server, visible only to you.</p>
+        <p className="px-4 py-1 text-[13px] leading-[18px] text-pretty text-muted-foreground">Your chats appear here. They’re saved on this server, visible only to you.</p>
       ) : (
         groups.map((g, i) => (
           <section key={`${g.label}-${i}`} aria-label={g.label}>
-            <h2 className="px-3 pb-1 text-[13px] leading-[18px] font-medium text-muted-foreground">{g.label}</h2>
-            <ul>
+            <h2 className="px-4 pb-1.5 text-[11px] leading-4 font-bold tracking-[0.1em] text-muted-foreground/80 uppercase">{g.label}</h2>
+            <ul className="space-y-px">
               {g.chats.map((c) => (
                 <ChatItem key={c.id} chat={c} current={c.id === current} />
               ))}
@@ -145,7 +155,7 @@ export function ChatList({ groups: first, next: firstNext, current, className, s
         ))
       )}
       {next && (
-        <Button type="button" variant="ghost" disabled={pending} onClick={loadMore} aria-busy={pending || undefined} className="h-10 rounded-lg text-[14px] font-medium text-foreground-secondary hover:text-foreground">
+        <Button type="button" variant="ghost" disabled={pending} onClick={loadMore} aria-busy={pending || undefined} className="h-10 rounded-full text-[13px] font-medium text-muted-foreground hover:text-foreground-secondary">
           {pending ? "Loading…" : "Show older chats"}
         </Button>
       )}
