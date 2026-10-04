@@ -7,6 +7,9 @@ const OWNER = { name: "Olive Owner", username: "olive", email: "owner@pulse.test
 const SAM = { name: "Sam Member", username: "sam.member", email: "sam@pulse.test" };
 const PASSWORD = "e2e-password-long";
 
+// In order: the coach journey signs in as the owner the first journey created.
+test.describe.configure({ mode: "serial" });
+
 const shot = (page: Page, name: string) => page.screenshot({ path: `test-results/admin/${name}.png`, fullPage: true });
 
 /** A signed-out phone in its own browser context. */
@@ -27,9 +30,9 @@ async function signUp(page: Page, who: { name: string; username: string; email: 
 async function onboard(page: Page) {
   await expect(page).toHaveURL(/\/onboarding$/);
   await page.getByRole("button", { name: "Birth date" }).click();
-  await page.getByRole("button", { name: "1990", exact: true }).click();
-  await page.getByRole("button", { name: "Jun", exact: true }).click();
-  await page.getByRole("dialog").getByText("15", { exact: true }).click();
+  await page.getByRole("listbox", { name: "Year" }).getByRole("option", { name: "1990", exact: true }).click();
+  await page.getByRole("listbox", { name: "Month" }).getByRole("option", { name: "June", exact: true }).click();
+  await page.getByRole("listbox", { name: "Day" }).getByRole("option", { name: "15", exact: true }).click();
   await page.getByText("Female", { exact: true }).click();
   await page.getByRole("button", { name: "Save and continue" }).click();
   await expect(page).toHaveURL(/\/$/);
@@ -133,12 +136,82 @@ test("owner starts the server, invites a member, manages accounts and the sign-u
   await expect(page.getByRole("dialog")).toContainText(`Delete ${SAM.name}’s account?`);
   await shot(page, "07-delete-confirm");
   await page.getByRole("dialog").getByRole("button", { name: "Delete account" }).click();
+  // Done when the dialog closes on the server's answer (while it is open the page behind is hidden from the
+  // accessibility tree, so the row would look gone too early).
+  await expect(page.getByText(`${SAM.name}’s account was deleted.`)).toBeVisible();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(accountRow(page, SAM.username)).toHaveCount(0);
-  await sam.goto("/"); // the shell streams first (skeletons, no data); the layout then redirects the dead session
-  await expect(sam).toHaveURL(/\/login$/, { timeout: 30_000 });
+  // Sam's browser still holds the cookie, but the session behind it is gone.
+  expect(await (await sam.request.get("/api/auth/get-session")).json()).toBeNull();
 
   // The owner has no menu of their own (owners are changed in .env), and the panel on a laptop.
   await expect(page.getByRole("button", { name: `Actions for ${OWNER.name}` })).toHaveCount(0);
   await page.setViewportSize({ width: 1440, height: 900 });
   await shot(page, "08-admin-panel-laptop");
+});
+
+// Runs after the journey above (one worker, file order): the owner exists and is onboarded.
+test("coach: an admin turns it on, the P button opens it, set-up, a question with a data card, saved history", async ({ page }) => {
+  await page.goto("/login");
+  await page.getByLabel("Email or username").fill(OWNER.email);
+  await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page).toHaveURL(/\/$/);
+
+  // Off by default: the round P button is still Check in.
+  await expect(page.getByRole("button", { name: /^Check in for/ })).toBeVisible();
+  expect(await (await page.goto("/coach"))?.text()).toContain("could not be found");
+
+  // The admin turns it on for everyone; the P button now opens Coach.
+  await page.goto("/admin");
+  await page.getByRole("radio", { name: "Everyone" }).click();
+  await expect(page.getByText("Every account can set up the coach")).toBeVisible();
+  await page.goto("/");
+  await page.getByRole("link", { name: "Open Coach" }).click();
+  await expect(page).toHaveURL(/\/coach$/);
+
+  // Consent, then the provider (the e2e server's scripted model needs no key).
+  await expect(page.getByRole("heading", { name: "Before you start" })).toBeVisible();
+  await shot(page, "09-coach-consent");
+  await page.getByRole("button", { name: "Allow" }).click();
+  await expect(page.getByRole("heading", { name: "Connect your AI provider" })).toBeVisible();
+  await expect(page.getByRole("radio", { name: "Anthropic" })).toBeVisible();
+  await shot(page, "10-coach-provider");
+  await page.getByRole("radio", { name: "Test model" }).click();
+  await page.getByRole("button", { name: "Test and save" }).click();
+
+  // The empty chat: Check in first, then suggestions. Ask one.
+  await expect(page.getByRole("heading", { name: "Ask about your recovery, sleep, strain or habits" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Check in" })).toBeVisible();
+  await shot(page, "11-coach-empty");
+  await page.getByRole("button", { name: "Why is my recovery where it is today?" }).click();
+
+  // The tool runs and renders Pulse's own card (a new account has no data, so the reasons show), then the reply.
+  const log = page.getByRole("log", { name: "Chat with Pulse’s coach" });
+  await expect(log.getByText("Why is my recovery where it is today?")).toBeVisible();
+  await expect(log.getByText("Recovery", { exact: true })).toBeVisible();
+  await expect(log.getByText("Take it easy", { exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/\/coach\?c=[\w-]+$/);
+  // Theme is System by default (Settings › Appearance): the page follows the browser's light or dark setting.
+  await page.locator("textarea").blur();
+  await page.emulateMedia({ colorScheme: "light" });
+  await shot(page, "12-coach-answer-light");
+  await page.emulateMedia({ colorScheme: "dark" });
+  await shot(page, "13-coach-answer-dark");
+
+  // Saved: a reload brings the chat back, and the history sheet lists it.
+  await page.reload();
+  await expect(page.getByText("Take it easy", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Past chats" }).click();
+  await expect(page.getByRole("dialog").getByRole("link", { name: "Why is my recovery where it is today?" })).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  // Settings › Coach: provider and model, never a key; the Your data page offers the chats.
+  await page.goto("/settings");
+  const coach = page.locator("#coach");
+  await expect(coach).toContainText("Test model");
+  await coach.scrollIntoViewIfNeeded();
+  await shot(page, "14-settings-coach");
+  await page.goto("/more/data");
+  await expect(page.getByRole("link", { name: "JSON" }).last()).toHaveAttribute("href", "/export/coach");
 });

@@ -155,6 +155,41 @@ flowchart TD
 The check runs in better-auth's `user.create.before` hook (`src/server/auth.ts`), so the sign-up form, the API and
 any other client all go through it.
 
+## AI coach
+
+The coach (`/coach`, the round **P** button) answers questions about a person's own Pulse data. It is off until an
+admin picks **Everyone** or **Chosen** in **More › Admin › Coach**. **Chosen** shows a Coach switch on each account;
+owners always have it.
+
+Each person brings their own key, so the server pays nothing for anyone's use. On first open, the coach explains what
+it sends and where, and asks for **Allow**. Then the person picks a provider (Anthropic, OpenAI, Google Gemini, Vercel
+AI Gateway or OpenRouter), pastes their API key and a model id. Pulse makes one tiny test request and saves the key only
+if it works.
+
+```mermaid
+flowchart LR
+  Q["Question in /coach"] --> R["POST /api/coach<br/>session, access, consent,<br/>10 requests a minute"]
+  R --> K["The person's key<br/>(decrypted in memory)"]
+  K --> P["Their provider"]
+  P -- "tool calls" --> T["Read-only tools over<br/>Pulse's own screens<br/>(only this person's data)"]
+  T --> P
+  P -- "answer, streamed" --> Q
+  R -- "chat saved" --> DB[("coach_chats")]
+```
+
+- **What leaves the server**: the person's questions and the numbers the tools look up (scores, vitals, workouts,
+  journal behaviours), sent to the provider *they* chose. Never names, emails or Google tokens.
+- **Keys** are encrypted with AES-256-GCM under a key derived from `BETTER_AUTH_SECRET`. They are never sent back to
+  the browser, logged or exported. Changing `BETTER_AUTH_SECRET` makes stored keys unreadable; the coach then asks
+  each person to add their key again.
+- **Admins** grant or remove access but can't see anyone's key or chats.
+- **Chats** are saved per person (Settings › Coach deletes them, More › Your data exports them) and go with the account.
+- **People can't enter a server address**, since the server makes the request and a user-chosen URL could reach your
+  internal network. Only you can add a model you run yourself, with `COACH_LOCAL_URL` and `COACH_LOCAL_MODEL`. It is
+  then offered as "This server's model", with no key needed.
+- **Behind nginx**, turn off response buffering for `/api/coach` (`proxy_buffering off;`) so answers stream. Pulse
+  sends `X-Accel-Buffering: no`, which nginx honours by default. Cloudflare Tunnel needs nothing.
+
 ## Environment reference
 
 Every variable is listed in [`.env.example`](../.env.example); the server validates them at boot and exits with a
@@ -169,6 +204,7 @@ list of what's wrong.
 | `ADMIN_EMAILS` | with Google | Comma-separated owner emails: they open the admin panel; on a server with no accounts, they sign up without an invite |
 | `SIGNUP` | no (`invite`) | The starting sign-up mode (`invite`, `open` or `closed`) until an admin changes it in the panel |
 | `DISABLE_SIGNUP` | no (false) | Older setting: `true` is the same as `SIGNUP=closed` |
+| `COACH_LOCAL_URL`, `COACH_LOCAL_MODEL` | no | A model you run (OpenAI-compatible, e.g. Ollama at `http://localhost:11434/v1`), offered in the coach with no key; set both or neither |
 | `SUPPORT_EMAIL` | no | Shown on the forgot-password page so people can ask you for a reset |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | with Google | The OAuth client from step 2 |
 | `APP_URL` | behind a proxy | The public URL |

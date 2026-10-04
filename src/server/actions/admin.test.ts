@@ -6,7 +6,8 @@ import { parseConfig, type Config } from "../config";
 import type { Db } from "../db";
 import { user } from "../db/schema";
 import { addUser, freshDb, USER } from "../testing";
-import { createInviteAction, deleteAccountAction, revokeInviteAction, setRoleAction, setSignupModeAction } from "./admin";
+import { coachAccess, coachMode } from "../coach/store";
+import { createInviteAction, deleteAccountAction, revokeInviteAction, setCoachAllowedAction, setCoachModeAction, setRoleAction, setSignupModeAction } from "./admin";
 
 const h = vi.hoisted(() => ({ db: undefined as unknown, cfg: undefined as unknown, user: null as unknown }));
 vi.mock("../auth", async (orig) => ({ ...(await orig<object>()), currentUser: async () => h.user }));
@@ -87,4 +88,19 @@ it("deletes a member, but not yourself, an owner or an admin", async () => {
   expect(await deleteAccountAction(other)).toEqual({ ok: false, error: "Remove admin from this account first." });
   expect(await deleteAccountAction(member)).toEqual(DONE);
   expect(await db.select().from(user).where(eq(user.id, member))).toEqual([]);
+});
+
+it("coach access: only admins set the mode or pick accounts, and owners aren't changed", async () => {
+  as(member);
+  expect(await setCoachModeAction("everyone")).toEqual(NOT_ADMIN);
+  expect(await setCoachAllowedAction(member, true)).toEqual(NOT_ADMIN);
+  expect(await coachMode(db)).toBe("off");
+  as(USER);
+  expect(await setCoachModeAction("chosen")).toEqual(DONE);
+  expect(await coachMode(db)).toBe("chosen");
+  expect((await setCoachModeAction("all" as never)).ok).toBe(false);
+  expect(await setCoachAllowedAction(member, true)).toEqual(DONE);
+  expect(await coachAccess(db, member)).toBe(true);
+  expect(await setCoachAllowedAction(owner, false)).toEqual({ ok: false, error: "Unknown account." });
+  expect(await coachAccess(db, owner)).toBe(true);
 });

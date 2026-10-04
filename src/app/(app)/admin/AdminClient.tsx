@@ -129,7 +129,7 @@ export function NewInvite() {
         </Button>
       </form>
       {link && (
-        <div role="status" className="rounded-xl bg-white/[0.04] p-3">
+        <div role="status" className="rounded-xl bg-foreground/[0.04] p-3">
           <p className="text-[13px] leading-[18px] text-foreground-secondary">Send this link. It won’t be shown again.</p>
           <div className="mt-2 flex items-center gap-2">
             <input readOnly value={link} aria-label="Invite link" onFocus={(e) => e.currentTarget.select()} className="h-11 min-w-0 flex-1 rounded-lg bg-secondary px-3 font-numeric text-[13px] text-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50" />
@@ -151,7 +151,7 @@ export function RevokeInvite({ id, label }: { id: number; label: string }) {
       disabled={pending}
       aria-label={`Revoke ${label}`}
       onClick={() => start(async () => void (await run(revokeInviteAction(id))))}
-      className="h-10 rounded-full px-4 text-[13px] font-semibold text-muted-foreground hover:bg-white/[0.06] hover:text-recovery-red-text"
+      className="h-10 rounded-full px-4 text-[13px] font-semibold text-muted-foreground hover:bg-foreground/[0.06] hover:text-recovery-red-text"
     >
       {pending ? "Revoking…" : "Revoke"}
     </Button>

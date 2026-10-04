@@ -80,7 +80,7 @@ export function ProviderForm({ providers, current, onSaved }: { providers: Provi
             <ToggleGroupItem
               key={x.id}
               value={x.id}
-              className="h-10 rounded-full! px-4 text-[13px] font-semibold text-foreground-secondary ring-1 ring-border transition-[background-color,color] duration-150 ease-standard hover:bg-white/[0.06] hover:text-foreground data-[state=on]:bg-secondary data-[state=on]:text-foreground data-[state=on]:ring-coach/60"
+              className="h-10 rounded-full! px-4 text-[13px] font-semibold text-foreground-secondary ring-1 ring-border transition-[background-color,color] duration-150 ease-standard hover:bg-foreground/[0.06] hover:text-foreground data-[state=on]:bg-secondary data-[state=on]:text-foreground data-[state=on]:ring-coach/60"
             >
               {x.label}
             </ToggleGroupItem>

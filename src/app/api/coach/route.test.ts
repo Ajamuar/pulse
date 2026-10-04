@@ -2,9 +2,9 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { parseConfig, type Config } from "@/server/config";
 import { MOCK_REPLY } from "@/server/coach/mock";
-import { loadChat, saveChat, saveProvider, setCoachMode, setConsent } from "@/server/coach/store";
+import { loadChat, saveProvider, setCoachMode, setConsent } from "@/server/coach/store";
 import type { Db } from "@/server/db";
-import { profile } from "@/server/db/schema";
+import { profile, user } from "@/server/db/schema";
 import { addUser, freshDb, TZ, USER } from "@/server/testing";
 import { POST } from "./route";
 
@@ -47,7 +47,8 @@ it("a turn streams the get_day tool and the reply, then saves the chat for this 
   const text = await res.text();
   expect(text).toContain("tool-input-available");
   expect(text).toContain("get_day");
-  expect(text).toContain("Take it easy");
+  expect(text).toContain("tool-output-available");
+  expect(text).toContain("\"delta\":\"easy** \"");
   await vi.waitFor(async () => expect(await loadChat(db, USER, "chat-0002")).toHaveLength(2));
   const [, reply] = (await loadChat(db, USER, "chat-0002"))!;
   expect(reply.parts.map((p) => (p.type === "text" ? p.text : "")).join("")).toBe(MOCK_REPLY);
@@ -64,16 +65,20 @@ it("a turn streams the get_day tool and the reply, then saves the chat for this 
 });
 
 it("the 11th request in a minute is refused", async () => {
+  // A user of its own: the guard counts per user in memory, across this file's tests.
+  // (an id no other test used: each test's database restarts the id sequence, the guard's memory doesn't).
+  const [{ id: fresh }] = await db.insert(user).values({ id: 9001, name: "Busy", email: "busy@pulse.test", emailVerified: true }).returning({ id: user.id });
+  await db.insert(profile).values({ userId: fresh, birthDate: "1990-01-01", sex: "male", timeZone: TZ, updatedAt: 0 });
+  as(fresh);
   await setCoachMode(db, "everyone");
-  await setConsent(db, USER, true);
-  await saveProvider(db, USER, "mock", "mock", null);
-  await saveChat(db, USER, "chat-0003", []);
+  await setConsent(db, fresh, true);
+  await saveProvider(db, fresh, "mock", "mock", null);
   const codes: number[] = [];
   for (let i = 0; i < 11; i++) {
     const r = await post(body(`chat-1${String(i).padStart(3, "0")}`));
     codes.push(r.status);
     await r.text();
   }
-  expect(codes.slice(0, 10).every((c) => c === 200)).toBe(true);
+  expect(codes.slice(0, 10)).toEqual(Array(10).fill(200));
   expect(codes[10]).toBe(429);
 });

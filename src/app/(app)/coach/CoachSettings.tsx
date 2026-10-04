@@ -44,7 +44,7 @@ export function CoachSettings({ setup, providers, providerLabel }: { setup: Coac
           <div className="divide-y divide-border">
             <div className={ROW}>
               <span className="text-[15px] leading-[22px]">Provider</span>
-              <span className="truncate text-right text-[15px] leading-[22px] text-foreground-secondary">{setup.provider ? providerLabel : "Not set"}</span>
+              <span className="truncate text-right text-[15px] leading-[22px] text-foreground-secondary">{(setup.provider && providers.find((p) => p.id === setup.provider)?.label) ?? (setup.provider ? providerLabel : "Not set")}</span>
             </div>
             {setup.model && (
               <div className={ROW}>
@@ -63,7 +63,7 @@ export function CoachSettings({ setup, providers, providerLabel }: { setup: Coac
             <Button variant="secondary" size="touch" onClick={() => setOpen(true)} disabled={pending}>
               {setup.provider ? "Change" : "Add key"}
             </Button>
-            {setup.provider && (
+            {setup.last4 && (
               <Button variant="outline" size="touch" disabled={pending} onClick={() => act(removeProviderAction, "Key removed.")}>
                 Remove key
               </Button>

@@ -204,14 +204,19 @@ export function Coach({ id, initial, chats, prefill, providerLabel }: { id: stri
       prepareSendMessagesRequest: ({ messages, id }) => ({ body: { id, message: messages.at(-1) } }),
     }),
     onError: (e) => setError(ERRORS[/\b(limit|key|provider)\b/.exec(e.message)?.[1] ?? ""] ?? "Couldn’t get an answer. Try again."),
-    onFinish: () => {
+    onFinish: ({ message }) => {
+      // Read the finished answer once, as plain words (no ** marks); never re-read a saved chat on load.
+      setAnnounce(message.parts.map((p) => (p.type === "text" ? p.text.replace(/\*\*/g, "") : "")).join(" ").trim())
       if (initial.length === 0) router.replace(`/coach?c=${id}`, { scroll: false })
     },
   })
+  const [announce, setAnnounce] = React.useState("")
   const busy = status === "submitted" || status === "streaming"
-  const lastDone = [...messages].reverse().find((m) => m.role === "assistant")
 
-  React.useEffect(() => end.current?.scrollIntoView({ block: "end", behavior: "smooth" }), [messages.length, status])
+  // A block body: newer browsers' scrollIntoView returns a promise, which React would take for a cleanup.
+  React.useEffect(() => {
+    end.current?.scrollIntoView({ block: "end", behavior: "smooth" })
+  }, [messages.length, status])
 
   const send = (text: string) => {
     const t = text.trim()
@@ -267,7 +272,7 @@ export function Coach({ id, initial, chats, prefill, providerLabel }: { id: stri
 
       {/* The finished answer, once, for screen readers (not every token). */}
       <p aria-live="polite" className="sr-only">
-        {status === "ready" && lastDone ? lastDone.parts.map((p) => (p.type === "text" ? p.text : "")).join(" ") : ""}
+        {announce}
       </p>
 
       {error && (
@@ -312,7 +317,7 @@ export function Coach({ id, initial, chats, prefill, providerLabel }: { id: stri
             <Square aria-hidden className="fill-current" />
           </Button>
         ) : (
-          <Button type="submit" size="icon-touch" disabled={!input.trim()} aria-label="Send" className="bg-foreground text-primary-foreground hover:bg-foreground/90">
+          <Button type="submit" size="icon-touch" disabled={!input.trim()} aria-label="Send">
             <ArrowUp aria-hidden />
           </Button>
         )}

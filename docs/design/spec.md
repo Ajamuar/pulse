@@ -773,7 +773,7 @@ Files: `src/components/metrics/*` (dials, rows, lists, cards) and `src/component
 - **Buttons.** `default` stays white with dark text for the one primary action (the reference app "+", "SAVE", "COMMIT" [latest-sheet-edit-1], [latest-coach-sheet-1]); `secondary` is `bg-secondary`; new `outline-pill` variant `rounded-full ring-1 ring-foreground/70 bg-transparent` for the second action in sheets and the info card ("DELETE", "OPEN TREND VIEW"). The "+" on Home is a 48 px `rounded-[14px] bg-foreground text-primary-foreground` square with `Plus` 26 px [latest-home-collapsed-1]. Press scale 0.96 everywhere, as v1.
 - **Tags and status chips** keep v1's look; chips get `rounded-md` (8 px).
 - **Insight card** keeps the 1 px gradient hairline; inner radius `rounded-[15px]` (§2.4), fill `--inset` `#111619` [latest-sleep-1].
-- **The Home "Ask"/coach row and the reference app's floating coach pill** are not adopted (Pulse has no assistant). Insight text stays in `InsightCard`.
+- **The Home "Ask"/coach row and the reference app's floating coach pill** are not adopted. The coach is its own screen (§7.21), opened by the round action; insight text stays in `InsightCard`.
 
 ### 5.0 Shared conventions
 
@@ -2615,6 +2615,17 @@ Shell: `DetailShell title="Your data"`, one 640 px column. Cards: "Daily scores"
 
 Index: `DetailShell title="How Pulse works"`, an intro line and one `LinkList` row per score (name and its one-line summary), two-up from 1280 px. A score: `DetailShell` titled with the score, subtitle "How it works"; the summary at 17 px with "Open {score}" beside it (under it on phone); the four section cards "What goes in", "How it is weighted", "What the bands mean", "Limits" in DetailShell's secondary grid (two columns from 1280 px); short details sit beside their term ("HRV 55%"), sentences go under it. Footer: "Not a medical device. Pulse's scores are estimates from a wrist sensor, for personal use, not a diagnosis." and Previous / Next links. Copy lives in `content.ts`, written from the code; when a constant changes, the copy changes with it.
 
+### 7.21 Coach `/coach`
+
+For users with coach access (admin panel, docs/setup.md "AI coach"); anyone else gets a 404. `DetailShell title="Coach"`; the round FloatingAction is hidden here (the composer takes its place).
+
+- **Setup** (one 560 px column): "Before you start" (four bullets: what is sent to which provider with the user's own key, the provider's pricing, chats saved on this server, not medical advice) with the primary sheet button **Allow**. Then "Connect your AI provider": provider pills (`ToggleGroup`, `rounded-full ring-1 ring-border`, on: `bg-secondary ring-coach/60`), API key (`AuthField type="password"`, hint "Encrypted on this server and never shown again." plus a `text-coach` link to the provider's key page), Model (pre-filled, editable), **Test and save** (sheet button; "Testing…" while the 1-token test runs). The owner's local model appears first as "This server's model", with no key field.
+- **Chat** (720 px column): a caption "Answers from {provider}, using your Pulse data." with Past chats (`History`, opens a `ResponsiveSheet` list with Delete per chat) and New chat (`Plus`). Empty: the Mark in the insight-gradient ring, "Ask about your recovery, sleep, strain or habits", one line ("…It's not medical advice."), then `text-coach` chips: **Check in** first (opens the check-in sheet), then four suggestions that send at once.
+- **Messages**: the user's in a `bg-secondary rounded-2xl` bubble, right, max 85 %; the coach's on the ground beside the Mark avatar, as `Prose` (paragraphs, bullets, bold; never HTML). Tool results render as kit cards: `get_day` is a card-material card with three `MiniRing` + value + caps label (a reason word such as "Syncing" or "Not worn" instead of a number when the metric has none), then up to three contributor rows with ± points. Other tools show nothing once done; while running, a caption with a pulsing `bg-coach` dot ("Looking at your day…").
+- **Composer**: `GLASS` bar fixed above the safe area (clear of the rail and sidebar from 768 / 1280 px), a `bg-field` textarea that grows to 5 lines (Enter sends, Shift+Enter breaks), primary round **Send** or secondary **Stop** while streaming.
+- **States**: thinking caption; error `role="alert"` card (`bg-recovery-red/12`) for too many requests, a dead key, or a provider refusal; the finished answer is announced once through an `aria-live="polite"` region, without markup.
+- **Settings › Coach** (after Appearance): Provider, Model, API key as `••••last4`; Change (provider sheet), Remove key, Delete chats, Turn off.
+
 ---
 
 ## 8. Journeys
@@ -2693,7 +2704,7 @@ flowchart LR
 - Do not use spinners in content; use the component's `.Skeleton`. The date pill's loading spinner is the one exception (§4.3.1).
 - Do not use a modal where a sheet works; the info card is a dialog because the reference app's is, and it carries no task.
 - Do not rename recovery-app-style labels per screen: one label per metric, as in §5 and §7.
-- Do not adopt the reference app features Pulse has no data for: band battery, community, coach chat, shop, referral, Advanced Labs, achievements, edit sleep.
+- Do not adopt the reference app features Pulse has no data for: band battery, community, shop, referral, Advanced Labs, achievements, edit sleep.
 
 ---
 
@@ -2746,7 +2757,7 @@ flowchart LR
 | V3 | Plan: top bar with the date switcher, sync dot and "Demo data" chip | HomeHeader / TitleHeader / DetailHeader (§4.3, §4.4); the Demo state is "Demo" in SyncStatus | Matches [latest-home-sticky-header-user-2025]; overrides v1 D2's TopBar half (D2's ShellStatus context stays) |
 | V4 | Plan and v1: `ResponsiveSheet` for metric explanations | `InfoDialog` (centred card) for explanations; sheets for tasks | [latest-popover-info-1] |
 | V5 | The reference app: Community tab | Journal in that slot | Pulse has no community |
-| V6 | The reference app: round coach button | Round "Check in" FloatingAction | No assistant; check-in is the daily action (inferred mapping) |
+| V6 | The reference app: round coach button | Round FloatingAction: opens the coach (§7.21) for users with coach access, else Check in | With access it maps to the reference app's assistant; Check in moves to the coach's first chip and the Journal tab |
 | V7 | The reference app shows the monitor cards and the insight only for today | Pulse shows the monitor cards on past days too (the insight stays today-only) | The data exists for past days; journey 6 relies on it |
 | V8 | v1 §5.6 Hypnogram as a Recharts step chart | Stage rows with hatched tracks and time blocks, radio-selectable (DOM), at every width | [latest-sleep-stages-1] |
 | V9 | v1 key statistics in one card; title "Key statistics" | "My Dashboard", one card per row | [latest-home-dashboard-1] |
@@ -2932,7 +2943,7 @@ Open items for U17 (not design changes): `src/lib/header-state.ts` with its unit
 |---|---|---|---|
 | I1 | Glass alpha (0.80 / 0.88) and blur (12 px) | §2.6 | Fitted to the show-through and the sampled solids; a still cannot measure them |
 | I2 | Tablet rail (88 px) and laptop sidebar (232 px), floating, in the tab bar's material | §4.2 | The reference app has no tablet or laptop layout after the redesign |
-| I3 | FloatingAction opens the check-in (the reference app's opens the coach) | §4.2.1 | Pulse has no assistant |
+| I3 | FloatingAction opens the coach with access, else the check-in | §4.2.1, §7.21 | The coach is off unless an admin turns it on |
 | I4 | Streak = consecutive worn days, using the `band_not_worn` coverage rule | §4.3 | The reference app's "continuous data" wording [latest-streak-1]; the threshold is Pulse's |
 | I5 | Sync freshness in the battery slot ("12m", dot colours) | §4.3.2 | Pulse has no battery data |
 | I6 | Header trigger: ring row (Home) or compact hero (details) when the hero's bottom passes under the header; compact dial, gauge and stat sizes and their side stats (sticky.md B2, B6) | §4.3, §4.3a | Only Home's rings and Healthspan's orb are in the captures |
