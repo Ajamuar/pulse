@@ -5,7 +5,8 @@ import { describe, expect, it } from "vitest";
 import { rows } from "./index";
 import { freshDb } from "../testing";
 
-const AUTH = new Set(["user", "session", "account", "verification", "rate_limit"]);
+// Auth tables, and the server-wide ones (admin panel): none belongs to one user.
+const AUTH = new Set(["user", "session", "account", "verification", "rate_limit", "invites", "server_settings"]);
 
 describe("schema", () => {
   it("every data table has user_id, first in its primary key, cascading from user", async () => {

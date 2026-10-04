@@ -4,13 +4,13 @@ import { ConfigError, parseConfig } from "./config";
 const google = { GOOGLE_CLIENT_ID: "id", GOOGLE_CLIENT_SECRET: "secret" };
 
 describe("parseConfig", () => {
-  it("defaults: demo mode, port 3000, the local dev database, sign-up open", () => {
+  it("defaults: demo mode, port 3000, the local dev database, sign-up by invite", () => {
     const c = parseConfig({});
     expect(c.dataSource).toBe("demo");
     expect(c.google).toBeNull();
     expect(c.port).toBe(3000);
     expect(c.databaseUrl).toBe("postgres://pulse:pulse@localhost:5432/pulse");
-    expect(c.disableSignup).toBe(false);
+    expect(c.signup).toBe("invite");
     expect(c.authSecret).toBeNull();
   });
 
@@ -32,7 +32,27 @@ describe("parseConfig", () => {
     expect(c.appUrl).toBe("https://pulse.example.com");
     expect(c.databaseUrl).toBe("postgres://u:p@db:5432/pulse");
     expect(c.authSecret).toBe("x".repeat(32));
-    expect(c.disableSignup).toBe(true);
+    expect(c.signup).toBe("closed");
+  });
+
+  it("SIGNUP picks invite, open or closed, and rejects anything else", () => {
+    expect(parseConfig({ SIGNUP: "open" }).signup).toBe("open");
+    expect(parseConfig({ SIGNUP: "closed" }).signup).toBe("closed");
+    expect(parseConfig({ SIGNUP: "open", DISABLE_SIGNUP: "true" }).signup).toBe("closed");
+    expect(() => parseConfig({ SIGNUP: "anyone" })).toThrow(/SIGNUP: must be invite, open or closed/);
+  });
+
+  it("ADMIN_EMAILS: a trimmed, lowercased list; empty by default; a bad address is named", () => {
+    expect(parseConfig({}).adminEmails).toEqual([]);
+    expect(parseConfig({ ADMIN_EMAILS: " Me@Example.com, ops@example.com ," }).adminEmails).toEqual(["me@example.com", "ops@example.com"]);
+    expect(() => parseConfig({ ADMIN_EMAILS: "me@example.com, nope" })).toThrow(/ADMIN_EMAILS/);
+  });
+
+  it("coach: the owner's local model needs its URL and model together; off by default", () => {
+    expect(parseConfig({}).coachLocal).toBeNull();
+    expect(parseConfig({ COACH_LOCAL_URL: "http://localhost:11434/v1", COACH_LOCAL_MODEL: "llama3.2" }).coachLocal).toEqual({ url: "http://localhost:11434/v1", model: "llama3.2" });
+    expect(() => parseConfig({ COACH_LOCAL_URL: "http://localhost:11434/v1" })).toThrow(/COACH_LOCAL_MODEL: set COACH_LOCAL_URL and COACH_LOCAL_MODEL together/);
+    expect(parseConfig({}).coachMock).toBe(false);
   });
 
   it("Google mode without a client ID fails with a named error", () => {

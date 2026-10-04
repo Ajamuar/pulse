@@ -111,8 +111,49 @@ Then:
 
 1. Add `https://<your-host>/oauth/callback` to the OAuth client (step 2.5).
 2. Set `APP_URL=https://<your-host>`: it pins the OAuth redirect and is the trusted origin for sign-in.
-3. Open the hostname on your phone, sign up or sign in, and use the browser's **Install app**.
-4. To keep strangers out, set `DISABLE_SIGNUP=true` once everyone you want has an account.
+3. Put your own email in `ADMIN_EMAILS` before the first start, then open the hostname and create your account
+   **right away**. While the server has no accounts, an `ADMIN_EMAILS` address needs no invite. Emails aren't
+   verified, so whoever signs up first with it owns the server. Once any account exists, an `ADMIN_EMAILS`
+   address can't be used to sign up at all.
+   Already running Pulse? Set `ADMIN_EMAILS` to the email of your existing account and restart.
+4. Use the browser's **Install app**, then invite people from **More › Admin** (see below).
+
+## Accounts, admins and invites
+
+Admins open **More › Admin** (`/admin`). An admin is either:
+
+- an **owner**: an email in `ADMIN_EMAILS`. Owners are changed only in `.env`, never from the panel. To add a
+  second owner, let them create their account first (with an invite), then add their email and restart. Listing
+  an email that has no account doesn't hold it open: sign-up with it is refused.
+- an account an admin promoted with **Make admin**.
+
+The panel has three parts:
+
+- **Sign-up**: who can create an account. **Invite only** is the default, **Open** lets anyone in, and **Closed**
+  lets nobody in. The switch works at once, with no restart. `SIGNUP` in `.env` sets the mode only until an admin
+  picks one in the panel. Owners can always sign up.
+- **Invites**: **Create link** makes a one-time link (`/signup?invite=…`) that expires after 7 days. The link is
+  shown once; only its hash is stored. Revoke an unused link to stop it working.
+- **Accounts**: everyone on the server, with when they joined, when they were last active and whether Google is
+  connected. No health data. An admin can make or remove admins and delete a member's account with all its data.
+  An admin must be made a member before their account can be deleted. Your own account goes from Settings.
+
+```mermaid
+flowchart TD
+  S["POST /api/auth/sign-up/email"] --> O{"Email in ADMIN_EMAILS?"}
+  O -- yes --> F{"Server has<br/>no accounts?"}
+  F -- yes --> OK["Account created"]
+  F -- no --> NO0["Refused: OWNER_EMAIL_RESERVED"]
+  O -- no --> M{"Sign-up mode<br/>(panel, else SIGNUP)"}
+  M -- closed --> NO1["Refused: sign-up closed"]
+  M -- open --> OK
+  M -- invite --> I{"x-pulse-invite header:<br/>unused, unexpired link?"}
+  I -- no --> NO2["Refused: INVITE_INVALID"]
+  I -- yes --> C["Link used up (atomic)"] --> OK
+```
+
+The check runs in better-auth's `user.create.before` hook (`src/server/auth.ts`), so the sign-up form, the API and
+any other client all go through it.
 
 ## Environment reference
 
@@ -121,11 +162,13 @@ list of what's wrong.
 
 | Variable | Required | Meaning |
 |---|---|---|
-| `DATA_SOURCE` | no (`demo`) | `demo`: generated data for one shared demo user; `google`: real data, open sign-up, each user connects Google |
+| `DATA_SOURCE` | no (`demo`) | `demo`: generated data for one shared demo user; `google`: real data, accounts, each user connects Google |
 | `POSTGRES_PASSWORD` | with compose | The database password; compose builds `DATABASE_URL` from it |
 | `DATABASE_URL` | outside compose | Defaults to `postgres://pulse:pulse@localhost:5432/pulse` (compose.dev.yaml) |
 | `BETTER_AUTH_SECRET` | in production | Signs sessions; `openssl rand -base64 32` |
-| `DISABLE_SIGNUP` | no (false) | `true`: only existing accounts can sign in |
+| `ADMIN_EMAILS` | with Google | Comma-separated owner emails: they open the admin panel; on a server with no accounts, they sign up without an invite |
+| `SIGNUP` | no (`invite`) | The starting sign-up mode (`invite`, `open` or `closed`) until an admin changes it in the panel |
+| `DISABLE_SIGNUP` | no (false) | Older setting: `true` is the same as `SIGNUP=closed` |
 | `SUPPORT_EMAIL` | no | Shown on the forgot-password page so people can ask you for a reset |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | with Google | The OAuth client from step 2 |
 | `APP_URL` | behind a proxy | The public URL |

@@ -27,6 +27,10 @@ export const user = pgTable("user", {
     .notNull(),
   username: text("username").unique(),
   displayUsername: text("display_username"),
+  /** Pulse's own column, not better-auth's: `admin` opens the admin panel (/admin), as do the ADMIN_EMAILS accounts. */
+  role: text("role", { enum: ["user", "admin"] }).default("user").notNull(),
+  /** Pulse's own column: an admin picked this account for the coach (admin panel, Coach = chosen accounts). */
+  coachAllowed: boolean("coach_allowed").default(false).notNull(),
 });
 
 export const session = pgTable(
@@ -399,6 +403,28 @@ export const reports = pgTable(
 );
 
 /** What scoring needs about the person. Absent until onboarding (the demo user's is seeded). */
+/**
+ * Sign-up invites from the admin panel. Only the token's SHA-256 is stored, so the link is shown once. Not per user:
+ * an invite outlives the admin who made it, and keeps who used it until that account is deleted.
+ */
+export const invites = pgTable("invites", {
+  id: serial("id").primaryKey(),
+  tokenHash: text("token_hash").notNull().unique(),
+  /** Who it is for, as the admin typed it ("Sam"). */
+  label: text("label"),
+  createdBy: integer("created_by").references(() => user.id, { onDelete: "set null" }),
+  createdAt: ts("created_at").notNull(),
+  expiresAt: ts("expires_at").notNull(),
+  usedAt: ts("used_at"),
+  usedBy: integer("used_by").references(() => user.id, { onDelete: "set null" }),
+});
+
+/** Server-wide settings an admin changes from the panel, one row per key. Unset keys fall back to the environment. */
+export const serverSettings = pgTable("server_settings", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+});
+
 export const profile = pgTable("profile", {
   userId: userId().primaryKey(),
   birthDate: date("birth_date", { mode: "string" }).notNull(),
@@ -436,6 +462,34 @@ export const loggedEntries = pgTable(
     createdAt: ts("created_at").notNull(),
   },
   (t) => [primaryKey({ columns: [t.userId, t.id] }), index("logged_entries_ts").on(t.userId, t.ts), index("logged_entries_day_type").on(t.userId, t.day, t.type)],
+);
+
+/**
+ * The coach, per user: consent, the AI provider and model they chose, and their API key encrypted
+ * (src/server/coach/crypto.ts; never sent to the browser or exported). `key_last4` is all Settings shows.
+ */
+export const coachSettings = pgTable("coach_settings", {
+  userId: userId().primaryKey(),
+  consentAt: ts("consent_at"),
+  provider: text("provider"),
+  model: text("model"),
+  keyCiphertext: bytea("key_ciphertext"),
+  keyLast4: text("key_last4"),
+  updatedAt: ts("updated_at").notNull(),
+});
+
+/** Coach chats: the AI SDK's UIMessage[] as validated and saved by /api/coach. */
+export const coachChats = pgTable(
+  "coach_chats",
+  {
+    userId: userId(),
+    id: text("id").notNull(),
+    title: text("title").notNull(),
+    messages: jsonb("messages").notNull(),
+    createdAt: ts("created_at").notNull(),
+    updatedAt: ts("updated_at").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.id] }), index("coach_chats_recent").on(t.userId, t.updatedAt)],
 );
 
 /** Tables holding a user's synced Google data and what was computed from it (cleared on a Google account switch). */

@@ -15,8 +15,24 @@ const Env = z
     BETTER_AUTH_SECRET: z.string().min(32, "use at least 32 characters (openssl rand -base64 32)").optional(),
     /** Who resets forgotten passwords (shown on /forgot as an email button). Unset: "ask whoever runs this server". */
     SUPPORT_EMAIL: z.email("must be an email address").optional(),
-    /** `true` closes sign-up: only existing accounts can sign in. */
+    /**
+     * Who can create an account until an admin changes it in the admin panel: `invite` (an admin's invite link),
+     * `open` (anyone) or `closed`. ADMIN_EMAILS can always sign up.
+     */
+    SIGNUP: z.enum(["invite", "open", "closed"], "must be invite, open or closed").default("invite"),
+    /** Older setting: `true` is the same as SIGNUP=closed. */
     DISABLE_SIGNUP: z.stringbool().default(false),
+    /** Comma-separated emails of this server's admins (the admin panel at /admin). They sign up without an invite. */
+    ADMIN_EMAILS: z
+      .string()
+      .transform((s) => s.split(",").map((e) => e.trim().toLowerCase()).filter(Boolean))
+      .pipe(z.array(z.email("must be comma-separated email addresses")))
+      .optional(),
+    /** Coach: an OpenAI-compatible server the owner runs (Ollama, LM Studio), offered to users with no key needed. */
+    COACH_LOCAL_URL: z.url("must be a URL, e.g. http://localhost:11434/v1").optional(),
+    COACH_LOCAL_MODEL: z.string().optional(),
+    /** Tests and e2e only: a scripted coach model. Refused in production. */
+    COACH_MOCK: z.stringbool().default(false),
     PORT: z.coerce.number().int().min(1).max(65535).default(3000),
     GOOGLE_CLIENT_ID: z.string().optional(),
     GOOGLE_CLIENT_SECRET: z.string().optional(),
@@ -28,6 +44,9 @@ const Env = z
     const need = (keys: (keyof typeof e)[], why: string) => {
       for (const k of keys) if (!e[k]) ctx.addIssue({ code: "custom", path: [k], message: `required ${why}` });
     };
+    if (!!e.COACH_LOCAL_URL !== !!e.COACH_LOCAL_MODEL)
+      ctx.addIssue({ code: "custom", path: [e.COACH_LOCAL_URL ? "COACH_LOCAL_MODEL" : "COACH_LOCAL_URL"], message: "set COACH_LOCAL_URL and COACH_LOCAL_MODEL together" });
+    if (e.COACH_MOCK && process.env.NODE_ENV === "production") ctx.addIssue({ code: "custom", path: ["COACH_MOCK"], message: "is for tests only, never in production" });
     if (e.DATA_SOURCE === "google") {
       need(["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"], "when DATA_SOURCE=google");
       // Real accounts: sessions must be signed with a secret of your own. Not checked at build time (no .env there).
@@ -51,7 +70,11 @@ export function parseConfig(env: Record<string, string | undefined>) {
     databaseUrl: e.DATABASE_URL ?? "postgres://pulse:pulse@localhost:5432/pulse",
     authSecret: e.BETTER_AUTH_SECRET ?? null,
     appUrl: e.APP_URL?.replace(/\/$/, "") ?? null,
-    disableSignup: e.DISABLE_SIGNUP,
+    /** The starting sign-up mode; the admin panel's choice (server_settings) wins once made. */
+    signup: e.DISABLE_SIGNUP ? ("closed" as const) : e.SIGNUP,
+    adminEmails: e.ADMIN_EMAILS ?? [],
+    coachLocal: e.COACH_LOCAL_URL && e.COACH_LOCAL_MODEL ? { url: e.COACH_LOCAL_URL, model: e.COACH_LOCAL_MODEL } : null,
+    coachMock: e.COACH_MOCK,
     supportEmail: e.SUPPORT_EMAIL ?? null,
     port: e.PORT,
     avatarUrl: e.AVATAR_URL ?? null,

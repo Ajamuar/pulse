@@ -5,6 +5,7 @@ import { currentUser } from "@/server/auth"
 import { AppShell } from "@/components/shells/AppShell"
 import { CheckInSheet } from "./journal/CheckIn"
 import { avatarSrc } from "@/server/avatar"
+import { coachAccess } from "@/server/coach/store"
 import { getDb } from "@/server/db"
 import { ctxOf } from "@/server/queries/common"
 import { getShellStatus } from "@/server/queries/settings"
@@ -30,9 +31,9 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   if (!ctx) redirect("/onboarding")
   // Fire and forget: the worker throttles itself; the page renders from what is already stored.
   requestSync({ userId: user.userId })
-  const [status, avatar] = await Promise.all([getShellStatus(ctx), avatarSrc(db, user.userId)])
+  const [status, avatar, coach] = await Promise.all([getShellStatus(ctx), avatarSrc(db, user.userId), coachAccess(db, user.userId)])
   return (
-    <AppShell live status={{ ...status, avatar }}>
+    <AppShell live status={{ ...status, avatar, coach }}>
       {children}
       {/* One check-in sheet for every screen, opened over it by `?checkin=1` (spec §11 UX2). */}
       <Suspense>

@@ -15,7 +15,13 @@
     "seed:demo": "tsx --env-file-if-exists=.env scripts/seed-demo-user.mts"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "4.0.71",
+    "@ai-sdk/google": "4.0.87",
+    "@ai-sdk/openai": "4.0.83",
+    "@ai-sdk/openai-compatible": "3.0.62",
+    "@ai-sdk/react": "4.0.130",
     "@better-auth/drizzle-adapter": "1.7.7",
+    "ai": "7.0.127",
     "better-auth": "1.7.7",
     "class-variance-authority": "0.7.1",
     "cn": "0.4.0",

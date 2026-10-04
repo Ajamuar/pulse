@@ -150,8 +150,11 @@ const SIGNUP_ERRORS: Record<string, [SignupField, string]> = {
   PASSWORD_TOO_LONG: ["password", "Use at most 128 characters."],
 }
 
-/** Create an account: name, username, email, password. Lands on Home, which sends a new account to onboarding. */
-export function SignupForm() {
+/**
+ * Create an account: name, username, email, password. Lands on Home, which sends a new account to onboarding.
+ * `invite` is the token from an invite link; it travels as a header (auth.ts INVITE_HEADER).
+ */
+export function SignupForm({ invite }: { invite?: string }) {
   const router = useRouter()
   const formRef = React.useRef<HTMLFormElement>(null)
   const [pending, setPending] = React.useState(false)
@@ -165,7 +168,10 @@ export function SignupForm() {
     setError(null)
     setFields({})
     const err = await settle(
-      authClient.signUp.email({ name: value("name").trim(), username: value("username").trim().toLowerCase(), email: value("email").trim(), password: value("password") }),
+      authClient.signUp.email(
+        { name: value("name").trim(), username: value("username").trim().toLowerCase(), email: value("email").trim(), password: value("password") },
+        invite ? { headers: { "x-pulse-invite": invite } } : undefined,
+      ),
     )
     if (!err) {
       router.replace("/")
@@ -185,7 +191,13 @@ export function SignupForm() {
             ? OFFLINE
             : err.code === "EMAIL_PASSWORD_SIGN_UP_DISABLED"
               ? "Sign-up is closed on this server."
-              : "Couldn’t create the account. Try again.",
+              : err.code === "OWNER_EMAIL_RESERVED"
+                ? "This email is reserved for this server’s admin. Use another email."
+                : err.code === "INVITE_INVALID"
+                ? invite
+                  ? "This invite link was just used, has expired or was revoked. Ask for a new one."
+                  : "Sign-up here needs an invite link. Ask whoever runs this server for one."
+                : "Couldn’t create the account. Try again.",
       )
     }
   }

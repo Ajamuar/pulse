@@ -1,6 +1,7 @@
 import { connection } from "next/server"
 import { DAY, formatDay } from "@/lib/format"
 import { Download } from "lucide-react"
+import { listChats } from "@/server/coach/store"
 import { userCtx } from "@/server/queries/common"
 import { getYourData } from "@/server/queries/settings"
 import { CAPTION } from "@/components/metrics/primitives"
@@ -28,7 +29,8 @@ function DownloadLink({ href, label }: { href: string; label: string }) {
 /** Your data `/more/data` (U21): your daily scores and journal answers as CSV or JSON. */
 export default async function YourDataPage() {
   await connection()
-  const vm = await getYourData(await userCtx())
+  const ctx = await userCtx()
+  const [vm, coach] = await Promise.all([getYourData(ctx), listChats(ctx.db, ctx.userId).then((c) => c.length > 0)])
   const since = vm.first ? ` since ${formatDay(vm.first, DAY.full)}` : ""
 
   return (
@@ -55,7 +57,16 @@ export default async function YourDataPage() {
             </div>
           </SectionShell>
 
-          <p className={CAPTION}>No export includes your Google access tokens.</p>
+          {coach && (
+            <SectionShell variant="card" level={2} title="Coach">
+              <p className={BODY}>Every saved coach chat, with the data cards it showed.</p>
+              <div className="mt-4">
+                <DownloadLink href="/export/coach" label="JSON" />
+              </div>
+            </SectionShell>
+          )}
+
+          <p className={CAPTION}>No export includes your Google access tokens or your AI provider key.</p>
         </div>
       }
     />

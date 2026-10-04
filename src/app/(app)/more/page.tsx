@@ -1,7 +1,8 @@
 import Link from "next/link"
 import { connection } from "next/server"
-import { Archive, BookOpen, CalendarDays, CalendarRange, ChartLine, ChevronRight, Database, ListChecks } from "lucide-react"
+import { Archive, BookOpen, CalendarDays, CalendarRange, ChartLine, ChevronRight, Database, ListChecks, ShieldCheck } from "lucide-react"
 import { formatDay, rangeLabel } from "@/lib/format"
+import { isAdmin } from "@/server/admin"
 import { currentUser, DEMO_EMAIL } from "@/server/auth"
 import { avatarSrc } from "@/server/avatar"
 import { getDb } from "@/server/db"
@@ -44,7 +45,8 @@ async function AccountRow() {
 /** More `/more` (spec §7.14, U21): everything that isn't configuration. Settings stays Account, Data source, Profile. */
 export default async function MorePage() {
   await connection()
-  const vm = await getMore(await userCtx())
+  const ctx = await userCtx()
+  const [vm, admin] = await Promise.all([getMore(ctx), ctx.mode === "google" && isAdmin(ctx.db, ctx.userId)])
   const reports: LinkListRow[] = [
     ...(vm.latestWeek
       ? [{ icon: CalendarRange, label: "Weekly report", aside: rangeLabel(vm.latestWeek.start, vm.latestWeek.end), href: `/reports/${vm.latestWeek.period}` }]
@@ -69,6 +71,7 @@ export default async function MorePage() {
         />
         <LinkList title="Help" rows={[{ icon: BookOpen, label: "How Pulse works", aside: `${SCORE_DOCS.length} scores`, href: "/more/how-it-works" }]} />
         <LinkList title="Your data" rows={[{ icon: Database, label: "Export", aside: "CSV, JSON", href: "/more/data" }]} />
+        {admin && <LinkList title="Server" rows={[{ icon: ShieldCheck, label: "Admin", aside: "Invites, accounts", href: "/admin" }]} />}
         <About version={vm.version} scoringVersion={vm.scoringVersion} />
       </div>
     </PageShell>

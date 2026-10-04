@@ -10,7 +10,7 @@ import { Wordmark } from "@/components/brand/Wordmark"
 import { dayLabel } from "@/lib/format"
 import { parseDay, tabForPath, TAB_ROOT, type Tab } from "@/lib/url"
 import { SheetTrigger } from "./SheetTrigger"
-import { useShellCalendar } from "./ShellStatus"
+import { useShellCalendar, useShellStatus } from "./ShellStatus"
 import { DemoChip, SyncStatus } from "./TopBar"
 
 const TABS: { tab: Tab; label: string; icon: LucideIcon }[] = [
@@ -186,9 +186,24 @@ function Monogram() {
  */
 function CheckInAction({ variant }: { variant: "float" | "rail" | "sidebar" }) {
   const { today } = useShellCalendar()
+  const { coach } = useShellStatus()
   const params = useSearchParams()
   const { d } = parseDay(params.get("d") ?? undefined, today)
   const label = `Check in for ${dayLabel(d, today)}`
+  // With coach access the same button opens the coach (spec §11 V6), as the reference app's opens its assistant;
+  // the check-in moves to the coach's first chip and the Journal tab.
+  if (coach) {
+    const face =
+      variant === "sidebar"
+        ? "flex h-12 items-center gap-3 rounded-full pr-4 pl-2.5 text-[15px] leading-5 font-semibold"
+        : cn("grid shrink-0 place-items-center", variant === "rail" ? "size-14 rounded-[20px]" : "size-[62px] rounded-[22px] shadow-glass backdrop-blur-md backdrop-saturate-150")
+    return (
+      <Link href="/coach" aria-label="Open Coach" className={cn(ACTION_FACE, face)}>
+        <Monogram />
+        {variant === "sidebar" && "Coach"}
+      </Link>
+    )
+  }
   if (variant === "sidebar")
     return (
       <SheetTrigger sheet="checkin" aria-label={label} className={cn(ACTION_FACE, "flex h-12 items-center gap-3 rounded-full pr-4 pl-2.5 text-[15px] leading-5 font-semibold")}>
@@ -230,7 +245,8 @@ export function AppNav() {
             <TabBar current={index} />
           </div>
         )}
-        {!pathname.startsWith("/settings") && (
+        {/* Not on Settings, nor on the coach, whose composer sits where the button would. */}
+        {!pathname.startsWith("/settings") && !pathname.startsWith("/coach") && (
           <React.Suspense>
             <CheckInAction variant="float" />
           </React.Suspense>

@@ -258,12 +258,13 @@ export function Profile({ profile }: { profile: SettingsVM["profile"] }) {
  * Settings body: configuration only (U21): Account, Data source (with sync), Profile, as one 640 px column at every
  * width. About, reports, exports and help live in More.
  */
-export function SettingsView({ vm, now, account }: { vm: SettingsVM; now: number; account: SettingsAccount }) {
+export function SettingsView({ vm, now, account, coach }: { vm: SettingsVM; now: number; account: SettingsAccount; coach?: React.ReactNode }) {
   return (
     <div className="mx-auto flex w-full max-w-[640px] flex-col gap-3 md:gap-4">
       <Account account={account} />
       <DataSource vm={vm} now={now} googleEmail={account.googleEmail} />
       <Profile profile={vm.profile} />
+      {coach}
       {/* Last and quiet: the one irreversible action sits below everything, away from the everyday controls. */}
       {!account.demo && account.email !== null && (
         <div className="flex justify-center pt-6 pb-2">

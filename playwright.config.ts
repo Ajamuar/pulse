@@ -27,7 +27,13 @@ const ONBOARDING_DB = "pulse_e2e_onboarding";
 // Journeys run at one phone and one laptop width; the sweep runs everywhere. onboarding.spec.ts runs only
 // in its own project, against the second server.
 const JOURNEYS = new Set(["390", "1440"]);
-const ignored = (name: string) => [...(JOURNEYS.has(name) ? [] : ["**/journeys.spec.ts", "**/auth.spec.ts"]), "**/onboarding.spec.ts"];
+// The admin panel and invites exist only on a real (Google) instance: a third server, DATA_SOURCE=google with a
+// dummy OAuth client (nothing here talks to Google) and an owner email, on a database with no accounts.
+const ADMIN_PORT = 3302;
+const ADMIN_DB = "pulse_e2e_admin";
+const E2E_OWNER = "owner@pulse.test"; // e2e/admin.spec.ts signs up with it
+
+const ignored = (name: string) => [...(JOURNEYS.has(name) ? [] : ["**/journeys.spec.ts", "**/auth.spec.ts"]), "**/onboarding.spec.ts", "**/admin.spec.ts"];
 const touch = (name: string, width: number, height: number, deviceScaleFactor = 3) => ({
   name,
   testIgnore: ignored(name),
@@ -76,6 +82,11 @@ export default defineConfig({
         storageState: { cookies: [], origins: [] },
       },
     },
+    {
+      name: "admin",
+      testMatch: "admin.spec.ts",
+      use: { baseURL: `http://localhost:${ADMIN_PORT}`, viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, hasTouch: true, isMobile: true },
+    },
   ],
   webServer: [
     {
@@ -107,6 +118,27 @@ export default defineConfig({
         E2E_NO_DEMO_PROFILE: "1",
       },
       reuseExistingServer: !process.env.CI,
+      timeout: 180_000,
+      stdout: "ignore",
+      stderr: "pipe",
+    },
+    {
+      // Never reused: the journey starts from a server with no accounts.
+      command: `node e2e/db.mjs reset ${ADMIN_DB} && ${
+        process.env.E2E_PROD ? `pnpm exec next start -p ${ADMIN_PORT}` : `pnpm exec next dev -p ${ADMIN_PORT}`
+      }`,
+      url: `http://localhost:${ADMIN_PORT}/healthz`,
+      env: {
+        ...env,
+        DATA_SOURCE: "google",
+        GOOGLE_CLIENT_ID: "e2e-client-id",
+        GOOGLE_CLIENT_SECRET: "e2e-client-secret",
+        ADMIN_EMAILS: E2E_OWNER,
+        DATABASE_URL: e2eUrl(ADMIN_DB),
+        PORT: String(ADMIN_PORT),
+        NEXT_DIST_DIR: process.env.E2E_PROD ? env.NEXT_DIST_DIR : ".next/e2e-admin",
+      },
+      reuseExistingServer: false,
       timeout: 180_000,
       stdout: "ignore",
       stderr: "pipe",

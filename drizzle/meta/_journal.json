@@ -8,6 +8,20 @@
       "when": 1791051091164,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791094170931,
+      "tag": "0001_admin_invites",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791096289332,
+      "tag": "0002_coach",
+      "breakpoints": true
     }
   ]
 }

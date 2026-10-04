@@ -1,12 +1,15 @@
-// Accounts and sessions (better-auth on Postgres through the Drizzle adapter). Anyone can sign up with a name, a
-// username and an email, then sign in with either the username or the email. Pages, Server Actions and route
-// handlers each look the session up themselves: the proxy only checks that a session cookie exists.
+// Accounts and sessions (better-auth on Postgres through the Drizzle adapter). People sign up with a name, a username
+// and an email (with an admin's invite link while sign-up is invite-only), then sign in with the username or the email.
+// Pages, Server Actions and route handlers each look the session up themselves: the proxy only checks that a session
+// cookie exists.
 import { betterAuth } from "better-auth";
+import { APIError } from "better-auth/api";
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 import { nextCookies } from "better-auth/next-js";
 import { username } from "better-auth/plugins";
 import { headers } from "next/headers";
 import { cache } from "react";
+import { claimInvite, inviteUsedBy, isOwnerEmail, signupMode, userCount } from "./admin";
 import { getConfig } from "./config";
 import { type Db, getDb } from "./db";
 import * as schema from "./db/schema";
@@ -16,6 +19,8 @@ import { ensureDefaultTags } from "./journalTags";
 export const MIN_PASSWORD = 10;
 export const MAX_PASSWORD = 128;
 export const USERNAME_RE = /^[a-z0-9_.]{3,30}$/;
+/** The sign-up form sends the invite token in this header (the sign-up body has a fixed shape). */
+export const INVITE_HEADER = "x-pulse-invite";
 
 function createAuth(db: Db) {
   const cfg = getConfig();
@@ -29,14 +34,45 @@ function createAuth(db: Db) {
       enabled: true,
       minPasswordLength: MIN_PASSWORD,
       maxPasswordLength: MAX_PASSWORD,
-      // A demo instance has one shared demo user and no sign-up.
-      disableSignUp: cfg.disableSignup || cfg.dataSource !== "google",
+      // A demo instance has one shared demo user and no sign-up. A real one asks signupMode (admin panel) per sign-up.
+      disableSignUp: cfg.dataSource !== "google",
       autoSignIn: true,
       revokeSessionsOnPasswordReset: true,
     },
     user: { deleteUser: { enabled: true } },
-    // A new account starts with the default journal behaviours; its data rows go with it on delete (FK cascade).
-    databaseHooks: { user: { create: { after: async (u) => void (await ensureDefaultTags(db, Number(u.id))) } } },
+    databaseHooks: {
+      user: {
+        create: {
+          // The sign-up mode, checked as the account is about to be made (after better-auth's own checks), for every
+          // caller, HTTP or not:
+          // - An ADMIN_EMAILS address may sign up only while the server has no accounts: that is how the owner
+          //   starts a new server, right after deploying (docs/setup.md). Emails aren't verified, so later it is
+          //   refused outright; otherwise anyone could claim a listed address that has no account yet and become an
+          //   owner. A later owner signs up like anyone, then is added to ADMIN_EMAILS.
+          // - closed: nobody else.
+          // - invite: an unused invite link in the x-pulse-invite header.
+          before: async (u, ctx) => {
+            if (isOwnerEmail(u.email)) {
+              if ((await userCount(db)) === 0) return;
+              throw new APIError("FORBIDDEN", { message: "This email is reserved for an admin of this server.", code: "OWNER_EMAIL_RESERVED" });
+            }
+            const mode = await signupMode(db);
+            if (mode === "closed") throw new APIError("BAD_REQUEST", { message: "Sign-up is closed on this server.", code: "EMAIL_PASSWORD_SIGN_UP_DISABLED" });
+            if (mode === "open") return;
+            const token = ctx?.headers?.get(INVITE_HEADER);
+            if (!token || !(await claimInvite(db, token)))
+              throw new APIError("FORBIDDEN", { message: "This invite link is used, expired or revoked.", code: "INVITE_INVALID" });
+          },
+          // A new account starts with the default journal behaviours; its data rows go with it on delete (FK cascade).
+          after: async (u, ctx) => {
+            const id = Number(u.id);
+            await ensureDefaultTags(db, id);
+            const token = ctx?.headers?.get(INVITE_HEADER);
+            if (token) await inviteUsedBy(db, token, id); // only an invite this sign-up claimed (usedBy still null)
+          },
+        },
+      },
+    },
     // No cookie cache: every request checks the session row (one indexed lookup), so a sign-out, password change or
     // deleted account takes effect at once on every device.
     session: { expiresIn: 30 * 86_400, updateAge: 86_400 },
