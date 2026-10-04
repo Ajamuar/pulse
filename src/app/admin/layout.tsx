@@ -9,7 +9,7 @@ import { adminGate } from "./gate"
 export const metadata: Metadata = { title: { default: "Admin", template: "%s · Admin · Pulse" }, manifest: null }
 
 const BACK =
-  "inline-flex h-9 items-center gap-2 rounded-md px-3 text-[14px] font-medium text-foreground-secondary ring-1 ring-border outline-none transition-[background-color,color] duration-150 ease-standard hover:bg-foreground/[0.05] hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+  "inline-flex h-9 shrink-0 items-center gap-2 rounded-md px-3 text-[14px] font-medium text-foreground-secondary ring-1 ring-border outline-none transition-[background-color,color] duration-150 ease-standard hover:bg-foreground/[0.05] hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 pointer-coarse:h-10"
 
 /**
  * The admin dashboard (docs/setup.md "Accounts, admins and invites"): its own frame, apart from the app. A sidebar
@@ -51,10 +51,10 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
       </aside>
 
       <div className="lg:pl-64">
-        <header className="sticky top-0 z-20 border-b border-border bg-background/90 backdrop-blur-md">
-          <div className="flex h-14 items-center justify-between gap-4 px-4 pt-[env(safe-area-inset-top)] sm:px-6 lg:px-8">
+        <header className="sticky top-0 z-20 border-b border-border bg-background/90 pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)] backdrop-blur-md">
+          <div className="flex h-14 items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
             <span className="flex min-w-0 items-center gap-3">
-              <Mark className="size-6 lg:hidden" />
+              <Mark className="size-6 shrink-0 lg:hidden" />
               <AdminBreadcrumb />
             </span>
             <Link href="/" className={BACK}>
@@ -68,7 +68,7 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
           </div>
         </header>
 
-        <main id="admin-main" className="px-4 pt-6 pb-[max(env(safe-area-inset-bottom),40px)] sm:px-6 lg:px-8 lg:pt-8">
+        <main id="admin-main" className="pt-6 pr-[max(env(safe-area-inset-right),16px)] pb-[max(env(safe-area-inset-bottom),40px)] pl-[max(env(safe-area-inset-left),16px)] sm:pr-[max(env(safe-area-inset-right),24px)] sm:pl-[max(env(safe-area-inset-left),24px)] lg:px-8 lg:pt-8">
           <div className="mx-auto max-w-[1200px]">{children}</div>
         </main>
       </div>

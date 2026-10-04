@@ -166,9 +166,10 @@ test("owner starts the server, invites a member, manages people and access", asy
   await expect(choice(page, "Invite only")).toHaveAttribute("aria-checked", "true");
   await shot(page, "07-access");
 
-  // Delete Sam: a confirmation, then the account and its session are gone.
+  // Delete Sam from his panel (on a phone the row opens it): a confirmation, then the account and its session are gone.
   await page.goto("/admin/people");
-  await page.getByRole("button", { name: `Delete ${SAM.name}` }).click();
+  await page.getByRole("button", { name: `Manage ${SAM.name}` }).click();
+  await page.getByRole("dialog", { name: SAM.name }).getByRole("button", { name: `Delete ${SAM.name}` }).click();
   await expect(page.getByRole("dialog")).toContainText(`Delete ${SAM.name}’s account?`);
   await page.getByRole("dialog").getByRole("button", { name: "Delete account" }).click();
   // Done when the dialog closes on the server's answer (while it is open the page behind is hidden from the

@@ -100,7 +100,7 @@ export function InviteList({ invites, now }: { invites: InviteRow[]; now: number
   const empty = { open: "No open invites. Create one above.", used: "No one has used an invite yet.", expired: "No expired invites." }
   return (
     <section aria-label="Invites" className="mt-4 overflow-hidden rounded-xl bg-card shadow-card ring-1 ring-border">
-      <div role="tablist" aria-label="Invites" className="flex gap-1 border-b border-border px-4 pt-3">
+      <div role="tablist" aria-label="Invites" className="flex gap-1 overflow-x-auto border-b border-border px-2 pt-2 [scrollbar-width:none] sm:px-4 sm:pt-3">
         {TABS.map((t) => {
           const n = invites.filter((i) => status(i) === t.key).length
           return (
@@ -111,7 +111,7 @@ export function InviteList({ invites, now }: { invites: InviteRow[]; now: number
               aria-selected={tab === t.key}
               onClick={() => setTab(t.key)}
               className={cn(
-                "relative flex h-10 items-center gap-1.5 px-3 text-[14px] font-medium outline-none transition-[color] duration-150 ease-standard focus-visible:ring-3 focus-visible:ring-ring/50",
+                "relative flex h-10 shrink-0 items-center gap-1.5 px-3 text-[14px] font-medium outline-none transition-[color] duration-150 ease-standard focus-visible:ring-3 focus-visible:ring-ring/50",
                 tab === t.key ? "text-foreground after:absolute after:inset-x-3 after:-bottom-px after:h-0.5 after:rounded-full after:bg-foreground" : "text-muted-foreground hover:text-foreground",
               )}
             >
@@ -124,33 +124,41 @@ export function InviteList({ invites, now }: { invites: InviteRow[]; now: number
       {shown.length === 0 ? (
         <p className="px-5 py-10 text-center text-[14px] text-muted-foreground">{empty[tab]}</p>
       ) : (
-        <div role="tabpanel" className="overflow-x-auto">
-          <table className="w-full min-w-[520px] border-collapse">
-            <thead>
-              <tr className="border-b border-border">
-                <th scope="col" className={TH}>For</th>
-                <th scope="col" className={TH}>Created</th>
-                <th scope="col" className={TH}>{tab === "used" ? "Used" : "Expires"}</th>
-                <th scope="col" className={TH}>Status</th>
-                <th scope="col" className={cn(TH, "text-right")}>
+        // Below 768 px each row is a compact list item: who it's for over its dates, then an icon action (or, once used, by whom).
+        <div role="tabpanel">
+          <table role="table" className="block w-full border-collapse md:table">
+            <thead role="rowgroup" className="max-md:sr-only">
+              <tr role="row" className="border-b border-border">
+                <th role="columnheader" scope="col" className={TH}>For</th>
+                <th role="columnheader" scope="col" className={TH}>Created</th>
+                <th role="columnheader" scope="col" className={TH}>{tab === "used" ? "Used" : "Expires"}</th>
+                <th role="columnheader" scope="col" className={TH}>Status</th>
+                <th role="columnheader" scope="col" className={cn(TH, "text-right")}>
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border">
+            <tbody role="rowgroup" className="block divide-y divide-border md:table-row-group">
               {shown.map((i) => {
                 const left = Math.ceil((i.expiresAt * 1000 - now) / 86_400_000)
+                const when = i.usedAt !== null ? relative(i.usedAt * 1000, now) : tab === "expired" ? shortDate(i.expiresAt * 1000) : left === 1 ? "In 1 day" : `In ${left} days`
                 return (
-                  <tr key={i.id}>
-                    <td className={cn(TD, "font-medium")}>{i.label ?? <span className="font-normal text-muted-foreground">Unnamed</span>}</td>
-                    <td className={cn(TD, "whitespace-nowrap text-muted-foreground")}>{relative(i.createdAt * 1000, now)}</td>
-                    <td className={cn(TD, "whitespace-nowrap text-muted-foreground")}>
-                      {i.usedAt !== null ? relative(i.usedAt * 1000, now) : tab === "expired" ? shortDate(i.expiresAt * 1000) : left === 1 ? "In 1 day" : `In ${left} days`}
+                  <tr role="row" key={i.id} className="flex min-h-16 items-center gap-3 px-4 py-2.5 md:table-row md:min-h-0">
+                    <td role="cell" className={cn(TD, "min-w-0 flex-1 font-medium md:table-cell md:px-4 md:py-3")}>
+                      <span className="block truncate md:whitespace-normal">{i.label ?? <span className="font-normal text-muted-foreground">Unnamed</span>}</span>
+                      {/* Phones: the dates as one line under the name (their columns are hidden). */}
+                      <span className="block truncate text-[13px] leading-[18px] font-normal text-muted-foreground md:hidden">
+                        {tab === "used" ? `Used ${when.toLowerCase()}` : tab === "expired" ? `Expired ${when}` : `Created ${relative(i.createdAt * 1000, now).toLowerCase()} · expires ${when.toLowerCase()}`}
+                      </span>
                     </td>
-                    <td className={TD}>
+                    <td role="cell" className={cn(TD, "hidden whitespace-nowrap text-muted-foreground md:table-cell md:px-4 md:py-3")}>{relative(i.createdAt * 1000, now)}</td>
+                    <td role="cell" className={cn(TD, "hidden whitespace-nowrap text-muted-foreground md:table-cell md:px-4 md:py-3")}>{when}</td>
+                    <td role="cell" className={cn(TD, "max-w-40 shrink-0 md:table-cell md:max-w-none md:px-4 md:py-3", tab !== "used" && "max-md:hidden")}>
                       {tab === "used" ? <Pill tone="good">{i.usedBy ? `Used by ${i.usedBy}` : "Used"}</Pill> : tab === "expired" ? <Pill>Expired</Pill> : <Pill tone="coach">Waiting</Pill>}
                     </td>
-                    <td className={cn(TD, "text-right")}>{i.usedAt === null && <RevokeInvite id={i.id} label={i.label ?? "this invite"} expired={tab === "expired"} />}</td>
+                    <td role="cell" className={cn(TD, "shrink-0 max-md:empty:hidden md:table-cell md:px-4 md:py-3 md:text-right")}>
+                      {i.usedAt === null && <RevokeInvite id={i.id} label={i.label ?? "this invite"} expired={tab === "expired"} />}
+                    </td>
                   </tr>
                 )
               })}

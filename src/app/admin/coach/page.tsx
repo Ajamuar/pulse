@@ -2,6 +2,7 @@ import Link from "next/link"
 import { Bot, FileText, Wrench } from "lucide-react"
 import { coachTexts, DEFAULTS, maxFor, PLACEHOLDERS, textHistory, TOOL_DOCS, type TextVersion } from "@/server/coach/texts"
 import { cn } from "@/lib/utils"
+import { CurrentInViewList } from "../AdminNav"
 import { TextEditor, type TextField } from "../CoachConfig"
 import { adminGate } from "../gate"
 import { PageHeader, Panel } from "../ui"
@@ -43,7 +44,7 @@ export default async function CoachConfigPage({ searchParams }: { searchParams: 
       />
       <div className="grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-6">
         <nav aria-label="Coach settings" className="min-w-0 rounded-xl bg-card p-2 shadow-card ring-1 ring-border lg:sticky lg:top-20 lg:self-start">
-          <ul className="flex gap-1 overflow-x-auto [scrollbar-width:none] lg:grid lg:overflow-visible">
+          <CurrentInViewList className="flex scroll-px-2 gap-1 overflow-x-auto [scrollbar-width:none] max-lg:-m-2 max-lg:p-2 max-lg:[mask-image:linear-gradient(to_left,transparent,black_32px)] lg:grid lg:overflow-visible">
             {items.map(({ id, label, icon: Icon }, i) => {
               const on = id === selected
               return (
@@ -53,7 +54,7 @@ export default async function CoachConfigPage({ searchParams }: { searchParams: 
                     aria-current={on ? "page" : undefined}
                     scroll={false}
                     className={cn(
-                      "flex h-9 items-center gap-2.5 rounded-md px-2.5 text-[13px] whitespace-nowrap outline-none transition-[background-color,color] duration-150 ease-standard focus-visible:ring-3 focus-visible:ring-ring/50",
+                      "flex h-9 items-center gap-2.5 rounded-md px-2.5 text-[13px] pointer-coarse:h-10 whitespace-nowrap outline-none transition-[background-color,color] duration-150 ease-standard focus-visible:ring-3 focus-visible:ring-ring/50",
                       id !== "instructions" && "font-mono",
                       on ? "bg-foreground/[0.08] font-medium text-foreground" : "text-foreground-secondary hover:bg-foreground/[0.05] hover:text-foreground",
                     )}
@@ -69,7 +70,7 @@ export default async function CoachConfigPage({ searchParams }: { searchParams: 
                 </li>
               )
             })}
-          </ul>
+          </CurrentInViewList>
         </nav>
 
         {doc === null ? (

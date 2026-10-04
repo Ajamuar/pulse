@@ -1,7 +1,8 @@
 "use client"
 
+import * as React from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useSearchParams } from "next/navigation"
 import { Bot, ChevronRight, LayoutDashboard, MailPlus, ShieldCheck, Users, type LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -67,7 +68,7 @@ export function AdminBreadcrumb() {
   const page = PAGES.find((p) => isCurrent(pathname, p.href))
   return (
     <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-[14px]">
-      <Link href="/admin" className="text-muted-foreground outline-none hover:text-foreground focus-visible:rounded-sm focus-visible:ring-3 focus-visible:ring-ring/50">
+      <Link href="/admin" className="inline-flex h-10 shrink-0 items-center text-muted-foreground outline-none hover:text-foreground focus-visible:rounded-sm focus-visible:ring-3 focus-visible:ring-ring/50">
         Admin
       </Link>
       {page && page.href !== "/admin" && (
@@ -82,11 +83,26 @@ export function AdminBreadcrumb() {
   )
 }
 
+/** Fades a scrolling row's trailing edge so cut-off items read as "more this way". */
+export const SCROLL_FADE = "[mask-image:linear-gradient(to_left,transparent,black_32px)]"
+
+/** Keeps a scrolling row's current item (aria-current) in view: on a phone it may start off-screen. */
+export function useCurrentInView<T extends HTMLElement>() {
+  const ref = React.useRef<T>(null)
+  const pathname = usePathname()
+  const query = useSearchParams().toString()
+  React.useEffect(() => {
+    ref.current?.querySelector("[aria-current=page]")?.scrollIntoView({ block: "nearest", inline: "nearest" })
+  }, [pathname, query])
+  return ref
+}
+
 /** Below 1024 px: the pages as a scrolling tab row under the top bar. */
 export function AdminTabs() {
   const pathname = usePathname()
+  const ref = useCurrentInView<HTMLElement>()
   return (
-    <nav aria-label="Admin" className="-mx-4 overflow-x-auto px-4 [scrollbar-width:none]">
+    <nav ref={ref} aria-label="Admin" className={cn("-mx-4 scroll-px-4 overflow-x-auto px-4 [scrollbar-width:none] sm:-mx-6 sm:scroll-px-6 sm:px-6", SCROLL_FADE)}>
       <ul className="flex w-max gap-1">
         {PAGES.map(({ href, label }) => {
           const on = isCurrent(pathname, href)
@@ -107,5 +123,15 @@ export function AdminTabs() {
         })}
       </ul>
     </nav>
+  )
+}
+
+/** A list that scrolls its current item into view (the coach page's item row on a phone). */
+export function CurrentInViewList({ className, children }: { className?: string; children: React.ReactNode }) {
+  const ref = useCurrentInView<HTMLUListElement>()
+  return (
+    <ul ref={ref} className={className}>
+      {children}
+    </ul>
   )
 }

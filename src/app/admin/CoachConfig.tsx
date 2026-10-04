@@ -44,10 +44,10 @@ export function TextEditor({ field, versions, now, rows = 3, mono, hint }: { fie
         <label htmlFor={id} className="text-[13px] leading-[18px] font-medium text-foreground-secondary">
           {field.label}
         </label>
-        <span className="flex items-center gap-1">
+        <span className="flex min-w-0 items-center gap-1">
           {isDefault ? <Pill>Default</Pill> : <Pill tone="coach">Edited{latest ? ` ${relative(latest.createdAt * 1000, now).toLowerCase()}${latest.by ? ` by ${latest.by}` : ""}` : ""}</Pill>}
           {versions.length > 0 && (
-            <Button type="button" variant="ghost" onClick={() => setHistory(true)} className="h-8 gap-1.5 rounded-lg px-2 text-[13px] font-medium text-muted-foreground hover:text-foreground">
+            <Button type="button" variant="ghost" onClick={() => setHistory(true)} className="h-8 gap-1.5 rounded-lg px-2 text-[13px] font-medium text-muted-foreground hover:text-foreground pointer-coarse:h-10">
               <History aria-hidden className="size-4" />
               {versions.length}
               <span className="sr-only">{versions.length === 1 ? "version" : "versions"} of {field.label}</span>
@@ -75,19 +75,19 @@ export function TextEditor({ field, versions, now, rows = 3, mono, hint }: { fie
             {value.length.toLocaleString()} / {field.max.toLocaleString()}
           </span>
         </span>
-        <span className="flex items-center gap-1.5">
+        <span className="ml-auto flex items-center gap-1.5">
           {!isDefault && !dirty && (
-            <Button type="button" variant="ghost" disabled={pending} onClick={() => save(field.def, "Back to the default.")} className="h-9 gap-1.5 rounded-lg px-3 text-[13px] font-medium text-muted-foreground hover:text-foreground">
+            <Button type="button" variant="ghost" disabled={pending} onClick={() => save(field.def, "Back to the default.")} className="h-9 gap-1.5 rounded-lg px-3 text-[13px] font-medium text-muted-foreground hover:text-foreground pointer-coarse:h-10">
               <RotateCcw aria-hidden className="size-3.5" />
               Reset to default
             </Button>
           )}
           {dirty && (
             <>
-              <Button type="button" variant="ghost" disabled={pending} onClick={() => setValue(field.current)} className="h-9 rounded-lg px-3 text-[13px] font-medium">
+              <Button type="button" variant="ghost" disabled={pending} onClick={() => setValue(field.current)} className="h-9 rounded-lg px-3 text-[13px] font-medium pointer-coarse:h-10">
                 Discard
               </Button>
-              <Button type="button" disabled={pending || over || !value.trim()} onClick={() => save(value.trim(), "Saved. The coach uses it from the next message.")} className="h-9 rounded-lg px-4 text-[13px] font-semibold">
+              <Button type="button" disabled={pending || over || !value.trim()} onClick={() => save(value.trim(), "Saved. The coach uses it from the next message.")} className="h-9 rounded-lg px-4 text-[13px] font-semibold pointer-coarse:h-10">
                 {pending && <LoaderCircle aria-hidden className="animate-spin motion-reduce:animate-none" />}
                 Save
               </Button>
@@ -112,7 +112,7 @@ export function TextEditor({ field, versions, now, rows = 3, mono, hint }: { fie
                     {i === 0 && " · in use"}
                   </span>
                   {i > 0 && v.body !== field.current && (
-                    <Button type="button" variant="secondary" disabled={pending} onClick={() => save(v.body, "Version restored.")} className="h-8 rounded-lg px-3 text-[13px] font-medium">
+                    <Button type="button" variant="secondary" disabled={pending} onClick={() => save(v.body, "Version restored.")} className="h-8 rounded-lg px-3 text-[13px] font-medium pointer-coarse:h-10">
                       Restore
                     </Button>
                   )}

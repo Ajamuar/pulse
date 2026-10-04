@@ -14,7 +14,8 @@ const DAY = 86_400_000
 
 const SIGNUP = { invite: "Invite only", open: "Open to anyone", closed: "Closed" }
 const COACH = { off: "Off", everyone: "Everyone", chosen: "Chosen people" }
-const LINK = "text-[13px] font-medium text-foreground-secondary underline-offset-4 outline-none hover:text-foreground hover:underline focus-visible:rounded-sm focus-visible:ring-3 focus-visible:ring-ring/50"
+// The after: box stretches the 20 px text link to a 40 px touch target without moving the panel header.
+const LINK = "relative text-[13px] font-medium after:absolute after:-inset-x-2 after:-inset-y-2.5 text-foreground-secondary underline-offset-4 outline-none hover:text-foreground hover:underline focus-visible:rounded-sm focus-visible:ring-3 focus-visible:ring-ring/50"
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
 
 /** Admin overview `/admin`: who is here and how active, growth, what's waiting (open invites), and how it's set. */
@@ -31,7 +32,7 @@ export default async function AdminOverview() {
   // New people per week, the last 8 weeks, oldest first.
   const weeks = Array.from({ length: 8 }, (_, i) => {
     const end = now - (7 - i) * 7 * DAY
-    return { label: i === 7 ? "This week" : `${7 - i}w ago`, n: accounts.filter((a) => a.createdAt.getTime() <= end && a.createdAt.getTime() > end - 7 * DAY).length }
+    return { label: i === 7 ? "This week" : `${7 - i}w ago`, short: i === 7 ? "Now" : `${7 - i}w`, n: accounts.filter((a) => a.createdAt.getTime() <= end && a.createdAt.getTime() > end - 7 * DAY).length }
   })
   const peak = Math.max(1, ...weeks.map((w) => w.n))
   const recent = [...accounts].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, 6)
@@ -55,7 +56,7 @@ export default async function AdminOverview() {
         }
       />
 
-      <section aria-label="At a glance" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section aria-label="At a glance" className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatCard label="People" value={accounts.length} note={newThisWeek ? `+${newThisWeek} joined this week` : "No one new this week"} icon={Users} />
         <StatCard label="Active this week" value={active.week} note={accounts.length ? `${Math.round((active.week / accounts.length) * 100)}% of everyone` : "No one yet"} icon={Activity} />
         <StatCard label="Open invites" value={open.length} note={open.length ? "Waiting to be used" : "None waiting"} icon={MailPlus} />
@@ -64,12 +65,15 @@ export default async function AdminOverview() {
 
       <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
         <Panel title="New people" description="Accounts created per week, the last 8 weeks.">
-          <div role="img" aria-label={weeks.map((w) => `${w.label}: ${w.n}`).join(", ")} className="flex h-44 items-end gap-2 pt-4">
+          <div role="img" aria-label={weeks.map((w) => `${w.label}: ${w.n}`).join(", ")} className="flex h-44 items-end gap-1.5 pt-4 sm:gap-2">
             {weeks.map((w) => (
               <div key={w.label} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1.5">
                 <span className="font-numeric text-[12px] text-muted-foreground tabular-nums">{w.n || ""}</span>
                 <span className={cn("w-full max-w-10 rounded-t-md", w.n ? "bg-coach/70" : "bg-foreground/[0.06]")} style={{ height: `${Math.max(4, (w.n / peak) * 100)}%` }} />
-                <span className="w-full truncate text-center text-[11px] text-muted-foreground">{w.label}</span>
+                <span className="w-full truncate text-center text-[11px] text-muted-foreground">
+                  <span className="sm:hidden">{w.short}</span>
+                  <span className="max-sm:hidden">{w.label}</span>
+                </span>
               </div>
             ))}
           </div>
@@ -104,7 +108,7 @@ export default async function AdminOverview() {
         >
           <ul className="divide-y divide-border">
             {recent.map((a) => (
-              <li key={a.id} className="flex items-center gap-3 px-5 py-3">
+              <li key={a.id} className="flex items-center gap-3 px-4 py-3 sm:px-5">
                 <span aria-hidden className="grid size-9 shrink-0 place-items-center rounded-full bg-foreground/[0.07] text-[13px] font-semibold">
                   {a.name.trim()[0]?.toUpperCase()}
                 </span>
@@ -129,14 +133,14 @@ export default async function AdminOverview() {
             flush
           >
             {open.length === 0 ? (
-              <p className="px-5 pb-5 text-[14px] text-muted-foreground">No open invites.</p>
+              <p className="px-4 pb-5 text-[14px] text-muted-foreground sm:px-5">No open invites.</p>
             ) : (
               <ul className="divide-y divide-border">
                 {open.slice(0, 4).map((i) => {
                   const left = Math.ceil((i.expiresAt * 1000 - now) / DAY)
                   return (
-                    <li key={i.id} className="flex items-center justify-between gap-3 px-5 py-3">
-                      <span className="truncate text-[14px] font-medium">{i.label ?? "Unnamed invite"}</span>
+                    <li key={i.id} className="flex items-center justify-between gap-3 px-4 py-3 sm:px-5">
+                      <span className="min-w-0 truncate text-[14px] font-medium">{i.label ?? "Unnamed invite"}</span>
                       <Pill tone={left <= 2 ? "warn" : "coach"}>{left === 1 ? "1 day left" : `${left} days left`}</Pill>
                     </li>
                   )

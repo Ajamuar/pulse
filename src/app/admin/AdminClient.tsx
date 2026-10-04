@@ -113,10 +113,11 @@ export function RevokeInvite({ id, label, expired }: { id: number; label: string
       disabled={pending}
       aria-label={`${expired ? "Remove" : "Revoke"} ${label}`}
       onClick={() => start(async () => void ((await run(revokeInviteAction(id))) && toast.success(expired ? "Invite removed." : "Invite revoked. Its link no longer works.")))}
-      className={expired ? BTN.outline : BTN.danger}
+      // Phones: icon only, a 40 px square at the end of the row (the label stays as the accessible name).
+      className={cn(expired ? BTN.outline : BTN.danger, "max-md:size-10 max-md:px-0 max-md:[&_svg]:size-4")}
     >
       {expired ? <Trash2 aria-hidden /> : <Ban aria-hidden />}
-      {pending ? (expired ? "Removing…" : "Revoking…") : expired ? "Remove" : "Revoke"}
+      <span className="max-md:sr-only">{pending ? (expired ? "Removing…" : "Revoking…") : expired ? "Remove" : "Revoke"}</span>
     </button>
   )
 }
