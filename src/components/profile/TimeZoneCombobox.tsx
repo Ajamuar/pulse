@@ -190,7 +190,7 @@ export function TimeZoneCombobox({
           role="listbox"
           aria-label="Time zones"
           onMouseDown={(e) => e.preventDefault()}
-          className="max-h-[152px] snap-y scroll-pt-1 overflow-y-auto overscroll-contain rounded-xl bg-field p-1 [scrollbar-width:thin] motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-top-1"
+          className="max-h-[152px] snap-y scroll-pt-1 overflow-y-auto overscroll-none rounded-xl bg-field p-1 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-top-1"
         >
           {matches.length === 0 && <li className="px-3 py-3 text-[15px] leading-5 text-muted-foreground">No time zone matches “{query}”.</li>}
           {matches.map((z, i) => {

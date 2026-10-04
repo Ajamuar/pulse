@@ -73,7 +73,7 @@ export function ResponsiveSheet({ open, onOpenChange, title, description, childr
           )}
         >
           {header(DrawerTitle, DrawerDescription, DrawerClose, "end")}
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-4">{children}</div>
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-none px-4 pb-4">{children}</div>
           {foot}
         </DrawerContent>
       </Drawer>
@@ -100,7 +100,7 @@ export function ResponsiveSheet({ open, onOpenChange, title, description, childr
         )}
       >
         {header(SheetTitle, SheetDescription, SheetClose, "end")}
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 pb-6">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-none px-6 pb-6">{children}</div>
         {foot}
       </SheetContent>
     </Sheet>

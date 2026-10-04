@@ -35,7 +35,7 @@ export function InfoDialogContent({ title, body, icon, chip, action }: InfoConte
           e.preventDefault()
           ;(e.currentTarget as HTMLElement).focus()
         }}
-        className="fixed top-1/2 left-1/2 z-50 max-h-[80svh] w-[calc(100%-32px)] max-w-[360px] -translate-1/2 overflow-y-auto overscroll-contain rounded-3xl bg-linear-to-b from-popover-top to-popover p-6 text-popover-foreground shadow-overlay ring-1 ring-foreground/8 outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-96 data-open:blur-in-4 data-open:duration-320 data-open:ease-out-expo data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-96 data-closed:duration-200 data-closed:ease-in-quick"
+        className="fixed top-1/2 left-1/2 z-50 max-h-[80svh] w-[calc(100%-32px)] max-w-[360px] -translate-1/2 overflow-y-auto overscroll-none rounded-3xl bg-linear-to-b from-popover-top to-popover p-6 text-popover-foreground shadow-overlay ring-1 ring-foreground/8 outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-96 data-open:blur-in-4 data-open:duration-320 data-open:ease-out-expo data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-96 data-closed:duration-200 data-closed:ease-in-quick"
       >
         <DialogPrimitive.Close asChild>
           <Button variant="ghost" size="icon-touch" aria-label="Close" className="absolute top-3 right-3 hover:bg-foreground/8">

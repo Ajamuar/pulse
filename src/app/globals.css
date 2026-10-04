@@ -451,15 +451,26 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    /* No visible scrollbars anywhere; scrolling itself (wheel, touch, keyboard) is unchanged. */
+    scrollbar-width: none;
+  }
+  ::-webkit-scrollbar {
+    display: none;
+  }
+  [data-slot="scroll-area-scrollbar"] {
+    display: none;
   }
   html {
     @apply font-sans;
     background: var(--background);
     -webkit-tap-highlight-color: transparent;
+    /* No rubber-band bounce at the page's top and bottom (iOS Safari 16+, Chrome); also turns off pull-to-refresh. */
+    overscroll-behavior: none;
     text-rendering: optimizeLegibility;
   }
   body {
     @apply text-foreground;
+    overscroll-behavior: none;
   }
   /* Tailwind v4's preflight gives buttons the arrow cursor; links show the hand. One affordance for both (U18 G-01). */
   button:not(:disabled),

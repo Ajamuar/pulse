@@ -52,7 +52,7 @@ function Wheel({ label, items, index, onIndex }: { label: string; items: string[
           go(index + step)
         }
       }}
-      className="relative h-(--wheel) [mask-image:linear-gradient(color-mix(in_srgb,var(--foreground)_35%,transparent),var(--foreground)_45%,var(--foreground)_55%,color-mix(in_srgb,var(--foreground)_35%,transparent))] snap-y snap-mandatory overflow-y-auto overscroll-contain rounded-lg py-[calc((var(--wheel)-40px)/2)] outline-none [scrollbar-width:none] focus-visible:ring-2 focus-visible:ring-foreground/70 [&::-webkit-scrollbar]:hidden"
+      className="relative h-(--wheel) [mask-image:linear-gradient(color-mix(in_srgb,var(--foreground)_35%,transparent),var(--foreground)_45%,var(--foreground)_55%,color-mix(in_srgb,var(--foreground)_35%,transparent))] snap-y snap-mandatory overflow-y-auto overscroll-none rounded-lg py-[calc((var(--wheel)-40px)/2)] outline-none [scrollbar-width:none] focus-visible:ring-2 focus-visible:ring-foreground/70 [&::-webkit-scrollbar]:hidden"
     >
       {items.map((item, i) => (
         <div

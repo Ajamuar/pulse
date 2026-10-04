@@ -106,7 +106,7 @@ export default function KitPage() {
       <main id="main" className="mx-auto max-w-[1440px] px-4 pt-8 pb-24 md:grid md:grid-cols-[220px_minmax(0,1fr)] md:gap-10 md:px-8">
         {/* Index with search; sticky under the header from 768 px. */}
         <nav aria-label="Component index" className="hidden md:block">
-          <div className="sticky top-24 -ml-2 max-h-[calc(100dvh-7rem)] space-y-5 overflow-y-auto overscroll-contain pr-2 pb-8 pl-2">
+          <div className="sticky top-24 -ml-2 max-h-[calc(100dvh-7rem)] space-y-5 overflow-y-auto overscroll-none pr-2 pb-8 pl-2">
             <KitSearch />
             {GROUPS.map((g) => (
               <div key={g.id} data-kit-group className="space-y-1">
