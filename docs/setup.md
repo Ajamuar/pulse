@@ -78,8 +78,9 @@ days of generated data to your local database: sign in as `demo@pulse.local` / `
 
 ## 4. Run it with Docker
 
-[`compose.yaml`](../compose.yaml) runs two containers: `pulse` (the app, published on `127.0.0.1:3000` only) and
-`pulse-db` (`postgres:18-alpine`, reachable only from the app). Put the secrets in `.env`:
+[`compose.yaml`](../compose.yaml) runs two containers: `pulse` (the app, on port 3000 inside Docker) and `pulse-db`
+(`postgres:18-alpine`, reachable only from the app). Neither publishes a port on the host: step 5 connects your
+tunnel or proxy to it. Put the secrets in `.env`:
 
 ```sh
 POSTGRES_PASSWORD=...                  # openssl rand -base64 24
@@ -103,7 +104,7 @@ Pick one:
 
 | Option | Good for | Notes |
 |---|---|---|
-| [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) | Reaching it from anywhere, no open ports | Route `pulse.example.com` to `http://localhost:3000` (or the container). Sign-in rate limits use Cloudflare's client IP. |
+| [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) | Reaching it from anywhere, no open ports | Route `pulse.example.com` to `http://pulse:3000` when `cloudflared` runs in Docker, or to `http://localhost:3000` with a host port (below). Sign-in rate limits use Cloudflare's client IP. |
 | [Tailscale Serve](https://tailscale.com/kb/1312/serve) | Your devices only | `https://<machine>.<tailnet>.ts.net` works as a Google redirect URI. |
 | Caddy or nginx with Let's Encrypt | A server with a public IP | Forward `X-Forwarded-For` and `X-Forwarded-Proto`. |
 
@@ -228,11 +229,23 @@ Each user's time zone is set in onboarding and Settings › Profile, not in the 
 
 ### Sharing the machine with other apps
 
-- **Port clash.** Pulse publishes `127.0.0.1:3000`. If another app already holds host port 3000, set `PULSE_PORT`
-  (any free port) in `.env`; the app inside the container keeps 3000.
-- **Tunnel by container name.** If your tunnel runs in Docker and routes to `http://pulse:3000`, Pulse must join the
-  tunnel's network. Put that in a `compose.override.yaml` next to `compose.yaml` (gitignored; `scripts/deploy.sh`
-  loads it), so every deploy keeps it:
+Machine-specific additions go in a `compose.override.yaml` next to `compose.yaml`. It is gitignored, `docker compose`
+reads it automatically, and `scripts/deploy.sh` loads it on every deploy.
+
+- **No host port by default.** Pulse listens on 3000 inside Docker only, so it never clashes with another app's
+  port and nothing on the machine's network can reach it directly.
+- **Tunnel or proxy outside Docker** (`cloudflared` or Caddy installed on the host, Tailscale Serve): publish a
+  loopback-only port. Pick any free host port; the app inside keeps 3000:
+
+  ```yaml
+  services:
+    pulse:
+      ports:
+        - "127.0.0.1:3000:3000"
+  ```
+
+- **Tunnel or proxy in Docker** that routes to `http://pulse:3000`: Pulse joins the tunnel's network instead, with no
+  port at all:
 
   ```yaml
   services:
