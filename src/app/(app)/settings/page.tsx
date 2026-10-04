@@ -1,4 +1,6 @@
 import { connection } from "next/server"
+import { isAdmin } from "@/server/admin"
+import { getConfig } from "@/server/config"
 import { currentUser, DEMO_EMAIL } from "@/server/auth"
 import { avatarSrc, connectedGoogleEmail } from "@/server/avatar"
 import { providerLabel, providerOptions } from "@/server/coach/options"
@@ -27,6 +29,8 @@ export default async function SettingsPage() {
     coachAccess(ctx.db, ctx.userId),
     coachSetup(ctx.db, ctx.userId),
   ])
+  // Same rule as the admin gate: only a Google instance has an admin panel.
+  const admin = getConfig().dataSource === "google" && (await isAdmin(ctx.db, ctx.userId))
   return (
     <DetailShell
       title="Settings"
@@ -46,6 +50,7 @@ export default async function SettingsPage() {
               avatar,
               customPhoto: avatar?.startsWith("/avatar?") ?? false,
               googleEmail,
+              admin,
             }}
           />
         </>

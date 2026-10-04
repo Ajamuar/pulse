@@ -8,8 +8,8 @@ import { requestSync } from "@/server/worker";
 
 /**
  * Google's redirect back after Connect Google. Without a Pulse session it goes to /login. A missing, unknown,
- * reused, expired or another user's `state` is a 400 and touches nothing. Lands on Settings with
- * `?oauth=connected` or `?oauth=<code>`.
+ * reused, expired or another user's `state` touches nothing and lands on Settings with `?oauth=expired`. Otherwise
+ * lands on Settings with `?oauth=connected` or `?oauth=<code>`.
  */
 export async function GET(request: NextRequest) {
   const { google } = getConfig();
@@ -19,12 +19,12 @@ export async function GET(request: NextRequest) {
   const origin = appOrigin(request, google.appUrl);
   const user = await requestUser(request);
   if (!user) return NextResponse.redirect(`${origin}/login`, 302);
+  const back = (result: string) => NextResponse.redirect(`${origin}/settings?oauth=${encodeURIComponent(result)}`, 302);
   // Bound to the user who started the connect: closes linking someone else's Google account to this session.
-  if (!consumeState(params.get("state"), user.userId)) return new Response("Invalid or expired state", { status: 400 });
+  if (!consumeState(params.get("state"), user.userId)) return back("expired");
 
   const db = getDb();
   const { userId } = user;
-  const back = (result: string) => NextResponse.redirect(`${origin}/settings?oauth=${encodeURIComponent(result)}`, 302);
   const code = params.get("code");
   if (!code) return back("access_denied");
   try {

@@ -54,15 +54,20 @@ describe("GET /oauth/callback", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("a missing, wrong, expired or reused state is a 400 that touches nothing", async () => {
-    expect((await call({ code: "c" })).status).toBe(400);
-    expect((await call({ state: "forged", code: "c" })).status).toBe(400);
-    expect((await call({ state: createState(USER, Date.now() - 10 * 60_000 - 1), code: "c" })).status).toBe(400);
+  it("a missing, wrong, expired or reused state goes back to Settings as expired and touches nothing", async () => {
+    const expired = async (q: Record<string, string>) => {
+      const res = await call(q);
+      expect(res.status).toBe(302);
+      expect(res.headers.get("location")).toMatch(/\/settings\?oauth=expired$/);
+    };
+    await expired({ code: "c" });
+    await expired({ state: "forged", code: "c" });
+    await expired({ state: createState(USER, Date.now() - 10 * 60_000 - 1), code: "c" });
     const s = state();
-    expect((await call({ state: s, code: "c" })).status).toBe(302);
-    expect((await call({ state: s, code: "c" })).status).toBe(400);
+    expect((await call({ state: s, code: "c" })).headers.get("location")).toMatch(/oauth=connected$/);
+    await expired({ state: s, code: "c" });
     // Another user's state.
-    expect((await call({ state: createState(USER + 1), code: "c" })).status).toBe(400);
+    await expired({ state: createState(USER + 1), code: "c" });
     // One connect: the token exchange and the Google Health identity check.
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });

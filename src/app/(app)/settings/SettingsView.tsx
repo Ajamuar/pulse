@@ -30,6 +30,8 @@ export type SettingsAccount = {
   avatar: string | null
   customPhoto: boolean
   googleEmail?: string | null
+  /** An admin of this server: the account card links to the admin panel. */
+  admin?: boolean
 }
 
 /**
@@ -54,6 +56,11 @@ export function Account({ account }: { account: SettingsAccount }) {
       <div className="mt-4 grid grid-cols-2 gap-2">
         {own && <AvatarButtons />}
         {own && <ChangePasswordButton />}
+        {account.admin && (
+          <Button asChild variant="secondary" size="touch" className="col-span-2 w-full">
+            <a href="/admin">Admin panel</a>
+          </Button>
+        )}
         <form method="post" action="/logout" className="col-span-2">
           <Button type="submit" variant="outline" size="touch" className="w-full">
             Sign out
