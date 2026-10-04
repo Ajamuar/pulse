@@ -5,12 +5,15 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useChat } from "@ai-sdk/react"
 import { DefaultChatTransport, type UIMessage } from "ai"
-import { ArrowUp, MessagesSquare, Square, SquarePen } from "lucide-react"
+import { ArrowUp, History, MessageSquarePlus, PanelLeftClose, PanelLeftOpen, Square } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { dayDigest } from "@/server/coach/tools"
 import type { ChatGroup } from "@/server/coach/store"
 import { Mark } from "@/components/brand/Mark"
-import { MiniRing, type MiniRingVariant } from "@/components/metrics/MiniRing"
+import type { MiniRingVariant } from "@/components/metrics/MiniRing"
+import { DATA_COLORS, dialColor } from "@/lib/bands"
+import { useShellStatus } from "@/components/shells/ShellStatus"
+import { UserAvatar } from "@/components/shells/UserAvatar"
 import { SheetTrigger } from "@/components/shells/SheetTrigger"
 import { GLASS } from "@/components/shells/AppNav"
 import { Button } from "@/components/ui/button"
@@ -42,42 +45,52 @@ const REASON: Record<string, string> = {
   no_data: "No data",
 }
 
+const MAX: Record<MiniRingVariant, number> = { recovery: 100, sleep: 100, strain: 21 }
+
+/**
+ * One score as a tile: the label, the value in its band's colour (or the reason there is none), and a bar filled to
+ * where the value sits on its scale. Same data language as Home, at a size that reads beside text.
+ */
 function Stat({ variant, label, m, unit }: { variant: MiniRingVariant; label: string; m: Num; unit?: string }) {
+  const color = m.value === null ? null : DATA_COLORS[dialColor(variant, m.value)]
   return (
-    <div className="flex min-w-0 items-center gap-2.5">
-      <MiniRing variant={variant} value={m.value} />
-      <div className="min-w-0">
-        <p className="font-numeric text-[17px] leading-5 font-bold tabular-nums">
-          {m.value === null ? <span className="text-[13px] font-semibold text-muted-foreground">{REASON[m.reason ?? "no_data"]}</span> : `${m.value}${unit ?? ""}`}
-        </p>
-        <p className="text-[11px] leading-4 font-bold tracking-[0.08em] text-muted-foreground uppercase">{label}</p>
-      </div>
+    <div className="min-w-0 rounded-xl bg-foreground/[0.035] p-3">
+      <p className="text-[12px] leading-4 font-medium text-muted-foreground">{label}</p>
+      <p className={cn("mt-1 font-numeric text-[22px] leading-7 font-bold tabular-nums", color?.text)}>
+        {m.value === null ? <span className="text-[14px] leading-7 font-semibold text-foreground-secondary">{REASON[m.reason ?? "no_data"]}</span> : `${m.value}${unit ?? ""}`}
+      </p>
+      <span aria-hidden className="mt-2 block h-1 overflow-hidden rounded-full bg-foreground/[0.08]">
+        {m.value !== null && <span className="block h-full rounded-full" style={{ width: `${Math.min(100, (m.value / MAX[variant]) * 100)}%`, background: color?.css }} />}
+      </span>
     </div>
   )
 }
 
-/** get_day's result as Pulse's own rings and numbers, so the answer can point at them. */
+/** get_day's result as Pulse's own numbers, so the answer can point at them: three scores, then what moved Recovery. */
 function DayCard({ d }: { d: DayDigest }) {
   const movers = d.recovery.contributors.filter((c) => c.points !== null && Math.abs(c.points) >= 1).sort((a, b) => Math.abs(b.points!) - Math.abs(a.points!)).slice(0, 3)
   return (
-    <div className="rounded-2xl bg-card p-4 shadow-card">
+    <div className="rounded-2xl bg-card p-2 shadow-card ring-1 ring-border/60">
       <div className="grid grid-cols-3 gap-2">
         <Stat variant="recovery" label="Recovery" m={d.recovery} unit="%" />
         <Stat variant="sleep" label="Sleep" m={d.sleep.performance} unit="%" />
         <Stat variant="strain" label="Strain" m={d.strain} />
       </div>
       {movers.length > 0 && (
-        <ul className="mt-3 space-y-1 border-t border-border pt-3 text-[13px] leading-[18px] text-foreground-secondary">
-          {movers.map((c) => (
-            <li key={c.label} className="flex justify-between gap-3">
-              <span>{c.label}</span>
-              <span className={cn("font-numeric font-semibold tabular-nums", c.points! > 0 ? "text-recovery-green" : "text-recovery-red-text")}>
-                {c.points! > 0 ? "+" : "−"}
-                {Math.abs(c.points!)} pts
-              </span>
-            </li>
-          ))}
-        </ul>
+        <div className="px-2 pt-3 pb-1.5">
+          <p className="text-[12px] leading-4 font-medium text-muted-foreground">What moved Recovery</p>
+          <ul className="mt-1.5 divide-y divide-border text-[14px] leading-5">
+            {movers.map((c) => (
+              <li key={c.label} className="flex items-center justify-between gap-3 py-1.5">
+                <span className="text-foreground-secondary">{c.label}</span>
+                <span className={cn("font-numeric font-semibold tabular-nums", c.points! > 0 ? "text-recovery-green" : "text-recovery-red-text")}>
+                  {c.points! > 0 ? "+" : "−"}
+                  {Math.abs(c.points!)} {Math.abs(c.points!) === 1 ? "pt" : "pts"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </div>
   )
@@ -105,23 +118,37 @@ function PartView({ part }: { part: Part }) {
   return null
 }
 
-function Message({ m }: { m: UIMessage }) {
+/** A 32 px avatar: the person's own photo for their messages, the Pulse mark in the insight ring for the coach's. */
+function Avatar({ coach, src }: { coach?: boolean; src?: string | null }) {
+  if (!coach)
+    return (
+      <span aria-hidden className="size-8 shrink-0">
+        <UserAvatar src={src} />
+      </span>
+    )
+  return (
+    <span aria-hidden className="grid size-8 shrink-0 place-items-center rounded-full bg-linear-to-br from-insight-from to-insight-to p-px">
+      <span className="grid size-full place-items-center rounded-full bg-background">
+        <Mark className="size-4" />
+      </span>
+    </span>
+  )
+}
+
+function Message({ m, avatar }: { m: UIMessage; avatar: string | null | undefined }) {
   if (m.role === "user")
     return (
-      <div className="flex justify-end">
-        <p className="max-w-[85%] rounded-2xl bg-secondary px-4 py-2.5 text-[16px] leading-6 whitespace-pre-wrap text-foreground">
+      <div className="flex items-end justify-end gap-2.5">
+        <p className="max-w-[80%] rounded-[20px] rounded-br-md bg-secondary px-4 py-2.5 text-[16px] leading-6 whitespace-pre-wrap text-foreground">
           {m.parts.map((p) => (p.type === "text" ? p.text : "")).join("")}
         </p>
+        <Avatar src={avatar} />
       </div>
     )
   return (
-    <div className="flex gap-3">
-      <span aria-hidden className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-full bg-linear-to-br from-insight-from to-insight-to p-px">
-        <span className="grid size-full place-items-center rounded-full bg-background">
-          <Mark className="size-3.5" />
-        </span>
-      </span>
-      <div className="min-w-0 flex-1 space-y-3">
+    <div className="flex gap-2.5">
+      <Avatar coach />
+      <div className="min-w-0 flex-1 space-y-3 pt-1">
         {m.parts.map((p, i) => (
           <PartView key={i} part={p} />
         ))}
@@ -136,6 +163,33 @@ const ERRORS: Record<string, string> = {
   provider: "Your provider refused the request (key, quota or billing). Check your account with them.",
 }
 
+// The laptop chat panel's open state, remembered on this device (a viewer convenience: localStorage, never required).
+const PANEL_KEY = "pulse:coach-chats-open"
+const panelListeners = new Set<() => void>()
+function readPanel() {
+  try {
+    return localStorage.getItem(PANEL_KEY) !== "0"
+  } catch {
+    return true
+  }
+}
+function setPanelOpen(open: boolean) {
+  try {
+    localStorage.setItem(PANEL_KEY, open ? "1" : "0")
+  } catch {
+    // Storage blocked (private window): the toggle still works for this page view.
+  }
+  panelOpenFallback = open
+  panelListeners.forEach((l) => l())
+}
+let panelOpenFallback: boolean | null = null
+const usePanelOpen = () =>
+  React.useSyncExternalStore(
+    (l) => (panelListeners.add(l), () => panelListeners.delete(l)),
+    () => panelOpenFallback ?? readPanel(),
+    () => true,
+  )
+
 const CHIP =
   "h-10 rounded-full px-4 text-[14px] font-medium text-foreground-secondary ring-1 ring-border outline-none transition-[background-color,color,box-shadow,scale] duration-150 ease-standard hover:bg-foreground/[0.04] hover:text-foreground hover:ring-coach/40 focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96]"
 
@@ -146,6 +200,7 @@ const CHIP =
  */
 export function Coach({ id, initial, groups, prefill, providerLabel }: { id: string; initial: UIMessage[]; groups: ChatGroup[]; prefill: string; providerLabel: string }) {
   const router = useRouter()
+  const { avatar } = useShellStatus()
   const [input, setInput] = React.useState(prefill)
   const [error, setError] = React.useState<string | null>(null)
   const area = React.useRef<HTMLTextAreaElement>(null)
@@ -183,31 +238,55 @@ export function Coach({ id, initial, groups, prefill, providerLabel }: { id: str
   }
 
   const chatCount = groups.reduce((n, g) => n + g.chats.length, 0)
+  const listOpen = usePanelOpen()
+  const ICON_BTN = "text-foreground-secondary hover:text-foreground"
+  const newChat = (
+    <Button asChild variant="ghost" size="icon-touch" aria-label="New chat" className={ICON_BTN}>
+      <Link href="/coach">
+        <MessageSquarePlus aria-hidden strokeWidth={1.75} />
+      </Link>
+    </Button>
+  )
   return (
-    <div className="xl:grid xl:grid-cols-[264px_minmax(0,1fr)] xl:gap-10">
-      <aside className="hidden xl:block">
-        <div className="sticky top-24 max-h-[calc(100svh-8rem)] overflow-y-auto pr-1 pb-4">
-          <ChatList groups={groups} current={initial.length ? id : null} />
-        </div>
-      </aside>
+    // Cancels AppShell's bottom padding (room for the phone tab bar, which this screen hides), so the composer rests
+    // on the screen's bottom edge, above the safe area, with no gap under it.
+    <div className={cn("-mb-[calc(62px+max(env(safe-area-inset-bottom)-6px,12px)+24px)] md:-mb-10 xl:grid xl:gap-8", listOpen ? "xl:grid-cols-[280px_minmax(0,1fr)]" : "xl:grid-cols-[minmax(0,1fr)]")}>
+      {/* Laptop: the chats as a collapsible panel beside the conversation (remembered per device). */}
+      {listOpen && (
+        <aside aria-label="Chats panel" className="hidden xl:block">
+          <div className="sticky top-20 flex max-h-[calc(100svh-7rem)] flex-col rounded-2xl bg-card shadow-card ring-1 ring-border">
+            <div className="flex items-center justify-between gap-1 border-b border-border py-2 pr-2 pl-4">
+              <h2 className="text-[15px] font-semibold">Chats</h2>
+              <span className="flex items-center">
+                {newChat}
+                <Button variant="ghost" size="icon-touch" aria-label="Hide chats" aria-expanded onClick={() => setPanelOpen(false)} className={ICON_BTN}>
+                  <PanelLeftClose aria-hidden strokeWidth={1.75} />
+                </Button>
+              </span>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto p-2">
+              <ChatList groups={groups} current={initial.length ? id : null} showNew={false} />
+            </div>
+          </div>
+        </aside>
+      )}
 
-      <div className="mx-auto flex min-h-[calc(100svh-11rem)] w-full max-w-[720px] flex-col">
-      {/* Phone and tablet: the chat list is its own page; New chat beside it. */}
-      <div className="-mt-2 mb-2 flex items-center justify-end gap-1 xl:hidden">
-        <Button asChild variant="ghost" className="h-10 gap-2 rounded-full px-3 text-[14px] font-medium text-foreground-secondary hover:text-foreground">
-          <Link href="/coach/chats">
-            <MessagesSquare aria-hidden className="size-[18px]" strokeWidth={1.75} />
-            Chats
-            {chatCount > 0 && <span className="font-numeric text-[13px] text-muted-foreground tabular-nums">{chatCount}</span>}
-          </Link>
-        </Button>
-        {messages.length > 0 && (
-          <Button asChild variant="ghost" size="icon-touch" aria-label="New chat" className="text-foreground-secondary hover:text-foreground">
-            <Link href="/coach">
-              <SquarePen aria-hidden strokeWidth={1.75} />
+      <div className="mx-auto flex min-h-[calc(100svh-4.5rem)] w-full max-w-[760px] flex-col pb-[max(env(safe-area-inset-bottom),12px)] md:pb-6">
+      {/* The chat's toolbar: the chats (a page below 1280 px, the panel's toggle from there) and New chat. */}
+      <div className="-mt-2 mb-2 flex items-center justify-between gap-1">
+        <span className="flex items-center">
+          <Button asChild variant="ghost" size="icon-touch" aria-label={chatCount ? `Chats (${chatCount})` : "Chats"} className={cn(ICON_BTN, "xl:hidden")}>
+            <Link href="/coach/chats">
+              <History aria-hidden strokeWidth={1.75} />
             </Link>
           </Button>
-        )}
+          {!listOpen && (
+            <Button variant="ghost" size="icon-touch" aria-label="Show chats" aria-expanded={false} onClick={() => setPanelOpen(true)} className={cn(ICON_BTN, "hidden xl:inline-flex")}>
+              <PanelLeftOpen aria-hidden strokeWidth={1.75} />
+            </Button>
+          )}
+        </span>
+        {(messages.length > 0 || !listOpen) && <span className={cn(listOpen && "xl:hidden")}>{newChat}</span>}
       </div>
 
       {messages.length === 0 ? (
@@ -235,7 +314,7 @@ export function Coach({ id, initial, groups, prefill, providerLabel }: { id: str
       ) : (
         <div role="log" aria-label="Chat with Pulse’s coach" className="mt-4 space-y-6">
           {messages.map((m) => (
-            <Message key={m.id} m={m} />
+            <Message key={m.id} m={m} avatar={avatar} />
           ))}
           {status === "submitted" && <Caption live>Thinking…</Caption>}
         </div>
@@ -260,7 +339,7 @@ export function Coach({ id, initial, groups, prefill, providerLabel }: { id: str
           e.preventDefault()
           send(input)
         }}
-        className={cn(GLASS, "sticky bottom-[max(calc(env(safe-area-inset-bottom)-6px),12px)] z-20 mt-auto flex items-end gap-2 rounded-[24px] p-1.5 md:bottom-6")}
+        className={cn(GLASS, "sticky bottom-[max(env(safe-area-inset-bottom),12px)] z-20 mt-auto flex items-end gap-2 rounded-[24px] p-1.5 md:bottom-6")}
       >
         <label htmlFor="coach-input" className="sr-only">
           Ask Coach
@@ -279,7 +358,7 @@ export function Coach({ id, initial, groups, prefill, providerLabel }: { id: str
           rows={1}
           maxLength={2000}
           placeholder="Ask Coach"
-          className="field-sizing-content max-h-32 min-h-11 min-w-0 flex-1 resize-none rounded-[18px] bg-field px-4 py-2.5 text-[16px] leading-6 text-foreground outline-none placeholder:text-muted-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="field-sizing-content max-h-32 min-h-11 min-w-0 flex-1 resize-none rounded-[18px] bg-field px-4 py-2.5 text-[16px] leading-6 text-foreground outline-none placeholder:text-muted-foreground"
         />
         {busy ? (
           <Button type="button" size="icon-touch" variant="secondary" onClick={() => stop()} aria-label="Stop">

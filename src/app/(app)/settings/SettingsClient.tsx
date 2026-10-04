@@ -206,7 +206,8 @@ export function DeleteAccountButton() {
     <>
       <Button
         variant="ghost"
-        className="h-10 rounded-full px-4 text-[13px] font-semibold text-muted-foreground hover:bg-foreground/[0.06] hover:text-recovery-red-text"
+        // Outlined in red: easy to find, clearly destructive, still quieter than the everyday buttons above.
+        className="h-11 rounded-full px-5 text-[13px] font-bold tracking-[0.06em] text-recovery-red-text uppercase ring-1 ring-recovery-red/45 hover:bg-recovery-red/10 hover:text-recovery-red-text"
         onClick={() => setOpen(true)}
       >
         Delete account

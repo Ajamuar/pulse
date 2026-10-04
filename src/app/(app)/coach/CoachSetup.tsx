@@ -119,7 +119,7 @@ export function ProviderForm({ providers, current, onSaved }: { providers: Provi
         {pending && <LoaderCircle aria-hidden className="animate-spin motion-reduce:animate-none" />}
         {pending ? "Testing…" : "Test and save"}
       </Button>
-      <p className={BODY}>Pulse checks the key with one tiny request before saving it.</p>
+      {p.needsKey && <p className={BODY}>Pulse checks the key with one tiny request before saving it.</p>}
     </form>
   )
 }

@@ -3,7 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Ellipsis, SquarePen } from "lucide-react"
+import { Ellipsis, MessageSquarePlus } from "lucide-react"
 import { toast } from "sonner"
 import { deleteChatAction } from "@/server/actions/coach"
 import type { ChatGroup, ChatRow } from "@/server/coach/store"
@@ -32,8 +32,8 @@ function ChatItem({ chat, current }: { chat: ChatRow; current: boolean }) {
         href={`/coach?c=${chat.id}`}
         aria-current={current ? "page" : undefined}
         className={cn(
-          "flex min-h-11 items-center rounded-xl py-2.5 pr-11 pl-3 text-[15px] leading-5 outline-none transition-[background-color,color] duration-150 ease-standard focus-visible:ring-3 focus-visible:ring-ring/50",
-          current ? "bg-foreground/[0.08] font-medium text-foreground" : "text-foreground-secondary hover:bg-foreground/[0.04] hover:text-foreground",
+          "flex min-h-10 items-center rounded-lg py-2 pr-11 pl-3 text-[14px] leading-5 outline-none transition-[background-color,color] duration-150 ease-standard focus-visible:ring-3 focus-visible:ring-ring/50",
+          current ? "bg-foreground/[0.06] font-medium text-foreground" : "text-foreground-secondary hover:bg-foreground/[0.04] hover:text-foreground",
         )}
       >
         <span className="line-clamp-2 text-pretty">{chat.title}</span>
@@ -78,15 +78,17 @@ function ChatItem({ chat, current }: { chat: ChatRow; current: boolean }) {
  * The coach's chats (spec §7.21): New chat on top, then the chats grouped by recency. Beside the conversation on
  * laptop, and its own page (/coach/chats) on smaller screens.
  */
-export function ChatList({ groups, current, className }: { groups: ChatGroup[]; current: string | null; className?: string }) {
+export function ChatList({ groups, current, className, showNew = true }: { groups: ChatGroup[]; current: string | null; className?: string; showNew?: boolean }) {
   return (
     <nav aria-label="Chats" className={cn("flex flex-col gap-4", className)}>
-      <Button asChild variant="secondary" className="h-11 justify-start gap-2.5 rounded-xl px-3 text-[15px] font-semibold">
+      {showNew && (
+      <Button asChild variant="ghost" className="h-10 justify-start gap-2.5 rounded-xl px-3 text-[14px] font-semibold ring-1 ring-border hover:bg-foreground/[0.04]">
         <Link href="/coach">
-          <SquarePen aria-hidden className="size-[18px]" strokeWidth={1.75} />
+          <MessageSquarePlus aria-hidden className="size-[18px]" strokeWidth={1.75} />
           New chat
         </Link>
       </Button>
+      )}
       {groups.length === 0 ? (
         <p className="px-3 text-[14px] leading-5 text-pretty text-muted-foreground">Your chats appear here. They’re saved on this server, visible only to you.</p>
       ) : (

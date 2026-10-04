@@ -41,7 +41,8 @@ export function ResponsiveSheet({ open, onOpenChange, title, description, childr
   // Radix returns focus to a DialogTrigger; these sheets are controlled without one, so remember the opener.
   const opener = React.useRef<HTMLElement | null>(null)
 
-  // X at the left on the phone drawer [latest-sheet-edit-1]; at the right on the floating right sheet (spec §4.8, U18 O-03).
+  // X at the right everywhere, where people look for it (2026-10-04; was the left on the phone drawer, after
+  // [latest-sheet-edit-1]). spec §4.8.
   const header = (Title: React.ElementType, Description: React.ElementType, Close: React.ElementType, closeAt: "start" | "end") => (
     <div className="grid grid-cols-[44px_minmax(0,1fr)_44px] items-center gap-2 px-2 pt-1 pb-3">
       <Close asChild>
@@ -71,7 +72,7 @@ export function ResponsiveSheet({ open, onOpenChange, title, description, childr
             "motion-reduce:[animation-duration:120ms]! motion-reduce:data-[state=open]:[animation-name:fadeIn]! motion-reduce:data-[state=closed]:[animation-name:fadeOut]!"
           )}
         >
-          {header(DrawerTitle, DrawerDescription, DrawerClose, "start")}
+          {header(DrawerTitle, DrawerDescription, DrawerClose, "end")}
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-4">{children}</div>
           {foot}
         </DrawerContent>

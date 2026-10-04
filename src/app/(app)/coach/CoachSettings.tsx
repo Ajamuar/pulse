@@ -11,6 +11,7 @@ import type { CoachSetup } from "@/server/coach/store"
 import { ResponsiveSheet } from "@/components/shells/ResponsiveSheet"
 import { SectionShell } from "@/components/shells/SectionShell"
 import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ProviderForm } from "./CoachSetup"
 
 const ROW = "flex min-h-13 items-center justify-between gap-3 py-2"
@@ -23,10 +24,12 @@ export function CoachSettings({ setup, providers, providerLabel }: { setup: Coac
   const router = useRouter()
   const [open, setOpen] = React.useState(false)
   const [pending, start] = React.useTransition()
-  const act = (p: () => Promise<ActionResult>, ok: string) =>
+  const [confirm, setConfirm] = React.useState<null | "chats" | "off">(null)
+  const act = (p: () => Promise<ActionResult>, ok: string, done?: () => void) =>
     start(async () => {
       const r = await p().catch((): ActionResult => ({ ok: false, error: "Couldn’t reach Pulse. Try again." }))
       if (!r.ok) return void toast.error(r.error)
+      done?.()
       toast.success(ok)
       router.refresh()
     })
@@ -55,34 +58,70 @@ export function CoachSettings({ setup, providers, providerLabel }: { setup: Coac
             {setup.last4 && (
               <div className={ROW}>
                 <span className="text-[15px] leading-[22px]">API key</span>
-                <span className="font-numeric text-[15px] leading-[22px] text-foreground-secondary tabular-nums">••••{setup.last4}</span>
+                <span className="flex items-center gap-3">
+                  <span className="font-numeric text-[15px] leading-[22px] text-foreground-secondary tabular-nums">••••{setup.last4}</span>
+                  <button
+                    type="button"
+                    disabled={pending}
+                    onClick={() => act(removeProviderAction, "Key removed.")}
+                    className="relative rounded-md text-[13px] font-semibold text-recovery-red-text outline-none after:absolute after:-inset-3 hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+                  >
+                    Remove
+                  </button>
+                </span>
               </div>
             )}
           </div>
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            <Button variant="secondary" size="touch" onClick={() => setOpen(true)} disabled={pending}>
+          {/* One row of three: change the provider, clear the chats, or turn the coach off. */}
+          <div className="mt-4 grid grid-cols-3 gap-2">
+            <Button variant="secondary" size="touch" className="px-1.5 text-[12px] tracking-[0.03em]" onClick={() => setOpen(true)} disabled={pending}>
               {setup.provider ? "Change" : "Add key"}
             </Button>
-            {setup.last4 && (
-              <Button variant="outline" size="touch" disabled={pending} onClick={() => act(removeProviderAction, "Key removed.")}>
-                Remove key
-              </Button>
-            )}
-            <Button variant="outline" size="touch" disabled={pending} onClick={() => act(deleteAllChatsAction, "Every chat deleted.")}>
+            <Button variant="outline" size="touch" className="px-1.5 text-[12px] tracking-[0.03em]" disabled={pending} onClick={() => setConfirm("chats")}>
               Delete chats
             </Button>
-            <Button variant="outline" size="touch" disabled={pending} onClick={() => act(() => setConsentAction(false), "Coach turned off.")}>
+            <Button variant="outline" size="touch" className="px-1.5 text-[12px] tracking-[0.03em]" disabled={pending} onClick={() => setConfirm("off")}>
               Turn off
             </Button>
           </div>
           <p className="mt-3 text-[13px] leading-[18px] text-muted-foreground">Your key is encrypted on this server and never shown again. Admins can’t see it or your chats.</p>
         </>
       )}
-      <ResponsiveSheet open={open} onOpenChange={setOpen} title="AI provider" description="Pulse checks the key with one tiny request before saving it.">
-        <div className="px-4 pb-[max(env(safe-area-inset-bottom),16px)] md:px-6 md:pb-6">
-          <ProviderForm providers={providers} current={setup} onSaved={() => (setOpen(false), toast.success("Provider saved."))} />
-        </div>
+      <ResponsiveSheet open={open} onOpenChange={setOpen} title="AI provider">
+        <ProviderForm providers={providers} current={setup} onSaved={() => (setOpen(false), toast.success("Provider saved."))} />
       </ResponsiveSheet>
+      <Dialog open={confirm !== null} onOpenChange={(o) => !o && !pending && setConfirm(null)}>
+        <DialogContent showCloseButton={false} className="ring-1 ring-border">
+          <DialogHeader>
+            <DialogTitle>{confirm === "chats" ? "Delete every coach chat?" : "Turn the coach off?"}</DialogTitle>
+            <DialogDescription>
+              {confirm === "chats"
+                ? "All your saved chats are removed from this server. This can’t be undone."
+                : "The coach stops until you set it up again. Your key and chats stay; delete them here first if you want them gone."}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="secondary" size="touch" onClick={() => setConfirm(null)} disabled={pending}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="touch"
+              className={confirm === "chats" ? "text-recovery-red-text" : undefined}
+              disabled={pending}
+              aria-busy={pending || undefined}
+              onClick={() =>
+                confirm === "chats"
+                  ? act(deleteAllChatsAction, "Every chat deleted.", () => setConfirm(null))
+                  : act(() => setConsentAction(false), "Coach turned off.", () => setConfirm(null))
+              }
+            >
+              {confirm === "chats" ? "Delete chats" : "Turn off"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </SectionShell>
   )
 }

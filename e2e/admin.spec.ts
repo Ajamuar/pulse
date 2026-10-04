@@ -234,7 +234,7 @@ test("coach: an admin turns it on, the P button opens it, set-up, a question wit
   // Saved: a reload brings the chat back. On a phone the chats are their own page, grouped by day.
   await page.reload();
   await expect(page.getByText("Take it easy", { exact: true })).toBeVisible();
-  await page.getByRole("link", { name: /^Chats/ }).click();
+  await page.getByRole("link", { name: /^Chats/ }).click(); // the history icon
   await expect(page).toHaveURL(/\/coach\/chats$/);
   const chats = page.getByRole("navigation", { name: "Chats" });
   await expect(chats.getByRole("region", { name: "Today" }).getByRole("link", { name: "Why is my recovery where it is today?" })).toBeVisible();
