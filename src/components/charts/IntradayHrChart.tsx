@@ -76,25 +76,40 @@ export const zoneBands = (zones: HrZone[]): Band[] => [
   ...[...zones].sort((a, b) => a.min - b.min).map((z) => ({ from: z.min, color: DATA_COLORS[ZONE_COLOR[z.zone] ?? "strain"].css })),
 ]
 
-/** The zones as a colour ruler under the plot: one segment per zone, sized by its bpm span, with the bpm where each starts (Bevel's workout chart). */
-export function ZoneRuler({ zones, className }: { zones: HrZone[]; className?: string }) {
-  const sorted = [...zones].sort((a, b) => a.min - b.min)
-  if (!sorted.length) return null
-  return (
-    <div aria-hidden className={className}>
-      <div className="flex gap-0.5">
-        {sorted.map((z, i) => (
-          <div key={z.zone} className="min-w-0" style={{ flexGrow: Math.max(1, z.max - z.min), flexBasis: 0 }}>
-            <div className={`h-1.5 rounded-full ${DATA_COLORS[ZONE_COLOR[z.zone] ?? "strain"].bg}`} />
-            <div className="mt-1 truncate text-[10px] leading-3 font-semibold tracking-[0.04em] text-foreground-secondary uppercase">{z.label}</div>
-            <div className="mt-0.5 truncate font-numeric text-[10px] leading-3 font-medium text-muted-foreground tabular-nums">
-              {i === sorted.length - 1 ? `${z.min}+` : `${z.min}-${sorted[i + 1].min - 1}`}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
+/**
+ * The zones on the bpm axis: a 4 px colour strip along the plot's right edge at each zone's height, labelled Z1-Z5.
+ * Only the part of a zone inside the y domain is drawn, so zones the heart rate never reached don't appear.
+ * (A ruler under the plot read as stretches of time.)
+ */
+export function zoneStrips(zones: HrZone[] | undefined, domain: [number, number]) {
+  return (zones ?? []).flatMap((z) => {
+    const lo = Math.max(z.min, domain[0])
+    const hi = Math.min(z.max, domain[1])
+    if (hi <= lo) return []
+    const color = DATA_COLORS[ZONE_COLOR[z.zone] ?? "strain"].css
+    return [
+      <ReferenceArea
+        key={`zone-${z.zone}`}
+        y1={lo}
+        y2={hi}
+        fill="transparent"
+        ifOverflow="visible"
+        label={({ viewBox }: { viewBox?: { x?: number; y?: number; width?: number; height?: number } }) => {
+          const { x = 0, y = 0, width = 0, height = 0 } = viewBox ?? {}
+          return (
+            <g pointerEvents="none">
+              <rect x={x + width + 3} y={y + 0.5} width={4} height={Math.max(0, height - 1)} rx={2} fill={color} />
+              {height >= 11 && (
+                <text x={x + width + 11} y={y + height / 2} dy="0.35em" fontSize={10} fontWeight={700} fill={color}>
+                  Z{z.zone}
+                </text>
+              )}
+            </g>
+          )
+        }}
+      />,
+    ]
+  })
 }
 
 function Chart({ hr, variant }: { hr: HrSeries; variant: "day" | "activity" }) {
@@ -124,7 +139,7 @@ function Chart({ hr, variant }: { hr: HrSeries; variant: "day" | "activity" }) {
   return (
     <div>
       <ChartFigure summary={summary} config={{ bpm: { label: "Heart rate", color: "var(--strain)" } }} className={variant === "day" ? "h-[200px]" : "h-[180px]"}>
-        <AreaChart data={rows} accessibilityLayer margin={{ top: 18, right: 8, bottom: 0, left: 0 }}>
+        <AreaChart data={rows} accessibilityLayer margin={{ top: 18, right: 28, bottom: 0, left: 0 }}>
           <defs>
             <BandGradient id={`hr-line-${id}`} top={hotTop} bottom={hotBottom} bands={bands} />
             {/* The fill is one soft fade in the peak's colour: band stops in a fill read as stacked blocks. */}
@@ -133,6 +148,7 @@ function Chart({ hr, variant }: { hr: HrSeries; variant: "day" | "activity" }) {
           </defs>
           <CartesianGrid {...GRID} />
           {spanAreas(hr.spans, variant === "day")}
+          {zoneStrips(hr.zones, domain)}
           <XAxis
             dataKey="t"
             type="number"
@@ -182,7 +198,6 @@ function Chart({ hr, variant }: { hr: HrSeries; variant: "day" | "activity" }) {
           <Area dataKey="hot" type="monotone" stroke={bandPaint(`hr-line-${id}`, hotTop, hotBottom, bands)} strokeWidth={1.75} fill={hotTop > domain[0] ? `url(#hr-fill-${id})` : "none"} connectNulls={false} activeDot={false} tooltipType="none" {...anim} />
         </AreaChart>
       </ChartFigure>
-      {hr.zones && hr.zones.length > 0 && <ZoneRuler zones={hr.zones} className="mt-3 pl-8 pr-2" />}
     </div>
   )
 }

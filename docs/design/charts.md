@@ -168,7 +168,7 @@ flowchart LR
 **Done:**
 - the shared layer: dashed grid, filled pills, band gradients for strokes, soft fades, glow dot, whole-number ticks;
 - TrendChart: gradient bars with a cap, y-scales in band colours, line coloured by band, bold selected day;
-- heart rate: grey outside workouts, zone colours inside, icon headers on spans, zone ruler;
+- heart rate: grey outside workouts, zone colours inside, icon headers on spans, zone strips on the bpm axis;
 - Stress and Energy: one continuous level-coloured line, icon spans, drain pills;
 - Hypnogram: thick stage blocks, stage-coloured lanes, bold bed and wake times;
 - Sleep HR: the lowest point marked;
