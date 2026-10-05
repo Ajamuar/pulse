@@ -1,3 +1,4 @@
+import { AppLifecycle } from "./AppLifecycle"
 import { AppNav } from "./AppNav"
 import { ShellStatusProvider, type ShellStatus } from "./ShellStatus"
 
@@ -24,6 +25,7 @@ export function AppShell({ status, live = false, children }: AppShellProps) {
       {/* Navigation before <main> in the DOM, so Tab reaches the rail or sidebar right after the skip link, not after the
           whole page (U18 G-05). It is fixed, so the order changes nothing visually. */}
       <AppNav />
+      <AppLifecycle />
       {/* Bottom padding clears the floating bar (62 px + its inset) or the round action, plus 24 px; 40 px from 768 px,
           where the action is docked in the rail or sidebar (D-L5).
           overflow-x-clip (not hidden, so sticky headers keep working): nothing a page paints can widen the layout

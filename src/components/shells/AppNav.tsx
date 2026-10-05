@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils"
 import { Mark } from "@/components/brand/Mark"
 import { Wordmark } from "@/components/brand/Wordmark"
 import { dayLabel } from "@/lib/format"
+import { haptic } from "@/lib/haptics"
 import { parseDay, tabForPath, TAB_ROOT, type Tab } from "@/lib/url"
 import { SheetTrigger } from "./SheetTrigger"
 import { useShellCalendar, useShellStatus } from "./ShellStatus"
@@ -52,7 +53,7 @@ function Lens({ index, axis, className }: { index: number; axis: "x" | "y"; clas
 /** Phone tab bar: a 62 px glass squircle with four destinations (spec §4.2, G1). */
 function TabBar({ current }: { current: number }) {
   return (
-    <nav aria-label="Primary" className={cn(GLASS, "relative h-[62px] min-w-0 flex-1 rounded-[22px] p-1")}>
+    <nav aria-label="Primary" onClick={() => haptic(6)} className={cn(GLASS, "relative h-[62px] min-w-0 flex-1 rounded-[22px] p-1")}>
       <Lens index={current} axis="x" className="inset-y-1 left-1 w-[calc((100%-8px)/4)] rounded-[18px]" />
       <ul className="relative grid h-full grid-cols-4">
         {TABS.map(({ tab, label, icon: Icon }, i) => (

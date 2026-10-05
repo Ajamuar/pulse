@@ -1,4 +1,4 @@
-import { Suspense } from "react"
+import { Suspense, ViewTransition } from "react"
 import { connection } from "next/server"
 import { redirect } from "next/navigation"
 import { currentUser } from "@/server/auth"
@@ -34,7 +34,8 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   const [status, avatar, coach] = await Promise.all([getShellStatus(ctx), avatarSrc(db, user.userId), coachAccess(db, user.userId)])
   return (
     <AppShell live status={{ ...status, avatar, coach }}>
-      {children}
+      {/* Navigations cross-fade (React's View Transitions); the nav and header chrome stay put. */}
+      <ViewTransition>{children}</ViewTransition>
       {/* One check-in sheet for every screen, opened over it by `?checkin=1` (spec §11 UX2). */}
       <Suspense>
         <CheckInSheet />

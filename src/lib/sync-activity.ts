@@ -19,6 +19,15 @@ export function startSyncing(): () => void {
   }
 }
 
+/** Runs a sync past the worker's 5-minute gate and waits for it. Plain fetch, never a Server Action: an action holds every link navigation until it returns. */
+export async function syncNow(): Promise<{ ok: boolean; error?: string }> {
+  const end = startSyncing()
+  return fetch("/sync", { method: "POST", cache: "no-store" })
+    .then((res) => res.json())
+    .catch(() => ({ ok: false, error: "Couldn’t reach Pulse" }))
+    .finally(end)
+}
+
 const subscribe = (cb: () => void) => {
   listeners.add(cb)
   return () => listeners.delete(cb)

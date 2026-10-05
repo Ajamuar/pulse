@@ -34,7 +34,7 @@ const ADMIN_PORT = 3302;
 const ADMIN_DB = "pulse_e2e_admin";
 const E2E_OWNER = "owner@pulse.test"; // e2e/admin.spec.ts signs up with it
 
-const ignored = (name: string) => [...(JOURNEYS.has(name) ? [] : ["**/journeys.spec.ts", "**/auth.spec.ts"]), "**/onboarding.spec.ts", "**/admin.spec.ts"];
+const ignored = (name: string) => [...(JOURNEYS.has(name) ? [] : ["**/journeys.spec.ts", "**/auth.spec.ts", "**/pwa.spec.ts"]), "**/onboarding.spec.ts", "**/admin.spec.ts"];
 const touch = (name: string, width: number, height: number, deviceScaleFactor = 3) => ({
   name,
   testIgnore: ignored(name),

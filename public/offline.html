@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1d2529">
+<title>Offline · Pulse</title>
+<style>
+  :root { color-scheme: dark light; --bg: #1d2529; --fg: #f6f8f9; --muted: #9aa7ad; }
+  @media (prefers-color-scheme: light) { :root { --bg: #f6f8f9; --fg: #101518; --muted: #5d6a70; } }
+  html, body { height: 100%; margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.4 system-ui, -apple-system, sans-serif; }
+  main { min-height: 100%; display: grid; place-content: center; justify-items: center; gap: 12px; padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom)); text-align: center; }
+  svg { width: 56px; height: 56px; }
+  h1 { margin: 8px 0 0; font-size: 20px; }
+  p { margin: 0; max-width: 32ch; color: var(--muted); }
+  button { margin-top: 12px; min-height: 44px; padding: 0 24px; border: 0; border-radius: 999px; background: #00f19f; color: #101518; font: inherit; font-weight: 600; }
+</style>
+</head>
+<body>
+<main>
+  <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6.9" y="4.5" width="4.2" height="11" rx="2.1" fill="#00f19f"/><rect x="12.9" y="8.5" width="4.2" height="11" rx="2.1" fill="#1fa0f0"/></svg>
+  <h1>You’re offline</h1>
+  <p>Pulse needs a connection to load your latest scores. Check your network and try again.</p>
+  <button type="button" onclick="location.reload()">Try again</button>
+</main>
+<script>addEventListener("online", () => location.reload())</script>
+</body>
+</html>

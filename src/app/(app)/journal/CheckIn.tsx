@@ -7,6 +7,8 @@ import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { TAG_GROUPS, tagIcon } from "@/lib/journal"
 import { DAY, formatDay } from "@/lib/format"
+import { haptic } from "@/lib/haptics"
+import { enqueue } from "@/lib/offline-queue"
 import { parseDay } from "@/lib/url"
 import { addCustomTag, loadCheckIn, saveJournalEntry } from "@/server/actions/journal"
 import type { JournalVM } from "@/server/queries/types"
@@ -197,15 +199,24 @@ export function CheckInSheet() {
     if (!data) return
     setSaving(true)
     setSaveError(false)
+    const changes = changedEntries(values, data.checkIn.entries)
+    let sent = 0
     try {
-      for (const [tag, value] of changedEntries(values, data.checkIn.entries)) {
+      if (!navigator.onLine) throw new Error("offline")
+      for (; sent < changes.length; sent++) {
+        const [tag, value] = changes[sent]
         const r = await saveJournalEntry({ day: data.day, tag, value })
-        if (!r.ok) throw new Error(r.error)
+        if (!r.ok) return setSaveError(true)
       }
+      haptic()
       finish()
       toast.success("Check-in saved")
     } catch {
-      setSaveError(true)
+      // A Server Action throws only when it can't reach the server: keep what wasn't sent on this device and send it
+      // when the connection is back (PwaRuntime flushes the queue).
+      enqueue(changes.slice(sent).map(([tag, value]) => ({ day: data.day, tag, value })))
+      finish()
+      toast("Saved on this device", { description: "It sends when you’re back online." })
     } finally {
       setSaving(false)
     }

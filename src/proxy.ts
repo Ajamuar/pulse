@@ -21,5 +21,5 @@ export const config = {
   // Open to all: better-auth's endpoints, Google's redirect (the callback validates itself), the health check, build
   // assets, and files under public/ (static extensions only, so a page path with a dot in it, /activity/a.b, is still
   // gated).
-  matcher: ["/((?!api/auth/|oauth/|healthz|_next/|.*\\.(?:ico|png|jpe?g|svg|webp|webmanifest|txt|xml|js|css|woff2?|map)$).*)"],
+  matcher: ["/((?!api/auth/|oauth/|healthz|_next/|.*\\.(?:ico|png|jpe?g|svg|webp|webmanifest|txt|xml|html|js|css|woff2?|map)$).*)"],
 };

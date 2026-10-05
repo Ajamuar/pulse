@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { GoogleFit } from "@/components/brand/GoogleFit"
 import { Mark } from "@/components/brand/Mark"
+import { AppSettings, SignOutForm } from "./AppSettings"
 import { AvatarButtons, ChangePasswordButton, DeleteAccountButton, DisconnectButton, EditProfileButton, SwitchGoogleButton, ThemePicker } from "./SettingsClient"
 import { CAPTION } from "@/components/metrics/primitives"
 
@@ -61,11 +62,11 @@ export function Account({ account }: { account: SettingsAccount }) {
             <a href="/admin">Admin panel</a>
           </Button>
         )}
-        <form method="post" action="/logout" className="col-span-2">
+        <SignOutForm className="col-span-2">
           <Button type="submit" variant="outline" size="touch" className="w-full">
             Sign out
           </Button>
-        </form>
+        </SignOutForm>
       </div>
     </SectionShell>
   )
@@ -265,7 +266,7 @@ export function Profile({ profile }: { profile: SettingsVM["profile"] }) {
  * Settings body: configuration only (U21): Account, Data source (with sync), Profile, Appearance, as one 640 px column at every
  * width. About, reports, exports and help live in More.
  */
-export function SettingsView({ vm, now, account, coach }: { vm: SettingsVM; now: number; account: SettingsAccount; coach?: React.ReactNode }) {
+export function SettingsView({ vm, now, account, coach, pushKey = null }: { vm: SettingsVM; now: number; account: SettingsAccount; coach?: React.ReactNode; pushKey?: string | null }) {
   return (
     <div className="mx-auto flex w-full max-w-[640px] flex-col gap-3 md:gap-4">
       <Account account={account} />
@@ -275,6 +276,7 @@ export function SettingsView({ vm, now, account, coach }: { vm: SettingsVM; now:
         <ThemePicker />
         <p className="mt-2 text-[13px] leading-[18px] text-pretty text-muted-foreground">System follows this device’s light or dark setting.</p>
       </SectionShell>
+      <AppSettings pushKey={pushKey} />
       {coach}
       {/* Last and quiet: the one irreversible action sits below everything, away from the everyday controls. */}
       {!account.demo && account.email !== null && (

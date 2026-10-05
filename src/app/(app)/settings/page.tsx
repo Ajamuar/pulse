@@ -5,6 +5,7 @@ import { currentUser, DEMO_EMAIL } from "@/server/auth"
 import { avatarSrc, connectedGoogleEmail } from "@/server/avatar"
 import { providerLabel, providerOptions } from "@/server/coach/options"
 import { coachAccess, coachSetup } from "@/server/coach/store"
+import { pushPublicKey } from "@/server/push"
 import { userCtx } from "@/server/queries/common"
 import { CoachSettings } from "../coach/CoachSettings"
 import { getSettings } from "@/server/queries/settings"
@@ -41,6 +42,7 @@ export default async function SettingsPage() {
           <SettingsView
             vm={vm}
             now={requestTime()}
+            pushKey={pushPublicKey()}
             coach={coach && <CoachSettings setup={coachState} providers={providerOptions()} providerLabel={providerLabel(coachState.provider)} />}
             account={{
               email: user?.email ?? null,

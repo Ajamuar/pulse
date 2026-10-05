@@ -1,6 +1,11 @@
 import type { NextConfig } from "next";
 
+// Baked into the client at build time: the service worker is registered as /sw.js?v=<this>, so each build installs
+// a fresh worker and the open app can offer "New version available".
+const BUILD_ID = process.env.GIT_SHA || Date.now().toString(36);
+
 const nextConfig: NextConfig = {
+  env: { NEXT_PUBLIC_BUILD_ID: BUILD_ID },
   output: "standalone",
   // Client cache for visited pages (Next 16 keeps dynamic pages for 0 s by default, so every tab switch re-rendered
   // on the server behind a skeleton). A sync's router.refresh() clears it, so data is never older than the last sync.
@@ -15,6 +20,9 @@ const nextConfig: NextConfig = {
   // No framing (clickjacking on the sign-in form), no MIME sniffing, and no full URLs in Referer to other sites.
   async headers() {
     return [
+      // The worker and its offline page must never be served stale, or an update could never arrive.
+      { source: "/sw.js", headers: [{ key: "Cache-Control", value: "no-cache, no-store, must-revalidate" }, { key: "Service-Worker-Allowed", value: "/" }] },
+      { source: "/offline.html", headers: [{ key: "Cache-Control", value: "no-cache" }] },
       {
         source: "/:path*",
         headers: [
