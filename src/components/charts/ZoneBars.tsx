@@ -28,6 +28,9 @@ export type ZoneBarsProps =
       emptyCopy?: string
     }
 
+/** Each zone's fill, cool to hot: Light blue, Moderate green, Vigorous orange, Peak red. */
+const ZONE_COLOR: Record<number, DataColor> = { 1: "strain", 2: "optimal", 3: "warning", 4: "recovery-red" }
+
 function share(part: number, total: number) {
   if (!total || !part) return "0%"
   const p = (part / total) * 100
@@ -63,7 +66,7 @@ function Rows({ zones, note }: { zones: ZoneRow[]; note?: string }) {
                 </span>
               </div>
               <div aria-hidden className="relative h-2 rounded-sm bg-(image:--pattern-hatch)">
-                <div className="absolute inset-y-0 left-0 rounded-sm bg-foreground" style={{ width: total ? `${(z.seconds / total) * 100}%` : 0 }} />
+                <div className={cn("absolute inset-y-0 left-0 rounded-sm", ZONE_COLOR[z.zone] ? DATA_COLORS[ZONE_COLOR[z.zone]].bg : "bg-foreground")} style={{ width: total ? `${(z.seconds / total) * 100}%` : 0 }} />
               </div>
             </li>
           )

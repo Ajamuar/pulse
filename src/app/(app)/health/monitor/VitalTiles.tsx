@@ -18,6 +18,12 @@ const ICON: Record<VitalKey, React.ReactNode> = {
   skinTempDev: <Thermometer />,
 }
 const FORMAT: Record<VitalKey, FormatKey> = { resp: "decimal1", spo2: "int", restingHr: "int", hrv: "int", skinTempDev: "signed1" }
+/**
+ * Five tiles: two a row on phone, the fifth full width; on tablet a six-column grid, three tiles then two wider ones;
+ * five a row on laptop. Before, the ranges note filled the empty sixth cell and read as a stray paragraph in the grid.
+ */
+const GRID =
+  "grid grid-cols-2 gap-3 *:last:col-span-2 md:grid-cols-6 md:*:col-span-2 md:[&>*:nth-last-child(-n+2)]:col-span-3 xl:grid-cols-5 xl:gap-4 xl:*:col-span-1 xl:[&>*:nth-last-child(-n+2)]:col-span-1"
 const NOTE = "Resting heart rate, HRV and skin temperature use Google’s personal ranges when it has them; otherwise your range is your baseline ± 2 SD over 60 nights."
 
 /** The five vital tiles, each opening its vital sheet (journey 6), plus the ranges note cell. */
@@ -34,7 +40,7 @@ export function VitalTiles({ vitals }: { vitals: Vital[] }) {
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5 xl:gap-4">
+      <div className={GRID}>
         {vitals.map((x) => (
           <KeyStatRow
             key={x.key}
@@ -53,9 +59,8 @@ export function VitalTiles({ vitals }: { vitals: Vital[] }) {
             }}
           />
         ))}
-        <p className="p-4 text-xs leading-4 font-medium text-pretty text-muted-foreground xl:hidden">{NOTE}</p>
       </div>
-      <p className="mt-3 hidden text-xs leading-4 font-medium text-muted-foreground xl:block">{NOTE}</p>
+      <p className="mt-3 text-xs leading-4 font-medium text-pretty text-muted-foreground">{NOTE}</p>
 
       <ResponsiveSheet open={!!current} onOpenChange={(o) => !o && setOpen(null)} title={v?.label ?? "Vital"}>
         {v && (
@@ -98,13 +103,12 @@ const SKELETON_LABEL: [VitalKey, string][] = [
 export function VitalTilesSkeleton() {
   return (
     <>
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5 xl:gap-4">
+      <div className={GRID}>
         {SKELETON_LABEL.map(([k, l]) => (
           <KeyStatRowSkeleton key={k} variant="tile" label={l} icon={ICON[k]} />
         ))}
-        <p className="p-4 text-xs leading-4 font-medium text-pretty text-muted-foreground xl:hidden">{NOTE}</p>
       </div>
-      <p className="mt-3 hidden text-xs leading-4 font-medium text-muted-foreground xl:block">{NOTE}</p>
+      <p className="mt-3 text-xs leading-4 font-medium text-pretty text-muted-foreground">{NOTE}</p>
     </>
   )
 }
