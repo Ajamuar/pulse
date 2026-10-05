@@ -8,7 +8,11 @@ const shot = (name: string, sizes: string, form_factor: "narrow" | "wide", label
   label,
 });
 
-const shortcutIcon = (name: string) => ({ src: `/icons/shortcut-${name}.png`, sizes: "192x192", type: "image/png" });
+// Icon URLs carry ?v=: Android's install service and the launcher cache icons by URL, so a changed picture needs a new one. Bump it with the pictures.
+const V = "3";
+const icon = (file: string, size: number, purpose: "any" | "maskable") => ({ src: `/icons/${file}.png?v=${V}`, sizes: `${size}x${size}`, type: "image/png", purpose });
+// Maskable too: the launcher then fills its whole circle with the picture instead of drawing the square on a grey disc.
+const shortcutIcons = (name: string) => [icon(`shortcut-${name}`, 192, "maskable"), icon(`shortcut-${name}`, 192, "any")];
 
 // Open to signed-out visitors (src/proxy.ts skips files with an extension), so install works from /login.
 export default function manifest(): MetadataRoute.Manifest {
@@ -30,16 +34,16 @@ export default function manifest(): MetadataRoute.Manifest {
     // Matches viewport.themeColor (layout.tsx), the top of the page ground, so the installed app's bar never changes colour on load.
     theme_color: "#1d2529",
     icons: [
-      // "any": the mark with the name under it. "maskable": inside the 80% safe zone; Android uses the 192 for the home-screen icon (mark) and the 512 for its launch screen (mark and name).
-      { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
-      { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
-      { src: "/icons/icon-maskable-192.png", sizes: "192x192", type: "image/png", purpose: "maskable" },
-      { src: "/icons/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+      // "any": the mark with the name under it. "maskable": the same, inside the 80% safe zone, for Android's home-screen icon and launch screen.
+      icon("icon-192", 192, "any"),
+      icon("icon-512", 512, "any"),
+      icon("icon-maskable-192", 192, "maskable"),
+      icon("icon-maskable-512", 512, "maskable"),
     ],
     shortcuts: [
-      { name: "Check in", short_name: "Check in", url: "/journal?checkin=1", icons: [shortcutIcon("checkin")] },
-      { name: "Recovery", url: "/recovery", icons: [shortcutIcon("recovery")] },
-      { name: "Sleep", url: "/sleep", icons: [shortcutIcon("sleep")] },
+      { name: "Check in", short_name: "Check in", url: "/journal?checkin=1", icons: shortcutIcons("checkin") },
+      { name: "Recovery", url: "/recovery", icons: shortcutIcons("recovery") },
+      { name: "Sleep", url: "/sleep", icons: shortcutIcons("sleep") },
     ],
     screenshots: [
       shot("phone-home", "720x1309", "narrow", "Home: recovery, strain and sleep"),

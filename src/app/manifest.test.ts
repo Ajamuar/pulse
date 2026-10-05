@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import manifest from "./manifest";
 
-const onDisk = (src: string) => existsSync(join(process.cwd(), "public", src));
+const onDisk = (src: string) => existsSync(join(process.cwd(), "public", src.split("?")[0]));
 
 describe("web app manifest", () => {
   const m = manifest();

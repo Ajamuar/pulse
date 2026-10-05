@@ -42,9 +42,9 @@ def render(w, h, bg, mark_h, path, name_w=None, name_color=None, gap=0):
 for s in (192, 512):
     render(s, s, DARK, s * 0.28, f"icons/icon-{s}.png", name_w=s * 0.5, name_color=LIGHT, gap=s * 0.07)
 # maskable: the launcher crops to a circle or squircle, so everything stays inside the 80% safe zone (a circle of radius 40%).
-# Android picks the 192 for the home-screen icon (the mark alone) and the 512 for its launch screen (mark and name).
-render(192, 192, DARK, 192 * 0.5, "icons/icon-maskable-192.png")
-render(512, 512, DARK, 512 * 0.26, "icons/icon-maskable-512.png", name_w=512 * 0.46, name_color=LIGHT, gap=512 * 0.06)
+# Android takes its launch screen from one of these and the home-screen icon from one; both show the name.
+for s in (192, 512):
+    render(s, s, DARK, s * 0.26, f"icons/icon-maskable-{s}.png", name_w=s * 0.46, name_color=LIGHT, gap=s * 0.06)
 
 # App shortcut icons (long-press menu): a lucide glyph in the brand colour on the splash colour, drawn for a circular crop.
 SHORTCUTS = {"checkin": LIGHT, "recovery": GREEN, "sleep": BLUE}
