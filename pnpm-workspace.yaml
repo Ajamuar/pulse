@@ -5,3 +5,6 @@ allowBuilds:
   unrs-resolver: false
 minimumReleaseAgeExclude:
   - '@types/node@24.19.1'
+# The home server's link can be slow (the next and swc tarballs are big); pnpm's 60 s default aborted the image build.
+fetchTimeout: 600000
+fetchRetries: 5
