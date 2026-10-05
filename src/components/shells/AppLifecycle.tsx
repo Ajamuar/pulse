@@ -103,12 +103,13 @@ export function AppLifecycle() {
 
   const shown = syncing || pull > 0
   return (
-    <div
-      aria-hidden
-      className="pointer-events-none fixed top-[calc(env(safe-area-inset-top)+8px)] left-1/2 z-40 grid size-9 -translate-x-1/2 place-items-center rounded-full bg-background-mid text-foreground shadow-md ring-1 ring-border transition-[opacity,translate] duration-150 ease-standard"
-      style={{ opacity: shown ? Math.min(1, syncing ? 1 : pull / TRIGGER) : 0, translate: `0 ${syncing ? 12 : pull / 2}px` }}
-    >
-      <RefreshCw strokeWidth={2} className={syncing ? "size-4 animate-spin motion-reduce:animate-none" : "size-4"} style={syncing ? undefined : { rotate: `${pull * 3}deg` }} />
+    <div aria-hidden className="pointer-events-none fixed inset-x-0 top-[calc(env(safe-area-inset-top)+8px)] z-40 flex justify-center">
+      <div
+        className="grid size-9 place-items-center rounded-full bg-background-mid text-foreground shadow-md ring-1 ring-border transition-[opacity,translate] duration-150 ease-standard"
+        style={{ opacity: shown ? Math.min(1, syncing ? 1 : pull / TRIGGER) : 0, translate: `0 ${syncing ? 12 : pull / 2}px` }}
+      >
+        <RefreshCw strokeWidth={2} className={syncing ? "size-4 animate-spin motion-reduce:animate-none" : "size-4"} style={syncing ? undefined : { rotate: `${pull * 3}deg` }} />
+      </div>
     </div>
   )
 }

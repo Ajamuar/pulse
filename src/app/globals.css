@@ -495,19 +495,6 @@
     user-select: none;
     -webkit-touch-callout: none;
   }
-  /* Route changes cross-fade (<ViewTransition> in the app layout): quick, and none under reduced motion. */
-  ::view-transition-group(*),
-  ::view-transition-old(*),
-  ::view-transition-new(*) {
-    animation-duration: 160ms;
-  }
-  @media (prefers-reduced-motion: reduce) {
-    ::view-transition-group(*),
-    ::view-transition-old(*),
-    ::view-transition-new(*) {
-      animation: none;
-    }
-  }
   /* Fixed to the viewport (a fixed pseudo-element works on iOS, background-attachment: fixed does not). */
   body::before {
     content: "";

@@ -5,14 +5,14 @@ What makes Pulse behave like an app when it is added to the Home Screen or insta
 | Piece | Where | Notes |
 |---|---|---|
 | Manifest | `src/app/manifest.ts` | `id`, scope, portrait, shortcuts (Check in, Recovery, Sleep), screenshots, `launch_handler`. |
-| Icons and launch screens | `public/icons`, `public/splash`, `scripts/gen-pwa-assets.py` | `any` icon = small mark on the splash colour (Android's launch screen). `maskable` has its own file. iOS launch screens per device size, dark and light. Rerun the script to regenerate. |
+| Icons and launch screens | `public/icons`, `public/splash`, `scripts/gen-pwa-assets.py` | `any` icon = small mark with the PULSE wordmark under it, on the splash colour (Android's launch screen). `maskable` has its own file. iOS launch screens per device size, dark and light. Rerun the script to regenerate. |
 | Service worker | `public/sw.js` | Caches only `/_next/static/*` and `/offline.html`. Never pages or health data. Also handles Web Push. |
 | Registration, update prompt, offline toast | `src/components/pwa/PwaRuntime.tsx` | Production builds only. Registered as `/sw.js?v=<build id>`, so each build installs a new worker and the user is asked before the page swaps. |
 | Foreground refresh, pull to sync, offline queue flush | `src/components/shells/AppLifecycle.tsx` | Signed-in screens only. |
 | Offline check-in queue | `src/lib/offline-queue.ts` | Check-in answers saved offline are kept in `localStorage` and replayed when back online. |
 | Install button / iOS steps, notifications switch | Settings › App (`settings/AppSettings.tsx`), `src/lib/install.ts`, `src/lib/push-client.ts` | |
 | Push backend | `src/server/push.ts`, `src/app/push/route.ts` | Needs `VAPID_*` env vars (see `setup.md`). Without them the switch is hidden. |
-| Route transitions | `<ViewTransition>` in `src/app/(app)/layout.tsx`, CSS in `globals.css` | |
+| Route transitions | Removed: React View Transitions snapshot the page, and the glass nav and headers (backdrop-filter) flickered during every route change. | |
 
 ## Flows
 
