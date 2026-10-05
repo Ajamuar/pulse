@@ -165,7 +165,7 @@ export function PersonPanel({ person: p, now, chosen, canReset, me, children }: 
                   <Pill tone={admin || p.role === "owner" ? "coach" : "neutral"}>{admin ? "Admin" : ROLE[p.role]}</Pill>
                 </dd>
                 <dt className="text-muted-foreground">Username</dt>
-                <dd className="min-w-0 truncate text-right">{p.username ? `@${p.username}` : "None"}</dd>
+                <dd className="min-w-0 truncate text-right">{p.username ? `@${p.username}` : "Not set"}</dd>
                 <dt className="text-muted-foreground">Joined</dt>
                 <dd className="text-right">{shortDate(p.createdAt)}</dd>
                 <dt className="text-muted-foreground">Last active</dt>

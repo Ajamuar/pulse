@@ -71,7 +71,7 @@ export default async function JournalPage({ searchParams }: PageProps<"/journal"
                         href={dayHref("/journal", h.day, today)}
                         aria-current={h.day === d ? "date" : undefined}
                         aria-label={`${dayLabel(h.day, today)}: ${h.yes.length ? h.yes.join(", ") : "no behaviours"}`}
-                        className="-mx-2 flex min-h-13 items-center gap-3 rounded-lg px-2 py-2 transition-[background-color] duration-150 ease-standard outline-none hover:bg-accent focus-visible:ring-3 focus-visible:ring-ring/50 active:bg-accent aria-[current=date]:bg-accent/60"
+                        className="relative -mx-2 flex min-h-13 items-center gap-3 rounded-lg px-2 py-2 transition-[background-color] duration-150 ease-standard outline-none before:absolute before:inset-y-3.5 before:left-0 before:w-[3px] before:rounded-full before:bg-foreground before:opacity-0 hover:bg-accent focus-visible:ring-3 focus-visible:ring-ring/50 active:bg-accent aria-[current=date]:before:opacity-100"
                       >
                         <span className="w-28 shrink-0 text-xs leading-4 font-bold tracking-[0.1em] uppercase tabular-nums">{dayLabel(h.day, today)}</span>
                         <span aria-hidden className="flex min-w-0 flex-1 flex-wrap justify-end gap-1.5">
@@ -81,7 +81,7 @@ export default async function JournalPage({ searchParams }: PageProps<"/journal"
                             </Badge>
                           ))}
                           {more > 0 && <span className="self-center font-numeric text-[13px] font-semibold text-muted-foreground tabular-nums">+{more}</span>}
-                          {!h.yes.length && <span className="self-center text-xs leading-4 font-medium text-muted-foreground">None</span>}
+                          {!h.yes.length && <span className="self-center text-xs leading-4 font-medium text-muted-foreground">No behaviours</span>}
                         </span>
                         <ChevronRight aria-hidden className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
                       </Link>
