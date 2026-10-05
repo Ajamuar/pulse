@@ -22,7 +22,8 @@ const barlow = Barlow({
 });
 
 // iOS shows no launch screen unless one matches the device exactly: every iPhone and iPad, both orientations and both
-// colour schemes, made by scripts/gen-ios-splash.mjs (pwa-asset-generator) into public/splash.
+// colour schemes, made by scripts/gen-ios-splash.mjs (pwa-asset-generator) into public/splash. The order matters: the
+// light set first, unmarked, then the dark set, or iOS shows the light image in dark mode.
 const LAUNCH_SCREENS: { url: string; media: string }[] = launchScreens
 
 const DESCRIPTION =

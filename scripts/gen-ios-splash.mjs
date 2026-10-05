@@ -28,8 +28,9 @@ for (const s of SCHEMES) {
     { stdio: "inherit" },
   )
   for (const [, url, media] of readFileSync(index, "utf8").matchAll(/<link rel="apple-touch-startup-image" href="([^"]+)" media="([^"]+)">/g))
-    // The generator marks only the dark set; naming the light one too keeps a dark-mode phone off the light image.
-    screens.push({ url, media: media.includes("prefers-color-scheme") ? media : `(prefers-color-scheme: light) and ${media}` })
+    // Light first with no colour scheme, then dark with (prefers-color-scheme: dark): the order iOS needs to pick the dark
+    // image in dark mode (pwa-asset-generator issue #51). A light set that names its scheme kept iOS on light.
+    screens.push({ url, media })
 }
 rmSync(tmp, { recursive: true, force: true })
 writeFileSync("src/app/launch-screens.json", JSON.stringify(screens, null, 2) + "\n")
