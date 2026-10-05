@@ -8,6 +8,7 @@ import { type Db, getDb, row, sql } from "./db";
 import { oauthTokens } from "./db/schema";
 import { ensureDefaultTags } from "./journalTags";
 import { recomputeIfNeeded } from "./pipeline";
+import { notifyRecovery, notifySyncProblem } from "./push";
 import { GoogleError } from "./sources/google/oauth";
 import { googleSource } from "./sources/google/sync";
 import { ensureDemoUser, seedSource } from "./sources/seed/generate";
@@ -194,10 +195,27 @@ export function startWorker() {
   // Google instance: everyone with a live grant. A revoked one waits for the user to reconnect.
   const grantees = async () =>
     (await getDb().select({ id: oauthTokens.userId }).from(oauthTokens).where(isNull(oauthTokens.revokedAt)).orderBy(asc(oauthTokens.userId))).map((r) => r.id);
+  const source: Source = google
+    ? {
+        ...googleSource,
+        // Lost Google access: tell the user once a day (the worker then drops them from its cycle).
+        pull: async (userId) => {
+          try {
+            return await googleSource.pull(userId);
+          } catch (err) {
+            if (err instanceof GoogleError && (err.code === "auth_revoked" || err.code === "invalid_grant")) await notifySyncProblem(getDb(), userId);
+            throw err;
+          }
+        },
+      }
+    : seedSource;
   g.__pulseWorker = createWorker({
     name: google ? "google" : "seed",
-    source: google ? googleSource : seedSource,
-    recompute: recomputeIfNeeded,
+    source,
+    recompute: async (userId, changed) => {
+      await recomputeIfNeeded(userId, changed);
+      await notifyRecovery(getDb(), userId);
+    },
     users: google ? grantees : async () => [await demoUser()],
     lock: (userId, fn) => withUserLock(getDb(), userId, fn),
   });

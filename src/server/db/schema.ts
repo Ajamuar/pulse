@@ -508,6 +508,21 @@ export const coachChats = pgTable(
   (t) => [primaryKey({ columns: [t.userId, t.id] }), index("coach_chats_recent").on(t.userId, t.updatedAt)],
 );
 
+/** One row per browser the user turned notifications on in. `last_*_day` dedupe the daily alerts (local YYYY-MM-DD). */
+export const pushSubscriptions = pgTable(
+  "push_subscriptions",
+  {
+    userId: userId(),
+    endpoint: text("endpoint").notNull(),
+    p256dh: text("p256dh").notNull(),
+    auth: text("auth").notNull(),
+    createdAt: ts("created_at").notNull(),
+    lastRecoveryDay: day("last_recovery_day"),
+    lastSyncAlertDay: day("last_sync_alert_day"),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.endpoint] })],
+);
+
 /** Tables holding a user's synced Google data and what was computed from it (cleared on a Google account switch). */
 export const SYNCED_TABLES = [
   syncState, rawPayloads, hrDays, stepsDays, dailyMetrics, sleepSegments, sleepSessions, exercises, dailyValues,
