@@ -8,6 +8,7 @@ import { CARD_MATERIAL } from "@/components/ui/card"
 import { SkeletonText } from "@/components/ui/skeleton"
 import { MetricState, type MetricMeta } from "@/components/shells/MetricState"
 import { CAPTION, DeltaMark, LABEL, MetricTags, StatusChip, ValueUnit } from "./primitives"
+import { Sparkline } from "./Sparkline"
 
 export type SleepStatus = "poor" | "sufficient" | "optimal"
 
@@ -42,6 +43,8 @@ export type KeyStatRowProps = {
    * `md` / `xl`: only below that breakpoint, where the grid has two columns.
    */
   wide?: boolean | "md" | "xl"
+  /** A wide tile's recent values (oldest first) drawn on its right as a sparkline, with `band` shaded as the normal range. */
+  spark?: { values: (number | null)[]; band?: { low: number; high: number } | null; caption?: string }
   className?: string
 }
 
@@ -170,7 +173,16 @@ function Tile({ p, c }: { p: KeyStatRowProps; c: Computed }) {
       <span aria-hidden className="contents">
         {/* the reference app's v2 tile [latest-health-monitor-1]: icon and a 10 px caps label on one line, then a 30 px value and a
             compact chip (spec §11 F16). */}
-        <span className={cn("contents", p.wide === true && "flex min-w-0 flex-1 flex-col gap-2", p.wide === "md" && "max-md:flex max-md:min-w-0 max-md:flex-1 max-md:flex-col max-md:gap-2", p.wide === "xl" && "max-xl:flex max-xl:min-w-0 max-xl:flex-1 max-xl:flex-col max-xl:gap-2")}>
+        <span
+          className={cn(
+            "contents",
+            p.wide === true && "flex min-w-0 flex-1 flex-col gap-2",
+            p.wide === "md" && "max-md:flex max-md:min-w-0 max-md:flex-1 max-md:flex-col max-md:gap-2",
+            p.wide === "xl" && "max-xl:flex max-xl:min-w-0 max-xl:flex-1 max-xl:flex-col max-xl:gap-2",
+            // With a sparkline the numbers keep their natural width and the line takes the rest.
+            p.spark && "flex-none! basis-auto"
+          )}
+        >
           <span className="flex items-center gap-2.5">
             {p.icon && <span className="grid size-5 shrink-0 place-items-center text-muted-foreground [&_svg]:size-5 [&_svg]:stroke-[1.5]">{p.icon}</span>}
             {p.label ? <span className={cn(TILE_LABEL, "line-clamp-3 min-w-0 text-foreground-secondary")}>{p.label}</span> : <SkeletonText className={cn(TILE_LABEL, "w-24")} />}
@@ -195,7 +207,7 @@ function Tile({ p, c }: { p: KeyStatRowProps; c: Computed }) {
               <>
                 {c.meta && <MetricTags provisional={c.meta.provisional} tags={c.meta.tags} className="justify-start" />}
                 {/* A wide tile states the comparison on its right instead (below). */}
-                <span className={cn("contents", p.wide === true && "hidden", p.wide === "md" && "max-md:hidden", p.wide === "xl" && "max-xl:hidden")}>
+                <span className={cn("contents", !p.spark && p.wide === true && "hidden", !p.spark && p.wide === "md" && "max-md:hidden", !p.spark && p.wide === "xl" && "max-xl:hidden")}>
                   {p.chip ? (
                     <StatusChip tone={p.chip.tone} className={TILE_CHIP}>
                       {p.chip.text}
@@ -213,7 +225,16 @@ function Tile({ p, c }: { p: KeyStatRowProps; c: Computed }) {
             )}
           </span>
         </span>
-        {p.wide && !c.loading && !c.reason && (p.chip || c.avgText) && (
+        {p.wide && p.spark && !c.loading && (
+          <Sparkline
+            values={p.spark.values}
+            band={p.spark.band}
+            color={p.chip?.tone === "warning" || p.chip?.tone === "alert" ? "var(--warning)" : "var(--foreground-secondary)"}
+            caption={p.spark.caption}
+            className={cn("h-16 min-w-0 flex-1 self-center", p.wide === "md" && "md:hidden", p.wide === "xl" && "xl:hidden")}
+          />
+        )}
+        {p.wide && !p.spark && !c.loading && !c.reason && (p.chip || c.avgText) && (
           <span className={cn("flex shrink-0 flex-col items-end gap-1 text-right", p.wide === "md" && "md:hidden", p.wide === "xl" && "xl:hidden")}>
             <span className={CAPTION}>{p.chip ? "Your range" : (p.averageLabel ?? "30-day avg")}</span>
             {p.chip ? (

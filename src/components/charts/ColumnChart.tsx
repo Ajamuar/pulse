@@ -79,7 +79,8 @@ export function ColumnChart({ summary, data, format, unit, tickEvery = 1, refere
             />
           }
         />
-        <Bar dataKey="value" radius={[3, 3, 0, 0]} maxBarSize={28} {...anim}>
+        {/* A dim full-height track behind each column, so the scale reads without a y-axis. */}
+        <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={28} background={{ fill: "color-mix(in srgb, var(--foreground) 4%, transparent)", radius: 4 }} {...anim}>
           {rows.map((r) => (
             <Cell key={r.key} fill={r.fill} />
           ))}

@@ -46,7 +46,15 @@ export type KeyStat = {
   format?: FormatKey;
 };
 
-export type ZoneRow = { zone: number; label: string; min: number; max: number | null; seconds: number };
+export type ZoneRow = {
+  zone: number;
+  label: string;
+  min: number;
+  max: number | null;
+  seconds: number;
+  /** Activity only: the mean seconds and share (0-1) in this zone over the person's last 30 days of the same kind. */
+  typical?: { seconds: number; share: number };
+};
 export type StackedSegment = { key: string; label: string; count: number; color: string };
 
 /** DriverList item. `delta` is in the list's unit; lists are sorted by |delta| descending. */
@@ -193,7 +201,7 @@ export type StrainVM = {
   hr: Metric<HrChart>;
   zones: Metric<ZoneRow[]>;
   maxHr: number;
-  /** Where the zones came from: Google for that day, or Pulse's % of max HR. */
+  /** How the zones are set: five on heart-rate reserve from the day's resting and max heart rate. */
   zoneNote: string;
   activities: ActivityItem[];
   trend: Trend;
@@ -217,7 +225,7 @@ export type ActivityVM = {
   hr: Metric<HrChart>;
   zones: Metric<ZoneRow[]>;
   maxHr: number;
-  /** Where the zones came from: Google for that day, or Pulse's % of max HR. */
+  /** How the zones are set: five on heart-rate reserve from the day's resting and max heart rate. */
   zoneNote: string;
   hrr: Metric<{ value: number; tone: ChipTone; label: "Good" | "Typical" | "Low" }>;
 };

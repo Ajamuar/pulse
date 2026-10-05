@@ -19,7 +19,7 @@ const ICON: Record<VitalKey, React.ReactNode> = {
 }
 const FORMAT: Record<VitalKey, FormatKey> = { resp: "decimal1", spo2: "int", restingHr: "int", hrv: "int", skinTempDev: "signed1" }
 /**
- * Five tiles: two a row below laptop, the fifth a full-width strip with its range on the right; five a row on laptop.
+ * Five tiles: two a row below laptop, the fifth a full-width strip with its 30-night sparkline; five a row on laptop.
  * Tablet once ran a 3 + 2 six-column grid whose two stretched tiles were half empty.
  */
 const GRID = "grid grid-cols-2 gap-3 *:last:col-span-2 xl:grid-cols-5 xl:gap-4 xl:*:last:col-span-1"
@@ -46,6 +46,8 @@ export function VitalTiles({ vitals }: { vitals: Vital[] }) {
             variant="tile"
             // The fifth tile spans the row below laptop (GRID): a wide strip with its range on the right.
             wide={i === vitals.length - 1 && "xl"}
+            // Its last 30 nights with the normal range shaded fill the strip's spare width.
+            spark={{ values: x.trend.points.slice(-30).map((p) => p.value), band: x.range, caption: "Last 30 nights" }}
             icon={ICON[x.key]}
             // the reference app's tiles abbreviate the two heart metrics ("RHR", "HRV") [latest-health-monitor-1]; the sheet keeps the full name.
             label={x.key === "restingHr" || x.key === "hrv" ? x.short : x.label}
