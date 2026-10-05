@@ -45,10 +45,12 @@ for s in (192, 512):
     # maskable: the launcher crops to a circle or squircle, so the mark stays inside the 80% safe zone (a circle of radius 40%).
     render(s, s, DARK, s * 0.5, f"icons/icon-maskable-{s}.png")
 
-# App shortcut icons (long-press menu): a dark glyph on a transparent background. Android draws these on the launcher's own
-# grey disc, like the "Site settings" gear beside them, so a square of our own colour would show as a box inside it.
-for name in ("checkin", "recovery", "sleep"):
-    svg = open(os.path.join(os.path.dirname(__file__), "shortcuts", f"{name}.svg")).read().replace("currentColor", f"rgb{DARK}")
+# App shortcut icons (long-press menu): a glyph on a transparent background. Android draws these on the launcher's own grey
+# disc (#999), like the "Site settings" gear beside them, so a square of our own colour would show as a box inside it.
+# Deep tones of the brand colours: the bright green and blue all but vanish on that grey (blue's contrast is 1.0).
+SHORTCUTS = {"checkin": DARK, "recovery": (0, 100, 62), "sleep": (13, 71, 161)}
+for name, color in SHORTCUTS.items():
+    svg = open(os.path.join(os.path.dirname(__file__), "shortcuts", f"{name}.svg")).read().replace("currentColor", f"rgb{color}")
     glyph = Image.open(io.BytesIO(subprocess.run(["rsvg-convert", "-w", str(192 * SS * 3 // 4), "-f", "png"], input=svg.encode(), capture_output=True, check=True).stdout)).convert("RGBA")
     img = Image.new("RGBA", (192 * SS, 192 * SS), (0, 0, 0, 0))
     img.paste(glyph, ((192 * SS - glyph.width) // 2, (192 * SS - glyph.height) // 2), glyph)

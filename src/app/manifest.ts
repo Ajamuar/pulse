@@ -9,9 +9,9 @@ const shot = (name: string, sizes: string, form_factor: "narrow" | "wide", label
 });
 
 // Icon URLs carry ?v=: Android's install service and the launcher cache icons by URL, so a changed picture needs a new one. Bump it with the pictures.
-const V = "5";
+const V = "6";
 const icon = (file: string, size: number, purpose: "any" | "maskable") => ({ src: `/icons/${file}.png?v=${V}`, sizes: `${size}x${size}`, type: "image/png", purpose });
-// Dark glyphs on transparent: Android draws shortcut icons on the launcher's own grey disc, not as adaptive icons.
+// Glyphs in deep brand tones on transparent: Android draws shortcut icons on the launcher's own grey disc, not as adaptive icons.
 const shortcutIcons = (name: string) => [icon(`shortcut-${name}`, 192, "any")];
 
 // Open to signed-out visitors (src/proxy.ts skips files with an extension), so install works from /login.
