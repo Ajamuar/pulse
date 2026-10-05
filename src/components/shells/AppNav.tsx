@@ -11,7 +11,7 @@ import { dayLabel } from "@/lib/format"
 import { parseDay, tabForPath, TAB_ROOT, type Tab } from "@/lib/url"
 import { SheetTrigger } from "./SheetTrigger"
 import { useShellCalendar, useShellStatus } from "./ShellStatus"
-import { DemoChip, SyncStatus } from "./TopBar"
+import { DemoChip } from "./TopBar"
 
 const TABS: { tab: Tab; label: string; icon: LucideIcon }[] = [
   { tab: "home", label: "Home", icon: House },
@@ -106,7 +106,6 @@ function Rail({ current, wide }: { current: number; wide: boolean }) {
         <React.Suspense>
           <CheckInAction variant="rail" />
         </React.Suspense>
-        <SyncStatus variant="icon" />
       </div>
     </nav>
   )
@@ -153,11 +152,8 @@ function Sidebar({ current, pathname }: { current: number; pathname: string }) {
         <React.Suspense>
           <CheckInAction variant="sidebar" />
         </React.Suspense>
-        <div className="space-y-1">
-          <div className="px-3">
-            <DemoChip />
-          </div>
-          <SyncStatus variant="line" />
+        <div className="px-3">
+          <DemoChip />
         </div>
       </div>
     </nav>

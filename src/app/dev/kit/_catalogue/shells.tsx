@@ -167,17 +167,6 @@ export const SHELLS: KitEntry[] = [
           </ShellStatusProvider>
         ),
       },
-      {
-        name: "icon and line variants",
-        node: (
-          <ShellStatusProvider value={fx.status}>
-            <div className="flex flex-col items-start gap-3">
-              <SyncStatus variant="icon" />
-              <SyncStatus variant="line" />
-            </div>
-          </ShellStatusProvider>
-        ),
-      },
     ],
   },
   {

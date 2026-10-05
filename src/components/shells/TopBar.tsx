@@ -67,9 +67,9 @@ const SYNC_TRIGGER =
 
 /**
  * Sync freshness in the reference app's battery slot: "12m" or "Demo", the band icon and a status dot, opening
- * the sync popover. `icon` drops the text (rail); `line` is the sidebar footer's full sentence.
+ * the sync popover. The one place the app shows it (the nav's footer copy said the same and drifted by a minute).
  */
-export function SyncStatus({ variant = "header" }: { variant?: "header" | "icon" | "line" }) {
+export function SyncStatus() {
   const s = useShellStatus()
   const nowMs = useNow()
   const syncing = useSyncing() || s.sync.state === "syncing"
@@ -79,32 +79,18 @@ export function SyncStatus({ variant = "header" }: { variant?: "header" | "icon"
     <Popover>
       <PopoverTrigger
         aria-label={s.mode === "demo" ? `Demo data. ${v.label}` : v.label}
-        className={cn(
-          SYNC_TRIGGER,
-          variant === "line" ? "h-11 w-full gap-2.5 px-3 hover:bg-foreground/5" : variant === "icon" ? "size-11 justify-center" : "h-11 min-w-11 justify-end pr-0.5 pl-2"
-        )}
+        className={cn(SYNC_TRIGGER, "h-11 min-w-11 justify-end pr-0.5 pl-2")}
       >
-        {variant === "line" ? (
-          <>
-            <span aria-hidden className={cn("size-2 shrink-0 rounded-full", v.dot)} />
-            <span className="truncate text-xs leading-4 font-medium text-muted-foreground">{v.label}</span>
-          </>
-        ) : (
-          <>
-            {variant === "header" && (
-              // Reserves the text width before hydration fills in the relative age.
-              // Home's top row may hide it on narrow phones (`data-sync-text`); the band, its dot, the popover and the accessible name still carry it.
-              <span data-sync-text className="min-w-[3ch] text-right font-numeric text-[15px] leading-5 font-semibold text-muted-foreground tabular-nums">
-                {short}
-              </span>
-            )}
-            <Band dot={v.dot} syncing={syncing} />
-          </>
-        )}
+        {/* Reserves the text width before hydration fills in the relative age.
+            Home's top row may hide it on narrow phones (`data-sync-text`); the band, its dot, the popover and the accessible name still carry it. */}
+        <span data-sync-text className="min-w-[3ch] text-right font-numeric text-[15px] leading-5 font-semibold text-muted-foreground tabular-nums">
+          {short}
+        </span>
+        <Band dot={v.dot} syncing={syncing} />
       </PopoverTrigger>
       <PopoverContent
-        side={variant === "line" ? "top" : variant === "icon" ? "right" : "bottom"}
-        align={variant === "header" ? "end" : "start"}
+        side="bottom"
+        align="end"
         sideOffset={8}
         collisionPadding={12}
         // Focus stays on the trigger: moving it in would ring the first button on a mouse open.
