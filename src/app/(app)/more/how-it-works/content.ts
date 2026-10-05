@@ -77,7 +77,7 @@ export const SCORE_DOCS: ScoreDoc[] = [
         rows: [
           { term: "Heart rate", detail: "Every reading from local midnight to midnight, sleep included. Each reading covers the gap to the next one, up to 2\u00a0minutes." },
           { term: "Resting heart rate", detail: "Fitbit’s daily value from Google, else last night’s sleeping resting heart rate, else 60\u00a0bpm." },
-          { term: "Max heart rate", detail: "The value in Settings; else the top of your Peak zone from Google; else 208 − 0.7 × your age." },
+          { term: "Max heart rate", detail: "The value in Settings; else 208 − 0.7 × your age." },
         ],
       },
       {

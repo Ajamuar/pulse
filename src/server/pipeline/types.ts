@@ -20,9 +20,10 @@ import type { StrainTarget } from "@/core/algorithms/strainTarget";
  * where DST starts at midnight (Santiago, Havana, Azores...), so the 23-hour day is the right one. 5: Pulse Age's
  * stored key is `pulseAge` (was a brand name), so stored healthspan rows rescore. 6: Google's inputs first (its daily
  * zones, resting HR, time in zones, skin-temperature baseline and personal ranges), four named zones. 7: five
- * display zones on heart-rate reserve (Strain's and WHOOP's 50/60/70/80/90%) in place of Google's four.
+ * display zones on heart-rate reserve (Strain's and WHOOP's 50/60/70/80/90%) in place of Google's four. 8: max HR
+ * no longer from Google's PEAK zone (a flat 220), so zones and Strain use the person's own or Tanaka's.
  */
-export const SCORING_VERSION = 7;
+export const SCORING_VERSION = 8;
 
 export type PipelineOptions = {
   /** Whose data: every read and write is scoped to this user. */

@@ -130,7 +130,7 @@ edges Strain has always counted with and the ones WHOOP uses.
 ```mermaid
 flowchart LR
   R[resting HR for the day] --> HRR["reserve = max − resting"]
-  M[max HR: Settings, else Google's, else 208 − 0.7 × age] --> HRR
+  M[max HR: Settings, else 208 − 0.7 × age] --> HRR
   HRR --> B["Zone N starts at resting + share × reserve<br/>shares 50 / 60 / 70 / 80 / 90%"]
   S[each heart-rate sample] --> T[time in zone: the sample's bpm picks its zone, its duration adds to it]
   B --> T
@@ -138,7 +138,8 @@ flowchart LR
   T --> Z13["Heart rate zones 1-3 and 4-5<br/>Strain rows, Pulse Age"]
 ```
 
-Example: resting 56, max 186. The reserve is 130, so the zones start at 121, 134, 147, 160 and 173 bpm. Time below
+Google's zone record is not used for max HR: its PEAK zone ends at a flat 220 for everyone, which pushed every zone up
+(Zone 1 from 144 bpm for a resting 67). Example: resting 56, max 186. The reserve is 130, so the zones start at 121, 134, 147, 160 and 173 bpm. Time below
 Zone 1 is counted but not shown. Google's own zone bounds and time-in-zone roll-up are still synced, but only the
 Active Zone Minutes page reads them. Colours, cool to hot: grey-blue, blue, green, orange, red.
 
