@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Barlow, Figtree } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { PwaRuntime } from "@/components/pwa/PwaRuntime"
+import { SW_SCRIPT } from "@/lib/sw"
 import { ThemeColor } from "@/components/shells/ThemeColor";
 import { THEME_SCRIPT } from "@/lib/theme";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -64,6 +65,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         {/* Settings › Appearance (system, light or dark, per device). Inline and first in <head>, so the class is on <html>
             before anything paints: next/script's beforeInteractive is queued and ran after first paint (a dark flash). */}
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+        {/* Production only, like PwaRuntime: in dev a worker would cache stale code. */}
+        {process.env.NODE_ENV === "production" && <script dangerouslySetInnerHTML={{ __html: SW_SCRIPT }} />}
         {/* Next's own manifest link omits crossorigin outside Vercel previews; child layouts set manifest: null. */}
         <link rel="manifest" href="/manifest.webmanifest" crossOrigin="use-credentials" />
         {/* Next's appleWebApp.capable now writes only the standard mobile-web-app-capable; iOS still reads Apple's own
