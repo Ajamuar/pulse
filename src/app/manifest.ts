@@ -9,7 +9,7 @@ const shot = (name: string, sizes: string, form_factor: "narrow" | "wide", label
 });
 
 // Icon URLs carry ?v=: Android's install service and the launcher cache icons by URL, so a changed picture needs a new one. Bump it with the pictures.
-const V = "3";
+const V = "4";
 const icon = (file: string, size: number, purpose: "any" | "maskable") => ({ src: `/icons/${file}.png?v=${V}`, sizes: `${size}x${size}`, type: "image/png", purpose });
 // Maskable too: the launcher then fills its whole circle with the picture instead of drawing the square on a grey disc.
 const shortcutIcons = (name: string) => [icon(`shortcut-${name}`, 192, "maskable"), icon(`shortcut-${name}`, 192, "any")];
@@ -34,7 +34,7 @@ export default function manifest(): MetadataRoute.Manifest {
     // Matches viewport.themeColor (layout.tsx), the top of the page ground, so the installed app's bar never changes colour on load.
     theme_color: "#1d2529",
     icons: [
-      // "any": the mark with the name under it. "maskable": the same, inside the 80% safe zone, for Android's home-screen icon and launch screen.
+      // Mark only. "maskable" keeps it inside the 80% safe zone; Android 12+ draws both the home-screen icon and its launch screen from it.
       icon("icon-192", 192, "any"),
       icon("icon-512", 512, "any"),
       icon("icon-maskable-192", 192, "maskable"),

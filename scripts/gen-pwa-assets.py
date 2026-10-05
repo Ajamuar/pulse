@@ -38,13 +38,12 @@ def render(w, h, bg, mark_h, path, name_w=None, name_color=None, gap=0):
     mark(img, w * SS / 2, cy, mark_h * SS)
     img.resize((w, h), Image.LANCZOS).save(os.path.join(OUT, path), optimize=True)
 
-# "any" icons: a small mark with the name under it, on the splash colour.
+# Icons carry the mark only, no name: Android 12+ builds its launch screen from the home-screen (adaptive) icon, so a name
+# in the icon would sit on the home screen too. The name lives on the iOS launch screens below.
 for s in (192, 512):
-    render(s, s, DARK, s * 0.28, f"icons/icon-{s}.png", name_w=s * 0.5, name_color=LIGHT, gap=s * 0.07)
-# maskable: the launcher crops to a circle or squircle, so everything stays inside the 80% safe zone (a circle of radius 40%).
-# Android takes its launch screen from one of these and the home-screen icon from one; both show the name.
-for s in (192, 512):
-    render(s, s, DARK, s * 0.26, f"icons/icon-maskable-{s}.png", name_w=s * 0.46, name_color=LIGHT, gap=s * 0.06)
+    render(s, s, DARK, s * 0.34, f"icons/icon-{s}.png")
+    # maskable: the launcher crops to a circle or squircle, so the mark stays inside the 80% safe zone (a circle of radius 40%).
+    render(s, s, DARK, s * 0.5, f"icons/icon-maskable-{s}.png")
 
 # App shortcut icons (long-press menu): a lucide glyph in the brand colour on the splash colour, drawn for a circular crop.
 SHORTCUTS = {"checkin": LIGHT, "recovery": GREEN, "sleep": BLUE}
