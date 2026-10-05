@@ -275,6 +275,24 @@ export type HealthHubVM = {
   monitor: Metric<{ vitals: { key: VitalKey; short: string; status: Vital["status"] }[]; inRange: number; total: number }>;
   stress: Metric<{ highMin: number; typicalHighMin: number | null; /** Today’s weekday, short ("Mon"). */ weekday: string; spark: TimePoint[] }>;
   fitness: Metric<{ vo2max: number; category: string; percentile: number; acwr: number | null; acwrTone: ChipTone | null }>;
+  /** The newest band reading (epoch ms), today or not. */
+  heartRate: { t: number; bpm: number } | null;
+};
+
+/** Minute-mean heart rate (`t` epoch ms, a null minute is a gap) and the newest sample; the live route's answer too. */
+export type HeartRateLive = { points: TimePoint[]; latest: { t: number; bpm: number } | null };
+
+export type HeartRateVM = HeartRateLive & {
+  day: string;
+  isToday: boolean;
+  /** The day's end, epoch ms: live points stop there. */
+  end: number;
+  restingHr: number | null;
+  /** The day's zone bounds for the chart's bands; the open top zone ends at `maxHr`. */
+  zoneBands: ZoneRow[];
+  maxHr: number;
+  zones: Metric<ZoneRow[]>;
+  zoneNote: string;
 };
 
 export type HealthspanContributor = {

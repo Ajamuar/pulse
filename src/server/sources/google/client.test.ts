@@ -163,6 +163,15 @@ describe("list", () => {
     const { client, apiCalls } = setup(() => pages.shift()!);
     expect(await client.list("heart-rate", lm("2026-09-10"), lm("2026-09-11"))).toEqual([{ n: 1 }, { n: 2 }, { n: 3 }]);
     expect(apiCalls().map((c) => c.url.searchParams.get("pageToken"))).toEqual([null, "p2"]);
+    expect((await raws())).toHaveLength(0); // intraday pages are not archived
+  });
+
+  it("listEach hands over one page at a time; other types' pages are archived", async () => {
+    const pages = [json({ dataPoints: [{ n: 1 }, { n: 2 }], nextPageToken: "p2" }), json({ dataPoints: [{ n: 3 }] })];
+    const { client } = setup(() => pages.shift()!);
+    const seen: unknown[][] = [];
+    await client.listEach("sleep", lm("2026-09-10"), lm("2026-09-11"), (points) => void seen.push(points));
+    expect(seen).toEqual([[{ n: 1 }, { n: 2 }], [{ n: 3 }]]);
     expect((await raws())).toHaveLength(2);
   });
 
@@ -206,7 +215,7 @@ describe("list", () => {
 
   it("a 200 that is not the expected envelope is an error, archived but not quoted", async () => {
     const { client } = setup(() => new Response("<html>SECRET proxy page</html>"));
-    const err = await caught(client.list("steps", lm("2026-09-10"), lm("2026-09-11")));
+    const err = await caught(client.list("sleep", lm("2026-09-10"), lm("2026-09-11")));
     expect(err.code).toBe("bad_response");
     expect(err.message).not.toContain("SECRET");
     expect((await raws())).toHaveLength(1);

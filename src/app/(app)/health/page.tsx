@@ -15,6 +15,7 @@ import { PageShell } from "@/components/shells/PageShell"
 import { SectionShell } from "@/components/shells/SectionShell"
 import { Skeleton } from "@/components/ui/skeleton"
 import { categoryTone, categoryWord, ordinal } from "./format"
+import { LastReading } from "./heart-rate/LiveHeartRate"
 
 export const metadata = { title: "Health" }
 
@@ -213,6 +214,16 @@ function Fitness({ m }: { m: HealthHubVM["fitness"] }) {
   )
 }
 
+function HeartRate({ hr }: { hr: HealthHubVM["heartRate"] }) {
+  if (!hr) return <p className={EMPTY}>No heart-rate readings yet. They show here once your band syncs.</p>
+  return (
+    <div className="space-y-1">
+      <ValueUnit value={String(hr.bpm)} unit="bpm" className={cn(TILE, "block")} />
+      <LastReading t={hr.t} />
+    </div>
+  )
+}
+
 /** Health hub `/health` (spec §7.6): today's values ; each card links to its detail screen. */
 export default async function HealthPage() {
   await connection()
@@ -229,8 +240,11 @@ export default async function HealthPage() {
         <SectionShell variant="card" level={2} title="Stress Monitor" href="/health/stress">
           <Stress m={vm.stress} />
         </SectionShell>
-        <SectionShell variant="card" level={2} title="Fitness" href="/health/fitness" className="xl:col-span-2">
+        <SectionShell variant="card" level={2} title="Fitness" href="/health/fitness">
           <Fitness m={vm.fitness} />
+        </SectionShell>
+        <SectionShell variant="card" level={2} title="Heart rate" href="/health/heart-rate">
+          <HeartRate hr={vm.heartRate} />
         </SectionShell>
       </HealthCards>
       <p className={cn(CAPTION, "text-center")}>Estimates for personal insight, not medical advice.</p>

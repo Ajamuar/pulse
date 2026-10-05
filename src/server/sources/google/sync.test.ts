@@ -16,10 +16,11 @@ import {
   stepsDays,
   syncState,
 } from "../../db/schema";
-import { readSamples } from "../../samples";
+import { readSamples, writeSamples } from "../../samples";
 import { addUser, freshDb, USER } from "../../testing";
 import { RAW_RETENTION_DAYS } from "./client";
 import { recompute } from "../../pipeline";
+import { GoogleError } from "./oauth";
 import { BACKFILL_DAYS, createGoogleSource, DEVICES_KEY, NO_DEVICE_ERROR } from "./sync";
 
 const TZ = "Asia/Kolkata"; // fixed +05:30, which the stub's civil-time filter relies on
@@ -77,7 +78,7 @@ beforeEach(async () => {
 });
 
 /** A source over a stubbed Google that answers each request from the fixtures inside its window. */
-function setup(o: { failing?: string[]; onRequest?: (type: string, filter: string | null) => void | Promise<void>; devices?: () => Response } = {}) {
+function setup(o: { failing?: string[]; failStatus?: number; onRequest?: (type: string, filter: string | null) => void | Promise<void>; devices?: () => Response } = {}) {
   let clock = NOW;
   const calls: { type: string; filter: string | null }[] = [];
   const fetch = vi.fn(async (input: string | URL | Request, init: RequestInit = {}) => {
@@ -88,7 +89,7 @@ function setup(o: { failing?: string[]; onRequest?: (type: string, filter: strin
     calls.push({ type, filter });
     await o.onRequest?.(type, filter);
     if (o.failing?.includes(type)) {
-      return json({ error: { code: 400, status: "INVALID_ARGUMENT", message: "secret body text" } }, 400);
+      return json({ error: { code: 400, status: "INVALID_ARGUMENT", message: "secret body text" } }, o.failStatus ?? 400);
     }
     if (rollup) {
       const { range } = JSON.parse(String(init.body));
@@ -401,5 +402,46 @@ describe("google sync", () => {
     const hr = calls.filter((c) => c.type === "heart-rate" && c.filter);
     expect(lowerBound(hr[0].filter)).toBe("2026-07-01T18:30:00.000Z");
     expect(await state("heart-rate")).toMatchObject({ backfillDaysDone: 180, lastError: null });
+  });
+});
+
+describe("pullHeartRate (the live view's pull)", () => {
+  const sec = (iso: string) => Date.parse(iso) / 1000;
+  const hrPoint = (iso: string, bpm: number) => ({
+    dataSource: { platform: "FITBIT", recordingMethod: "PASSIVELY_MEASURED" },
+    heartRate: { beatsPerMinute: String(bpm), sampleTime: { physicalTime: iso } },
+  });
+  const upper = (f: string | null) => /< "([^"]+)"/.exec(f!)![1];
+
+  it("lists heart-rate once, from the newest stored sample minus 10 minutes to now, and merges it", async () => {
+    const { source, calls } = setup();
+    await writeSamples(db, "hr", USER, [{ ts: sec("2026-10-02T05:50:30Z"), v: 60 }]);
+    data["heart-rate"] = [hrPoint("2026-10-02T05:50:30Z", 60), hrPoint("2026-10-02T05:58:00Z", 77)];
+    await source.pullHeartRate!(USER);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].type).toBe("heart-rate");
+    expect(lowerBound(calls[0].filter)).toBe("2026-10-02T05:40:00.000Z"); // minute-aligned, 10 min before 05:50:30
+    expect(upper(calls[0].filter)).toBe("2026-10-02T06:00:00.000Z");
+    expect(await readSamples(db, "hr", USER, sec("2026-10-02T05:00:00Z"), sec("2026-10-02T07:00:00Z"))).toEqual([
+      { ts: sec("2026-10-02T05:50:30Z"), v: 60 },
+      { ts: sec("2026-10-02T05:58:00Z"), v: 77 },
+    ]);
+    expect(await dirtyDays()).toEqual(["2026-10-02"]); // the next full run rescores it
+    expect(await state("heart-rate")).toBeUndefined(); // the full sync's cursor is not moved
+  });
+
+  it("with nothing stored (or only older days), starts at today's local midnight", async () => {
+    const { source, calls } = setup();
+    await writeSamples(db, "hr", USER, [{ ts: sec("2026-09-28T05:00:00Z"), v: 60 }]);
+    await source.pullHeartRate!(USER);
+    expect(lowerBound(calls[0].filter)).toBe("2026-10-01T18:30:00.000Z"); // 00:00 in Asia/Kolkata
+  });
+
+  it("does not retry a 429: it throws at once for the worker to stop", async () => {
+    const { source, calls } = setup({ failing: ["heart-rate"], failStatus: 429 });
+    const err = await source.pullHeartRate!(USER).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(GoogleError);
+    expect((err as GoogleError).status).toBe(429);
+    expect(calls).toHaveLength(1);
   });
 });

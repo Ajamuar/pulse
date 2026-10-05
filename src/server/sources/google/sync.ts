@@ -49,6 +49,8 @@ export const NO_DEVICE_ERROR = `[google] ${DEVICES_KEY}: NO_PAIRED_DEVICE`;
 const OVERLAP_DAYS = 3;
 /** heart-rate and steps re-fetch from synced_through minus this. */
 const INTRADAY_OVERLAP_S = 3600;
+/** The live heart-rate pull re-fetches from the newest stored sample minus this. */
+export const LIVE_OVERLAP_S = 600;
 
 type Job =
   | { key: string; kind: "daily"; type: (typeof DAILY_TYPES)[number] }
@@ -154,21 +156,41 @@ export function createGoogleSource(deps: SyncDeps): Source {
           }
         }
 
-        // heart-rate one local day at a time: list() holds the whole range in memory (~37k points/day).
+        // heart-rate one local day at a time, each page mapped as it arrives: a day can be 86k points (one a second),
+        // and holding them raw ran the heap out (a crash loop on a new band's backfill).
         const chunkDays = job.kind === "hr" ? 1 : DATA_TYPES[job.type].maxDays;
         for (const win of localWindows(from, t, chunkDays, tz)) {
+          const hr = job.kind === "hr" ? await heartRate(client, win) : null;
           const points =
-            job.kind === "rollup" || job.kind === "extra"
-              ? await client.dailyRollUp(job.type, localDay(win.start, tz), dayAfter(win.end, tz))
-              : await client.list(job.type, win.start, win.end);
+            hr !== null
+              ? []
+              : job.kind === "rollup" || job.kind === "extra"
+                ? await client.dailyRollUp(job.type, localDay(win.start, tz), dayAfter(win.end, tz))
+                : await client.list(job.type, win.start, win.end);
           await db.transaction(async (tx) => {
-            if (await w.write(tx, job, points, win)) run.changed = true;
+            if (await (hr !== null ? w.writeHr(tx, hr, win) : w.write(tx, job, points, win))) run.changed = true;
             if (backfilling) done = Math.min(BACKFILL_DAYS, done + daysIn(win, tz));
             await setState(tx, job.key, { syncedThrough: win.end, ...(backfilling && { backfillDaysDone: done }) });
           });
         }
         if (backfilling) await setState(db, job.key, { syncedThrough: t, backfillDaysDone: BACKFILL_DAYS });
       }
+    },
+
+    /**
+     * The live heart-rate view's pull: one heart-rate list from the newest stored sample (less LIVE_OVERLAP_S, never
+     * before today's local midnight) to now, written as the hr job writes it (merge, dirty days for the next
+     * recompute). sync_state is left alone: the full sync's overlap re-reads this stretch anyway. No retries, so a
+     * 429 or a revoked grant throws at once for the caller to back off.
+     */
+    async pullHeartRate(userId: number) {
+      const t = nowS();
+      const w = writer(tz, userId);
+      const last = await w.lastSample(db, "hr");
+      const start = Math.max(localMidnight(localDay(t, tz), tz), minute((last ?? 0) - LIVE_OVERLAP_S));
+      if (start >= t) return;
+      const win = { start, end: t };
+      await w.writeHr(db, await heartRate(createGoogleClient({ ...deps, userId, maxTries: 1 }), win), win);
     },
   };
 }
@@ -179,15 +201,31 @@ export function createGoogleSource(deps: SyncDeps): Source {
  */
 export const googleSource: Source = {
   async pull(userId) {
-    const { google } = getConfig();
-    if (!google) return { changed: false };
-    const db = getDb();
-    const timeZone = (await getProfile(db, userId))?.timeZone ?? "UTC";
-    return createGoogleSource({ db, google, timeZone }).pull(userId);
+    return (await sourceFor(userId))?.pull(userId) ?? { changed: false };
+  },
+  async pullHeartRate(userId) {
+    await (await sourceFor(userId))?.pullHeartRate?.(userId);
   },
 };
 
+async function sourceFor(userId: number) {
+  const { google } = getConfig();
+  if (!google) return null;
+  const db = getDb();
+  const timeZone = (await getProfile(db, userId))?.timeZone ?? "UTC";
+  return createGoogleSource({ db, google, timeZone });
+}
+
 const minute = (s: number) => Math.floor(s / 60) * 60;
+
+/** A window's band heart rate, mapped page by page so only the samples are held, never a day of raw points. */
+async function heartRate(client: Pick<ReturnType<typeof createGoogleClient>, "listEach">, win: TimeWindow) {
+  const hr = new Map<number, number>();
+  await client.listEach("heart-rate", win.start, win.end, (points) => {
+    for (const [ts, bpm] of mapHeartRate(points)) hr.set(ts, bpm);
+  });
+  return hr;
+}
 
 /** The exclusive civil end day for a window ending at `end`: the day after, unless `end` is a local midnight. */
 const dayAfter = (end: number, tz: string) =>
@@ -299,13 +337,8 @@ function writer(tz: string, userId: number) {
         if (h) changed = (await upsert(db, dailyValues, ["day", "key"], userId, [{ day: "latest", key: "height_cm", value: h.cm }])).length > 0;
         break;
       }
-      case "hr": {
-        const hr = mapHeartRate(points);
-        // ponytail: only when the window has band HR, so an empty or unreadable answer never wipes a day;
-        // a whole window deleted upstream stays. Drop the guard if that is ever seen.
-        if (hr.size) for (const ts of await mergeSamples(db, "hr", userId, win, hr, "replace")) dirty.add(dayOf(ts));
-        break;
-      }
+      case "hr":
+        return writeHr(db, mapHeartRate(points), win);
       case "steps": {
         // Max with the stored minute too: a multi-minute interval that starts before the re-fetch
         // window must not shrink the minutes it spills into.
@@ -336,6 +369,16 @@ function writer(tz: string, userId: number) {
     return changed || dirty.size > 0;
   }
 
+  /** Merges a window's band heart rate into hr_days and marks the changed days dirty. True when anything changed. */
+  async function writeHr(db: Db, hr: Map<number, number>, win: TimeWindow): Promise<boolean> {
+    // ponytail: only when the window has band HR, so an empty or unreadable answer never wipes a day;
+    // a whole window deleted upstream stays. Drop the guard if that is ever seen.
+    if (!hr.size) return false;
+    const dirty = new Set((await mergeSamples(db, "hr", userId, win, hr, "replace")).map(dayOf));
+    if (dirty.size) await db.insert(intradayDirty).values([...dirty].map((day) => ({ userId, day }))).onConflictDoNothing();
+    return dirty.size > 0;
+  }
+
   /** The user's newest stored intraday sample, unix seconds: the last offset of the newest day row. */
   async function lastSample(db: Db, kind: "hr" | "steps"): Promise<number | null> {
     const t = kind === "hr" ? hrDays : stepsDays;
@@ -346,5 +389,5 @@ function writer(tz: string, userId: number) {
     return r?.t ?? null;
   }
 
-  return { write, lastSample };
+  return { write, writeHr, lastSample };
 }

@@ -65,8 +65,13 @@ export async function mergeSamples(
   mode: "replace" | "max",
 ): Promise<number[]> {
   const t = T[table];
-  const lo = Math.min(win.start, ...incoming.keys());
-  const hi = Math.max(win.end, ...[...incoming.keys()].map((k) => k + 1));
+  // A loop, not Math.min(...keys): a day can hold 86k keys, past what a spread call takes as arguments.
+  let lo = win.start;
+  let hi = win.end;
+  for (const k of incoming.keys()) {
+    if (k < lo) lo = k;
+    if (k + 1 > hi) hi = k + 1;
+  }
   const stored = new Map((await load(db, table, userId, lo, hi)).map((r) => [r.bucket, r]));
   const buckets = new Set<number>(stored.keys());
   for (const ts of incoming.keys()) buckets.add(bucketOf(ts));
@@ -87,8 +92,9 @@ export async function mergeSamples(
       if (mode === "max") after.set(ts, Math.max(v, before.get(ts) ?? v));
       else after.set(ts, v);
     }
+    const n = changed.length;
     for (const ts of new Set([...before.keys(), ...after.keys()])) if (before.get(ts) !== after.get(ts)) changed.push(ts);
-    if (!changed.some((ts) => bucketOf(ts) === b)) continue;
+    if (changed.length === n) continue;
     const sorted = [...after].sort((a, z) => a[0] - z[0]);
     if (!sorted.length) {
       await db.delete(t).where(and(eq(t.userId, userId), eq(t.bucket, b)));

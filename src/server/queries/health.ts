@@ -7,7 +7,10 @@ import { dayLabel, formatDay } from "@/lib/format";
 import { weekOf } from "@/lib/url";
 import { and, desc, eq, isNotNull, lte, max } from "drizzle-orm";
 import { dailyMetrics, dailyScores, dailyValues, healthRecords } from "../db/schema";
-import { addDays, daysBetween, fractionalYears, wall } from "../time";
+import { minuteMeanHr } from "@/core/algorithms/stress";
+import { readHr, sampleRange } from "../samples";
+import { addDays, daysBetween, fractionalYears, localMidnight, wall } from "../time";
+import { zoneBounds, zoneNote, zoneRows } from "./strain";
 import { illnessRaised, VITAL_LABEL } from "./home";
 import {
   type DayRow,
@@ -38,6 +41,8 @@ import type {
   HealthHubVM,
   HealthspanContributor,
   HealthspanVM,
+  HeartRateLive,
+  HeartRateVM,
   Metric,
   MonitorVM,
   StressVM,
@@ -60,7 +65,13 @@ export async function getHealthHub(ctx: QueryCtx): Promise<HealthHubVM> {
   const today = todayOf(ctx);
   const rows = await loadDays(ctx, addDays(today, -35), today);
   const row = rows.get(today);
-  const [hsVm, monitor, fit, stressSeries] = await Promise.all([getHealthspan(today, ctx), getMonitor(today, ctx, rows), getFitness(ctx), loadSeries(ctx, today, "stress")]);
+  const [hsVm, monitor, fit, stressSeries, heartRate] = await Promise.all([
+    getHealthspan(today, ctx),
+    getMonitor(today, ctx, rows),
+    getFitness(ctx),
+    loadSeries(ctx, today, "stress"),
+    latestHr(ctx),
+  ]);
   const hs = hsVm.result;
   // Healthspan updates weekly: compare the shown week's pace with the stored week before it.
   const prevDay = addDays(hsVm.asOf, -7);
@@ -90,7 +101,14 @@ export async function getHealthHub(ctx: QueryCtx): Promise<HealthHubVM> {
     fitness: fit.vo2.value
       ? ok({ vo2max: fit.vo2.value.value, category: fit.vo2.value.category, percentile: fit.vo2.value.percentile, acwr: tl?.acwr ?? null, acwrTone: tl?.tone ?? null })
       : none("no_data"),
+    heartRate,
   };
+}
+
+/** The newest stored band reading, whenever it was. */
+async function latestHr(ctx: QueryCtx) {
+  const r = await sampleRange(ctx.db, "hr", ctx.userId);
+  return r ? (await hrMinutes(ctx, r.max, r.max + 1)).latest : null;
 }
 
 // ── Healthspan ──────────────────────────────────────────────────────────────
@@ -521,5 +539,41 @@ export async function getFitness(ctx: QueryCtx): Promise<FitnessVM> {
     trainingLoad,
     load,
     loadReason: load.some((p) => p.ctl != null) ? null : { reason: "calibrating", nightsLeft: Math.max(1, standardConfig.minimumDays - (tl?.contiguousDays ?? 0)) },
+  };
+}
+
+// ── Heart rate ──────────────────────────────────────────────────────────────
+
+/**
+ * The band's heart rate over [from, to) unix seconds (minute-aligned) as minute means, a null for a minute without a
+ * sample so the chart leaves a gap, plus the newest raw sample in the range.
+ */
+export async function hrMinutes(ctx: QueryCtx, from: number, to: number): Promise<HeartRateLive> {
+  const hr = await readHr(ctx.db, ctx.userId, from, to);
+  const last = hr.at(-1);
+  return {
+    points: minuteMeanHr(hr, from, to).map((v, m) => ({ t: ms(from + m * 60), v: v === null ? null : Math.round(v) })),
+    latest: last ? { t: ms(last.ts), bpm: last.bpm } : null,
+  };
+}
+
+/** Heart rate `/health/heart-rate?d=`: the day's minutes (today up to now), resting heart rate and time in zones. */
+export async function getHeartRate(day: string, ctx: QueryCtx): Promise<HeartRateVM> {
+  const isToday = day === todayOf(ctx);
+  const start = localMidnight(day, ctx.timeZone);
+  const end = localMidnight(addDays(day, 1), ctx.timeZone);
+  const to = isToday ? Math.min(end, Math.floor(ctx.now / 60) * 60 + 60) : end;
+  const [hr, rows] = await Promise.all([hrMinutes(ctx, start, to), loadDays(ctx, day, day)]);
+  const row = rows.get(day);
+  return {
+    day,
+    isToday,
+    end: ms(end),
+    ...hr,
+    restingHr: row?.metrics?.rhrBpm ?? null,
+    zoneBands: row?.s1 ? zoneBounds(row.s1.zoneLower) : [],
+    maxHr: row?.s1?.maxHr ?? ctx.profile.maxHr,
+    zones: zoneRows(row),
+    zoneNote: zoneNote(row, ctx),
   };
 }

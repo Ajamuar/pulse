@@ -60,7 +60,7 @@ export default function Loading() {
             <StressChartSkeleton variant="spark" />
           </div>
         </SectionShell>
-        <SectionShell variant="card" level={2} title="Fitness" href="/health/fitness" className="xl:col-span-2">
+        <SectionShell variant="card" level={2} title="Fitness" href="/health/fitness">
           <div aria-hidden className="flex items-start justify-between gap-4">
             <div className="space-y-1">
               <SkeletonText className={`${TILE} w-[4ch]`} />
@@ -72,6 +72,12 @@ export default function Loading() {
               <SkeletonText className="w-[4ch] font-numeric text-xl leading-6 font-bold" />
               <Chip />
             </div>
+          </div>
+        </SectionShell>
+        <SectionShell variant="card" level={2} title="Heart rate" href="/health/heart-rate">
+          <div aria-hidden className="space-y-1">
+            <SkeletonText className={`${TILE} w-[4ch]`} />
+            <SkeletonText className={`${CAPTION} w-28`} />
           </div>
         </SectionShell>
       </div>

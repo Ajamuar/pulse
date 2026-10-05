@@ -8,12 +8,15 @@ import { type Db, getDb, row, sql } from "./db";
 import { oauthTokens } from "./db/schema";
 import { ensureDefaultTags } from "./journalTags";
 import { recomputeIfNeeded } from "./pipeline";
+import { GoogleError } from "./sources/google/oauth";
 import { googleSource } from "./sources/google/sync";
 import { ensureDemoUser, seedSource } from "./sources/seed/generate";
 import type { Source } from "./sources/types";
 
 const INTERVAL_MS = 15 * 60_000;
 const FRESH_MS = 5 * 60_000;
+/** At most one live heart-rate pull per user this often, however many tabs poll. */
+const LIVE_MS = 60_000;
 /** The advisory lock's first key: "Pulse" in ASCII, so it can't collide with another app's locks on the database. */
 const LOCK_KEY = 0x50756c73;
 
@@ -38,16 +41,18 @@ type WorkerDeps = {
 export function createWorker({ name, source, recompute, users, lock = (_, fn) => fn().then(() => true), intervalMs = INTERVAL_MS, log = console }: WorkerDeps) {
   let started = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
-  const states = new Map<number, UserState & { again: boolean }>();
+  /** `liveAt`: the last live heart-rate pull's start; `live`: that pull while it runs. `liveStopped`: a 429 or a lost grant, cleared by the next full run. */
+  const states = new Map<number, UserState & { again: boolean; liveAt: number | null; live: Promise<void> | null; liveStopped: boolean }>();
   const stateOf = (userId: number) => {
     let s = states.get(userId);
-    if (!s) states.set(userId, (s = { running: false, lastRunAt: null, lastSuccessAt: null, lastError: null, again: false }));
+    if (!s) states.set(userId, (s = { running: false, lastRunAt: null, lastSuccessAt: null, lastError: null, again: false, liveAt: null, live: null, liveStopped: false }));
     return s;
   };
 
   async function runUser(userId: number): Promise<void> {
     const s = stateOf(userId);
     s.running = true;
+    await s.live; // a live pull holds the lock for a second; let it finish rather than skip the run
     try {
       const got = await lock(userId, async () => {
         const { changed } = await source.pull(userId);
@@ -63,6 +68,7 @@ export function createWorker({ name, source, recompute, users, lock = (_, fn) =>
     } finally {
       s.lastRunAt = Date.now();
       s.running = false;
+      s.liveStopped = false;
     }
     if (s.again) {
       s.again = false;
@@ -102,6 +108,27 @@ export function createWorker({ name, source, recompute, users, lock = (_, fn) =>
       }
       if (!force && s.lastRunAt !== null && Date.now() - s.lastRunAt < FRESH_MS) return;
       void runUser(userId);
+    },
+    /**
+     * The live heart-rate pull, resolved when it is done or skipped: skipped while the user's full run is going (or
+     * another process holds their lock), within LIVE_MS of the last one, and after a 429 or a lost grant until the
+     * next full run. Never throws: the caller shows what is stored either way.
+     */
+    async pullHeartRate(userId: number) {
+      const s = stateOf(userId);
+      if (!source.pullHeartRate || s.running || s.liveStopped || (s.liveAt !== null && Date.now() - s.liveAt < LIVE_MS)) return;
+      s.liveAt = Date.now();
+      s.live = (async () => {
+        try {
+          await lock(userId, () => source.pullHeartRate!(userId));
+        } catch (err) {
+          if (err instanceof GoogleError && (err.status === 429 || err.code === "auth_revoked" || err.code === "not_connected")) s.liveStopped = true;
+          log.error(`[worker] user ${userId} live heart rate failed: ${err instanceof Error ? err.message : String(err)}`);
+        } finally {
+          s.live = null;
+        }
+      })();
+      await s.live;
     },
     isRunning: (userId: number) => states.get(userId)?.running ?? false,
     stateOf(userId: number): UserState {
@@ -183,6 +210,11 @@ export function startWorker() {
  */
 export function requestSync(opts: { userId: number; force?: boolean }) {
   g.__pulseWorker?.requestSync(opts);
+}
+
+/** The live heart-rate view's throttled pull (createWorker's pullHeartRate); nothing without a worker. */
+export async function pullHeartRate(userId: number) {
+  await g.__pulseWorker?.pullHeartRate(userId);
 }
 
 /**

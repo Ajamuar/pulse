@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createWorker, syncAndWait, withUserLock } from "./worker";
 import { freshDb } from "./testing";
+import { GoogleError } from "./sources/google/oauth";
 
 const MIN = 60_000;
 const U = 7;
@@ -151,6 +152,65 @@ describe("createWorker", () => {
     expect(pull).toHaveBeenCalledTimes(2);
     await tick(MIN);
     expect(pull).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe("pullHeartRate (live)", () => {
+  function live(hr = vi.fn<(userId: number) => Promise<void>>(async () => {})) {
+    const pull = vi.fn<(userId: number) => Promise<{ changed: boolean }>>(async () => {
+      await new Promise((r) => setTimeout(r, 1000));
+      return { changed: false };
+    });
+    const worker = createWorker({ name: "test", source: { pull, pullHeartRate: hr }, recompute: async () => {}, users: async () => [U], intervalMs: 15 * MIN, log });
+    return { worker, pull, hr };
+  }
+
+  it("runs at most once a minute per user, however often it is asked", async () => {
+    const { worker, hr } = live();
+    await Promise.all([worker.pullHeartRate(U), worker.pullHeartRate(U)]);
+    await worker.pullHeartRate(U);
+    expect(hr).toHaveBeenCalledTimes(1);
+    await worker.pullHeartRate(8); // another user has their own minute
+    expect(hr).toHaveBeenCalledTimes(2);
+    await tick(MIN);
+    await worker.pullHeartRate(U);
+    expect(hr).toHaveBeenCalledTimes(3);
+  });
+
+  it("is skipped while the user's full run is going", async () => {
+    const { worker, hr } = live();
+    worker.start();
+    await tick(0); // the first cycle's run is in its 1-second pull
+    expect(worker.isRunning(U)).toBe(true);
+    await worker.pullHeartRate(U);
+    expect(hr).not.toHaveBeenCalled();
+  });
+
+  it("after a 429 (or a revoked grant) stops until the next full run, then resumes", async () => {
+    for (const err of [new GoogleError("RESOURCE_EXHAUSTED", 429), new GoogleError("auth_revoked", 401)]) {
+      const { worker, hr } = live(vi.fn(async () => Promise.reject(err)));
+      await worker.pullHeartRate(U);
+      await tick(5 * MIN);
+      await worker.pullHeartRate(U);
+      expect(hr).toHaveBeenCalledTimes(1);
+      worker.start();
+      await tick(2000); // the full run finishes
+      await worker.pullHeartRate(U);
+      expect(hr).toHaveBeenCalledTimes(2);
+    }
+  });
+
+  it("another failure only waits out the minute, and never throws", async () => {
+    const { worker, hr } = live(vi.fn(async () => Promise.reject(new GoogleError("network"))));
+    await expect(worker.pullHeartRate(U)).resolves.toBeUndefined();
+    await tick(MIN);
+    await worker.pullHeartRate(U);
+    expect(hr).toHaveBeenCalledTimes(2);
+  });
+
+  it("a source without one (the demo seed) does nothing", async () => {
+    const { worker } = setup();
+    await expect(worker.pullHeartRate(U)).resolves.toBeUndefined();
   });
 });
 
