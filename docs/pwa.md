@@ -5,7 +5,7 @@ What makes Pulse behave like an app when it is added to the Home Screen or insta
 | Piece | Where | Notes |
 |---|---|---|
 | Manifest | `src/app/manifest.ts` | `id`, scope, portrait, shortcuts (Check in, Recovery, Sleep), screenshots, `launch_handler`. |
-| Icons and launch screens | `public/icons`, `public/splash`, `scripts/gen-pwa-assets.py` | `any` icon = small mark with the PULSE wordmark under it, on the splash colour (Android's launch screen). `maskable` has its own file. iOS launch screens per device size, dark and light. Rerun the script to regenerate. |
+| Icons and launch screens | `public/icons`, `public/splash`, `scripts/gen-pwa-assets.py` | `any` icon = small mark with the PULSE wordmark under it, on the splash colour (Android's launch screen). `maskable` has its own files (the 192 is the mark alone for the home-screen icon, the 512 adds the name for Android's launch screen). Shortcut icons are `icons/shortcut-*.png`. iOS launch screens per device size, dark and light. Rerun the script to regenerate. |
 | Service worker | `public/sw.js` | Caches only `/_next/static/*` and `/offline.html`. Never pages or health data. Also handles Web Push. |
 | Registration, update prompt, offline toast | `src/components/pwa/PwaRuntime.tsx` | Production builds only. Registered as `/sw.js?v=<build id>`, so each build installs a new worker and the user is asked before the page swaps. |
 | Foreground refresh, pull to sync, offline queue flush | `src/components/shells/AppLifecycle.tsx` | Signed-in screens only. |

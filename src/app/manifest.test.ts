@@ -22,6 +22,7 @@ describe("web app manifest", () => {
 
   it("shortcuts point at real routes with icons, screenshots exist", () => {
     expect(m.shortcuts!.map((s) => s.url)).toEqual(["/journal?checkin=1", "/recovery", "/sleep"]);
+    for (const s of m.shortcuts!) for (const i of s.icons!) expect(onDisk(i.src), i.src).toBe(true);
     for (const s of m.screenshots!) expect(onDisk(s.src), s.src).toBe(true);
   });
 });

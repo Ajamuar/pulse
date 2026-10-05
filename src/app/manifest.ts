@@ -8,6 +8,8 @@ const shot = (name: string, sizes: string, form_factor: "narrow" | "wide", label
   label,
 });
 
+const shortcutIcon = (name: string) => ({ src: `/icons/shortcut-${name}.png`, sizes: "192x192", type: "image/png" });
+
 // Open to signed-out visitors (src/proxy.ts skips files with an extension), so install works from /login.
 export default function manifest(): MetadataRoute.Manifest {
   return {
@@ -28,16 +30,16 @@ export default function manifest(): MetadataRoute.Manifest {
     // Matches viewport.themeColor (layout.tsx), the top of the page ground, so the installed app's bar never changes colour on load.
     theme_color: "#1d2529",
     icons: [
-      // "any" is a small mark on the splash colour (it is also Android's launch screen); "maskable" keeps the mark in the 80% safe zone.
+      // "any": the mark with the name under it. "maskable": inside the 80% safe zone; Android uses the 192 for the home-screen icon (mark) and the 512 for its launch screen (mark and name).
       { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
       { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
       { src: "/icons/icon-maskable-192.png", sizes: "192x192", type: "image/png", purpose: "maskable" },
       { src: "/icons/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
     shortcuts: [
-      { name: "Check in", short_name: "Check in", url: "/journal?checkin=1", icons: [{ src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }] },
-      { name: "Recovery", url: "/recovery", icons: [{ src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }] },
-      { name: "Sleep", url: "/sleep", icons: [{ src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }] },
+      { name: "Check in", short_name: "Check in", url: "/journal?checkin=1", icons: [shortcutIcon("checkin")] },
+      { name: "Recovery", url: "/recovery", icons: [shortcutIcon("recovery")] },
+      { name: "Sleep", url: "/sleep", icons: [shortcutIcon("sleep")] },
     ],
     screenshots: [
       shot("phone-home", "720x1309", "narrow", "Home: recovery, strain and sleep"),

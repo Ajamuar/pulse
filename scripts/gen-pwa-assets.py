@@ -38,11 +38,22 @@ def render(w, h, bg, mark_h, path, name_w=None, name_color=None, gap=0):
     mark(img, w * SS / 2, cy, mark_h * SS)
     img.resize((w, h), Image.LANCZOS).save(os.path.join(OUT, path), optimize=True)
 
-# "any" icons double as Android's launch screen: a small mark with the name under it, on the splash colour.
+# "any" icons: a small mark with the name under it, on the splash colour.
 for s in (192, 512):
     render(s, s, DARK, s * 0.28, f"icons/icon-{s}.png", name_w=s * 0.5, name_color=LIGHT, gap=s * 0.07)
-    # maskable: the launcher crops to a circle or squircle; the mark stays inside the 80% safe zone.
-    render(s, s, DARK, s * 0.5, f"icons/icon-maskable-{s}.png")
+# maskable: the launcher crops to a circle or squircle, so everything stays inside the 80% safe zone (a circle of radius 40%).
+# Android picks the 192 for the home-screen icon (the mark alone) and the 512 for its launch screen (mark and name).
+render(192, 192, DARK, 192 * 0.5, "icons/icon-maskable-192.png")
+render(512, 512, DARK, 512 * 0.26, "icons/icon-maskable-512.png", name_w=512 * 0.46, name_color=LIGHT, gap=512 * 0.06)
+
+# App shortcut icons (long-press menu): a lucide glyph in the brand colour on the splash colour, drawn for a circular crop.
+SHORTCUTS = {"checkin": LIGHT, "recovery": GREEN, "sleep": BLUE}
+for name, color in SHORTCUTS.items():
+    svg = open(os.path.join(os.path.dirname(__file__), "shortcuts", f"{name}.svg")).read().replace("currentColor", f"rgb{color}")
+    glyph = Image.open(io.BytesIO(subprocess.run(["rsvg-convert", "-w", str(192 * SS // 2), "-f", "png"], input=svg.encode(), capture_output=True, check=True).stdout)).convert("RGBA")
+    img = Image.new("RGB", (192 * SS, 192 * SS), DARK)
+    img.paste(glyph, ((192 * SS - glyph.width) // 2, (192 * SS - glyph.height) // 2), glyph)
+    img.resize((192, 192), Image.LANCZOS).save(os.path.join(OUT, f"icons/shortcut-{name}.png"), optimize=True)
 
 # iOS launch screens: portrait px sizes of the devices Safari still serves (device width x height @ ratio).
 IOS = [(430, 932, 3), (393, 852, 3), (428, 926, 3), (390, 844, 3), (375, 812, 3), (414, 896, 3), (414, 896, 2), (414, 736, 3), (375, 667, 2),
