@@ -403,8 +403,8 @@ export function Coach({ id, initial, groups, next, prefill, providerLabel }: { i
           so a short chat never scrolls by a few pixels. */}
       <div className="mx-auto flex min-h-[calc(100svh-76px-env(safe-area-inset-top))] md:min-h-[calc(100svh-84px-env(safe-area-inset-top))] xl:min-h-[calc(100svh-92px)] w-full max-w-[760px] flex-col pb-[max(env(safe-area-inset-bottom),12px)] md:pb-6">
         {/* Below 1280 px, the chat's toolbar: the chats (their own page), New chat and settings. From 1280 px the chats
-            panel (expanded or collapsed) carries all three. */}
-        <div className="-mt-2 mb-2 flex items-center justify-between gap-1 xl:hidden">
+            panel (expanded or collapsed) carries all three. Pinned under the header (44 px, 52 from 768) on the page ground, so the chat scrolls beneath it. */}
+        <div className="sticky top-[calc(env(safe-area-inset-top)+44px)] z-10 -mt-2 mb-2 flex items-center justify-between gap-1 bg-(image:--page-ground) bg-no-repeat pb-1 [background-position:0_calc(0px-env(safe-area-inset-top)-44px)] [background-size:100%_100vh] md:top-[calc(env(safe-area-inset-top)+52px)] md:[background-position:0_calc(0px-env(safe-area-inset-top)-52px)] xl:hidden">
           <Button asChild variant="ghost" size="icon-touch" aria-label={chatCount ? `Chats (${chatCount})` : "Chats"} className={ICON_BTN}>
             <Link href="/coach/chats">
               <History aria-hidden strokeWidth={1.75} />
