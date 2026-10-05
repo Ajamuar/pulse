@@ -74,16 +74,16 @@ export default function BrandPage() {
         </Row>
         <Row surface label="Maskable 512 (no mask, circle mask, 80% safe zone)">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/icons/icon-512.png" alt="Maskable icon" width={160} height={160} />
+          <img src="/icons/icon-maskable-512.png" alt="Maskable icon" width={160} height={160} />
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/icons/icon-512.png" alt="Maskable icon in a circle mask" width={160} height={160} className="rounded-full" />
+          <img src="/icons/icon-maskable-512.png" alt="Maskable icon in a circle mask" width={160} height={160} className="rounded-full" />
           <span className="relative size-40">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/icons/icon-512.png" alt="Maskable icon with safe zone" width={160} height={160} />
+            <img src="/icons/icon-maskable-512.png" alt="Maskable icon with safe zone" width={160} height={160} />
             <span className="absolute inset-[10%] rounded-full border border-dashed border-red-400" />
           </span>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/icons/icon-192.png" alt="Maskable icon at 192" width={96} height={96} className="rounded-[22px]" />
+          <img src="/icons/icon-maskable-192.png" alt="Maskable icon at 192" width={96} height={96} className="rounded-[22px]" />
         </Row>
       </section>
     </main>
