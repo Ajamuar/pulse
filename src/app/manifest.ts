@@ -18,7 +18,8 @@ const shortcutIcons = (name: string) => [icon(`shortcut-${name}`, 192, "any")];
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/",
-    name: "Pulse: recovery, strain and sleep",
+    // Short on purpose: Android draws the name under the icon on its launch screen, in the system font.
+    name: "Pulse",
     short_name: "Pulse",
     description: "Recovery, strain and sleep from your Fitbit Air.",
     lang: "en",
