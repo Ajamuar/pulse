@@ -148,7 +148,7 @@ export function SleepStages({ hours, hr, data }: SleepStagesProps) {
       metric={hours}
       skeleton={<SleepStagesSkeleton />}
       renderReason={(r, meta) => (
-        <div className="grid min-h-40 place-items-center">
+        <div className="grid place-items-center">
           <ReasonPlaceholder reason={r} nightsLeft={meta.nightsLeft} size="md" />
         </div>
       )}

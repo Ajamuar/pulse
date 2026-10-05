@@ -19,11 +19,10 @@ const ICON: Record<VitalKey, React.ReactNode> = {
 }
 const FORMAT: Record<VitalKey, FormatKey> = { resp: "decimal1", spo2: "int", restingHr: "int", hrv: "int", skinTempDev: "signed1" }
 /**
- * Five tiles: two a row on phone, the fifth full width; on tablet a six-column grid, three tiles then two wider ones;
- * five a row on laptop. Before, the ranges note filled the empty sixth cell and read as a stray paragraph in the grid.
+ * Five tiles: two a row below laptop, the fifth a full-width strip with its range on the right; five a row on laptop.
+ * Tablet once ran a 3 + 2 six-column grid whose two stretched tiles were half empty.
  */
-const GRID =
-  "grid grid-cols-2 gap-3 *:last:col-span-2 md:grid-cols-6 md:*:col-span-2 md:[&>*:nth-last-child(-n+2)]:col-span-3 xl:grid-cols-5 xl:gap-4 xl:*:col-span-1 xl:[&>*:nth-last-child(-n+2)]:col-span-1"
+const GRID = "grid grid-cols-2 gap-3 *:last:col-span-2 xl:grid-cols-5 xl:gap-4 xl:*:last:col-span-1"
 const NOTE = "Resting heart rate, HRV and skin temperature use Google’s personal ranges when it has them; otherwise your range is your baseline ± 2 SD over 60 nights."
 
 /** The five vital tiles, each opening its vital sheet (journey 6), plus the ranges note cell. */
@@ -41,10 +40,12 @@ export function VitalTiles({ vitals }: { vitals: Vital[] }) {
   return (
     <>
       <div className={GRID}>
-        {vitals.map((x) => (
+        {vitals.map((x, i) => (
           <KeyStatRow
             key={x.key}
             variant="tile"
+            // The fifth tile spans the row below laptop (GRID): a wide strip with its range on the right.
+            wide={i === vitals.length - 1 && "xl"}
             icon={ICON[x.key]}
             // the reference app's tiles abbreviate the two heart metrics ("RHR", "HRV") [latest-health-monitor-1]; the sheet keeps the full name.
             label={x.key === "restingHr" || x.key === "hrv" ? x.short : x.label}

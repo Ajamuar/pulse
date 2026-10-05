@@ -40,6 +40,17 @@ function share(part: number, total: number) {
 function Rows({ zones, note }: { zones: ZoneRow[]; note?: string }) {
   const total = zones.reduce((a, z) => a + z.seconds, 0)
   const sorted = [...zones].sort((a, b) => b.zone - a.zone)
+  // No time in any zone (an easy walk): one line that says so, not four greyed rows of 0:00:00.
+  const lowest = sorted.at(-1)
+  if (!total && lowest)
+    return (
+      <div className="flex flex-1 flex-col justify-center">
+        <p className="rounded-lg bg-secondary px-3 py-3 text-[15px] leading-[22px] text-pretty text-foreground-secondary">
+          Heart rate stayed under the {lowest.label} zone ({lowest.min}{"\u00a0"}bpm) the whole time.
+        </p>
+        {note && <p className="mt-3 text-xs leading-4 font-medium text-muted-foreground">{note}</p>}
+      </div>
+    )
   return (
     // In a stretched card (Strain's Time in zones beside two stacked cards) the rows share the spare height
     // evenly instead of leaving it under the last row (SYM5). In a natural-height parent nothing grows.

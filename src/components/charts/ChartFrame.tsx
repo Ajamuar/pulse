@@ -52,6 +52,17 @@ export function useSeriesAnimation() {
 
 export const GRID = { vertical: false, stroke: "var(--chart-grid)" } as const
 export const AXIS = { tickLine: false, axisLine: false, tickMargin: 8 } as const
+/**
+ * Right margin that holds reference-line labels ("Avg", "7,000", "Your age") outside the plot, so bars and lines never
+ * run under them: about 6.5 px a character at 11 px, plus the label's 5 px offset. Pair with `position: "right"`.
+ */
+export const labelGutter = (labels: (string | false | null | undefined)[], base = 4) => {
+  const widest = Math.max(0, ...labels.map((l) => (l ? l.length : 0)))
+  return widest ? Math.max(base, Math.ceil(widest * 6.5) + 8) : base
+}
+/** A reference line's label in the right gutter (see `labelGutter`). */
+export const gutterLabel = (value: string, fill = "var(--foreground-secondary)") =>
+  ({ value, position: "right", fill, fontSize: 11, fontWeight: 600 }) as const
 export const LINE_CURSOR = { stroke: "var(--chart-cursor)", strokeWidth: 1 }
 export const BAR_CURSOR = { fill: "color-mix(in srgb, var(--foreground) 5%, transparent)" }
 export const TOOLTIP_CLASS = "rounded-xl border-0 bg-popover shadow-overlay ring-1 ring-foreground/10"

@@ -111,7 +111,7 @@ function Chart({ hr, highlight }: { hr: SleepHr; highlight?: { start: number; en
 /** Heart rate across the main sleep with its bed and wake markers; the chosen stage lit (spec §7.5, §11 R9). */
 export function SleepHrChart({ data, highlight }: SleepHrChartProps) {
   const empty = (
-    <div className={`grid place-items-center ${H}`}>
+    <div className="grid place-items-center">
       <EmptyState body="No heart-rate data for this night." />
     </div>
   )
@@ -121,7 +121,7 @@ export function SleepHrChart({ data, highlight }: SleepHrChartProps) {
       skeleton={<SleepHrChartSkeleton />}
       empty={empty}
       renderReason={(r) => (
-        <div className={`grid place-items-center ${H}`}>
+        <div className="grid place-items-center">
           <ReasonPlaceholder reason={r} size="md" />
         </div>
       )}

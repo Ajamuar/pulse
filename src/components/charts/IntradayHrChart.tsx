@@ -11,7 +11,7 @@ import { EmptyState } from "@/components/shells/EmptyState"
 import { MetricState } from "@/components/shells/MetricState"
 import { useOptionalShellCalendar } from "@/components/shells/ShellStatus"
 import { ReasonPlaceholder } from "@/components/metrics/ReasonPlaceholder"
-import { AXIS, ChartFigure, GRID, LINE_CURSOR, TOOLTIP_CLASS, TooltipLine, useSeriesAnimation } from "./ChartFrame"
+import { AXIS, ChartFigure, GRID, labelGutter, LINE_CURSOR, TOOLTIP_CLASS, TooltipLine, useSeriesAnimation } from "./ChartFrame"
 
 /** A marked stretch on an intraday chart. `label` is the short name: "Run", "Ride", "Strength", "Sleep", "Nap". */
 export type ChartSpan = { kind: "workout" | "sleep"; start: number; end: number; label: string }
@@ -41,7 +41,8 @@ export function spanAreas(spans: ChartSpan[] | undefined) {
       fill={s.kind === "workout" ? "var(--strain-deep)" : "var(--sleep)"}
       fillOpacity={s.kind === "workout" ? 0.3 : 0.12}
       ifOverflow="hidden"
-      label={{ value: s.label, position: "insideTop", fill: "var(--foreground-secondary)", fontSize: 11 }}
+      // Above the plot, in the chart's top margin: inside it the label sat on the line and the zone labels.
+      label={{ value: s.label, position: "top", fill: "var(--foreground-secondary)", fontSize: 11 }}
     />
   ))
 }
@@ -59,7 +60,7 @@ function Chart({ hr, variant }: { hr: HrSeries; variant: "day" | "activity" }) {
 
   return (
     <ChartFigure summary={summary} config={{ bpm: { label: "Heart rate", color: "var(--strain)" } }} className={variant === "day" ? "h-[200px]" : "h-[180px]"}>
-      <AreaChart data={hr.points} accessibilityLayer margin={{ top: 16, right: 8, bottom: 0, left: 0 }}>
+      <AreaChart data={hr.points} accessibilityLayer margin={{ top: 16, right: labelGutter(hr.zones?.map((z) => z.label) ?? [], 8), bottom: 0, left: 0 }}>
         <defs>
           <linearGradient id={`hr-fill-${id}`} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="var(--strain)" stopOpacity={0.45} />
@@ -75,7 +76,8 @@ function Chart({ hr, variant }: { hr: HrSeries; variant: "day" | "activity" }) {
             fill={z.zone % 2 ? "var(--chart-band)" : "transparent"}
             fillOpacity={1}
             ifOverflow="hidden"
-            label={{ value: z.label, position: "insideRight", fill: "var(--muted-foreground)", fontSize: 10 }}
+            // In the right gutter, beside the plot: inside it the heart-rate line ran through the label.
+            label={{ value: z.label, position: "right", fill: "var(--muted-foreground)", fontSize: 10 }}
           />
         ))}
         {spanAreas(hr.spans)}
@@ -121,9 +123,8 @@ function Chart({ hr, variant }: { hr: HrSeries; variant: "day" | "activity" }) {
 
 /** Heart rate across the day or an activity, with zones and markers (spec §5.7). */
 export function IntradayHrChart({ data, variant = "day" }: IntradayHrChartProps) {
-  const h = variant === "day" ? "h-[200px]" : "h-[180px]"
   const empty = (
-    <div className={`grid place-items-center ${h}`}>
+    <div className="grid place-items-center">
       <EmptyState body="No heart-rate data for this day." />
     </div>
   )
@@ -133,7 +134,7 @@ export function IntradayHrChart({ data, variant = "day" }: IntradayHrChartProps)
       skeleton={<IntradayHrChartSkeleton variant={variant} />}
       empty={empty}
       renderReason={(r) => (
-        <div className={`grid place-items-center ${h}`}>
+        <div className="grid place-items-center">
           <ReasonPlaceholder reason={r} size="md" />
         </div>
       )}

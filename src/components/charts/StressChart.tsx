@@ -100,7 +100,7 @@ function Chart({ s, variant }: { s: StressSeries; variant: "full" | "spark" }) {
 export function StressChart({ data, variant }: StressChartProps) {
   const empty =
     variant === "full" ? (
-      <div className="grid h-[200px] place-items-center">
+      <div className="grid place-items-center">
         <EmptyState body="No still minutes to score yet today. Stress is measured only while you are not moving." />
       </div>
     ) : (
@@ -114,7 +114,7 @@ export function StressChart({ data, variant }: StressChartProps) {
       reasonSize={variant === "full" ? "md" : "sm"}
       renderReason={(r) =>
         variant === "full" ? (
-          <div className="grid h-[200px] place-items-center">
+          <div className="grid place-items-center">
             <ReasonPlaceholder reason={r} size="md" />
           </div>
         ) : (

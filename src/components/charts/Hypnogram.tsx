@@ -109,7 +109,7 @@ export function HypnogramChart({ night }: { night: HypnogramNight }) {
 /** Last night's stages as a step chart over four lanes (spec §5.6, derived design). */
 export function Hypnogram({ data }: HypnogramProps) {
   const empty = (
-    <div className="grid h-40 place-items-center">
+    <div className="grid place-items-center">
       <EmptyState body="No stage data for this night. Fitbit only stages sleeps longer than about 3 hours." />
     </div>
   )
@@ -119,7 +119,7 @@ export function Hypnogram({ data }: HypnogramProps) {
       skeleton={<HypnogramSkeleton />}
       empty={empty}
       renderReason={(r) => (
-        <div className="grid h-40 place-items-center">
+        <div className="grid place-items-center">
           <ReasonPlaceholder reason={r} size="md" />
         </div>
       )}

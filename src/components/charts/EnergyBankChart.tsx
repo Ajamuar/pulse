@@ -52,7 +52,7 @@ function Chart({ e }: { e: EnergySeries }) {
             fill="var(--sleep)"
             fillOpacity={0.12}
             ifOverflow="hidden"
-            label={{ value: "Nap", position: "insideTop", fill: "var(--foreground-secondary)", fontSize: 11 }}
+            label={{ value: "Nap", position: "top", fill: "var(--foreground-secondary)", fontSize: 11 }}
           />
         ))}
         <XAxis dataKey="x" type="number" scale="time" domain={[first, last]} ticks={hourTicks(first, last, 6, tz)} tickFormatter={(v: number) => clock(v, tz)} interval="preserveStartEnd" minTickGap={24} {...AXIS} />
@@ -100,7 +100,7 @@ function Chart({ e }: { e: EnergySeries }) {
 /** another app's Energy Bank in the reference app's language (spec §5.9). */
 export function EnergyBankChart({ data }: EnergyBankChartProps) {
   const empty = (
-    <div className="grid h-[140px] place-items-center">
+    <div className="grid place-items-center">
       <EmptyState body="Energy Bank starts once you wake up." />
     </div>
   )
@@ -110,7 +110,7 @@ export function EnergyBankChart({ data }: EnergyBankChartProps) {
       skeleton={<EnergyBankChartSkeleton />}
       empty={empty}
       renderReason={(r, meta) => (
-        <div className="grid h-[140px] place-items-center">
+        <div className="grid place-items-center">
           <ReasonPlaceholder reason={r} nightsLeft={meta.nightsLeft} size="md" />
         </div>
       )}

@@ -15,7 +15,7 @@ import { EmptyState } from "@/components/shells/EmptyState"
 import { MetricState } from "@/components/shells/MetricState"
 import { useOptionalShellCalendar } from "@/components/shells/ShellStatus"
 import { StatusChip, ValueUnit } from "@/components/metrics/primitives"
-import { AXIS, BAR_CURSOR, ChartFigure, GRID, LINE_CURSOR, TOOLTIP_CLASS, TooltipLine, useSeriesAnimation } from "./ChartFrame"
+import { AXIS, BAR_CURSOR, ChartFigure, GRID, gutterLabel, labelGutter, LINE_CURSOR, TOOLTIP_CLASS, TooltipLine, useSeriesAnimation } from "./ChartFrame"
 
 export type TrendPoint = {
   date: string
@@ -142,6 +142,9 @@ function Trend({ points, p }: { points: TrendPoint[]; p: TrendChartProps }) {
   const widest = formatValue(p.format, Math.max(0, ...rows.map((r) => r.value ?? 0))).length
   const axisWidth = widest <= 3 ? 32 : 15 + 7 * widest
 
+  const showAvg = !line && range !== "w" && avg !== null
+  const gutter = labelGutter([p.reference?.label, showAvg && "Avg"])
+
   const ticks =
     range === "w"
       ? rows.map((r) => r.date)
@@ -223,7 +226,7 @@ function Trend({ points, p }: { points: TrendPoint[]; p: TrendChartProps }) {
           <ComposedChart
             data={rows}
             accessibilityLayer
-            margin={{ top: range === "w" ? 18 : 8, right: 4, bottom: 0, left: 4 }}
+            margin={{ top: range === "w" ? 18 : 8, right: gutter, bottom: 0, left: 4 }}
             onMouseMove={(s) => setActive(s?.activeTooltipIndex == null ? null : Number(s.activeTooltipIndex))}
             onMouseLeave={() => setActive(null)}
           >
@@ -239,17 +242,12 @@ function Trend({ points, p }: { points: TrendPoint[]; p: TrendChartProps }) {
                 stroke="var(--chart-cursor)"
                 strokeDasharray="4 4"
                 ifOverflow="extendDomain"
-                label={{ value: p.reference.label, position: "insideTopRight", fill: "var(--muted-foreground)", fontSize: 11 }}
+                label={gutterLabel(p.reference.label, "var(--muted-foreground)")}
               />
             )}
             {/* the reference app's month bars carry a dashed average line [latest-trends-1] (spec §11 F21). */}
-            {!line && range !== "w" && avg !== null && (
-              <ReferenceLine
-                y={avg}
-                stroke="var(--chart-cursor)"
-                strokeDasharray="3 3"
-                label={{ value: "Avg", position: "insideBottomLeft", fill: "var(--foreground-secondary)", fontSize: 11, fontWeight: 600 }}
-              />
+            {showAvg && (
+              <ReferenceLine y={avg} stroke="var(--chart-cursor)" strokeDasharray="3 3" label={gutterLabel("Avg")} />
             )}
             {p.target && <ReferenceArea y1={p.target[0]} y2={p.target[1]} fill="var(--dial-target)" fillOpacity={0.3} ifOverflow="extendDomain" />}
             <ChartTooltip
