@@ -65,6 +65,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
         {/* Next's own manifest link omits crossorigin outside Vercel previews; child layouts set manifest: null. */}
         <link rel="manifest" href="/manifest.webmanifest" crossOrigin="use-credentials" />
+        {/* Next's appleWebApp.capable now writes only the standard mobile-web-app-capable; iOS still reads Apple's own
+            name for a Home Screen web app, and without it shows no launch screen. */}
+        <meta name="apple-mobile-web-app-capable" content="yes" />
       </head>
       <body className="flex min-h-full flex-col">
         <TooltipProvider>{children}</TooltipProvider>
