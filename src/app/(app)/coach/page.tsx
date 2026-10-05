@@ -5,7 +5,7 @@ import { providerLabel, providerOptions } from "@/server/coach/options"
 import { coachAccess, coachSetup, groupChats, listChats, loadChat } from "@/server/coach/store"
 import { userCtx } from "@/server/queries/common"
 import { DetailShell } from "@/components/shells/DetailShell"
-import { Coach } from "./Coach"
+import { Coach, CoachBarActions } from "./Coach"
 import { Consent, ProviderForm } from "./CoachSetup"
 
 export const metadata = { title: "Coach" }
@@ -51,11 +51,14 @@ export default async function CoachPage({ searchParams }: { searchParams: Promis
 
   const saved = c && /^[\w-]{8,64}$/.test(c) ? await loadChat(db, userId, c) : null
   const id = saved ? c! : randomUUID()
+  const groups = groupChats(chats, now, timeZone)
+  const chatCount = groups.reduce((n, g) => n + g.chats.length, 0)
   return (
     <div className={FRAME}>
       <DetailShell
         title="Coach"
-        primary={<Coach key={id} id={id} initial={saved ?? []} groups={groupChats(chats, now, timeZone)} next={next} prefill={(q ?? "").slice(0, 500)} providerLabel={providerLabel(setup.provider)} />}
+        action={<CoachBarActions chatCount={chatCount} chatOpen={(saved?.length ?? 0) > 0} />}
+        primary={<Coach key={id} id={id} initial={saved ?? []} groups={groups} next={next} prefill={(q ?? "").slice(0, 500)} providerLabel={providerLabel(setup.provider)} />}
       />
     </div>
   )

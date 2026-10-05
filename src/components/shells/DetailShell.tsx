@@ -20,6 +20,8 @@ export type DetailShellProps = {
   /** Left-aligned header with an icon before the title (Activity, spec §7.4). */
   align?: DetailHeaderProps["align"]
   titleIcon?: React.ReactNode
+  /** The header's right side in place of the info button (DetailHeader `action`). */
+  action?: React.ReactNode
   /** Page ground (spec §2.1): Healthspan is the reference app's darker `#101518`; the collapsed band paints the same ground. */
   ground?: "default" | "healthspan"
   /** The hero component. With `collapse`, it must accept `compact` (or forward it to the component inside). */
@@ -50,11 +52,11 @@ export type DetailShellProps = {
 }
 
 /** Detail screens (spec §4.6): one dial, one number, then everything that explains it. */
-export function DetailShell({ title, subtitle, info, backHref, dateSwitcher, dismiss, align, titleIcon, ground, hero, stats, collapse, summary, notch, insight, primary, secondary, footer, loading }: DetailShellProps) {
+export function DetailShell({ title, subtitle, info, backHref, dateSwitcher, dismiss, align, titleIcon, action, ground, hero, stats, collapse, summary, notch, insight, primary, secondary, footer, loading }: DetailShellProps) {
   // With no summary, the insight takes the hero's right column on laptop (spec §7.9).
   const side = summary ?? (hero ? insight : null)
   const inHeader = dateSwitcher?.placement === "header"
-  const headerProps = { title, subtitle, info, backHref, dismiss, align, titleIcon, dateTitle: inHeader ? dateSwitcher : undefined }
+  const headerProps = { title, subtitle, info, backHref, dismiss, align, titleIcon, action, dateTitle: inHeader ? dateSwitcher : undefined }
   // Built here, on the server, so a page's own wrapper hero (a server component) renders its compact form too.
   const compact = collapse && isValidElement<{ compact?: boolean }>(hero) ? cloneElement(hero, { compact: true }) : null
   return (

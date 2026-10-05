@@ -25,6 +25,8 @@ export type DetailHeaderProps = {
   /** `start`: back, an optional 24 px icon, then the title over the subtitle, all left-aligned (Activity, [latest-activity-1]). */
   align?: "center" | "start"
   titleIcon?: React.ReactNode
+  /** The bar's right side in place of the info button (Coach: chats, new chat, settings). Pinned with the bar. */
+  action?: React.ReactNode
 }
 
 /**
@@ -43,6 +45,7 @@ export function DetailHeaderRow({
   dismiss = "back",
   align = "center",
   titleIcon,
+  action,
   centerClassName,
   className,
 }: DetailHeaderProps & { centerClassName?: string; className?: string }) {
@@ -128,7 +131,7 @@ export function DetailHeaderRow({
           )}
         </div>
       }
-      right={info && (sub ? <span className={sideLine}><InfoButton info={info} label={title} variant="header" /></span> : <InfoButton info={info} label={title} variant="header" />)}
+      right={action ?? (info && (sub ? <span className={sideLine}><InfoButton info={info} label={title} variant="header" /></span> : <InfoButton info={info} label={title} variant="header" />))}
     />
   )
 }

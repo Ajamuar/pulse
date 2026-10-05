@@ -299,6 +299,26 @@ const SUGGESTION = cn(
  * messages on the ground with the user's in a bubble, tool results as Pulse cards, and the composer pinned to the
  * bottom of the chat column. Sends only the newest message; the server holds the history.
  */
+/** The chat's actions below 1280 px, in the page header so they stay put (from 1280 px the chats panel carries all three). */
+export function CoachBarActions({ chatCount, chatOpen }: { chatCount: number; chatOpen: boolean }) {
+  const btn = "text-foreground-secondary hover:text-foreground"
+  return (
+    <span className="flex items-center xl:hidden">
+      <Button asChild variant="ghost" size="icon-touch" aria-label={chatCount ? `Chats (${chatCount})` : "Chats"} className={btn}>
+        <Link href="/coach/chats">
+          <History aria-hidden strokeWidth={1.75} />
+        </Link>
+      </Button>
+      {chatOpen && <NewChatButton />}
+      <Button asChild variant="ghost" size="icon-touch" aria-label="Coach settings" className={btn}>
+        <Link href="/settings#coach">
+          <Settings2 aria-hidden strokeWidth={1.6} />
+        </Link>
+      </Button>
+    </span>
+  )
+}
+
 export function Coach({ id, initial, groups, next, prefill, providerLabel }: { id: string; initial: UIMessage[]; groups: ChatGroup[]; next: ChatCursor | null; prefill: string; providerLabel: string }) {
   const router = useRouter()
   const [input, setInput] = React.useState(prefill)
@@ -351,10 +371,8 @@ export function Coach({ id, initial, groups, next, prefill, providerLabel }: { i
   }
   const lastAnswer = messages.at(-1)?.role === "assistant" ? messages.at(-1)!.id : null
 
-  const chatCount = groups.reduce((n, g) => n + g.chats.length, 0)
   const listOpen = usePanelOpen()
   const keyboard = useKeyboardInset()
-  const ICON_BTN = "text-foreground-secondary hover:text-foreground"
   const PANEL_BTN = "rounded-full text-muted-foreground hover:bg-foreground/8 hover:text-foreground"
   // Provider, key, chats and turning the coach off live in Settings › Coach.
   const settingsLink = (className: string, size: "icon-lg" | "icon-touch") => (
@@ -402,20 +420,6 @@ export function Coach({ id, initial, groups, next, prefill, providerLabel }: { i
       {/* Fills exactly the viewport under the header (its height, the notch and the shell's top padding: 76/84/92 px),
           so a short chat never scrolls by a few pixels. */}
       <div className="mx-auto flex min-h-[calc(100svh-76px-env(safe-area-inset-top))] md:min-h-[calc(100svh-84px-env(safe-area-inset-top))] xl:min-h-[calc(100svh-92px)] w-full max-w-[760px] flex-col pb-[max(env(safe-area-inset-bottom),12px)] md:pb-6">
-        {/* Below 1280 px, the chat's toolbar: the chats (their own page), New chat and settings. From 1280 px the chats
-            panel (expanded or collapsed) carries all three. Pinned where it rests, under the header (68 px with its fade, 76 from 768), on the page ground, so it never slides and the chat scrolls beneath it. */}
-        <div className="sticky top-[calc(env(safe-area-inset-top)+68px)] z-10 -mt-2 mb-2 flex items-center justify-between gap-1 bg-(image:--page-ground) bg-no-repeat pb-1 [background-position:0_calc(0px-env(safe-area-inset-top)-68px)] [background-size:100%_100vh] md:top-[calc(env(safe-area-inset-top)+76px)] md:[background-position:0_calc(0px-env(safe-area-inset-top)-76px)] xl:hidden">
-          <Button asChild variant="ghost" size="icon-touch" aria-label={chatCount ? `Chats (${chatCount})` : "Chats"} className={ICON_BTN}>
-            <Link href="/coach/chats">
-              <History aria-hidden strokeWidth={1.75} />
-            </Link>
-          </Button>
-          <span className="flex items-center">
-            {messages.length > 0 && <NewChatButton />}
-            {settingsLink(ICON_BTN, "icon-touch")}
-          </span>
-        </div>
-
         {messages.length === 0 ? (
           <div className="my-auto flex flex-col items-center py-8 text-center">
             <span aria-hidden className="grid size-12 place-items-center rounded-full bg-linear-to-br from-insight-from to-insight-to p-px">
