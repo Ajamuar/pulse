@@ -58,6 +58,11 @@ export function PwaRuntime() {
       const onController = () => asked && location.reload()
       navigator.serviceWorker.addEventListener("controllerchange", onController)
       off = () => navigator.serviceWorker.removeEventListener("controllerchange", onController)
+    } else if ("serviceWorker" in navigator) {
+      // `next dev` registers no worker, but one left on this origin by a production build (`pnpm start`) keeps serving
+      // its cached /_next/static files, and dev's files keep their names while their contents change: stale CSS.
+      void navigator.serviceWorker.getRegistrations().then((rs) => rs.forEach((r) => void r.unregister()))
+      void caches?.keys().then((ks) => ks.forEach((k) => void caches.delete(k)))
     }
     return () => {
       removeEventListener("unhandledrejection", onRejection)
