@@ -175,7 +175,8 @@ export function hrChartOf(
   return ok({
     points,
     zones: zoneBounds(s1.zoneLower),
-    spans: from == null ? spans : spans.filter((x) => x.end > ms(from) && x.start < ms(to!)),
+    // An activity window marks only its workouts, not sleep or a neighbouring session caught in the padding.
+    spans: from == null ? spans : spans.filter((x) => x.kind === "workout" && x.end > ms(from) && x.start < ms(to!)),
     now: isToday && from == null && s1.lastHrTs != null ? ms(s1.lastHrTs) : null,
   });
 }

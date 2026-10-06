@@ -83,7 +83,7 @@ export async function getActivity(id: string, ctx: QueryCtx): Promise<ActivityVM
     dayStrain: row?.s1?.effort != null ? toStrain(row.s1.effort) : null,
     stats,
     insight: a && a.hrCount > 0 ? zoneInsight(a.zoneSeconds) : null,
-    hr: hrChartOf(ctx, row, e.day, e.day === todayOf(ctx), series, recent.filter((y) => y.day === e.day), e.startTs - 600, e.endTs + 600),
+    hr: hrChartOf(ctx, row, e.day, e.day === todayOf(ctx), series, recent.filter((y) => y.id === id), e.startTs - 600, e.endTs + 600),
     zones: a ? withTypical(zoneRows(row, a.zoneSeconds), same.flatMap((x) => { const z = statOf(x)?.zoneSeconds; return z ? [z] : []; })) : none(reason),
     maxHr: row?.s1?.maxHr ?? ctx.profile.maxHr,
     zoneNote: zoneNote(row, ctx),

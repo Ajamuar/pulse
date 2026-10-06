@@ -43,14 +43,18 @@ function SpanMark({ viewBox, kind, text }: { viewBox?: { x?: number; y?: number;
   const { x = 0, y = 0, width = 0 } = viewBox ?? {}
   const Icon = kind === "sleep" ? Moon : Activity
   const w = 14 + Math.ceil(text.length * 6.2)
-  const left = x + width / 2 - w / 2
+  // A header stays inside its own stretch, so back-to-back spans never overprint: the name when it fits, else the icon alone.
+  const named = width >= w
+  const left = named ? x + width / 2 - w / 2 : x + width / 2 - 5.5
   return (
     <g pointerEvents="none">
       <rect x={x} y={y} width={width} height={2} fill={SPAN_COLOR[kind]} />
-      <Icon x={left} y={y - 15} width={11} height={11} color={SPAN_COLOR[kind]} strokeWidth={2.25} />
-      <text x={left + 14} y={y - 9.5} dy="0.35em" fontSize={11} fontWeight={600} fill="var(--foreground-secondary)">
-        {text}
-      </text>
+      {width >= 11 && <Icon x={left} y={y - 15} width={11} height={11} color={SPAN_COLOR[kind]} strokeWidth={2.25} />}
+      {named && (
+        <text x={left + 14} y={y - 9.5} dy="0.35em" fontSize={11} fontWeight={600} fill="var(--foreground-secondary)">
+          {text}
+        </text>
+      )}
     </g>
   )
 }
