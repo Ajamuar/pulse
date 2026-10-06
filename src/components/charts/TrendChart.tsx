@@ -60,6 +60,8 @@ export type TrendChartProps = {
   headline?: "average" | "day"
   /** Draws a line of the trailing `smooth`-day average over the bars or dots (weight's 7-day average). */
   smooth?: number
+  /** A line with dots at every range, the week's dots ringed and labelled (WHOOP's Sleep efficiency); else bars until 6M. */
+  line?: boolean
 }
 
 const RANGE_ARIA: Record<TrendRange, string> = { w: "1 week", m: "1 month", "6m": "6 months", "1y": "1 year" }
@@ -157,10 +159,10 @@ function Trend({ points, p }: { points: TrendPoint[]; p: TrendChartProps }) {
   const byDay = p.headline === "day"
   // The day the header and legend describe: the scrubbed one, else the selected (last) day.
   const shown = scrubbed ?? (byDay || p.stack ? (rows.at(-1) ?? null) : null)
-  const line = range === "6m" || range === "1y"
+  const line = !!p.line || range === "6m" || range === "1y"
   // A single-hue 6M line (Pulse Age, VO2 max, vitals) fits its data; bars always start at zero.
   const domain: [number | "auto", number | "auto"] =
-    p.colorBy === "band" ? [0, 100] : p.colorBy === "stress" ? [0, 3] : line && p.colorBy === "single" ? ["auto", "auto"] : [0, "auto"]
+    p.colorBy === "band" ? [0, 100] : p.colorBy === "stress" ? [0, 3] : line && (p.colorBy === "single" || p.line) ? ["auto", "auto"] : [0, "auto"]
   // Room for the widest tick ("15,000", "5:00"): about 7 px a character at 12 px, the tick margin, and one more
   // character for a rounded-up top tick. Three characters fit the original 32 px.
   const widest = formatValue(p.format, Math.max(0, ...rows.map((r) => r.value ?? 0))).length
@@ -174,7 +176,8 @@ function Trend({ points, p }: { points: TrendPoint[]; p: TrendChartProps }) {
   const gradientOf = (c: string) => `bar-${uid}-${barColors.indexOf(c)}`
   // Band metrics label their thresholds in band colours; the rest show two ticks above zero, so no bar chart is left without a scale.
   const bandTicks = p.colorBy === "band" ? [33, 67, 100] : p.colorBy === "stress" ? [1, 2, 3] : undefined
-  const fmtTick = wholeTick((v) => formatValue(p.format, v))
+  // Durations always read h:mm ("3:00"); wholeTick would print a whole number of minutes raw ("180").
+  const fmtTick = p.format === "duration" ? (v: number) => formatValue(p.format, v) : wholeTick((v) => formatValue(p.format, v))
   const showAvg = !line && range !== "w" && avg !== null
   const gutter = labelGutter([p.reference?.label, showAvg && "Avg"])
 
@@ -259,7 +262,8 @@ function Trend({ points, p }: { points: TrendPoint[]; p: TrendChartProps }) {
           <ComposedChart
             data={rows}
             accessibilityLayer
-            margin={{ top: range === "w" ? 18 : 8, right: gutter, bottom: 0, left: 4 }}
+            // A labelled line needs room beside the last dot for its label.
+            margin={{ top: range === "w" ? 18 : 8, right: p.line && range === "w" ? Math.max(gutter, 14) : gutter, bottom: 0, left: 4 }}
             onMouseMove={(s) => setActive(s?.activeTooltipIndex == null ? null : Number(s.activeTooltipIndex))}
             onMouseLeave={() => setActive(null)}
           >
@@ -359,12 +363,13 @@ function Trend({ points, p }: { points: TrendPoint[]; p: TrendChartProps }) {
               }
             />
             {line && (
-              <Area dataKey="value" type="monotone" stroke="none" fill={`url(#area-${uid})`} connectNulls={false} activeDot={false} tooltipType="none" {...anim} />
+              <Area dataKey="value" type={p.line ? "linear" : "monotone"} stroke="none" fill={`url(#area-${uid})`} connectNulls={false} activeDot={false} tooltipType="none" {...anim} />
             )}
             {line ? (
               <Line
                 dataKey="value"
-                type="monotone"
+                // Straight segments for a labelled line: a curve overshoots the dots it joins.
+                type={p.line ? "linear" : "monotone"}
                 // Band metrics colour the line by the band it passes through (Bevel's Strain trend); one-hue metrics keep it quiet.
                 stroke={bands ? bandPaint(`line-${uid}`, hi, lo, bands) : "var(--foreground-secondary)"}
                 strokeWidth={bands ? 2 : 1.5}
@@ -373,12 +378,18 @@ function Trend({ points, p }: { points: TrendPoint[]; p: TrendChartProps }) {
                   d.payload?.value == null || d.cx == null || d.cy == null ? (
                     <g key={d.index} />
                   ) : (
-                    <circle key={d.index} cx={d.cx} cy={d.cy} r={d.index === rows.length - 1 ? 4 : 2.5} fill={d.payload.fill} fillOpacity={d.payload.fillOpacity} stroke={d.index === rows.length - 1 ? "var(--card)" : "none"} strokeWidth={2} />
+                    p.line && range === "w" ? (
+                      <circle key={d.index} cx={d.cx} cy={d.cy} r={4.5} fill="var(--card)" stroke={d.payload.fill} strokeOpacity={d.payload.fillOpacity} strokeWidth={2} />
+                    ) : (
+                      <circle key={d.index} cx={d.cx} cy={d.cy} r={d.index === rows.length - 1 ? 4 : 2.5} fill={d.payload.fill} fillOpacity={d.payload.fillOpacity} stroke={d.index === rows.length - 1 ? "var(--card)" : "none"} strokeWidth={2} />
+                    )
                   )
                 }
                 activeDot={(d: { cx?: number; cy?: number; payload?: (typeof rows)[number] }) => <GlowDot cx={d.cx} cy={d.cy} fill={d.payload?.fill} />}
                 {...anim}
-              />
+              >
+                {p.line && range === "w" && <LabelList dataKey="text" position="top" offset={12} fill="var(--foreground-secondary)" fontSize={12} fontWeight={600} formatter={(v: unknown) => (v ? `${v}${p.unit === "%" ? "%" : ""}` : "")} />}
+              </Line>
             ) : p.stack ? (
               [
                 ...p.stack.map((s, i) => ({ ...s, dataKey: `part_${s.key}`, label: i === p.stack!.length - 1 ? "label_top" : null })),

@@ -8,10 +8,10 @@ import type { Metric } from "@/lib/reasons"
 import { Skeleton, SkeletonText } from "@/components/ui/skeleton"
 import { EmptyState } from "@/components/shells/EmptyState"
 import { MetricState } from "@/components/shells/MetricState"
-import { HypnogramChart, HypnogramSkeleton } from "@/components/charts/Hypnogram"
+import { HypnogramChart } from "@/components/charts/Hypnogram"
 import { SleepHrChart, SleepHrChartSkeleton, type SleepHr } from "@/components/charts/SleepHrChart"
 import { ReasonPlaceholder } from "./ReasonPlaceholder"
-import { CAPTION, DeltaMark, LABEL } from "./primitives"
+import { DeltaMark, LABEL } from "./primitives"
 
 type Stage = "awake" | "rem" | "light" | "deep"
 export type SleepStagesNight = {
@@ -59,86 +59,112 @@ function HoursHero({ h }: { h: SleepHours }) {
   )
 }
 
+/** WHOOP's stage names; Fitbit's "Deep" is slow-wave sleep. */
+const ROW_LABEL: Record<Stage, string> = { awake: "Awake", light: "Light", deep: "SWS (Deep)", rem: "REM" }
+const TABS = [
+  ["breakdown", "Breakdown"],
+  ["timeline", "Timeline"],
+] as const
+type Tab = (typeof TABS)[number][0]
+
+/** The typical-range mark: a dashed box over the track (the legend's swatch and each row's range). */
+const RANGE_BOX = "border-x-[1.5px] border-dashed border-foreground/75 bg-foreground/12"
+
 function Rows({ night, selected, onSelect }: { night: SleepStagesNight; selected: Stage; onSelect: (s: Stage) => void }) {
   const name = React.useId()
+  const [tab, setTab] = React.useState<Tab>("breakdown")
   const span = Math.max(1, night.wake - night.bed)
   const rows = ORDER.map((s) => night.rows.find((r) => r.stage === s)).filter((r) => !!r)
 
   return (
     <div className="space-y-4">
-      {/* Bed and wake times sit on the heart-rate chart's axis above, as in the reference app. */}
-      <div className={cn(CAPTION, "flex items-baseline justify-between gap-2 tabular-nums")}>
-        <h3 className={cn(LABEL, "text-foreground-secondary")}>Stages</h3>
+      {/* One view at a time: the stage breakdown (WHOOP's rows) or the night's timeline (the hypnogram). */}
+      <div role="tablist" aria-label="Stages view" className="flex gap-0.5 rounded-lg bg-muted p-0.5">
+        {TABS.map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={tab === id}
+            onClick={() => setTab(id)}
+            className={cn(
+              "grid h-10 flex-1 place-items-center rounded-md text-[13px] font-bold tracking-[0.1em] uppercase outline-none transition-[background-color,color] duration-150 ease-standard focus-visible:ring-3 focus-visible:ring-ring/50",
+              tab === id ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <div className="flex items-center justify-between gap-2">
+        {tab === "breakdown" ? (
+          <span className={cn(LABEL, "flex items-center gap-2 text-foreground-secondary")}>
+            <span aria-hidden className={cn("h-4 w-3.5", RANGE_BOX)} />
+            Typical range
+          </span>
+        ) : (
+          <h3 className={cn(LABEL, "text-foreground-secondary")}>Stages</h3>
+        )}
         <span className="flex items-baseline gap-2">
           <span className={cn(LABEL, "text-muted-foreground")}>Duration</span>
-          <span className="font-numeric text-[17px] leading-5 font-bold text-foreground">{hmm(span / 60_000)}</span>
+          <span className="font-numeric text-[17px] leading-5 font-bold text-foreground tabular-nums">{hmm(span / 60_000)}</span>
         </span>
       </div>
-      {/* The whole night at a glance (a community request): when you were awake, in REM, light or deep sleep. The
-          rows below break each stage out and light it on the heart-rate line. */}
-      <HypnogramChart night={night} />
-      <div role="radiogroup" aria-label="Highlight a sleep stage" className="space-y-4 pt-1">
-        {rows.map((r) => {
-          const on = r.stage === selected
-          const blocks = night.segments.filter((g) => g.stage === r.stage)
-          return (
-            <label key={r.stage} className="group block cursor-pointer space-y-2.5">
-              <span className="flex items-center gap-3">
-                <input
-                  type="radio"
-                  name={name}
-                  value={r.stage}
-                  checked={on}
-                  onChange={() => onSelect(r.stage)}
-                  aria-label={`${r.label}, ${Math.round(r.pct)} percent, ${hmm(r.minutes)}. Typical ${r.typical[0]} to ${r.typical[1]} percent`}
-                  className="peer sr-only"
-                />
-                {/* the reference app's radio: a white ring, filled white with a dark centre when chosen. */}
-                <span
-                  aria-hidden
-                  className={cn(
-                    "grid size-[22px] shrink-0 place-items-center rounded-full ring-2 transition-[background-color,box-shadow] duration-150 ease-standard ring-inset peer-focus-visible:outline-3 peer-focus-visible:outline-ring/50",
-                    on ? "bg-foreground ring-foreground" : "ring-foreground/80 group-hover:ring-foreground"
-                  )}
-                >
-                  {on && <span className="size-2 rounded-full bg-background" />}
-                </span>
-                <span aria-hidden className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                  <span className={LABEL}>{r.label}</span>
-                  <span className="font-numeric text-[13px] leading-4 font-semibold text-foreground-secondary tabular-nums">{Math.round(r.pct)}%</span>
-                  <span className={cn(CAPTION, "tabular-nums")}>
-                    Typical {r.typical[0]}-{r.typical[1]}%
+      {tab === "timeline" ? (
+        <HypnogramChart night={night} />
+      ) : (
+        // Choosing a stage lights its stretches on the heart-rate line above.
+        <div role="radiogroup" aria-label="Highlight a sleep stage" className="space-y-5 pt-1">
+          {rows.map((r) => {
+            const on = r.stage === selected
+            const color = DATA_COLORS[`stage-${r.stage}`]
+            return (
+              <label key={r.stage} className="group block cursor-pointer space-y-3">
+                <span className="flex items-center gap-3">
+                  <input
+                    type="radio"
+                    name={name}
+                    value={r.stage}
+                    checked={on}
+                    onChange={() => onSelect(r.stage)}
+                    aria-label={`${ROW_LABEL[r.stage]}, ${Math.round(r.pct)} percent, ${hmm(r.minutes)}. Typical ${r.typical[0]} to ${r.typical[1]} percent`}
+                    className="peer sr-only"
+                  />
+                  {/* the reference app's radio: a white ring, filled white with a dark centre when chosen. */}
+                  <span
+                    aria-hidden
+                    className={cn(
+                      "grid size-[26px] shrink-0 place-items-center rounded-full ring-2 transition-[background-color,box-shadow] duration-150 ease-standard ring-inset peer-focus-visible:outline-3 peer-focus-visible:outline-ring/50",
+                      on ? "bg-foreground ring-foreground" : "ring-foreground/90 group-hover:ring-foreground"
+                    )}
+                  >
+                    {on && <span className="size-2.5 rounded-full bg-background" />}
+                  </span>
+                  <span aria-hidden className="flex min-w-0 flex-1 items-baseline gap-2.5">
+                    <span className={cn(LABEL, "text-[13px]")}>{ROW_LABEL[r.stage]}</span>
+                    <span className={cn("font-numeric text-[15px] leading-5 font-bold tabular-nums", color.text)}>{Math.round(r.pct)}%</span>
+                  </span>
+                  <span aria-hidden className="font-numeric text-[22px] leading-7 font-bold tabular-nums">
+                    {hmm(r.minutes)}
                   </span>
                 </span>
-                <span aria-hidden className="font-numeric text-xl leading-6 font-bold tabular-nums">
-                  {hmm(r.minutes)}
+                {/* WHOOP's row: the stage's share of the night filled over the hatched track, the typical range boxed. */}
+                <span aria-hidden className="relative block h-3.5 rounded-[4px] bg-(image:--pattern-hatch)">
+                  <span className="absolute inset-y-0 left-0 rounded-[4px]" style={{ width: `${Math.min(100, r.pct)}%`, background: color.css }} />
+                  <span className={cn("absolute -inset-y-1.5", RANGE_BOX)} style={{ left: `${r.typical[0]}%`, width: `${r.typical[1] - r.typical[0]}%` }} />
                 </span>
-              </span>
-              {/* The stage's time drawn as blocks on the hatched night track (spec §2.9, V8). */}
-              <span aria-hidden className="relative block h-3 overflow-hidden rounded-full bg-(image:--pattern-hatch)">
-                {blocks.map((g) => (
-                  <span
-                    key={g.start}
-                    className={cn(
-                      "absolute inset-y-0 min-w-0.5 rounded-[2px] transition-opacity duration-150 ease-standard",
-                      !on && "opacity-35"
-                    )}
-                    // In the stage's own colour, as on the hypnogram above, so a row reads as that lane.
-                    style={{ background: DATA_COLORS[`stage-${r.stage}`].css, left: `${((g.start - night.bed) / span) * 100}%`, width: `${((g.end - g.start) / span) * 100}%` }}
-                  />
-                ))}
-              </span>
-            </label>
-          )
-        })}
-      </div>
+              </label>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
 
 /**
- * the reference app's "Last night's sleep" card (spec §7.5, §11 V8, R9): the hours hero, the overnight heart rate, then the stage
- * rows with hatched tracks. Choosing a stage lights its blocks on the tracks and its stretches on the heart-rate line.
+ * the reference app's "Last night's sleep" card (spec §7.5, §11 V8, R9): the hours hero, the overnight heart rate, then the
+ * stages as a breakdown (rows) or a timeline (hypnogram). Choosing a stage row lights its stretches on the heart-rate line.
  */
 export function SleepStages({ hours, hr, data }: SleepStagesProps) {
   const [selected, setSelected] = React.useState<Stage>("awake")
@@ -177,19 +203,19 @@ export function SleepStages({ hours, hr, data }: SleepStagesProps) {
 function StageRowsSkeleton() {
   return (
     <div aria-hidden className="space-y-4">
+      <Skeleton className="h-11 rounded-lg" />
       <div className="flex items-baseline justify-between">
-        <span className={cn(LABEL, "text-foreground-secondary")}>Stages</span>
+        <span className={cn(LABEL, "text-foreground-secondary")}>Typical range</span>
         <SkeletonText className="w-24 text-[17px] leading-5" />
       </div>
-      <HypnogramSkeleton />
-      {["Awake", "Light", "Deep", "REM"].map((l) => (
+      {["Awake", "Light", "SWS (Deep)", "REM"].map((l) => (
         <div key={l} className="space-y-2.5">
           <div className="flex items-center gap-3">
-            <span className="size-[22px] rounded-full ring-2 ring-foreground/30 ring-inset" />
+            <span className="size-[26px] rounded-full ring-2 ring-foreground/30 ring-inset" />
             <span className={cn(LABEL, "flex-1")}>{l}</span>
             <SkeletonText className="w-[4ch] font-numeric text-xl leading-6" />
           </div>
-          <Skeleton className="h-3 rounded-full bg-muted/60" />
+          <Skeleton className="h-3.5 rounded-[4px] bg-muted/60" />
         </div>
       ))}
     </div>

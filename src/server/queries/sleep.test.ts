@@ -34,6 +34,30 @@ describe("getSleep", () => {
     expect(vm.debtTrend.points).toHaveLength(182);
   });
 
+  it("consistency draws five nights against the usual times; restorative splits deep and REM; efficiency trends by night", async () => {
+    const vm = await getSleep(dayAt(150), ctxFor(db));
+    const c = vm.consistency.value!;
+    expect(c.pct).toBe(vm.summary[1].metric.value);
+    expect(c.nights).toHaveLength(5);
+    const night = c.nights.at(-1)!;
+    expect(night.day).toBe(dayAt(150));
+    expect(night.bed).toBeLessThan(night.wake); // bed before midnight reads negative, wake after it positive
+    expect(night.typicalBed).not.toBeNull();
+    expect(night.typicalWake).not.toBeNull();
+    // Each night's optimal times come from the 14 nights before it, so they move from night to night.
+    expect(new Set(c.nights.map((n) => n?.typicalBed)).size).toBeGreaterThan(1);
+    const last = vm.restorative.at(-1)!;
+    expect(last.parts!.deep + last.parts!.rem).toBe(last.value);
+    expect(vm.restorative).toHaveLength(30);
+    expect(vm.efficiencyTrend.points.at(-1)!.value).toBeCloseTo(vm.summary[2].metric.value!, 6);
+  });
+
+  it("no night: consistency carries the night's reason and restorative has a gap", async () => {
+    const off = await getSleep(dayAt(156), ctxFor(db));
+    expect(off.consistency.value).toBeNull();
+    expect(off.restorative.at(-1)).toMatchObject({ value: null, parts: null });
+  });
+
   it("calibrates the need and the planner in the first week", async () => {
     const vm = await getSleep(dayAt(3), ctxFor(db));
     expect(vm.hoursVsNeed.value?.calibrating).toBe(true);

@@ -255,6 +255,20 @@ export type SleepVM = {
     parts: { baselineMin: number; strainMin: number; debtMin: number; napMin: number };
     calibrating: boolean;
   }>;
+  /** The last five nights' bed and wake times against the usual ones (WHOOP's Sleep Consistency chart); a missing night is null. */
+  consistency: Metric<{
+    pct: number;
+    average: number | null;
+    /**
+     * Minutes from local midnight: bed negative when before it (22:30 is -90), wake positive. `typicalBed` and
+     * `typicalWake` are that night's optimal times: the median of the 14 nights before it (WHOOP's moving dashed lines).
+     */
+    nights: ({ day: string; label: string; bed: number; wake: number; typicalBed: number | null; typicalWake: number | null } | null)[];
+  }>;
+  /** Deep and REM minutes per night, 30 nights ending on the day (WHOOP's Restorative sleep bars). */
+  restorative: SplitPoint[];
+  /** Sleep efficiency per night, % (WHOOP's Sleep efficiency trend). */
+  efficiencyTrend: Trend;
   details: KeyStat[];
   debtTrend: Trend;
   planner: Metric<SleepPlanVM & { weekdayWake: boolean }>;

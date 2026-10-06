@@ -292,6 +292,25 @@ export function StrainSkeleton() {
   )
 }
 
+/** A measure card's shape (sleep's hours vs. needed and efficiency): the percentage, a bar, then its legend rows. */
+function MeasureSkeleton({ rows: labels }: { rows: string[] }) {
+  return (
+    <div aria-hidden>
+      <SkeletonText className="w-24 font-numeric text-4xl leading-10 font-bold" />
+      <Skeleton className="mt-4 h-3.5 rounded-[3px]" />
+      <dl className="mt-4 space-y-2 rounded-lg bg-inset px-3 py-3">
+        {labels.map((l) => (
+          <div key={l} className="flex items-center gap-3 text-[13px] leading-4 font-medium">
+            <span className="size-3 shrink-0 rounded-[3px] bg-secondary" />
+            <dt className="flex-1 text-foreground-secondary">{l}</dt>
+            <SkeletonText className="w-[5ch]" />
+          </div>
+        ))}
+      </dl>
+    </div>
+  )
+}
+
 export function SleepSkeleton() {
   return (
     <DialDetail
@@ -311,18 +330,20 @@ export function SleepSkeleton() {
         </SectionShell>
       }
       secondary={[
-        <CardSkeleton key="need" title="Hours vs. need">
-          <div className="space-y-3">
-            <SkeletonText className="w-40 font-numeric text-4xl leading-10 font-bold" />
-            <dl className="space-y-1.5">
-              {["Baseline need", "Yesterday’s strain", "Sleep debt", "Naps"].map((l) => (
-                <div key={l} className="flex items-baseline justify-between gap-3 text-xs leading-4 font-medium">
-                  <dt className="text-muted-foreground">{l}</dt>
-                  <SkeletonText className="w-[5ch]" />
-                </div>
-              ))}
-            </dl>
+        <CardSkeleton key="need" title="Hours vs. needed">
+          <MeasureSkeleton rows={["Healthy minimum", "Recent strain", "Sleep debt"]} />
+        </CardSkeleton>,
+        <CardSkeleton key="consistency" title="Sleep consistency">
+          <div className="space-y-4">
+            <SkeletonText className="w-24 font-numeric text-4xl leading-10 font-bold" />
+            <Skeleton className="h-52 rounded-lg" />
           </div>
+        </CardSkeleton>,
+        <CardSkeleton key="restorative" title="Restorative sleep">
+          <TrendChartSkeleton chip />
+        </CardSkeleton>,
+        <CardSkeleton key="efficiency" title="Sleep efficiency">
+          <TrendChartSkeleton chip />
         </CardSkeleton>,
         <CardSkeleton key="details" title="Details">
           {statRows(["Time in bed", "Wake events", "Respiratory rate", "Sleep debt"])}

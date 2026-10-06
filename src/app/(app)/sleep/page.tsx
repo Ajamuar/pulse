@@ -1,12 +1,12 @@
 import { cn } from "@/lib/utils"
 import { clock, hmm } from "@/lib/format"
-import { TrendChart } from "@/components/charts/TrendChart"
+import { TrendChart, type TrendSeries } from "@/components/charts/TrendChart"
+import { DATA_COLORS } from "@/lib/bands"
 import { InsightCard } from "@/components/metrics/InsightCard"
 import { KeyStatRow } from "@/components/metrics/KeyStatRow"
 import { ReasonPlaceholder } from "@/components/metrics/ReasonPlaceholder"
 import { ScoreDial } from "@/components/metrics/ScoreDial"
 import { SleepStages } from "@/components/metrics/SleepStages"
-import { ValueUnit } from "@/components/metrics/primitives"
 import { DetailShell } from "@/components/shells/DetailShell"
 import { SectionShell } from "@/components/shells/SectionShell"
 import { Card } from "@/components/ui/card"
@@ -16,6 +16,7 @@ import { pageDay, type SearchParams } from "../_lib/day"
 import { HashScroll } from "../_lib/HashScroll"
 import { SLEEP_INFO, TONIGHT_INFO } from "../_lib/info"
 import { CAPTION, LABEL, LEGEND, statProps, trendProps } from "../_lib/view"
+import { HoursVsNeed, SleepConsistency } from "./SleepCards"
 
 export const metadata = { title: "Sleep", description: "Sleep performance, stages, need and debt, plus tonight’s bedtime plan." }
 
@@ -24,8 +25,13 @@ const STATUS_LEGEND = [
   ["bg-foreground-secondary", "Sufficient"],
   ["bg-optimal", "Optimal"],
 ] as const
-/** "+0:12", "−0:05". */
-const signedHmm = (min: number, sign: "+" | "−") => `${sign}${hmm(Math.abs(min))}`
+
+/** Deep under REM, as WHOOP stacks them. */
+const RESTORATIVE_PARTS: readonly TrendSeries[] = [
+  { key: "rem", label: "REM", color: DATA_COLORS["stage-rem"].css },
+  { key: "deep", label: "Deep", color: DATA_COLORS["stage-deep"].css },
+]
+const WEEK_MONTH = ["w", "m"] as const
 
 /** Sleep `/sleep?d=` (spec §7.5). */
 export default async function SleepPage({ searchParams }: PageProps<"/sleep">) {
@@ -77,8 +83,26 @@ export default async function SleepPage({ searchParams }: PageProps<"/sleep">) {
         </SectionShell>
       }
       secondary={[
-        <SectionShell key="need" variant="card" title="Hours vs. need" level={2}>
+        <SectionShell key="need" variant="card" title="Hours vs. needed" level={2}>
           <HoursVsNeed vm={vm} />
+        </SectionShell>,
+        <SectionShell key="consistency" variant="card" title="Sleep consistency" level={2}>
+          <SleepConsistency vm={vm} />
+        </SectionShell>,
+        <SectionShell key="restorative" variant="card" title="Restorative sleep" level={2}>
+          <TrendChart
+            label="Restorative sleep"
+            format="duration"
+            colorBy="single"
+            stack={RESTORATIVE_PARTS}
+            headline="day"
+            ranges={WEEK_MONTH}
+            defaultRange="w"
+            data={{ value: vm.restorative.map((p) => ({ date: p.day, value: p.value, parts: p.parts })), reason: null, provisional: false }}
+          />
+        </SectionShell>,
+        <SectionShell key="efficiency" variant="card" title="Sleep efficiency" level={2}>
+          <TrendChart label="Sleep efficiency" unit="%" format="int" colorBy="sleep" direction="up" line defaultRange="w" {...trendProps(vm.efficiencyTrend)} />
         </SectionShell>,
         <SectionShell key="details" variant="card" title="Details" level={2}>
           <div className="divide-y divide-border">
@@ -96,42 +120,6 @@ export default async function SleepPage({ searchParams }: PageProps<"/sleep">) {
         </SectionShell>,
       ]}
     />
-  )
-}
-
-function HoursVsNeed({ vm }: { vm: SleepVM }) {
-  const m = vm.hoursVsNeed
-  if (m.value === null) return <ReasonPlaceholder reason={m.reason} nightsLeft={m.nightsLeft} size="md" />
-  const h = m.value
-  const rows: [string, string][] = [
-    ["Baseline need", hmm(h.parts.baselineMin)],
-    ["Yesterday’s strain", signedHmm(h.parts.strainMin, "+")],
-    ["Sleep debt", signedHmm(h.parts.debtMin, "+")],
-    ["Naps", signedHmm(h.parts.napMin, "−")],
-  ]
-  return (
-    <div className="space-y-3">
-      <p>
-        <ValueUnit value={hmm(h.asleepMin)} className="font-numeric text-4xl leading-10 font-bold tracking-[-0.01em]" />
-        <span className="ml-1.5 text-[13px] leading-4 font-semibold text-foreground-secondary">
-          of <span className="font-numeric tabular-nums">{hmm(h.needMin)}</span> needed
-        </span>
-      </p>
-      {h.calibrating ? (
-        <p className={CAPTION}>
-          Your need settles after 7 nights. Using <span className="font-numeric tabular-nums">{hmm(h.needMin)}</span> until then.
-        </p>
-      ) : (
-        <dl className="space-y-1.5">
-          {rows.map(([label, value]) => (
-            <div key={label} className="flex items-baseline justify-between gap-3 text-xs leading-4 font-medium">
-              <dt className="text-muted-foreground">{label}</dt>
-              <dd className="font-numeric text-foreground-secondary tabular-nums">{value}</dd>
-            </div>
-          ))}
-        </dl>
-      )}
-    </div>
   )
 }
 

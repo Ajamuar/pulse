@@ -81,6 +81,8 @@ export async function getSleep(day: string, ctx: QueryCtx): Promise<SleepVM> {
     ? ok({ asleepMin: main.asleepMin, average: prior.mean, ...(prior.sd !== undefined && { sd: prior.sd }) })
     : fromReason(noNight, isToday);
 
+  const consistency: SleepVM["consistency"] = main ? consistencyOf(rows, day, ctx.timeZone, "calibrating", priorStats(rows, day, (r) => r.sleep?.consistency).mean) : fromReason(noNight, isToday);
+
   const details = [
     { ...stat("timeInBed", "Time in bed", (r) => r.sleep?.main?.inBedMin, "min"), direction: "neutral" as const },
     { ...stat("wakeEvents", "Wake events", (r) => r.sleep?.main?.wakeEvents, undefined), direction: "down" as const },
@@ -100,6 +102,12 @@ export async function getSleep(day: string, ctx: QueryCtx): Promise<SleepVM> {
     hours,
     nightHr,
     hoursVsNeed,
+    consistency,
+    restorative: trendPoints(rows, day, (r) => (r.sleep?.main?.deepMin != null && r.sleep.main.remMin != null ? r.sleep.main.deepMin + r.sleep.main.remMin : null), 30).map((p) => {
+      const m = rows.get(p.day)?.sleep?.main;
+      return { ...p, parts: p.value !== null && m ? { deep: m.deepMin!, rem: m.remMin! } : null };
+    }),
+    efficiencyTrend: { points: trendPoints(rows, day, efficiencyPct) },
     details,
     debtTrend: {
       points: trendPoints(rows, day, (r) => (r.sleep?.main ? r.sleep.debtMin / 60 : null)),
@@ -159,6 +167,26 @@ const bedMin = (start: number, tz: string) => {
   const m = localMinutes(start, tz);
   return m > 720 ? m - 1440 : m;
 };
+
+const median = (xs: number[]) => (xs.length ? [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)] : null);
+const WEEKDAY = new Intl.DateTimeFormat("en-US", { weekday: "short", timeZone: "UTC" });
+
+/** Five nights ending on `day`: bed and wake as minutes from local midnight, each with the median of the 14 nights before it. */
+export function consistencyOf(rows: Map<string, DayRow>, day: string, tz: string, noScore: SleepVM["performance"]["reason"], average: number | null): SleepVM["consistency"] {
+  const pct = rows.get(day)?.sleep?.consistency;
+  if (!finite(pct)) return none(noScore ?? "calibrating");
+  const night = (d: string) => {
+    const m = rows.get(d)?.sleep?.main;
+    return m ? { day: d, label: WEEKDAY.format(new Date(`${d}T12:00:00Z`)), bed: bedMin(m.start, tz), wake: localMinutes(m.end, tz) } : null;
+  };
+  const withTypical = (d: string) => {
+    const n = night(d);
+    if (!n) return null;
+    const prior = Array.from({ length: 14 }, (_, k) => night(addDays(d, -(k + 1)))).filter((x) => x !== null);
+    return { ...n, typicalBed: median(prior.map((x) => x.bed)), typicalWake: median(prior.map((x) => x.wake)) };
+  };
+  return ok({ pct, average, nights: Array.from({ length: 5 }, (_, k) => withTypical(addDays(day, k - 4))) });
+}
 
 export function insightOf(rows: Map<string, DayRow>, day: string, tz: string): string | null {
   const row = rows.get(day);
