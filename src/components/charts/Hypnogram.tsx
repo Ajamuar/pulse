@@ -1,6 +1,6 @@
 "use client"
 
-import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts"
+import { CartesianGrid, Line, LineChart, ReferenceLine, XAxis, YAxis } from "recharts"
 import { DATA_COLORS } from "@/lib/bands"
 import { hourTicks, hypnogramSeries, STAGES, type Stage, type StageSegment } from "@/lib/charts"
 import { clock, durationWords } from "@/lib/format"
@@ -105,6 +105,10 @@ export function HypnogramChart({ night }: { night: HypnogramNight }) {
             />
           }
         />
+        {/* A faint track under each lane (Google Health's sleep chart), so a short stretch still reads as its row. */}
+        {LANE_STAGE.map((_, lane) => (
+          <ReferenceLine key={lane} y={lane} stroke="color-mix(in srgb, var(--foreground) 7%, transparent)" strokeWidth={14} />
+        ))}
         <Line dataKey="lane" type="stepAfter" stroke="color-mix(in srgb, var(--foreground) 22%, transparent)" strokeWidth={1} dot={false} activeDot={false} {...anim} />
         {STAGES.map((st) => (
           <Line
