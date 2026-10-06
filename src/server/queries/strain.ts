@@ -95,7 +95,7 @@ export async function getStrain(day: string, ctx: QueryCtx): Promise<StrainVM> {
     zones: zoneRows(row),
     maxHr: row?.s1?.maxHr ?? ctx.profile.maxHr,
     zoneNote: zoneNote(row, ctx),
-    activities: exs.filter((e) => e.day === day).map((e) => activityItem(e, row)),
+    activities: exs.filter((e) => e.day === day).map((e) => activityItem(e, row)).sort((a, b) => b.start - a.start),
     trend: { points: pts, target: target.value ? [target.value.low, target.value.high] : null },
     calories: calorieSplit(rows, day, soFar),
     workouts: { points: trendPoints(rows, day, (r) => workoutMin.get(r.day) ?? 0, 60, soFar) },
