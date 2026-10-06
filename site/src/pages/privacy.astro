@@ -26,7 +26,7 @@ const toc = [
   title="Privacy Policy"
   description="What the hosted Pulse app collects, how it uses your Google Health data, who it is shared with (no one), and how to export or delete it."
   keywords={["pulse privacy policy", "google health data privacy", "pulse data deletion"]}
-  effective="2026-10-04"
+  effective="2026-10-06"
   toc={toc}
 >
   <p class="lede" slot="lede">
@@ -110,6 +110,7 @@ const toc = [
       <li>computing your recovery, strain, sleep and stress scores, baselines, trends and reports;</li>
       <li>showing your health data, journal and logged entries back to you;</li>
       <li>saving what you log to your Google Health account;</li>
+      <li>answering your questions in the AI coach, if you turn it on (see Sharing);</li>
       <li>keeping your account secure and the service running.</li>
     </ul>
     <p>Specifically, Pulse does <strong>not</strong>:</p>
@@ -144,8 +145,17 @@ const toc = [
   <section id="sharing">
     <h2>Sharing</h2>
     <p>
-      We do not share your personal data or Google data with third parties. The only outside company involved is our network provider, <strong>Cloudflare</strong>, which
+      We do not share your personal data or Google data with third parties, except with the AI provider you choose for the coach (below). The only outside company involved is our network provider, <strong>Cloudflare</strong>, which
       carries traffic to and from the hosted app (encrypted with HTTPS) and protects it from attacks. Cloudflare does not get access to the database.
+    </p>
+    <h3>AI coach</h3>
+    <p>
+      The coach is optional and off unless you turn it on. To use it, you agree to its consent notice and add an API key for an AI provider you pick (Anthropic, OpenAI,
+      Google Gemini, Vercel AI Gateway or OpenRouter), or choose a model the maintainer runs on the same server. When you ask the coach a question, Pulse sends that provider
+      your question, your earlier messages in the chat, and the parts of your data needed to answer it, such as your recovery, sleep, heart rate variability, activities and
+      journal. The provider processes it under your own account and its terms; Pulse never uses it to train models. Nothing is sent until you ask a question, and nothing is
+      sent if you turn the coach off or remove your key. Your API key is stored encrypted and never sent to your browser. Your chats are kept until you delete them or your
+      account.
     </p>
     <p>We may disclose data if the law requires it, for example a valid court order. We would tell you if we are allowed to.</p>
   </section>
