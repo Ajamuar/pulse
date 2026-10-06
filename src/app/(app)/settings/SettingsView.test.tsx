@@ -27,7 +27,7 @@ const account = { email: "me@example.com", avatar: null, customPhoto: false }
 const source = () => screen.getByRole("region", { name: "Data source" })
 
 describe("Settings view", () => {
-  // The section follows the URL hash, which jsdom keeps between tests.
+  // The section follows the URL (?s=), which jsdom keeps between tests.
   beforeEach(() => history.replaceState(null, "", "/"))
 
   it("journey 9: not connected offers Connect Google to /oauth/start", () => {
@@ -88,20 +88,23 @@ describe("Settings view", () => {
     expect(within(profile).getByText("Not set")).toBeInTheDocument()
   })
 
-  it("opens the section the URL hash names (More's Account & settings rows), the first with none", () => {
+  it("opens the section ?s= names (More's Account & settings rows), an older name too, the first with none", () => {
     const { unmount } = render(<SettingsView vm={base} now={NOW} account={account} />)
     expect(screen.getByRole("region", { name: "Account" })).toBeInTheDocument()
     expect(screen.queryByRole("region", { name: "Data source" })).not.toBeInTheDocument()
     unmount()
-    history.replaceState(null, "", "/#sync") // an older deep link
-    render(<SettingsView vm={base} now={NOW} account={account} />)
+    const app = render(<SettingsView initial="app" vm={base} now={NOW} account={account} />)
+    expect(screen.getByRole("region", { name: "Appearance" })).toBeInTheDocument()
+    expect(screen.queryByRole("region", { name: "Account" })).not.toBeInTheDocument()
+    app.unmount()
+    render(<SettingsView initial="sync" vm={base} now={NOW} account={account} />)
     expect(source()).toBeInTheDocument()
   })
 
-  it("the sections panel switches section and the hash follows", () => {
+  it("the sections panel switches section and the URL follows", () => {
     render(<SettingsView vm={base} now={NOW} account={account} />)
     fireEvent.click(within(screen.getByRole("complementary", { name: "Settings sections" })).getByRole("button", { name: "Data source" }))
-    expect(location.hash).toBe("#source")
+    expect(location.search).toBe("?s=source")
     expect(source()).toBeInTheDocument()
   })
 

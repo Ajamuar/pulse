@@ -99,7 +99,7 @@ export function SyncStatus() {
       >
         {/* The source row opens Settings › Data source, where each data type's status (and any failure) is listed. */}
         <Link
-          href="/settings#source"
+          href="/settings?s=source"
           className="flex items-center gap-3 rounded-t-[inherit] p-4 outline-none transition-[background-color] duration-150 ease-standard hover:bg-foreground/[0.04] focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
         >
           <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-xl bg-foreground/[0.06]">

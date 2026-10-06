@@ -12,7 +12,7 @@ import { GoogleFit } from "@/components/brand/GoogleFit"
 import { Mark } from "@/components/brand/Mark"
 import { AppSettings, SignOutForm } from "./AppSettings"
 import { AvatarButtons, ChangePasswordButton, DeleteAccountButton, DisconnectButton, EditProfileButton, SwitchGoogleButton, ThemePicker } from "./SettingsClient"
-import { SettingsLayout, type SectionId, type SettingsSection } from "./SettingsLayout"
+import { SettingsLayout, type SettingsSection } from "./SettingsLayout"
 import { CAPTION } from "@/components/metrics/primitives"
 
 const BODY = "max-w-[65ch] text-[15px] leading-[22px] text-pretty text-foreground-secondary"
@@ -267,7 +267,7 @@ export function Profile({ profile }: { profile: SettingsVM["profile"] }) {
  * Settings body: configuration only (U21), one section at a time (SettingsLayout): Account (with profile), Data source (with sync),
  * App (appearance, install, notifications) and, with coach access, Coach. About, reports, exports and help live in More.
  */
-export function SettingsView({ vm, now, account, coach, pushKey = null, initial }: { vm: SettingsVM; now: number; account: SettingsAccount; coach?: React.ReactNode; pushKey?: string | null; initial?: SectionId }) {
+export function SettingsView({ vm, now, account, coach, pushKey = null, initial }: { vm: SettingsVM; now: number; account: SettingsAccount; coach?: React.ReactNode; pushKey?: string | null; initial?: string | null }) {
   const sections: SettingsSection[] = [
     {
       id: "account",
@@ -301,5 +301,6 @@ export function SettingsView({ vm, now, account, coach, pushKey = null, initial 
     },
     ...(coach ? [{ id: "coach" as const, label: "Coach", node: coach }] : []),
   ]
-  return <SettingsLayout sections={sections} initial={initial} />
+  // Keyed by the section asked for, so a link to another one (?s=) opens it even on this page.
+  return <SettingsLayout key={initial ?? ""} sections={sections} initial={initial} />
 }

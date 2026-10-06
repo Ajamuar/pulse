@@ -92,6 +92,6 @@ export function Evidence({ name, output }: { name: string; output: unknown }) {
       {d.scores.map((v) => <KeyStatRow key={v.score} variant="row" label={v.score} metric={metric(v)} format="decimal1" direction="none" />)}
     </Card><BasedOn href={d.period ? `/reports/${encodeURIComponent(d.period)}` : "/reports"}>Report · {d.start} to {d.end}</BasedOn></div>
   }
-  if (name === "get_profile") return <BasedOn href="/settings#profile">Your profile</BasedOn>
+  if (name === "get_profile") return <BasedOn href="/settings?s=account">Your profile</BasedOn>
   return null
 }

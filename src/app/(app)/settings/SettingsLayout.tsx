@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Palette, PanelLeftClose, PanelLeftOpen, Plug, Sparkles, UserRound } from "lucide-react"
+import { Palette, PanelLeftClose, PanelLeftOpen, Plug, UserRound, BotMessageSquare } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { GLASS } from "@/components/shells/AppNav"
 import { panelStore } from "@/components/shells/panelStore"
@@ -14,9 +14,9 @@ const ICON: Record<SectionId, React.ComponentType<{ "aria-hidden"?: boolean; str
   account: UserRound,
   source: Plug,
   app: Palette,
-  coach: Sparkles,
+  coach: BotMessageSquare,
 }
-/** Older deep links: /settings#sync, #appearance. */
+/** Older names: ?s=sync, ?s=appearance, ?s=profile. */
 const ALIAS: Record<string, SectionId> = { sync: "source", appearance: "app", profile: "account" }
 
 const panel = panelStore("pulse:settings-panel-open")
@@ -25,27 +25,23 @@ const PANEL_BTN = "rounded-full text-muted-foreground hover:bg-foreground/8 hove
 /**
  * Settings, one section at a time. From 1280 px the sections are a glass panel beside the app's compact rail (expanded or
  * collapsed, remembered per device, as the coach's chats panel is). Below that there is no second level: each section is
- * its own row on More (Account & settings) and opens at its URL hash (/settings#coach), so a reload and the coach's settings
- * buttons land in the right place. With no hash, the first section.
+ * its own row on More (Account & settings) and opens at `?s=` (/settings?s=coach), which the server reads, so the first
+ * paint is already the right section; a reload and the coach's settings buttons land there too. A query, not a hash: a
+ * client navigation sets the hash only after the page mounts, so every row opened the first section. With none, the
+ * first section.
  */
-export function SettingsLayout({ sections, initial = null }: { sections: SettingsSection[]; initial?: SectionId | null }) {
+export function SettingsLayout({ sections, initial = null }: { sections: SettingsSection[]; initial?: string | null }) {
   const open = panel.use()
-  const [active, setActive] = React.useState<SectionId | null>(initial)
-  const idsKey = sections.map((s) => s.id).join()
+  const ids = sections.map((s) => s.id)
+  const resolve = (raw: string | null | undefined) => {
+    const id = (raw && (ALIAS[raw] ?? raw)) as SectionId
+    return ids.includes(id) ? id : null
+  }
+  const [active, setActive] = React.useState<SectionId | null>(() => resolve(initial))
   const pick = (id: SectionId) => {
-    history.replaceState(history.state, "", `#${id}`)
+    history.replaceState(history.state, "", `?s=${id}`)
     setActive(id)
   }
-  React.useEffect(() => {
-    const fromHash = () => {
-      const h = location.hash.slice(1)
-      const id = (ALIAS[h] ?? h) as SectionId
-      if (idsKey.split(",").includes(id)) setActive(id)
-    }
-    fromHash()
-    window.addEventListener("hashchange", fromHash)
-    return () => window.removeEventListener("hashchange", fromHash)
-  }, [idsKey])
   const current = sections.find((s) => s.id === active) ?? sections[0]
 
   const item = (s: SettingsSection, collapsed: boolean) => {

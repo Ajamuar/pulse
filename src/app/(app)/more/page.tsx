@@ -1,7 +1,6 @@
 import { connection } from "next/server"
-import { Archive, BookOpen, CalendarDays, CalendarRange, ChartLine, Database, ListChecks, Palette, Plug, Sparkles, UserRound } from "lucide-react"
+import { Archive, BookOpen, CalendarDays, CalendarRange, ChartLine, Database, ListChecks, Palette, Plug, UserRound, BotMessageSquare } from "lucide-react"
 import { formatDay, rangeLabel } from "@/lib/format"
-import { currentUser, DEMO_EMAIL } from "@/server/auth"
 import { coachAccess } from "@/server/coach/store"
 import { userCtx } from "@/server/queries/common"
 import { getMore } from "@/server/queries/settings"
@@ -16,14 +15,13 @@ export const metadata = { title: "More" }
 export default async function MorePage() {
   await connection()
   const ctx = await userCtx()
-  const [vm, user, coach] = await Promise.all([getMore(ctx), currentUser(), coachAccess(ctx.db, ctx.userId)])
+  const [vm, coach] = await Promise.all([getMore(ctx), coachAccess(ctx.db, ctx.userId)])
   // Below 1280 px (where the sidebar lists Settings) each part of Settings is a row here, as the reference app's "Account & settings".
-  const account = user?.email === DEMO_EMAIL ? "Demo" : user?.name || user?.username || user?.email
   const settings: LinkListRow[] = [
-    { icon: UserRound, label: "Account", description: account ?? undefined, href: "/settings#account" },
-    { icon: Plug, label: "Data source", href: "/settings#source" },
-    { icon: Palette, label: "App", description: "Theme, install, notifications", href: "/settings#app" },
-    ...(coach ? [{ icon: Sparkles, label: "Coach", description: "Provider, key, morning brief", href: "/settings#coach" }] : []),
+    { icon: UserRound, label: "Account", href: "/settings?s=account" },
+    { icon: Plug, label: "Data source", href: "/settings?s=source" },
+    { icon: Palette, label: "App", href: "/settings?s=app" },
+    ...(coach ? [{ icon: BotMessageSquare, label: "Coach", href: "/settings?s=coach" }] : []),
   ]
   const reports: LinkListRow[] = [
     ...(vm.latestWeek

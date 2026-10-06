@@ -47,7 +47,7 @@ export function ConnectionBanner({ className }: { className?: string }) {
       body: "This Google account has no Google Health profile, so there is nothing to sync. Settings has the fix.",
       action: (
         <Button asChild size="touch" variant="secondary">
-          <Link href="/settings#source">Open Settings</Link>
+          <Link href="/settings?s=source">Open Settings</Link>
         </Button>
       ),
       role: "alert",
@@ -58,7 +58,7 @@ export function ConnectionBanner({ className }: { className?: string }) {
       body: "This Google account has Google Health but no Fitbit device. Pair your Fitbit Air in the Google Health app, or sign in with the account it uses.",
       action: (
         <Button asChild size="touch" variant="secondary">
-          <Link href="/settings#source">Open Settings</Link>
+          <Link href="/settings?s=source">Open Settings</Link>
         </Button>
       ),
       role: "alert",

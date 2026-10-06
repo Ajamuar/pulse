@@ -44,11 +44,6 @@ export function CoachSettings({ setup, providers, providerLabel, notifications }
         router.refresh()
       })
   }
-  // A client navigation to /settings#coach (the coach's settings buttons) scrolls to the hash while the route's
-  // loading skeleton is up, which has no #coach, so it lands at the top. Once this section mounts, finish the jump.
-  React.useEffect(() => {
-    if (window.location.hash === "#coach") document.getElementById("coach")?.scrollIntoView({ block: "start" })
-  }, [])
   const act = (p: () => Promise<ActionResult>, ok: string, done?: () => void) =>
     start(async () => {
       const r = await p().catch((): ActionResult => ({ ok: false, error: "Couldn’t reach Pulse. Try again." }))

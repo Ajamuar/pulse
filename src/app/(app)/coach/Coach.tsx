@@ -292,7 +292,7 @@ export function CoachBarActions({ chatCount, chatOpen }: { chatCount: number; ch
       </Button>
       {chatOpen && <NewChatButton />}
       <Button asChild variant="ghost" size="icon-touch" aria-label="Coach settings" className={btn}>
-        <Link href="/settings#coach">
+        <Link href="/settings?s=coach">
           <Settings2 aria-hidden strokeWidth={1.6} />
         </Link>
       </Button>
@@ -365,7 +365,7 @@ export function Coach({ id, initial, groups, next, prefill, auto, providerLabel,
   // Provider, key, chats and turning the coach off live in Settings › Coach.
   const settingsLink = (className: string, size: "icon-lg" | "icon-touch") => (
     <Button asChild variant="ghost" size={size} aria-label="Coach settings" className={className}>
-      <Link href="/settings#coach">
+      <Link href="/settings?s=coach">
         <Settings2 aria-hidden strokeWidth={1.6} className={size === "icon-lg" ? "size-[18px]" : undefined} />
       </Link>
     </Button>

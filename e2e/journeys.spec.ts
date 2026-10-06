@@ -161,7 +161,7 @@ test("9. More hub: Trends and a metric switch, a custom behaviour in the check-i
   await page.getByRole("navigation", { name: "Primary" }).filter({ visible: true }).first().getByRole("link", { name: "More" }).click();
   await expect(page).toHaveURL(url("/more"));
   // Below 1280 px More lists the parts of Settings (Account & settings); the sidebar carries it from there.
-  if (info.project.name === "390") await expect(page.getByRole("link", { name: /^Account/ })).toHaveAttribute("href", "/settings#account");
+  if (info.project.name === "390") await expect(page.getByRole("link", { name: /^Account/ })).toHaveAttribute("href", "/settings?s=account");
 
   await page.getByRole("link", { name: /^Trends/ }).click();
   await expect(page).toHaveURL(url("/trends"));
