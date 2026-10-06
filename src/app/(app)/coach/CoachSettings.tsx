@@ -12,8 +12,14 @@ import { ResponsiveSheet } from "@/components/shells/ResponsiveSheet"
 import { SectionShell } from "@/components/shells/SectionShell"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Switch } from "@/components/ui/switch"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ProviderForm } from "./CoachSetup"
+
+/** 7:00 AM: where the time starts when the brief is switched on. */
+const DEFAULT_BRIEF = 7 * 60
+const clock = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`
+const toMinute = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5))
 
 const ROW = "flex min-h-13 items-center justify-between gap-3 py-2"
 
@@ -27,7 +33,17 @@ export function CoachSettings({ setup, providers, providerLabel, notifications }
   const [pending, start] = React.useTransition()
   const [confirm, setConfirm] = React.useState<null | "chats" | "off">(null)
   const [notes, setNotes] = React.useState(setup.instructions ?? "")
-  const clock = (m: number | null) => (m === null ? "" : `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`)
+  const [brief, setBrief] = React.useState(setup.briefMinute)
+  // Optimistic: the switch and the time stay put while the save runs; a failed save puts them back.
+  const saveBrief = (m: number | null) => {
+    setBrief(m)
+    void setPreferencesAction({ briefMinute: m })
+      .catch((): ActionResult => ({ ok: false, error: "Couldn’t reach Pulse. Try again." }))
+      .then((r) => {
+        if (!r.ok) return (setBrief(setup.briefMinute), void toast.error(r.error))
+        router.refresh()
+      })
+  }
   // A client navigation to /settings#coach (the coach's settings buttons) scrolls to the hash while the route's
   // loading skeleton is up, which has no #coach, so it lands at the top. Once this section mounts, finish the jump.
   React.useEffect(() => {
@@ -81,27 +97,21 @@ export function CoachSettings({ setup, providers, providerLabel, notifications }
             )}
             {notifications && (
               <div className={ROW}>
-                <label htmlFor="coach-brief" className="text-[15px] leading-[22px]">
+                <label htmlFor="coach-brief-on" className="text-[15px] leading-[22px]">
                   Morning brief
-                  <span className="block text-[13px] leading-[18px] text-muted-foreground">A notification when your Recovery is ready; tap to read it.</span>
                 </label>
-                <span className="flex items-center gap-2">
-                  <Input
-                    id="coach-brief"
-                    type="time"
-                    className="w-28"
-                    defaultValue={clock(setup.briefMinute)}
-                    disabled={pending}
-                    onChange={(e) => {
-                      const [h, m] = e.target.value.split(":").map(Number)
-                      if (e.target.value) act(() => setPreferencesAction({ briefMinute: h * 60 + m }), "Brief time saved.")
-                    }}
-                  />
-                  {setup.briefMinute !== null && (
-                    <button type="button" disabled={pending} onClick={() => act(() => setPreferencesAction({ briefMinute: null }), "Morning brief off.")} className="relative rounded-md text-[13px] font-semibold text-foreground-secondary outline-none after:absolute after:-inset-3 hover:underline focus-visible:ring-3 focus-visible:ring-ring/50">
-                      Off
-                    </button>
+                <span className="flex items-center gap-3">
+                  {brief !== null && (
+                    <Input
+                      type="time"
+                      aria-label="Morning brief time"
+                      className="w-28"
+                      value={clock(brief)}
+                      onChange={(e) => e.target.value && setBrief(toMinute(e.target.value))}
+                      onBlur={() => brief !== setup.briefMinute && saveBrief(brief)}
+                    />
                   )}
+                  <Switch id="coach-brief-on" checked={brief !== null} onCheckedChange={(on) => saveBrief(on ? DEFAULT_BRIEF : null)} />
                 </span>
               </div>
             )}
