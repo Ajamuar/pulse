@@ -13,6 +13,9 @@ import { DetailShell } from "@/components/shells/DetailShell"
 import { OAuthToast } from "./SettingsClient"
 import { SettingsView } from "./SettingsView"
 
+/** From 1280 px the app nav stays the 88 px rail (AppNav) and the sections panel sits beside it: the coach's frame (coach/page.tsx), keyed on `data-settings`. */
+const FRAME = "xl:-ml-[144px] xl:has-data-[settings=closed]:pl-[76px] xl:has-data-[settings=open]:pl-[284px]"
+
 /** The request time; relative sync ages are computed against it on the server. */
 const requestTime = () => Date.now()
 
@@ -33,9 +36,9 @@ export default async function SettingsPage() {
   // Same rule as the admin gate: only a Google instance has an admin panel.
   const admin = getConfig().dataSource === "google" && (await isAdmin(ctx.db, ctx.userId))
   return (
+    <div className={FRAME}>
     <DetailShell
       title="Settings"
-      dismiss="close"
       primary={
         <>
           <OAuthToast />
@@ -58,5 +61,6 @@ export default async function SettingsPage() {
         </>
       }
     />
+    </div>
   )
 }

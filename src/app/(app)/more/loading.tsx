@@ -1,24 +1,25 @@
-import { Archive, BookOpen, CalendarDays, CalendarRange, ChartLine, Database, ListChecks } from "lucide-react"
+import { Archive, BookOpen, CalendarDays, CalendarRange, ChartLine, Database, ListChecks, Palette, Plug, UserRound } from "lucide-react"
 import { SCORING_VERSION } from "@/server/pipeline"
 import { APP_VERSION } from "@/server/queries/settings"
 import { LinkListSkeleton, MORE_COLUMN } from "@/components/shells/LinkList"
 import { PageShell } from "@/components/shells/PageShell"
-import { CARD_MATERIAL } from "@/components/ui/card"
-import { Skeleton, SkeletonText } from "@/components/ui/skeleton"
 import { About } from "./About"
 
-/** More: the same rows and About card in their final boxes; only the account and the captions are bars (spec §5.19). */
+/** More: the same rows and About card in their final boxes; only the captions are bars (spec §5.19). */
 export default function Loading() {
   return (
     <PageShell loading title="More">
-      <div aria-hidden className={`${CARD_MATERIAL} flex min-h-18 items-center gap-3 px-4 py-3 md:hidden`}>
-        <Skeleton className="size-11 shrink-0 rounded-full" />
-        <span className="min-w-0 flex-1">
-          <SkeletonText className="w-24 text-[15px] leading-[22px]" />
-          <span className="block text-[13px] leading-[18px] text-muted-foreground">Account, data source, profile</span>
-        </span>
-      </div>
       <div className={MORE_COLUMN}>
+        <div className="xl:hidden">
+          <LinkListSkeleton
+            title="Account & settings"
+            rows={[
+              { icon: UserRound, label: "Account" },
+              { icon: Plug, label: "Data source" },
+              { icon: Palette, label: "App" },
+            ]}
+          />
+        </div>
         <LinkListSkeleton
           title="Reports"
           rows={[

@@ -29,9 +29,9 @@ const Buttons = () => (
 /** Settings: SettingsView's one 640 px column of Account, Data source, Profile, with static labels (spec §7.14, §5.19). */
 export default function Loading() {
   return (
+    <div className="xl:-ml-[144px] xl:pl-[284px]">
     <DetailShell loading
       title="Settings"
-      dismiss="close"
       primary={
         <div aria-hidden className="mx-auto flex w-full max-w-[640px] flex-col gap-3 md:gap-4">
           <SectionShell variant="card" level={2} title="Account">
@@ -62,5 +62,6 @@ export default function Loading() {
         </div>
       }
     />
+    </div>
   )
 }

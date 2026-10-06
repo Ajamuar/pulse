@@ -14,6 +14,7 @@ import type { MiniRingVariant } from "@/components/metrics/MiniRing"
 import { DATA_COLORS, dialColor } from "@/lib/bands"
 import { SheetTrigger } from "@/components/shells/SheetTrigger"
 import { GLASS } from "@/components/shells/AppNav"
+import { panelStore } from "@/components/shells/panelStore"
 import { Button } from "@/components/ui/button"
 import { CARD_MATERIAL } from "@/components/ui/card"
 import { ChatList, NewChatButton } from "./ChatList"
@@ -263,32 +264,10 @@ const ERRORS: Record<string, string> = {
   provider: "Your provider refused the request (key, quota or billing). Check your account with them.",
 }
 
-// The laptop chat panel's open state, remembered on this device (a viewer convenience: localStorage, never required).
-const PANEL_KEY = "pulse:coach-chats-open"
-const panelListeners = new Set<() => void>()
-function readPanel() {
-  try {
-    return localStorage.getItem(PANEL_KEY) !== "0"
-  } catch {
-    return true
-  }
-}
-function setPanelOpen(open: boolean) {
-  try {
-    localStorage.setItem(PANEL_KEY, open ? "1" : "0")
-  } catch {
-    // Storage blocked (private window): the toggle still works for this page view.
-  }
-  panelOpenFallback = open
-  panelListeners.forEach((l) => l())
-}
-let panelOpenFallback: boolean | null = null
-const usePanelOpen = () =>
-  React.useSyncExternalStore(
-    (l) => (panelListeners.add(l), () => panelListeners.delete(l)),
-    () => panelOpenFallback ?? readPanel(),
-    () => true,
-  )
+// The laptop chat panel's open state, remembered on this device.
+const chatsPanel = panelStore("pulse:coach-chats-open")
+const usePanelOpen = chatsPanel.use
+const setPanelOpen = chatsPanel.set
 
 /** A starter question: the app's card row (icon, label, chevron), as on More and Settings. */
 const SUGGESTION = cn(
