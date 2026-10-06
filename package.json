@@ -10,6 +10,7 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "coach:eval": "tsx scripts/eval-coach.mts",
     "e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
     "seed:demo": "tsx --env-file-if-exists=.env scripts/seed-demo-user.mts",

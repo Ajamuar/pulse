@@ -5,9 +5,10 @@ import webpush from "web-push";
 import { BAND_WORD, recoveryBand } from "@/lib/bands";
 import { getConfig } from "./config";
 import { type Db } from "./db";
-import { dailyScores, pushSubscriptions } from "./db/schema";
+import { coachSettings, dailyScores, pushSubscriptions } from "./db/schema";
+import { coachAccess } from "./coach/store";
 import { userTimeZone } from "./profile";
-import { localDay } from "./time";
+import { localDay, localMinutes } from "./time";
 
 export type PushPayload = { title: string; body: string; url: string; tag: string };
 type Sub = { endpoint: string; p256dh: string; auth: string };
@@ -97,5 +98,37 @@ export async function notifySyncProblem(db: Db, userId: number, now = Math.floor
     await sendPush(db, userId, { title: "Pulse can’t sync", body: "Google access was lost. Open Settings to reconnect.", url: "/settings", tag: "sync" }, subs);
   } catch (err) {
     console.error(`[push] user ${userId} sync alert: ${err instanceof Error ? err.message : String(err)}`);
+  }
+}
+
+/**
+ * After a run: "Your brief is ready" once per local day, at or after the time the user chose in Settings, once today's
+ * Recovery exists. The tap opens the coach, which writes the brief then (/coach?brief=1), so nothing is spent on a
+ * brief nobody opens.
+ * ponytail: claimed before sending, so a failed send isn't retried that day.
+ */
+export async function notifyBrief(db: Db, userId: number, now = Math.floor(Date.now() / 1000)) {
+  if (!getConfig().vapid) return;
+  try {
+    const [c] = await db.select({ minute: coachSettings.briefMinute, consent: coachSettings.consentAt }).from(coachSettings).where(eq(coachSettings.userId, userId));
+    if (c?.minute == null || !c.consent || !(await coachAccess(db, userId))) return;
+    const tz = await userTimeZone(db, userId);
+    if (!tz || localMinutes(now, tz) < c.minute) return;
+    const day = localDay(now, tz);
+    const [r] = await db
+      .select({ value: sql<number | null>`(${dailyScores.recovery}->>'value')::float` })
+      .from(dailyScores)
+      .where(and(eq(dailyScores.userId, userId), eq(dailyScores.day, day)));
+    if (r?.value == null) return;
+    const [claimed] = await db
+      .update(coachSettings)
+      .set({ lastBriefDay: day })
+      .where(and(eq(coachSettings.userId, userId), or(isNull(coachSettings.lastBriefDay), lt(coachSettings.lastBriefDay, day))))
+      .returning({ userId: coachSettings.userId });
+    if (!claimed) return;
+    const value = Math.round(r.value);
+    await sendPush(db, userId, { title: "Your brief is ready", body: `Recovery ${value}%: ${BAND_WORD[recoveryBand(value)]}. Tap for today’s brief.`, url: "/coach?brief=1", tag: "brief" });
+  } catch (err) {
+    console.error(`[push] user ${userId} brief alert: ${err instanceof Error ? err.message : String(err)}`);
   }
 }

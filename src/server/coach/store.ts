@@ -44,11 +44,11 @@ export async function setCoachAllowed(db: Db, userId: number, allowed: boolean):
 // ── Provider, key and consent ────────────────────────────────────────────────
 
 /** What the browser may know about the user's setup: never the key itself. */
-export type CoachSetup = { provider: string | null; model: string | null; last4: string | null; consent: boolean };
+export type CoachSetup = { provider: string | null; model: string | null; last4: string | null; consent: boolean; instructions: string | null; briefMinute: number | null };
 
 export async function coachSetup(db: Db, userId: number): Promise<CoachSetup> {
   const [r] = await db.select().from(coachSettings).where(eq(coachSettings.userId, userId));
-  return { provider: r?.provider ?? null, model: r?.model ?? null, last4: r?.keyLast4 ?? null, consent: r?.consentAt != null };
+  return { provider: r?.provider ?? null, model: r?.model ?? null, last4: r?.keyLast4 ?? null, consent: r?.consentAt != null, instructions: r?.customInstructions ?? null, briefMinute: r?.briefMinute ?? null };
 }
 
 export async function setConsent(db: Db, userId: number, on: boolean): Promise<void> {
@@ -57,6 +57,12 @@ export async function setConsent(db: Db, userId: number, on: boolean): Promise<v
     .insert(coachSettings)
     .values({ userId, consentAt, updatedAt: now() })
     .onConflictDoUpdate({ target: coachSettings.userId, set: { consentAt, updatedAt: now() } });
+}
+
+/** The user's own notes for the coach (null clears them) and when they want the morning-brief notification (minutes after local midnight; null = off). */
+export async function setPreferences(db: Db, userId: number, p: { instructions?: string | null; briefMinute?: number | null }): Promise<void> {
+  const values = { ...("instructions" in p && { customInstructions: p.instructions }), ...("briefMinute" in p && { briefMinute: p.briefMinute }), updatedAt: now() };
+  await db.insert(coachSettings).values({ userId, ...values }).onConflictDoUpdate({ target: coachSettings.userId, set: values });
 }
 
 /** Stores the provider and model, and the key encrypted (null for the owner's local model, which needs none). */
@@ -88,7 +94,7 @@ export function modelFor(provider: string, model: string, apiKey: string | null)
   return p && apiKey ? p.create(apiKey, model) : null;
 }
 
-export async function coachModel(db: Db, userId: number): Promise<{ model: LanguageModel; provider: string } | { problem: ModelProblem }> {
+export async function coachModel(db: Db, userId: number): Promise<{ model: LanguageModel; provider: string; instructions: string | null } | { problem: ModelProblem }> {
   if (!(await coachAccess(db, userId))) return { problem: "no_access" };
   const [r] = await db.select().from(coachSettings).where(eq(coachSettings.userId, userId));
   if (!r?.consentAt) return { problem: "no_consent" };
@@ -100,7 +106,7 @@ export async function coachModel(db: Db, userId: number): Promise<{ model: Langu
     if (key === null) return { problem: "key_unreadable" };
   }
   const model = modelFor(r.provider, r.model, key);
-  return model ? { model, provider: r.provider } : { problem: "no_key" };
+  return model ? { model, provider: r.provider, instructions: r.customInstructions } : { problem: "no_key" };
 }
 
 // ── Chats ────────────────────────────────────────────────────────────────────

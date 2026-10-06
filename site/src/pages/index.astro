@@ -65,7 +65,8 @@ const extras: { icon: string; label: string }[] = [
 
 const coach = [
   { icon: "lock-keyhole", t: "Your key, your provider", d: "Anthropic, OpenAI, Gemini, Vercel AI Gateway, OpenRouter, or a model on your own server. The key is encrypted and never reaches the browser." },
-  { icon: "eye", t: "Reads, never writes", d: "Its tools only read your scores, so every answer points back to a number you can open." },
+  { icon: "eye", t: "Reads, never writes", d: "Read-only tools look up sleep, workouts, trends and habits. Evidence cards link back to your data." },
+  { icon: "sparkles", t: "Advice for your day", d: "Suggestions adapt to your Recovery, sleep, HRV and accumulated strain. Older turns are summarized so longer chats keep their context." },
   { icon: "toggle-left", t: "Off until you turn it on", d: "Admins choose who gets the coach. Without it, the same button opens the evening check-in." },
 ]
 
@@ -223,7 +224,7 @@ const schema = [softwareApp(Astro.site!, description), faqPage(faq)]
       <div class="coach-copy">
         <span class="monogram" aria-hidden="true">P</span>
         <h2 id="coach-h">Ask about your own numbers.</h2>
-        <p class="lede">The P button on every screen opens Coach: a chat that reads your Recovery, sleep, strain and journal before it answers.</p>
+        <p class="lede">The P button opens Coach. Ask for today’s brief, explore what changed, or plan training and tonight’s sleep with your own data.</p>
         <dl class="coach-facts">
           {
             coach.map((c) => (

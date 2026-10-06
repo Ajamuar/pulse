@@ -20,7 +20,7 @@ export default async function CoachConfigPage({ searchParams }: { searchParams: 
   const [t, history, { item }] = await Promise.all([coachTexts(db), textHistory(db), searchParams])
   const now = requestTime()
   const tools = Object.entries(TOOL_DOCS)
-  const selected = item && item in TOOL_DOCS ? item : "instructions"
+  const selected = item && (item in TOOL_DOCS || item === "summary_instructions") ? item : "instructions"
 
   const byKey = new Map<string, Omit<TextVersion, "key">[]>()
   for (const { key, ...v } of history) byKey.set(key, [...(byKey.get(key) ?? []), v])
@@ -31,10 +31,10 @@ export default async function CoachConfigPage({ searchParams }: { searchParams: 
   }
   /** Whether any of a tool's (or the instructions') wording differs from the default. */
   const edited = (name: string) =>
-    name === "instructions" ? t("instructions") !== DEFAULTS.instructions : [`tool.${name}`, ...Object.keys(TOOL_DOCS[name].params).map((p) => `tool.${name}.${p}`)].some((k) => t(k) !== DEFAULTS[k])
+    name === "instructions" || name === "summary_instructions" ? t(name) !== DEFAULTS[name] : [`tool.${name}`, ...Object.keys(TOOL_DOCS[name].params).map((p) => `tool.${name}.${p}`)].some((k) => t(k) !== DEFAULTS[k])
 
-  const items = [{ id: "instructions", label: "Instructions", icon: FileText }, ...tools.map(([name]) => ({ id: name, label: name, icon: Wrench }))]
-  const doc = selected === "instructions" ? null : TOOL_DOCS[selected]
+  const items = [{ id: "instructions", label: "Instructions", icon: FileText }, { id: "summary_instructions", label: "Conversation summaries", icon: FileText }, ...tools.map(([name]) => ({ id: name, label: name, icon: Wrench }))]
+  const doc = selected === "instructions" || selected === "summary_instructions" ? null : TOOL_DOCS[selected]
 
   return (
     <>
@@ -74,8 +74,8 @@ export default async function CoachConfigPage({ searchParams }: { searchParams: 
         </nav>
 
         {doc === null ? (
-          <Panel className="min-w-0" title="Instructions" description="Sent at the start of every conversation. Keep the safety rules: no numbers without a tool, honest missing data, not medical advice.">
-            {editor(field("instructions", "Instructions"), {
+          <Panel className="min-w-0" title={selected === "summary_instructions" ? "Conversation summaries" : "Instructions"} description={selected === "summary_instructions" ? "Preserve user preferences and earlier decisions. Measurements must be fetched fresh." : "Keep the safety rules: no numbers without a tool, honest missing data, not medical advice."}>
+            {editor(field(selected, selected === "summary_instructions" ? "Conversation summaries" : "Instructions"), {
               rows: 18,
               hint: (
                 <>

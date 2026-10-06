@@ -221,7 +221,7 @@ list of what's wrong.
 | `DISABLE_SIGNUP` | no (false) | Older setting: `true` is the same as `SIGNUP=closed` |
 | `COACH_LOCAL_URL`, `COACH_LOCAL_MODEL` | no | A model you run (OpenAI-compatible, e.g. Ollama at `http://localhost:11434/v1`), offered in the coach with no key; set both or neither |
 | `SUPPORT_EMAIL` | no | Shown on the forgot-password page so people can ask you for a reset |
-| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | no | Turns on notifications ("Recovery ready", "Pulse can't sync"). Make the keys with `npx web-push generate-vapid-keys`; the subject is `mailto:you@example.com`. Set all three or none |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | no | Turns on notifications ("Recovery ready", "Pulse can't sync", and the coach's optional "Your brief is ready"). Make the keys with `npx web-push generate-vapid-keys`; the subject is `mailto:you@example.com`. Set all three or none |
 | `ANDROID_PACKAGE_NAME`, `ANDROID_CERT_SHA256` | no | Your Android APK's package and signing key fingerprints, served as `/.well-known/assetlinks.json` so the APK opens without a URL bar ([docs/pwa.md](pwa.md#android-apk-with-pwabuilder)). Set both or neither |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | with Google | The OAuth client from step 2 |
 | `APP_URL` | behind a proxy | The public URL |
@@ -331,3 +331,11 @@ ls -1t "$dir"/pulse-*.dump | tail -n +15 | xargs -r rm -f
 | Server exits at boot with a database error | Postgres isn't reachable at `DATABASE_URL`; check `docker compose ps` and `docker compose logs db`. |
 
 Still stuck? Open an issue with the bug template (and no personal data).
+
+### Checking coach answers
+
+`pnpm coach:eval --fixtures` checks six generated-data cases in an isolated in-memory database: Recovery drops, poor sleep, missing data, conflicting signals, sparse habit evidence and conversation continuity. It never reads an account's health data.
+
+To compare real models, set `COACH_EVAL_PROVIDER`, `COACH_EVAL_MODEL` and `COACH_EVAL_KEY`, then run `pnpm coach:eval`. This uses the chosen provider for answers, conversation summaries and a structured model judge. It checks required data reads and grades grounding, actions and honesty. The judge is a heuristic, not proof of answer quality. Output contains case names and pass/fail scores, never keys, health data or full replies. Provider usage is billed to that key.
+
+Long coach conversations use an extra provider request to summarize older turns. Full chats remain stored; summaries carry preferences and earlier decisions, and measurements are fetched again. Admins can edit the summary instructions under AI coach.

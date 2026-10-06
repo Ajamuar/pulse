@@ -5,8 +5,9 @@ import { generateText } from "ai";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { currentUser, SIGNED_OUT } from "../auth";
+import { MAX_NOTES } from "../coach/instructions";
 import { providerOf } from "../coach/providers";
-import { coachAccess, deleteAllChats, deleteChat, groupChats, listChats, modelFor, removeProvider, saveProvider, setConsent, type ChatCursor, type ChatGroup } from "../coach/store";
+import { coachAccess, deleteAllChats, deleteChat, groupChats, listChats, modelFor, removeProvider, saveProvider, setConsent, setPreferences, type ChatCursor, type ChatGroup } from "../coach/store";
 import { ctxOf } from "../queries/common";
 import { getConfig } from "../config";
 import { getDb } from "../db";
@@ -69,6 +70,26 @@ export async function removeProviderAction(): Promise<ActionResult> {
   const me = await currentUser();
   if (!me) return SIGNED_OUT;
   await removeProvider(getDb(), me.userId);
+  revalidatePath("/settings");
+  return DONE;
+}
+
+const Preferences = z.object({
+  instructions: z.string().max(MAX_NOTES, `Keep it under ${MAX_NOTES} characters.`).nullable().optional(),
+  briefMinute: z.number().int().min(0).max(1439).nullable().optional(),
+});
+
+/** The user's own notes for the coach and the morning-brief time; only the fields sent change. */
+export async function setPreferencesAction(input: z.input<typeof Preferences>): Promise<ActionResult> {
+  const me = await member();
+  if (typeof me !== "number") return me;
+  const r = Preferences.safeParse(input);
+  if (!r.success) return { ok: false, error: r.error.issues[0].message };
+  const { instructions, briefMinute } = r.data;
+  await setPreferences(getDb(), me, {
+    ...(instructions !== undefined && { instructions: instructions?.trim() || null }),
+    ...(briefMinute !== undefined && { briefMinute }),
+  });
   revalidatePath("/settings");
   return DONE;
 }

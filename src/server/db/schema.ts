@@ -475,6 +475,12 @@ export const coachSettings = pgTable("coach_settings", {
   model: text("model"),
   keyCiphertext: bytea("key_ciphertext"),
   keyLast4: text("key_last4"),
+  /** The user's own notes on how the coach should talk to them (max 500 characters); appended under the rules. */
+  customInstructions: text("custom_instructions"),
+  /** Minutes after local midnight to send the "brief ready" notification; null = off. */
+  briefMinute: integer("brief_minute"),
+  /** The last local day that notification went out. */
+  lastBriefDay: text("last_brief_day"),
   updatedAt: ts("updated_at").notNull(),
 });
 

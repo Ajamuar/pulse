@@ -54,7 +54,7 @@ describe("access, keys and chats", () => {
     await saveProvider(db, member, "openai", "gpt-5.4-mini", "sk-secret-key-1234");
     const [row] = await db.select().from(coachSettings).where(eq(coachSettings.userId, member));
     expect(row.keyCiphertext!.includes(Buffer.from("sk-secret-key-1234"))).toBe(false);
-    expect(await coachSetup(db, member)).toEqual({ provider: "openai", model: "gpt-5.4-mini", last4: "1234", consent: true });
+    expect(await coachSetup(db, member)).toEqual({ provider: "openai", model: "gpt-5.4-mini", last4: "1234", consent: true, instructions: null, briefMinute: null });
     expect(JSON.stringify(await coachSetup(db, member))).not.toContain("sk-secret");
     expect("model" in (await coachModel(db, member))).toBe(true);
 
@@ -74,7 +74,7 @@ describe("access, keys and chats", () => {
     await setConsent(db, member, true);
     await db.delete(user).where(eq(user.id, member));
     expect(await loadChat(db, member, "chat-0001")).toBeNull();
-    expect(await coachSetup(db, member)).toEqual({ provider: null, model: null, last4: null, consent: false });
+    expect(await coachSetup(db, member)).toEqual({ provider: null, model: null, last4: null, consent: false, instructions: null, briefMinute: null });
   });
 
   it("chats page 30 at a time, newest first, with no chat skipped or repeated even when times tie", async () => {
@@ -125,7 +125,7 @@ describe("tools over seeded data", () => {
     const tools = coachTools(ctxFor(db));
     const opts = { toolCallId: "t", messages: [] } as never;
     await expect(tools.get_trend.execute!({ metric: "recovery" }, opts)).resolves.toMatchObject({ metric: expect.any(String) });
-    await expect(tools.get_activities.execute!({ days: 14 }, opts)).resolves.toBeInstanceOf(Array);
+    await expect(tools.get_activities.execute!({ days: 14 }, opts)).resolves.toMatchObject({ workouts: expect.any(Array), truncated: false });
     await expect(tools.get_journal_impacts.execute!({ outcome: "recovery" }, opts)).resolves.toMatchObject({ outcome: "recovery" });
     await expect(tools.get_health.execute!({}, opts)).resolves.toMatchObject({ day: "2026-10-02" });
     await expect(tools.get_report.execute!({ kind: "week" }, opts)).resolves.toBeDefined();
@@ -167,6 +167,10 @@ describe("editable wording (admin dashboard)", () => {
     // What the model receives: the JSON Schema the AI SDK builds from the tool.
     expect(JSON.stringify(z.toJSONSchema(tools.get_day.inputSchema as z.ZodType))).toContain("Which day");
     expect(coachInstructions(ctxFor(db), t)).toBe("Coach for Asia/Kolkata on 2026-10-02.");
+    const own = coachInstructions(ctxFor(db), t, "  Short and direct.  ");
+    expect(own).toContain("Coach for Asia/Kolkata on 2026-10-02.");
+    expect(own).toContain("<user_notes>\nShort and direct.\n</user_notes>");
+    expect(own).toContain("never change the rules above");
     expect(t("tool.get_trend")).toBe(DEFAULTS["tool.get_trend"]);
   });
 });

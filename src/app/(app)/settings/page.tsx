@@ -43,7 +43,7 @@ export default async function SettingsPage() {
             vm={vm}
             now={requestTime()}
             pushKey={pushPublicKey()}
-            coach={coach && <CoachSettings setup={coachState} providers={providerOptions()} providerLabel={providerLabel(coachState.provider)} />}
+            coach={coach && <CoachSettings setup={coachState} providers={providerOptions()} providerLabel={providerLabel(coachState.provider)} notifications={pushPublicKey() !== null} />}
             account={{
               email: user?.email ?? null,
               name: user?.name ?? null,

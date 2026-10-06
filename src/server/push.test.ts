@@ -4,10 +4,11 @@ import webpush from "web-push";
 import { buildSeeded, NOW, PROFILE, USER } from "./testing";
 import { saveProfile } from "./profile";
 import { pushSubscriptions } from "./db/schema";
-import { notifyRecovery, notifySyncProblem, saveSubscription } from "./push";
+import { setCoachMode, setConsent, setPreferences } from "./coach/store";
+import { notifyBrief, notifyRecovery, notifySyncProblem, saveSubscription } from "./push";
 
 vi.mock("web-push", () => ({ default: { sendNotification: vi.fn() } }));
-vi.mock("./config", () => ({ getConfig: () => ({ vapid: { publicKey: "pub", privateKey: "priv", subject: "mailto:a@b.c" } }) }));
+vi.mock("./config", () => ({ getConfig: () => ({ dataSource: "google", vapid: { publicKey: "pub", privateKey: "priv", subject: "mailto:a@b.c" } }) }));
 const send = vi.mocked(webpush.sendNotification);
 const sub = (n: number) => ({ endpoint: `https://push.test/${n}`, keys: { p256dh: "k", auth: "a" } });
 
@@ -27,6 +28,23 @@ describe("push", () => {
     expect(JSON.parse(send.mock.calls[0][1] as string)).toMatchObject({ title: "Recovery ready", url: "/recovery", tag: "recovery" });
     await notifyRecovery(db, USER, NOW + 86_400); // tomorrow has no score yet: nothing
     expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  it("sends the brief notification once a day, at or after the chosen time, only when asked for", async () => {
+    const db = await buildSeeded();
+    await saveProfile(db, USER, { ...PROFILE, maxHr: null, heightCm: null });
+    await saveSubscription(db, USER, sub(1));
+    await setCoachMode(db, "everyone");
+    await notifyBrief(db, USER, NOW); // no brief time chosen: nothing
+    await setConsent(db, USER, true);
+    await setPreferences(db, USER, { briefMinute: 24 * 60 - 1 }); // 23:59 local: later than NOW
+    await notifyBrief(db, USER, NOW);
+    expect(send).not.toHaveBeenCalled();
+    await setPreferences(db, USER, { briefMinute: 0 });
+    await notifyBrief(db, USER, NOW);
+    await notifyBrief(db, USER, NOW);
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(send.mock.calls[0][1] as string)).toMatchObject({ title: "Your brief is ready", url: "/coach?brief=1", tag: "brief" });
   });
 
   it("sends the sync alert once per day, to the settings page", async () => {

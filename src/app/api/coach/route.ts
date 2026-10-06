@@ -1,18 +1,16 @@
 // The coach's chat endpoint (useChat on /coach). Order: signed in, coach access, a usable model (consent and key),
 // requests per minute, then the chat itself, loaded and saved by id **and** the user. Never logs message content,
 // tool output, keys or provider bodies.
-import { convertToModelMessages, createUIMessageStreamResponse, isStepCount, streamText, toUIMessageStream, validateUIMessages, type UIMessage } from "ai";
+import { createUIMessageStreamResponse, isStepCount, streamText, toUIMessageStream, validateUIMessages, type UIMessage } from "ai";
 import { z } from "zod";
 import { requestUser } from "@/server/auth";
+import { coachHistory } from "@/server/coach/history";
 import { coachInstructions } from "@/server/coach/instructions";
 import { allowRequest, coachModel, loadChat, saveChat } from "@/server/coach/store";
 import { coachTexts } from "@/server/coach/texts";
 import { coachTools } from "@/server/coach/tools";
 import { getDb } from "@/server/db";
 import { ctxOf } from "@/server/queries/common";
-
-/** History sent to the model: the newest messages only (the whole chat is still saved). */
-const HISTORY = 20;
 
 /**
  * One request per turn: the chat id and the newest user message (the server holds the history). `trigger` and
@@ -67,14 +65,16 @@ export async function POST(req: Request) {
   const tools = coachTools(ctx, texts);
   const previous = historyFor((await loadChat(db, user.userId, id)) ?? [], body.data);
   if (!previous) return fail(400, "bad_request");
-  const messages = await validateUIMessages({ messages: [...previous, body.data.message as UIMessage], tools }).catch(() => null);
+  const incoming: UIMessage = { id: body.data.message.id, role: "user", parts: body.data.message.parts as UIMessage["parts"] };
+  const messages = await validateUIMessages({ messages: [...previous, incoming], tools }).catch(() => null);
   if (!messages) return fail(400, "bad_request");
 
   const started = Date.now();
+  const history = await coachHistory(messages, m.model, texts, req.signal);
   const result = streamText({
     model: m.model,
-    instructions: coachInstructions(ctx, texts),
-    messages: await convertToModelMessages(messages.slice(-HISTORY)),
+    instructions: coachInstructions(ctx, texts, m.instructions),
+    messages: history.modelMessages,
     tools,
     stopWhen: isStepCount(6),
     abortSignal: req.signal,
@@ -85,7 +85,7 @@ export async function POST(req: Request) {
     headers: { "X-Accel-Buffering": "no" }, // stream through nginx-style proxies
     stream: toUIMessageStream({
       stream: result.stream,
-      originalMessages: messages,
+      originalMessages: history.saved,
       generateMessageId: () => crypto.randomUUID(),
       onEnd: async ({ messages: all }) => {
         await saveChat(db, user.userId, id, all);

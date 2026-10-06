@@ -8,7 +8,7 @@ import { type Db, getDb, row, sql } from "./db";
 import { oauthTokens } from "./db/schema";
 import { ensureDefaultTags } from "./journalTags";
 import { recomputeIfNeeded } from "./pipeline";
-import { notifyRecovery, notifySyncProblem } from "./push";
+import { notifyBrief, notifyRecovery, notifySyncProblem } from "./push";
 import { GoogleError } from "./sources/google/oauth";
 import { googleSource } from "./sources/google/sync";
 import { ensureDemoUser, seedSource } from "./sources/seed/generate";
@@ -215,6 +215,7 @@ export function startWorker() {
     recompute: async (userId, changed) => {
       await recomputeIfNeeded(userId, changed);
       await notifyRecovery(getDb(), userId);
+      await notifyBrief(getDb(), userId);
     },
     users: google ? grantees : async () => [await demoUser()],
     lock: (userId, fn) => withUserLock(getDb(), userId, fn),

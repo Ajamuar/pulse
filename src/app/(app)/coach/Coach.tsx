@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useChat } from "@ai-sdk/react"
 import { DefaultChatTransport, type UIMessage } from "ai"
-import { Activity, ArrowUp, Check, ChevronRight, Copy, Dumbbell, History, ListChecks, Moon, NotebookPen, PanelLeftClose, PanelLeftOpen, Pencil, RotateCcw, Settings2, Square, type LucideIcon } from "lucide-react"
+import { Activity, ArrowUp, Check, ChevronRight, Copy, Dumbbell, History, Moon, NotebookPen, PanelLeftClose, PanelLeftOpen, Pencil, RotateCcw, Settings2, Square, type LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { dayDigest } from "@/server/coach/tools"
 import type { ChatCursor, ChatGroup } from "@/server/coach/store"
@@ -19,19 +19,21 @@ import { CARD_MATERIAL } from "@/components/ui/card"
 import { ChatList, NewChatButton } from "./ChatList"
 import { Prose } from "./Prose"
 
-type DayDigest = Awaited<ReturnType<typeof dayDigest>>
-type Num = { value: number | null; reason?: string }
+import type { CoachSuggestion } from "@/core/algorithms/coachSuggestions"
+import { Evidence } from "./Evidence"
 
-const SUGGESTIONS: { text: string; icon: LucideIcon }[] = [
-  { text: "Why is my recovery where it is today?", icon: Activity },
-  { text: "How did I sleep last night?", icon: Moon },
-  { text: "How hard should I train today?", icon: Dumbbell },
-  { text: "Which habits help my recovery?", icon: ListChecks },
-]
+type DayDigest = Awaited<ReturnType<typeof dayDigest>>
+type Num = { value: number | null; reason?: string | null }
+
+const SUGGESTION_ICONS: Record<CoachSuggestion["key"], LucideIcon> = {
+  brief: Activity, recovery: Activity, training: Dumbbell, hrv: Activity, sleep: Moon, strain: Dumbbell, sync: Moon,
+}
 
 /** One line while a tool runs, in the voice of the screen it reads. */
 const RUNNING: Record<string, string> = {
   get_day: "Looking at your day…",
+  get_sleep: "Reading your sleep and bedtime plan…",
+  get_activity: "Checking workout intensity…",
   get_trend: "Checking your trends…",
   get_activities: "Looking at your workouts…",
   get_journal_impacts: "Reading your journal…",
@@ -118,8 +120,8 @@ function PartView({ part }: { part: Part }) {
   const tool = part as Part & { state: string; output?: unknown }
   if (tool.state === "output-error") return <Caption>Couldn’t read that part of your data.</Caption>
   if (tool.state !== "output-available") return <Caption live>{RUNNING[name] ?? "Looking at your data…"}</Caption>
-  if (name === "get_day") return <DayCard d={tool.output as DayDigest} />
-  return null
+  if (name === "get_day") return <div className="space-y-2"><DayCard d={tool.output as DayDigest} /><Evidence name={name} output={tool.output} /></div>
+  return <Evidence name={name} output={tool.output} />
 }
 
 /** The answer as plain words (no ** marks), for the clipboard and the screen-reader announcement. */
@@ -319,7 +321,7 @@ export function CoachBarActions({ chatCount, chatOpen }: { chatCount: number; ch
   )
 }
 
-export function Coach({ id, initial, groups, next, prefill, providerLabel }: { id: string; initial: UIMessage[]; groups: ChatGroup[]; next: ChatCursor | null; prefill: string; providerLabel: string }) {
+export function Coach({ id, initial, groups, next, prefill, auto, providerLabel, suggestions }: { id: string; initial: UIMessage[]; groups: ChatGroup[]; next: ChatCursor | null; prefill: string; auto: boolean; providerLabel: string; suggestions: CoachSuggestion[] }) {
   const router = useRouter()
   const [input, setInput] = React.useState(prefill)
   const [error, setError] = React.useState<string | null>(null)
@@ -358,6 +360,13 @@ export function Coach({ id, initial, groups, next, prefill, providerLabel }: { i
     void sendMessage({ text: t })
     area.current?.focus()
   }
+  // The morning-brief notification opens /coach?brief=1: its tap is the user's go-ahead, so the brief is asked once.
+  const asked = React.useRef(false)
+  React.useEffect(() => {
+    if (!auto || asked.current) return
+    asked.current = true
+    send(prefill)
+  })
   const edit = (messageId: string, text: string) => {
     if (busy) return
     setError(null)
@@ -432,7 +441,9 @@ export function Coach({ id, initial, groups, next, prefill, providerLabel }: { i
               The coach looks up your own Pulse numbers before it answers, using {providerLabel}. It’s not medical advice.
             </p>
             <ul className="mt-8 grid w-full max-w-[600px] gap-2 sm:grid-cols-2">
-              {SUGGESTIONS.map(({ text, icon: Icon }) => (
+              {suggestions.map(({ text, key }) => {
+                const Icon = SUGGESTION_ICONS[key]
+                return (
                 <li key={text} className="min-w-0">
                   <button type="button" onClick={() => send(text)} className={SUGGESTION}>
                     <Icon aria-hidden className="size-5 shrink-0 text-coach" strokeWidth={1.75} />
@@ -440,7 +451,7 @@ export function Coach({ id, initial, groups, next, prefill, providerLabel }: { i
                     <ChevronRight aria-hidden className="size-4 shrink-0 text-muted-foreground transition-[translate] duration-150 ease-standard group-hover/suggestion:translate-x-0.5" strokeWidth={1.75} />
                   </button>
                 </li>
-              ))}
+              )})}
             </ul>
             <SheetTrigger
               sheet="checkin"

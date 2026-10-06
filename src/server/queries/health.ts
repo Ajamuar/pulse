@@ -502,7 +502,7 @@ function stressInsight(st: NonNullable<DayRow["stress"]>, tz: string) {
 // ── Fitness ─────────────────────────────────────────────────────────────────
 
 const ACWR_STATUS = { neutral: "detraining", optimal: "optimal", warning: "pushing", alert: "high_risk" } as const satisfies Record<ChipTone, string>;
-const acwrStatus = (acwr: number) => {
+export const acwrStatus = (acwr: number) => {
   const tone = acwrTone(acwr);
   return { status: ACWR_STATUS[tone], tone };
 };

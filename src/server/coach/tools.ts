@@ -1,12 +1,16 @@
 // The coach's tools: read-only, bound to the signed-in user's QueryCtx by closure (the model never names a user),
 // each a compact digest of an existing screen query. A metric without a value carries its reason code instead, so
 // the model can say "calibrating" rather than guess. No chart series, ids or raw payloads.
-import { tool } from "ai";
+import { tool, type InferToolOutput } from "ai";
 import { z } from "zod";
+import { trainingGuidance } from "@/core/algorithms/coaching";
+
 import type { Metric } from "@/lib/reasons";
 import { getActivities } from "../queries/activities";
-import { firstDay, todayOf, type QueryCtx } from "../queries/common";
-import { getHealthHub, getMonitor } from "../queries/health";
+import { getActivity } from "../queries/activity";
+import { energyBankVM } from "../queries/home";
+import { dayStartOf, firstDay, loadDays, maybe, meanSd, todayOf, type QueryCtx } from "../queries/common";
+import { acwrStatus, getFitness, getHealthHub, getMonitor } from "../queries/health";
 import { getJournalInsights } from "../queries/journal";
 import { getRecovery } from "../queries/recovery";
 import { getReport } from "../queries/reports";
@@ -14,26 +18,19 @@ import { getMore } from "../queries/settings";
 import { getSleep } from "../queries/sleep";
 import { getStrain } from "../queries/strain";
 import { getStress } from "../queries/health";
-import { getTrends, TREND_METRICS, type TrendMetricKey } from "../queries/trends";
-import { addDays } from "../time";
+import { TREND_METRICS, type TrendMetricKey } from "../queries/trends";
+import { addDays, daysBetween } from "../time";
 import { defaultTexts, type Texts } from "./texts";
 
 const round = (v: number, dp = 0) => Math.round(v * 10 ** dp) / 10 ** dp;
 
 /** A number metric as `{ value }` or `{ value: null, reason }`; provisional only when it is. */
 export function num(m: Metric<number>, dp = 0) {
-  if (m.value === null) return { value: null, reason: m.reason ?? "no_data", ...(m.nightsLeft !== undefined && { nightsLeft: m.nightsLeft }) };
-  return { value: round(m.value, dp), ...(m.provisional && { provisional: true }) };
+  return { value: m.value === null ? null : round(m.value, dp), reason: m.value === null ? m.reason ?? "no_data" : null, provisional: m.provisional, ...(m.nightsLeft !== undefined && { nightsLeft: m.nightsLeft }) };
 }
 
-const Day = (description: string) =>
-  z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional()
-    .describe(description);
+const Day = (description: string) => z.iso.date().optional().describe(description);
 
-/** The day asked for, clamped to [first day with data, today]: never a future day. */
 async function dayOf(ctx: QueryCtx, day: string | undefined) {
   const today = todayOf(ctx);
   if (!day || day > today) return today;
@@ -41,11 +38,54 @@ async function dayOf(ctx: QueryCtx, day: string | undefined) {
   return first && day < first ? first : day;
 }
 
+export async function sleepDigest(ctx: QueryCtx, day: string) {
+  const s = await getSleep(day, ctx);
+  return {
+    day, timeZone: ctx.timeZone,
+    performance: { ...num(s.performance), unit: "%" },
+    asleepMinutes: num(s.hours.value ? { ...s.hours, value: s.hours.value.asleepMin } : { ...s.hours, value: null }),
+    need: s.hoursVsNeed,
+    summary: s.summary.map((v) => ({ key: v.key, label: v.label, unit: v.unit ?? null, ...num(v.metric, 1), baseline: v.average, status: v.status ?? null })),
+    details: s.details.map((v) => ({ key: v.key, label: v.label, unit: v.unit ?? null, ...num(v.metric, 1), baseline: v.average })),
+    stages: s.stages?.value ? { value: { bedAt: s.stages.value.bed, wakeAt: s.stages.value.wake, rows: s.stages.value.rows.map((r) => ({ stage: r.label, minutes: round(r.minutes), pct: round(r.pct) })) }, reason: null, provisional: s.stages.provisional } : { value: null, reason: s.stages?.reason ?? "no_data", provisional: false },
+    planner: s.planner, insight: s.insight,
+  };
+}
+
+export async function trendDigest(ctx: QueryCtx, metric: TrendMetricKey, start?: string, end?: string) {
+  const to = end && end < todayOf(ctx) ? end : todayOf(ctx);
+  const requested = start ?? addDays(to, -13);
+  const from = requested > to ? to : requested < addDays(to, -89) ? addDays(to, -89) : requested;
+  const count = daysBetween(from, to) + 1;
+  const priorEnd = addDays(from, -1);
+  const priorStart = addDays(from, -count);
+  const rows = await loadDays(ctx, priorStart, to);
+  const m = TREND_METRICS.find((m) => m.key === metric)!;
+  const points = (a: string, b: string) => {
+    const out = [];
+    for (let day = a; day <= b; day = addDays(day, 1)) {
+      const row = rows.get(day)!;
+      const partial = !!m.partialToday && day === todayOf(ctx);
+      const v = partial ? null : m.pick(row);
+      const rec = row.recovery;
+      const reason = metric === "recovery" && rec?.reason ? rec.reason : "no_data";
+      out.push({ day, ...num(maybe(v, reason, !!m.provisional?.(row)), 1), ...(partial && { excludedPartialDay: true }) });
+    }
+    return out;
+  };
+  const current = points(from, to);
+  const previous = points(priorStart, priorEnd);
+  const stats = (p: typeof current) => ({ average: num(maybe(meanSd(p.map((d) => d.value)).mean, "no_data", p.some((d) => d.provisional)), 1), observedDays: p.filter((d) => d.value !== null).length });
+  return { metric: m.label, key: metric, unit: m.unit ?? (m.format === "duration" ? "min" : null), start: from, end: to, requestedStart: start ?? null, requestedEnd: end ?? null, calendarDays: count, ...stats(current), previous: { start: priorStart, end: priorEnd, ...stats(previous) }, points: current };
+}
+
 export async function dayDigest(ctx: QueryCtx, day: string) {
-  const [rec, sleep, strain, stress] = await Promise.all([getRecovery(day, ctx), getSleep(day, ctx), getStrain(day, ctx), getStress(day, ctx)]);
+  const [rec, sleep, strain, stress, rows] = await Promise.all([getRecovery(day, ctx), getSleep(day, ctx), getStrain(day, ctx), getStress(day, ctx), loadDays(ctx, day, day)]);
+  const bank = energyBankVM(ctx, rows.get(day), day, rec.isToday, null);
   return {
     day,
     isToday: rec.isToday,
+    guidance: trainingGuidance({ recovery: rec.recovery.value, provisional: rec.recovery.provisional, sleepPerformance: sleep.performance.value, strain: strain.strain.value, targetHigh: strain.target.value?.high ?? null, loadStatus: rows.get(day)?.trainingLoad?.acwr == null ? null : acwrStatus(rows.get(day)!.trainingLoad!.acwr!).status }),
     recovery: {
       ...num(rec.recovery),
       unit: "%",
@@ -71,7 +111,8 @@ export async function dayDigest(ctx: QueryCtx, day: string) {
       target: strain.target.value ? [round(strain.target.value.low, 1), round(strain.target.value.high, 1)] : null,
       coachLine: strain.coach,
     },
-    stress: stress.gauge.value ? { value: Math.round(stress.gauge.value.value), level: stress.gauge.value.level } : num({ ...stress.gauge, value: null }),
+    energyBank: { value: bank.value ? { current: round(bank.value.current), charged: round(bank.value.charged), drained: round(bank.value.drained), asOf: bank.value.until } : null, reason: bank.reason, provisional: bank.provisional },
+    stress: stress.gauge.value ? { ...num({ ...stress.gauge, value: stress.gauge.value.value }, 1), level: stress.gauge.value.level } : num({ ...stress.gauge, value: null }),
   };
 }
 
@@ -86,34 +127,35 @@ export function coachTools(ctx: QueryCtx, t: Texts = defaultTexts) {
       inputSchema: z.object({ day: Day(t("tool.get_day.day")) }),
       execute: async ({ day }) => dayDigest(ctx, await dayOf(ctx, day)),
     }),
+    get_sleep: tool({
+      description: t("tool.get_sleep"),
+      inputSchema: z.object({ day: Day(t("tool.get_sleep.day")) }),
+      execute: async ({ day }) => sleepDigest(ctx, await dayOf(ctx, day)),
+    }),
     get_trend: tool({
       description: t("tool.get_trend"),
-      inputSchema: z.object({ metric: z.enum(TREND_METRICS.map((m) => m.key) as [TrendMetricKey, ...TrendMetricKey[]]).describe(t("tool.get_trend.metric")) }),
-      execute: async ({ metric }) => {
-        const t = await getTrends(metric, ctx);
-        const meta = TREND_METRICS.find((m) => m.key === metric)!;
-        return {
-          metric: meta.label,
-          unit: meta.unit ?? null,
-          reason: t.points.reason,
-          periods: t.periods.map((p) => ({ range: p.range, average: num(p.average, 1), prior: p.prior === null ? null : round(p.prior, 1) })),
-        };
-      },
+      inputSchema: z.object({ metric: z.enum(TREND_METRICS.map((m) => m.key) as [TrendMetricKey, ...TrendMetricKey[]]).describe(t("tool.get_trend.metric")), start: Day(t("tool.get_trend.start")), end: Day(t("tool.get_trend.end")) }),
+      execute: async ({ metric, start, end }) => trendDigest(ctx, metric, start, end),
     }),
     get_activities: tool({
       description: t("tool.get_activities"),
       inputSchema: z.object({ days: z.number().int().min(1).max(90).default(14).describe(t("tool.get_activities.days")) }),
       execute: async ({ days }) => {
         const a = await getActivities(days, ctx);
-        return a.groups.flatMap((g) =>
-          g.items.map((i) => ({
-            day: g.day,
-            name: i.name,
-            minutes: Math.round((i.end - i.start) / 60_000),
-            strain: num(i.strain, 1),
-            distanceKm: i.distanceKm === null ? null : round(i.distanceKm, 1),
-          })),
-        );
+        const all = a.groups.flatMap((g) => g.items.map((i) => ({
+          id: i.id, day: g.day, name: i.name, minutes: Math.round((i.end - i.start) / 60_000),
+          strain: num(i.strain, 1), distanceKm: i.distanceKm === null ? null : round(i.distanceKm, 1),
+        })));
+        return { start: addDays(a.today, -(days - 1)), end: a.today, total: all.length, truncated: all.length > 30, workouts: all.slice(0, 30) };
+      },
+    }),
+    get_activity: tool({
+      description: t("tool.get_activity"),
+      inputSchema: z.object({ id: z.string().min(1).max(100).describe(t("tool.get_activity.id")) }),
+      execute: async ({ id }) => {
+        const a = await getActivity(id, ctx);
+        if (!a || a.day > todayOf(ctx)) return { workout: null, reason: "no_data" as const };
+        return { workout: { id: a.id, day: a.day, name: a.name, minutes: Math.round((a.end - a.start) / 60_000), strain: num(a.strain, 1), stats: a.stats.map((v) => ({ label: v.label, unit: v.unit ?? null, ...num(v.metric, 1), baseline: v.average })), zones: a.zones, zoneNote: a.zoneNote, hrRecovery: a.hrr, insight: a.insight }, reason: null };
       },
     }),
     get_journal_impacts: tool({
@@ -124,8 +166,8 @@ export function coachTools(ctx: QueryCtx, t: Texts = defaultTexts) {
         return {
           outcome,
           unit: j.unit,
-          effects: j.items.map((i) => ({ behaviour: i.label, delta: round(i.delta, 1), withAvg: i.avgWith, withoutAvg: i.avgWithout, yesDays: i.yes, noDays: i.no })),
-          needsMoreData: j.needsMore.map((n) => n.label),
+          effects: j.items.map((i) => ({ key: i.key, behaviour: i.label, effect: i.effect, confidenceInterval: i.ci ?? null, delta: round(i.delta, 1), withAvg: i.avgWith, withoutAvg: i.avgWithout, yesDays: i.yes, noDays: i.no })),
+          needsMoreData: j.needsMore.map((n) => ({ behaviour: n.label, yesDays: n.yes, noDays: n.no })),
         };
       },
     }),
@@ -134,13 +176,15 @@ export function coachTools(ctx: QueryCtx, t: Texts = defaultTexts) {
       inputSchema: z.object({ day: Day(t("tool.get_health.day")) }),
       execute: async ({ day }) => {
         const d = await dayOf(ctx, day);
-        const [mon, hub] = await Promise.all([getMonitor(d, ctx), getHealthHub(ctx)]);
+        const dated = { ...ctx, now: Math.min(ctx.now, dayStartOf(ctx, addDays(d, 1)) - 1) };
+        const [mon, hub, fit] = await Promise.all([getMonitor(d, dated), getHealthHub(dated), getFitness(dated)]);
         return {
-          day: d,
+          day: d, asOf: hub.day,
+          trainingLoad: fit.trainingLoad,
           vitals: mon.vitals.map((v) => ({ vital: v.label, unit: v.unit, ...num(v.metric, 1), status: v.status, range: v.range })),
           illness: mon.illness,
-          pulseAge: hub.healthspan.value ? { years: round(hub.healthspan.value.pulseAge, 1), vsActualAge: round(hub.healthspan.value.deltaYears, 1) } : null,
-          vo2max: hub.fitness.value ? { value: round(hub.fitness.value.vo2max, 1), category: hub.fitness.value.category } : null,
+          pulseAge: { value: hub.healthspan.value ? { years: round(hub.healthspan.value.pulseAge, 1), vsActualAge: round(hub.healthspan.value.deltaYears, 1) } : null, reason: hub.healthspan.reason, provisional: hub.healthspan.provisional },
+          vo2max: { value: hub.fitness.value ? { vo2max: round(hub.fitness.value.vo2max, 1), category: hub.fitness.value.category } : null, reason: hub.fitness.reason, provisional: hub.fitness.provisional },
           trainingLoadRatio: hub.fitness.value?.acwr ?? null,
         };
       },
@@ -154,6 +198,7 @@ export function coachTools(ctx: QueryCtx, t: Texts = defaultTexts) {
         const r = latest && (await getReport(latest.period, ctx));
         if (!r) return { report: null, reason: "no_data" };
         return {
+          period: r.period,
           start: r.start,
           end: r.end,
           partial: r.partial,
@@ -178,3 +223,5 @@ export function coachTools(ctx: QueryCtx, t: Texts = defaultTexts) {
 }
 
 export type CoachTools = ReturnType<typeof coachTools>;
+
+export type CoachOutputs = { [K in keyof CoachTools]: InferToolOutput<CoachTools[K]> };

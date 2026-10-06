@@ -20,11 +20,17 @@ export function mockModel() {
         { type: "text-end" as const, id: "t1" },
         { type: "finish" as const, finishReason: { unified: "stop" as const, raw: undefined }, usage },
       ];
+      const current = prompt.slice(prompt.findLastIndex((m) => m.role === "user"));
+      const question = JSON.stringify(current[0]?.content ?? "").toLowerCase();
+      const used = new Set(current.flatMap((m) => m.role === "tool" ? m.content.flatMap((p) => p.type === "tool-result" ? [p.toolName] : []) : []));
+      const plan = question.includes("brief") ? ["get_day", "get_sleep", "get_health", "get_activities"] : question.includes("trend") || question.includes("hrv") ? ["get_trend"] : question.includes("habit") ? ["get_journal_impacts"] : question.includes("sleep") ? ["get_sleep"] : ["get_day"];
+      const next = plan.find((name) => !used.has(name));
+      const input = next === "get_trend" ? JSON.stringify({ metric: question.includes("hrv") ? "hrv" : "recovery" }) : next === "get_activities" ? JSON.stringify({ days: 14 }) : next === "get_journal_impacts" ? JSON.stringify({ outcome: "recovery" }) : "{}";
       const call = [
-        { type: "tool-call" as const, toolCallId: `call-${prompt.length}`, toolName: "get_day", input: "{}" },
+        { type: "tool-call" as const, toolCallId: `call-${prompt.length}`, toolName: next ?? "get_day", input },
         { type: "finish" as const, finishReason: { unified: "tool-calls" as const, raw: undefined }, usage },
       ];
-      const chunks: ((typeof text)[number] | (typeof call)[number])[] = prompt.at(-1)?.role === "tool" ? text : call;
+      const chunks: ((typeof text)[number] | (typeof call)[number])[] = next ? call : text;
       return { stream: simulateReadableStream({ chunks, chunkDelayInMs: 20 }) };
     },
   });

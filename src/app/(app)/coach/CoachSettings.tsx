@@ -5,12 +5,13 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import type { ActionResult } from "@/server/actions/journal"
-import { deleteAllChatsAction, removeProviderAction, setConsentAction } from "@/server/actions/coach"
+import { deleteAllChatsAction, removeProviderAction, setConsentAction, setPreferencesAction } from "@/server/actions/coach"
 import type { ProviderOption } from "@/server/coach/options"
 import type { CoachSetup } from "@/server/coach/store"
 import { ResponsiveSheet } from "@/components/shells/ResponsiveSheet"
 import { SectionShell } from "@/components/shells/SectionShell"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ProviderForm } from "./CoachSetup"
 
@@ -20,11 +21,13 @@ const ROW = "flex min-h-13 items-center justify-between gap-3 py-2"
  * Settings › Coach: the provider and model, the key as ••••last4 only, and the controls to change or remove it,
  * turn the coach off (consent) or delete every chat.
  */
-export function CoachSettings({ setup, providers, providerLabel }: { setup: CoachSetup; providers: ProviderOption[]; providerLabel: string }) {
+export function CoachSettings({ setup, providers, providerLabel, notifications }: { setup: CoachSetup; providers: ProviderOption[]; providerLabel: string; notifications: boolean }) {
   const router = useRouter()
   const [open, setOpen] = React.useState(false)
   const [pending, start] = React.useTransition()
   const [confirm, setConfirm] = React.useState<null | "chats" | "off">(null)
+  const [notes, setNotes] = React.useState(setup.instructions ?? "")
+  const clock = (m: number | null) => (m === null ? "" : `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`)
   // A client navigation to /settings#coach (the coach's settings buttons) scrolls to the hash while the route's
   // loading skeleton is up, which has no #coach, so it lands at the top. Once this section mounts, finish the jump.
   React.useEffect(() => {
@@ -76,6 +79,46 @@ export function CoachSettings({ setup, providers, providerLabel }: { setup: Coac
                 </span>
               </div>
             )}
+            {notifications && (
+              <div className={ROW}>
+                <label htmlFor="coach-brief" className="text-[15px] leading-[22px]">
+                  Morning brief
+                  <span className="block text-[13px] leading-[18px] text-muted-foreground">A notification when your Recovery is ready; tap to read it.</span>
+                </label>
+                <span className="flex items-center gap-2">
+                  <Input
+                    id="coach-brief"
+                    type="time"
+                    className="w-28"
+                    defaultValue={clock(setup.briefMinute)}
+                    disabled={pending}
+                    onChange={(e) => {
+                      const [h, m] = e.target.value.split(":").map(Number)
+                      if (e.target.value) act(() => setPreferencesAction({ briefMinute: h * 60 + m }), "Brief time saved.")
+                    }}
+                  />
+                  {setup.briefMinute !== null && (
+                    <button type="button" disabled={pending} onClick={() => act(() => setPreferencesAction({ briefMinute: null }), "Morning brief off.")} className="relative rounded-md text-[13px] font-semibold text-foreground-secondary outline-none after:absolute after:-inset-3 hover:underline focus-visible:ring-3 focus-visible:ring-ring/50">
+                      Off
+                    </button>
+                  )}
+                </span>
+              </div>
+            )}
+            <div className="py-2">
+              <label htmlFor="coach-notes" className="text-[15px] leading-[22px]">About you</label>
+              <textarea
+                id="coach-notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                onBlur={() => notes.trim() !== (setup.instructions ?? "") && act(() => setPreferencesAction({ instructions: notes }), "Saved.")}
+                maxLength={500}
+                rows={3}
+                placeholder="Short and direct. I lift four days a week and I'm training for a half marathon."
+                className="mt-1 w-full resize-none rounded-lg border border-border bg-transparent px-3 py-2 text-[15px] leading-[22px] outline-none placeholder:text-muted-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+              />
+              <p className="text-[13px] leading-[18px] text-muted-foreground">How you’d like the coach to talk and what it should know. It never changes the coach’s safety rules.</p>
+            </div>
           </div>
           {/* Change the provider full width; clear the chats or turn the coach off side by side, like the account card. */}
           <div className="mt-4 grid grid-cols-2 gap-2">

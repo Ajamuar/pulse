@@ -218,11 +218,11 @@ test("coach: an admin turns it on, the P button opens it, set-up, a question wit
   await expect(page.getByRole("heading", { name: "What would you like to know?" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Check in for today" })).toBeVisible();
   await shot(page, "11-coach-empty");
-  await page.getByRole("button", { name: "Why is my recovery where it is today?" }).click();
+  await page.getByRole("button", { name: "Today's brief" }).click();
 
   // The tool runs and renders Pulse's own card, then the reply.
   const log = page.getByRole("log", { name: "Chat with Pulse’s coach" });
-  await expect(log.getByText("Why is my recovery where it is today?")).toBeVisible();
+  await expect(log.getByText("Today's brief")).toBeVisible();
   await expect(log.getByText("Recovery", { exact: true })).toBeVisible();
   await expect(log.getByText("Take it easy", { exact: true })).toBeVisible();
   await expect(page).toHaveURL(/\/coach\?c=[\w-]+$/);
@@ -238,22 +238,22 @@ test("coach: an admin turns it on, the P button opens it, set-up, a question wit
   await page.getByRole("link", { name: /^Chats/ }).click(); // the history icon
   await expect(page).toHaveURL(/\/coach\/chats$/);
   const chats = page.getByRole("navigation", { name: "Chats" });
-  await expect(chats.getByRole("region", { name: "Today" }).getByRole("link", { name: "Why is my recovery where it is today?" })).toBeVisible();
+  await expect(chats.getByRole("region", { name: "Today" }).getByRole("link", { name: "Today's brief" })).toBeVisible();
   await shot(page, "14-coach-chats-phone");
 
   // Delete it from its menu, with a confirmation.
-  await page.getByRole("button", { name: "Options for “Why is my recovery where it is today?”" }).click();
+  await page.getByRole("button", { name: "Options for “Today's brief”" }).click();
   await page.getByRole("menuitem", { name: "Delete chat" }).click();
   await page.getByRole("dialog").getByRole("button", { name: "Delete chat" }).click();
   await expect(page.getByText("Chat deleted.")).toBeVisible();
-  await expect(chats.getByRole("link", { name: "Why is my recovery where it is today?" })).toHaveCount(0);
+  await expect(chats.getByRole("link", { name: "Today's brief" })).toHaveCount(0);
 
   // On a laptop the chat list sits beside the conversation.
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/coach");
-  await page.getByRole("button", { name: "How did I sleep last night?" }).click();
+  await page.getByRole("button", { name: "How can I improve tonight's sleep?" }).click();
   await expect(page.getByText("Take it easy", { exact: true })).toBeVisible();
-  await expect(page.getByRole("navigation", { name: "Chats" }).getByRole("link", { name: "How did I sleep last night?" })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Chats" }).getByRole("link", { name: "How can I improve tonight's sleep?" })).toBeVisible();
   await shot(page, "15-coach-laptop");
   await page.setViewportSize({ width: 390, height: 844 });
 
