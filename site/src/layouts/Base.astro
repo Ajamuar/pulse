@@ -295,6 +295,12 @@ const nav = [
       height: 18px;
     }
   }
+  /* Phones with Android's larger text: the links grow but the bar can't, so the mark stands alone (the link keeps its name). */
+  @media (max-width: 420px) {
+    .home :global(.wm) {
+      display: none;
+    }
+  }
   /* The smallest phones: tighter links so the bar fits 320 px without a sideways scroll. */
   @media (max-width: 360px) {
     nav ul {
