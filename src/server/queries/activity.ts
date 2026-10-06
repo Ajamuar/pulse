@@ -84,7 +84,7 @@ export async function getActivity(id: string, ctx: QueryCtx): Promise<ActivityVM
     stats,
     insight: a && a.hrCount > 0 ? zoneInsight(a.zoneSeconds) : null,
     hr: hrChartOf(ctx, row, e.day, e.day === todayOf(ctx), series, recent.filter((y) => y.id === id), e.startTs - 600, e.endTs + 600),
-    zones: a ? withTypical(zoneRows(row, a.zoneSeconds), same.flatMap((x) => { const z = statOf(x)?.zoneSeconds; return z ? [z] : []; })) : none(reason),
+    zones: a ? withTypical(zoneRows(row, a.zoneSeconds, a.zoneBelowSeconds), same.flatMap((x) => { const s = statOf(x); return s ? [[...s.zoneSeconds, s.zoneBelowSeconds ?? 0]] : []; })) : none(reason),
     maxHr: row?.s1?.maxHr ?? ctx.profile.maxHr,
     zoneNote: zoneNote(row, ctx),
     hrr,
@@ -109,7 +109,7 @@ export function withTypical(m: Metric<ZoneRow[]>, prior: number[][]): Metric<Zon
   };
 }
 
-/** Seconds per zone, Zone 1 to Zone 5. */
+/** Seconds per zone, Zone 1 to Zone 5 (Zone 0 is not counted). */
 function zoneInsight(seconds: number[]): string | null {
   const min = seconds.map((s) => Math.round(s / 60));
   const hard = min[3] + min[4];

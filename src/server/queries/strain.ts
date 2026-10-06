@@ -140,10 +140,13 @@ export const zoneBounds = (lower: number[]): ZoneRow[] =>
 export const zoneNote = (row: DayRow | undefined, ctx: QueryCtx) =>
   `Zones on your heart-rate reserve: resting ${Math.round(row?.s1?.restingHr ?? 0)} to max ${row?.s1?.maxHr ?? ctx.profile.maxHr} bpm.`;
 
-export function zoneRows(row: DayRow | undefined, seconds = row?.s1?.zoneSeconds): Metric<ZoneRow[]> {
+export function zoneRows(row: DayRow | undefined, seconds = row?.s1?.zoneSeconds, below = row?.s1?.zoneBelowSeconds): Metric<ZoneRow[]> {
   const s1 = row?.s1;
   if (!s1 || s1.hrCount === 0 || !seconds) return none(hrReason(s1 ?? null));
-  return ok(zoneBounds(s1.zoneLower).map((z, i) => ({ ...z, seconds: Math.round(seconds[i]) })));
+  const rows = zoneBounds(s1.zoneLower).map((z, i) => ({ ...z, seconds: Math.round(seconds[i]) }));
+  // Zone 0: time under Zone 1, from the Zone 1 floor. Days stored before it was kept have no such row.
+  if (below != null) rows.push({ zone: 0, label: "Zone 0", min: 0, max: rows[0].min - 1, seconds: Math.round(below) });
+  return ok(rows);
 }
 
 /** Intraday HR for the day, or for [from, to) unix seconds (an activity window). */

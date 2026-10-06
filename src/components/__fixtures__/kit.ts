@@ -185,6 +185,7 @@ export const zones: ZoneRow[] = [
   { zone: 3, label: "Zone 3", min: 147, max: 159, seconds: 1360, typical: { seconds: 1500, share: 0.17 } },
   { zone: 2, label: "Zone 2", min: 134, max: 146, seconds: 2108, typical: { seconds: 2400, share: 0.25 } },
   { zone: 1, label: "Zone 1", min: 121, max: 133, seconds: 5371, typical: { seconds: 4800, share: 0.48 } },
+  { zone: 0, label: "Zone 0", min: 0, max: 120, seconds: 3600, typical: { seconds: 3000, share: 0.3 } },
 ]
 export const recoveryBreakdown: StackedSegment[] = [
   { key: "green", label: "Green (67-100%)", count: 4, color: "recovery-green" },

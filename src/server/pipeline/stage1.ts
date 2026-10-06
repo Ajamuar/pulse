@@ -131,8 +131,9 @@ function stage1Day(
   const restingHr = dailyRhr ?? sessionRhr ?? defaultRestingHR;
   // Five zones on heart-rate reserve from the day's resting HR, the same zones Strain counts.
   const zoneSet = hrZones(restingHr, maxHr);
-  const tiz = (xs: HrSample[]) => timeInZone(xs, zoneSet).seconds;
+  const tiz = (xs: HrSample[]) => timeInZone(xs, zoneSet);
 
+  const dayTiz = tiz(dayHr);
   const means = minuteMeanHr(dayHr, start, end);
   const n = means.length;
   const steps = new Array<number>(n).fill(0);
@@ -157,19 +158,22 @@ function stage1Day(
     maxHr,
     effort: strain(dayHr, maxHr, restingHr),
     zoneLower: zoneSet.zones.map((z) => round(z.lower, 1)),
-    zoneSeconds: tiz(dayHr),
+    zoneSeconds: dayTiz.seconds,
+    zoneBelowSeconds: dayTiz.belowZone1,
     dayAggregate: probe.dayAggregate,
     stillMinutes: still.filter((v) => v != null).length,
   };
   const activities: Stage1Activity[] = exs.map((e) => {
     const xs = hr.filter((s) => s.ts >= e.startTs && s.ts <= e.endTs);
+    const actTiz = tiz(xs);
     return {
       id: e.id,
       effort: strain(xs, maxHr, restingHr),
       hrCount: xs.length,
       avgHr: xs.length ? round(xs.reduce((a, s) => a + s.bpm, 0) / xs.length, 1) : null,
       maxHr: xs.length ? Math.max(...xs.map((s) => s.bpm)) : null,
-      zoneSeconds: tiz(xs),
+      zoneSeconds: actTiz.seconds,
+      zoneBelowSeconds: actTiz.belowZone1,
       hrr: hrRecovery(hr, e.startTs, e.endTs, maxHr),
     };
   });

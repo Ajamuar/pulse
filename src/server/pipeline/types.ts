@@ -23,7 +23,7 @@ import type { StrainTarget } from "@/core/algorithms/strainTarget";
  * display zones on heart-rate reserve (Strain's and WHOOP's 50/60/70/80/90%) in place of Google's four. 8: max HR
  * no longer from Google's PEAK zone (a flat 220), so zones and Strain use the person's own or Tanaka's.
  */
-export const SCORING_VERSION = 8;
+export const SCORING_VERSION = 9;
 
 export type PipelineOptions = {
   /** Whose data: every read and write is scoped to this user. */
@@ -52,6 +52,8 @@ export type Stage1Day = {
   /** Zones 1–5 on heart-rate reserve: lower bounds (bpm) and seconds. */
   zoneLower: number[];
   zoneSeconds: number[];
+  /** Seconds below Zone 1 ("Zone 0"); absent on days stored before version 9. */
+  zoneBelowSeconds?: number;
   /** Stress Monitor's resting daytime HR for the day (independent of the baseline). */
   dayAggregate: number | null;
   stillMinutes: number;
@@ -65,6 +67,7 @@ export type Stage1Activity = {
   avgHr: number | null;
   maxHr: number | null;
   zoneSeconds: number[];
+  zoneBelowSeconds?: number;
   hrr: HrRecoveryResult | null;
 };
 
