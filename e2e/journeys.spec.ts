@@ -160,20 +160,21 @@ test("9. More hub: Trends and a metric switch, a custom behaviour in the check-i
   await page.goto("/");
   await page.getByRole("navigation", { name: "Primary" }).filter({ visible: true }).first().getByRole("link", { name: "More" }).click();
   await expect(page).toHaveURL(url("/more"));
-  // Phones reach Settings from More's account row; the sidebar carries it from 768 px.
-  if (info.project.name === "390") await expect(page.getByRole("link", { name: /Settings$/ })).toBeVisible();
+  // Below 1280 px More lists the parts of Settings (Account & settings); the sidebar carries it from there.
+  if (info.project.name === "390") await expect(page.getByRole("link", { name: /^Account/ })).toHaveAttribute("href", "/settings#account");
 
   await page.getByRole("link", { name: /^Trends/ }).click();
   await expect(page).toHaveURL(url("/trends"));
   await expect(page.getByRole("heading", { level: 2, name: "Recovery" })).toBeVisible();
-  // The picker is grouped (137f7c6): a section first, then the metric in it.
-  await page.getByRole("navigation", { name: "Metric section" }).getByRole("link", { name: "Vitals" }).click();
-  await page.getByRole("navigation", { name: "Vitals metric" }).getByRole("link", { name: "Heart rate variability" }).click();
+  // One picker row: a bottom sheet (sections as an accordion) on a phone, a popover of every section from 768 px.
+  await page.getByRole("button", { name: /Recovery & sleep/ }).click();
+  if (info.project.name === "390") await page.getByRole("button", { name: /^Vitals/ }).click();
+  await page.getByRole("link", { name: "Heart rate variability" }).click();
   await expect(page).toHaveURL(url("/trends?metric=hrv"));
   await expect(page.getByRole("heading", { level: 2, name: "Heart rate variability" })).toBeVisible();
   await page.getByRole("radio", { name: "1 year" }).click();
   await expect(page).toHaveURL(/\/trends\?metric=hrv&r=1y$/);
-  await expect(page.getByRole("navigation", { name: "Vitals metric" }).getByRole("link", { name: "Heart rate variability" })).toHaveAttribute("aria-current", "page");
+  await expect(page.getByRole("button", { name: /Vitals/ })).toContainText("Heart rate variability");
 
   const name = `Plunge ${info.project.name} ${Date.now() % 1e6}`;
   await page.goto("/more");
