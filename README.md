@@ -29,7 +29,7 @@ The database is created and migrated on boot, and the sync worker starts once (`
 
 Every variable is listed and explained in [`.env.example`](.env.example). It is validated at startup, and the server exits on invalid config.
 
-- `DATA_SOURCE=google` switches to real data from the Google Health API. It needs `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` and `BETTER_AUTH_SECRET`. People sign up with a name, username, email and password (better-auth), sign in with the username or the email, and connect their own Google account from inside Pulse. Sign-up is invite-only by default: set `ADMIN_EMAILS` to your email, create your account, then invite people from the admin dashboard at `/admin` ([setup guide](docs/setup.md#accounts-admins-and-invites)).
+- `DATA_SOURCE=google` switches to real data from the Google Health API. It needs `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` and `BETTER_AUTH_SECRET`. People sign up with a name, username, email and password (better-auth), sign in with the username or the email, and connect their own Google account from inside Pulse. Sign-up is invite-only by default: set `ADMIN_EMAILS` to your email, create your account, then invite people from the admin dashboard at `/admin` ([admin guide](docs/adm_interactions.md#invite-people)).
 - The first sign-in asks for your birth date and sex (onboarding). Settings › Profile edits them.
 
 ## Install as an app
@@ -40,7 +40,7 @@ PWABuilder. Notifications, the offline page, launch screens and how to rebrand t
 
 ## Deploy
 
-Pulse runs as one Docker container with its database in a volume, behind a tunnel or HTTPS reverse proxy. The [setup guide](docs/setup.md) covers Google Cloud, Docker, HTTPS, backups and troubleshooting.
+Pulse runs as one Docker container with its database in a volume, behind a tunnel or HTTPS reverse proxy. The [setup guide](docs/setup.md) covers Google Cloud, Docker, HTTPS over Tailscale and troubleshooting; [other setups](docs/alt_setups.md) covers Cloudflare Tunnel and reverse proxies; the [admin guide](docs/adm_interactions.md) covers invites, the coach, updates and backups.
 
 ## Commands
 
