@@ -10,7 +10,7 @@
 // Why not render the kit components in Astro: Recharts 3 draws nothing on the server (its charts register their parts
 // in effects and measure their box), so every dial and chart came out empty. The browser is the one renderer that
 // lays them out exactly as the app does.
-import { mkdirSync, writeFileSync } from "node:fs"
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import sharp from "sharp"
 import { chromium, DEVICES, SCREENS, demoSession, openScreen, undemo, APP, COACH_APP, coachSession } from "./app.mjs"
@@ -301,14 +301,18 @@ const topColor = async (page) => {
 const all = new Map() // every kept CSS rule, by its place in the app's stylesheets
 const save = async (page, name, shot, top) => {
   if (top) shot.html = shot.html.replace('style="--kit-w:', `style="--kit-top:${top};--kit-w:`)
+  await collect(page)
+  writeFileSync(out(`screens/${name}.html`), shot.html)
+  console.log(`wrote src/kit/screens/${name}.html (${shot.width} x ${shot.height}, ${Math.round(shot.html.length / 1024)} KB)`)
+}
+// Keeps every CSS rule the page's document uses, merged with those of the screens before it.
+const collect = async (page) => {
   for (const r of await page.evaluate(rules)) {
     const key = r.raw ?? r.pos.join("/")
     const prev = all.get(key)
     if (prev && r.sels) prev.sels = [...new Set([...prev.sels, ...r.sels])]
     else if (!prev) all.set(key, { ...r })
   }
-  writeFileSync(out(`screens/${name}.html`), shot.html)
-  console.log(`wrote src/kit/screens/${name}.html (${shot.width} x ${shot.height}, ${Math.round(shot.html.length / 1024)} KB)`)
 }
 
 const token = await demoSession()
@@ -365,6 +369,16 @@ if (COACH_APP) {
     await save(page, name, await page.evaluate(snapshot, { id: name, height: opts.viewport.height, phone: kind === "phone" }), top)
     await ctx.close()
   }
+} else {
+  // Without a coach app the committed coach screens stay, and still need their rules: each is laid into an app page,
+  // whose stylesheets are the same, and the rules it uses are kept.
+  const page = await browser.newPage()
+  await page.goto(`${APP}/login`, { waitUntil: "networkidle" })
+  for (const kind of Object.keys(DEVICES)) {
+    await page.evaluate((html) => (document.body.innerHTML = html), readFileSync(out(`screens/${kind}-coach.html`), "utf8"))
+    await collect(page)
+    console.log(`kept src/kit/screens/${kind}-coach.html`)
+  }
 }
 await browser.close()
 
@@ -381,11 +395,17 @@ const list = [...all.values()].sort((a, b) => cmp(a.pos, b.pos))
 let css = ""
 let open = []
 const head = []
+// The coach app serves the same stylesheet from another address, so its rules come again after all of the demo
+// app's. A repeat would win over the first copy's later rules (`.flex` over `xl:grid`): only the first one is kept.
+const seen = new Set()
 for (const r of list) {
   if (r.raw && r.path.length === 0 && !r.raw.startsWith("@layer")) {
     head.push(r.raw)
     continue
   }
+  const id = `${r.path.join("\n")}\n${r.raw ?? `${r.sels.join(",")}{${r.body}${r.nested}}`}`
+  if (seen.has(id)) continue
+  seen.add(id)
   const path = r.path.map(atRule)
   let same = 0
   while (same < open.length && same < path.length && open[same] === path[same]) same++

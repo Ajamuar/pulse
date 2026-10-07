@@ -67,11 +67,10 @@ export const HIDE = `window.hideWhere = (test) => {
 }`
 
 // Runs in the page. Every phone screen keeps the full screen height (so the site's phones are one size), and its
-// content ends on a row or card boundary rather than mid-row: the lowest y above the floating tab bar that no row,
-// chip, line of text or icon crosses. Containers taller than a few rows (a card of rows) may be cut between their
-// rows. Everything below the cut is hidden, so the content ends on a gap of background (or of the card being cut).
-// A card's bottom edge may slip a little under the floating tab bar, as it does in the app, but no line of text or
-// icon shows through its glass.
+// content ends on a row or card boundary rather than mid-row: the lowest y on the screen that no row, chip, line of
+// text or icon crosses. Containers taller than a few rows (a card of rows) may be cut between their rows. Everything
+// below the cut is hidden, so the content ends on a gap of background (or of the card being cut). Content runs on
+// under the floating tab bar's glass, as it does in the app, so the screen never ends on an empty band above it.
 export function cleanCut({ maxH, minH }) {
   // A sheet (the dashboard editor) fills the screen and ends on its own buttons.
   if (document.querySelector("[role=dialog]")) return maxH
@@ -82,7 +81,6 @@ export function cleanCut({ maxH, minH }) {
   const inset = maxH - bar // space the bottom bar takes, 0 without one
   const boxes = [] // what a cut must not cross
   const ends = new Set() // where a cut may fall: the bottom of any row, card or line
-  const marks = [] // bottoms of text lines and icons, which never go under the bar
   const solid = (c) => !/rgba\(0, 0, 0, 0\)|transparent/.test(c.backgroundColor) || c.backgroundImage !== "none" || c.boxShadow !== "none" || parseFloat(c.borderTopWidth) + parseFloat(c.borderBottomWidth) > 0
   for (const e of document.querySelectorAll("main *")) {
     const c = getComputedStyle(e)
@@ -91,20 +89,20 @@ export function cleanCut({ maxH, minH }) {
     if (!r.height || !r.width) continue
     const ink = /^(svg|img|canvas|video|input|button)$/i.test(e.tagName)
     if (ink || solid(c)) ends.add(Math.ceil(r.bottom))
-    if (ink) marks.push(r.bottom)
     // A row: a short box with a background or divider, or a short group of several parts (label, bar, caption).
     if (ink || (r.height <= ROW && (solid(c) || e.children.length > 1))) boxes.push([r.top, r.bottom])
     for (const n of e.childNodes) {
       if (n.nodeType !== 3 || !n.textContent.trim()) continue
       const range = document.createRange()
       range.selectNodeContents(n)
-      for (const t of range.getClientRects()) boxes.push([t.top, t.bottom]), ends.add(Math.ceil(t.bottom)), marks.push(t.bottom)
+      for (const t of range.getClientRects()) boxes.push([t.top, t.bottom]), ends.add(Math.ceil(t.bottom))
     }
   }
-  const crosses = (y) => boxes.some(([t, b]) => t < y - 0.5 && b > y + 0.5)
-  // With a bar: up to 16 under its top edge, with every line and icon above it. Without: a gap of plain background
-  // that clears the screen's rounded corners.
-  const fits = (y) => (inset ? y <= bar + 16 && !marks.some((b) => b > bar && b < y + 0.5) : y + 28 <= maxH)
+  // A row that runs off the bottom of the screen may be cut under a bar: it scrolls on under the glass in the app.
+  const crosses = (y) => boxes.some(([t, b]) => t < y - 0.5 && b > y + 0.5 && !(inset && b > maxH))
+  // With a bar: anywhere on the screen, under the bar's glass. Without: a gap of plain background that clears the
+  // screen's rounded corners.
+  const fits = (y) => (inset ? y <= maxH : y + 28 <= maxH)
   const cut = [...ends].sort((a, b) => b - a).find((y) => y >= minH && fits(y) && !crosses(y))
   if (!cut) throw new Error(`No clean cut on ${location.pathname}`)
   hideWhere((r) => r.top >= cut)
