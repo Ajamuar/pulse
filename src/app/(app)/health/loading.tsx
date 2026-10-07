@@ -33,7 +33,7 @@ export default function Loading() {
             </div>
           </div>
         </SectionShell>
-        <SectionShell variant="card" level={2} title="Health Monitor" href="/health/monitor">
+        <SectionShell variant="card" level={2} title="Health Monitor" info={false} href="/health/monitor">
           <div aria-hidden className="space-y-4">
             <ul className="grid grid-cols-5 divide-x divide-border">
               {Array.from({ length: 5 }, (_, i) => (
@@ -50,7 +50,7 @@ export default function Loading() {
             </div>
           </div>
         </SectionShell>
-        <SectionShell variant="card" level={2} title="Stress Monitor" href="/health/stress">
+        <SectionShell variant="card" level={2} title="Stress Monitor" info={false} href="/health/stress">
           <div aria-hidden className="grid grid-cols-[auto_minmax(0,1fr)] items-end gap-4">
             <div className="space-y-2">
               <p className={LABEL}>Today’s high stress</p>

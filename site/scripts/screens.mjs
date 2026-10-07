@@ -349,7 +349,7 @@ if (COACH_APP) {
     // The answer streams in (and is mirrored to a live region for screen readers, so wait on the text, not a node).
     // A freshly started dev server can drop the first answer, so ask again from a new chat, up to three times.
     for (let i = 0; ; i++) {
-      await page.getByRole("button", { name: "Today's brief" }).click() // the chip, not a chat in the list
+      await page.getByRole("button", { name: "Today's brief", exact: true }).click()
       const ok = await page.waitForFunction(() => document.body.innerText.includes("usual bedtime"), null, { timeout: 15000 }).then(() => true, () => false)
       if (ok) break
       if (i === 2) throw new Error("The coach never answered")

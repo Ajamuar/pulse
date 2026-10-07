@@ -1,13 +1,10 @@
-// Comparison and question pages under /compare/<slug>/. Facts about other products are dated and sourced
-// (see docs/research/landing-and-seo.md), name them in plain text only, and say where they are the better pick.
-// Re-check every claim about another product on each content update and bump `checked`.
+// Re-check third-party claims on each content update and update `checked`.
 import type { Faq, Source } from "./metrics"
 
 export type Table = { head: string[]; rows: string[][]; caption: string }
 export type Section = { h: string; p?: string[]; list?: string[]; table?: Table }
 export type Comparison = {
   slug: string
-  /** Short label for links and the footer. */
   nav: string
   title: string
   h1: string
@@ -69,7 +66,7 @@ export const COMPARISONS: Comparison[] = [
         h: "How Pulse gets the data",
         p: [
           "The band syncs to the Google Health app as usual. Pulse reads it from there through the Google Health API, with an OAuth client you create in your own Google Cloud project, and stores it in Postgres on your server. Your Google Health data is not copied anywhere else.",
-          "Google caps an unverified OAuth app at 100 users, so a shared hosted version is not practical. One instance serves one person, which is also the privacy model.",
+          "Google caps an unverified OAuth app at 100 users, so a shared hosted version is not practical. Each account’s queries and stored health records are scoped to that user.",
         ],
       },
       {

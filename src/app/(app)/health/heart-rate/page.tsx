@@ -19,12 +19,11 @@ const INFO = {
   ),
 }
 
-/** Heart rate `/health/heart-rate?d=`: the latest reading (live on today), the day's minutes and time in zones. */
 export default async function HeartRatePage({ searchParams }: PageProps<"/health/heart-rate">) {
   const { d, today, ctx } = await pageDay(searchParams as SearchParams, "/health/heart-rate")
   const vm = await getHeartRate(d, ctx)
   return (
-    // Keyed by day: the live view seeds its state from vm once, so switching days must remount it, not keep the old day.
+    // Remount on date changes because the live view seeds its state only once.
     <LiveHeartRate key={d} vm={vm}>
       <DetailShell
         title="Heart rate"
@@ -32,7 +31,7 @@ export default async function HeartRatePage({ searchParams }: PageProps<"/health
         info={INFO}
         hero={<HeartRateHero />}
         primary={
-          <SectionShell variant="card" level={2} title={vm.isToday ? "Today" : dayLabel(d, today)}>
+          <SectionShell variant="card" level={2} title={vm.isToday ? "Today" : dayLabel(d, today)} info={{ title: "Daily heart rate", body: "Heartbeats per minute across the selected day. Gaps mean no heart rate reading was available." }}>
             <HeartRateChart />
           </SectionShell>
         }

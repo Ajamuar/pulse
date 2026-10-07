@@ -46,7 +46,6 @@ export const VITAL_LABEL: Record<VitalKey, string> = {
   skinTempDev: "Skin temperature",
 };
 
-/** Home `/` for `day` (spec §7.1). */
 export async function getHome(day: string, ctx: QueryCtx): Promise<HomeVM> {
   const today = todayOf(ctx);
   const isToday = day === today;
@@ -102,20 +101,18 @@ export async function getHome(day: string, ctx: QueryCtx): Promise<HomeVM> {
       const r = rows.get(d);
       const e = r?.s1?.effort;
       const rec = r?.recovery?.value;
-      // Today has no Strain score until effort accrues: a 0.0 would plot as a dive to the floor, so it is a gap (SYM4).
+      // A day without accrued effort is a gap; zero would show a misleading drop in Strain.
       const scored = finite(e) && (d !== today || e > 0);
       return { day: d, strain: scored ? toStrain(e) : null, recovery: finite(rec) ? rec : null };
     }),
   };
 }
 
-/** the reference app's banners switch from outlook to review at 17:00 (inferred, spec §12 I15). */
 export const REVIEW_FROM_MIN = 17 * 60;
 const f1 = (x: number) => x.toFixed(1);
 
 type DayScores = { recovery: Metric<number>; strain: Metric<number>; target: [number, number] | null };
 
-/** "Your daily outlook" / "Your day in review": a templated summary of the day's stored scores (spec §7.1 7a). */
 export function outlookOf(ctx: QueryCtx, row: DayRow | undefined, s: DayScores, isToday: boolean): HomeVM["outlook"] {
   const review = !isToday || localMinutes(ctx.now, ctx.timeZone) >= REVIEW_FROM_MIN;
   const rec = s.recovery.value;
@@ -140,7 +137,6 @@ export function outlookOf(ctx: QueryCtx, row: DayRow | undefined, s: DayScores, 
 
 const RECOVERY_TITLE = { green: "Ready for strain", yellow: "A steady day", red: "Time to recover" } as const;
 
-/** Today's coach cards from the same templates the detail screens use (Strain Coach, Recovery, Sleep). */
 function insightsOf(ctx: QueryCtx, rows: Map<string, DayRow>, row: DayRow | undefined, day: string, s: Pick<DayScores, "strain" | "target">): HomeVM["insights"] {
   const out: HomeVM["insights"] = [];
   const target = s.target ? { low: s.target[0], high: s.target[1] } : null;
@@ -222,7 +218,6 @@ export function energyBankVM(ctx: QueryCtx, row: DayRow | undefined, day: string
 const hasBand = async (db: Db, userId: number) =>
   (await db.select({ b: hrDays.bucket }).from(hrDays).where(eq(hrDays.userId, userId)).limit(1)).length > 0;
 
-/** My Dashboard's default list: the v1 rows, or the phone metrics for an account that has never synced heart rate (§11 CD2). */
 export const dashboardDefault = async (db: Db, userId: number): Promise<DashboardKey[]> => ((await hasBand(db, userId)) ? DASHBOARD_DEFAULT : PHONE_DEFAULT);
 
 /** My Dashboard's chosen metrics in order. Keys no longer in the catalogue are skipped; none chosen means the default list. */
@@ -243,7 +238,6 @@ const spec = (
   format?: KeyStat["format"],
 ): StatSpec => ({ pick, metric, ...(unit && { unit }), direction, ...(href && { href }), ...(format && { format }) });
 
-/** Each dashboard metric on `row`'s day: its value path (for averages), the metric with its reason, unit and link. */
 function statSpecs(row: DayRow | undefined, isToday: boolean): Record<DashboardKey, StatSpec> {
   const m = row?.metrics;
   const rhr = (r: DayRow) => r.metrics?.rhrBpm ?? r.sessionRhr ?? null;
@@ -251,16 +245,15 @@ function statSpecs(row: DayRow | undefined, isToday: boolean): Record<DashboardK
   const skinReason = m?.nightlyTempC != null ? "calibrating" : vitalReason(row, isToday);
   const dailyReason = !row?.s1 || row.s1.hrCount === 0 ? hrReason(row?.s1 ?? null) : "no_data";
   const out = {
-    hrv: spec((r) => r.metrics?.hrvMs, maybe(m?.hrvMs, vitalReason(row, isToday, true)), "ms", "up", "/recovery"),
-    rhr: spec(rhr, maybe(row && rhr(row), vitalReason(row, isToday)), "bpm", "down", "/recovery"),
-    resp: spec((r) => r.metrics?.respBpm, maybe(m?.respBpm, vitalReason(row, isToday)), "rpm", "neutral", "/health/monitor"),
+    hrv: spec((r) => r.metrics?.hrvMs, maybe(m?.hrvMs, vitalReason(row, isToday, true)), "ms", "up", metricHref("hrv")),
+    rhr: spec(rhr, maybe(row && rhr(row), vitalReason(row, isToday)), "bpm", "down", metricHref("rhr")),
+    resp: spec((r) => r.metrics?.respBpm, maybe(m?.respBpm, vitalReason(row, isToday)), "rpm", "neutral", metricHref("resp")),
     sleep: spec((r) => r.sleep?.performance, sleepMetric(row, isToday), "%", "up", "/sleep"),
     calories: spec((r) => r.metrics?.calories, maybe(m?.calories, dailyReason), "kcal", "neutral", metricHref("calories")),
     steps: spec((r) => r.metrics?.steps, maybe(m?.steps, dailyReason), undefined, "up", metricHref("steps")),
-    spo2: spec((r) => r.metrics?.spo2Pct, maybe(m?.spo2Pct, vitalReason(row, isToday)), "%", "up", "/health/monitor"),
-    skin: spec(skin, maybe(row && skin(row), skinReason), "°C", "toward_zero", "/health/monitor"),
+    spo2: spec((r) => r.metrics?.spo2Pct, maybe(m?.spo2Pct, vitalReason(row, isToday)), "%", "up", metricHref("spo2")),
+    skin: spec(skin, maybe(row && skin(row), skinReason), "°C", "toward_zero", metricHref("skin")),
   } as Record<DashboardKey, StatSpec>;
-  // Shown-only readings: missing simply means Google had none for the day.
   for (const b of BODY_METRICS) {
     const pick = (r: DayRow) => (b.key === "weight" ? r.metrics?.weightKg : r.metrics?.bodyFatPct);
     out[b.key] = spec(pick, maybe(row && pick(row), "no_data"), b.unit, b.direction, b.href, b.format);
@@ -270,7 +263,6 @@ function statSpecs(row: DayRow | undefined, isToday: boolean): Record<DashboardK
   return out;
 }
 
-/** The dashboard rows for `keys`, in that order, each against its mean over the 30 days before `day`. */
 export function keyStats(rows: Map<string, DayRow>, day: string, isToday: boolean, keys: DashboardKey[]): KeyStat[] {
   const specs = statSpecs(rows.get(day), isToday);
   return keys.map((key) => {
@@ -287,10 +279,7 @@ function emptyKeys(rows: Map<string, DayRow>, day: string, isToday: boolean): Da
   return DASHBOARD_METRICS.map((m) => m.key).filter((key) => !days.some((r) => finite(specs[key].pick(r))));
 }
 
-/**
- * The band recorded no heart rate on `day` but the phone counted something: Home leads with those numbers (§11 CD2).
- * Null when the band was worn, or when the phone recorded nothing either.
- */
+/** Phone-only activity leads Home when no band heart rate was recorded. */
 function phoneDay(rows: Map<string, DayRow>, day: string, isToday: boolean): KeyStat[] | null {
   const row = rows.get(day);
   if (!row || (row.s1 && row.s1.hrCount > 0)) return null;
@@ -300,7 +289,6 @@ function phoneDay(rows: Map<string, DayRow>, day: string, isToday: boolean): Key
   return stats.length ? stats : null;
 }
 
-/** The latest complete week or month with a report. */
 export async function latestReport(ctx: QueryCtx, kind: "week" | "month") {
   const pattern = kind === "week" ? "____-W__" : "____-__";
   const rows = await ctx.db

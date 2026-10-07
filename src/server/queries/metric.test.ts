@@ -1,4 +1,3 @@
-// Metric detail screens `/metric/[key]` (spec §11 MD1).
 import { beforeAll, describe, expect, it } from "vitest";
 import { and, eq } from "drizzle-orm";
 import { type Db, row, sql } from "../db";
@@ -8,13 +7,13 @@ import { localMidnight } from "../time";
 import { copyDb, ctxFor, dayAt, seeded, TZ, USER } from "../testing";
 
 import { DETAIL_KEYS, getMetricDetail, rangeStats, STEP_TARGET, WEEKLY_TARGET, type Section } from "./metric";
+import { getHome } from "./home";
 
 let db: Db;
 beforeAll(async () => {
   db = await seeded();
 });
 
-/** daily_values upsert for the test user. */
 const putValue = (c: Db, day: string, key: string, value: number) =>
   c.insert(dailyValues).values({ userId: USER, day, key, value }).onConflictDoUpdate({ target: [dailyValues.userId, dailyValues.day, dailyValues.key], set: { value } });
 const metricOn = async (c: Db, day: string) =>
@@ -24,7 +23,6 @@ const TODAY = dayAt(179);
 const PAST = dayAt(170);
 const section = <K extends Section["kind"]>(s: Section[], kind: K) => s.find((x) => x.kind === kind) as Extract<Section, { kind: K }> | undefined;
 
-/** No NaN or ±Infinity anywhere in a view model. */
 function finiteEverywhere(v: unknown, path = "vm"): void {
   if (typeof v === "number") expect(Number.isFinite(v), path).toBe(true);
   else if (v && typeof v === "object") for (const [k, x] of Object.entries(v)) finiteEverywhere(x, `${path}.${k}`);
@@ -36,10 +34,34 @@ describe("getMetricDetail", () => {
       for (const day of [TODAY, PAST]) {
         const vm = await getMetricDetail(key, day, ctxFor(db));
         finiteEverywhere(vm, `${key}@${day}`);
-        if (vm.value.value === null) expect(vm.value.reason).toBe("no_data");
+        if (vm.value.value === null) expect(vm.value.reason).toBeTruthy();
         if (vm.history.value === null) expect(vm.history.reason).toBe("no_data");
         else expect(vm.history.value).toHaveLength(365);
       }
+  });
+
+  it("nightly vital pages match dashboard values and open the selected metric", async () => {
+    const home = await getHome(PAST, ctxFor(db));
+    for (const key of ["hrv", "rhr", "resp", "spo2", "skin"] as const) {
+      const detail = await getMetricDetail(key, PAST, ctxFor(db));
+      const dashboard = home.keyStats.find((s) => s.key === key)!;
+      expect(dashboard.href).toBe(`/metric/${key}`);
+      expect(detail.label).toBe(dashboard.label);
+      expect(detail.value).toEqual(dashboard.metric);
+      expect(detail.total).toBe(false);
+      expect(detail.history.value?.at(-1)?.day).toBe(PAST);
+      expect(detail.history.value?.at(-1)?.value).toBe(detail.value.value);
+    }
+  });
+
+  it("missing nightly vitals keep sync reasons without borrowing another user's reading", async () => {
+    const ctx = ctxFor(db, undefined, 99999);
+    for (const key of ["hrv", "rhr", "resp", "spo2", "skin"] as const) {
+      const detail = await getMetricDetail(key, TODAY, ctx);
+      expect(detail.value).toMatchObject({ value: null, reason: "awaiting_sleep_sync" });
+      expect(detail.history).toMatchObject({ value: null, reason: "no_data" });
+      expect(detail.valueDay).toBeNull();
+    }
   });
 
   it("steps: the day's value against its prior 30 days, today a gap in history, hours summing the stored steps", async () => {

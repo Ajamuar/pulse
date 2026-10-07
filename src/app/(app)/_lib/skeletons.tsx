@@ -91,10 +91,10 @@ export function HomeSkeleton({ stats = DASHBOARD_DEFAULT }: { stats?: DashboardK
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3 xl:col-start-2 xl:row-start-1 xl:grid-cols-1 xl:gap-4">
-                <SectionShell variant="card" title="Health Monitor" href="/health/monitor" level={2}>
+                <SectionShell variant="card" title="Health Monitor" info={false} href="/health/monitor" level={2}>
                   <MonitorLineSkeleton />
                 </SectionShell>
-                <SectionShell variant="card" title="Stress Monitor" href="/health/stress" level={2}>
+                <SectionShell variant="card" title="Stress Monitor" info={false} href="/health/stress" level={2}>
                   <MonitorLineSkeleton />
                 </SectionShell>
               </div>

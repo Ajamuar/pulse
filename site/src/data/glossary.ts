@@ -1,4 +1,3 @@
-// The glossary at /glossary/. `metric` links a term to its metric page by the app slug (see metrics.ts).
 export type Term = { term: string; id: string; definition: string; metric?: string }
 
 export const GLOSSARY: Term[] = [
@@ -17,7 +16,7 @@ export const GLOSSARY: Term[] = [
   { term: "Provisional", id: "provisional", definition: "Pulse's label for a score computed before it has enough of your history to be reliable. Pulse shows no number at all when it has too little data, rather than a guess." },
   { term: "Pulse Age", id: "pulse-age", metric: "pulse-age", definition: "An estimate of how old your body behaves, from nine habits and vitals compared with a fit person of your age and sex. Built on population studies, not a clinical test." },
   { term: "Recovery", id: "recovery", metric: "recovery", definition: "A 0-100% score each morning of how ready your body is for strain, from HRV, resting heart rate, sleep, respiratory rate and skin temperature against your baselines." },
-  { term: "Resting heart rate", id: "resting-heart-rate", metric: "resting-heart-rate", definition: "Your heart rate at rest. Pulse takes the lowest 5-minute average during your main sleep." },
+  { term: "Resting heart rate", id: "resting-heart-rate", metric: "resting-heart-rate", definition: "Your heart rate at rest. Pulse uses Google’s daily resting heart rate, with the lowest 5-minute sleep average as a fallback when Google has none." },
   { term: "Restorative sleep", id: "restorative-sleep", metric: "sleep", definition: "Deep and REM sleep as a share of time asleep. Wrist devices estimate sleep stages only moderately well, so Pulse gives it a modest weight." },
   { term: "RMSSD", id: "rmssd", metric: "hrv", definition: "Root mean square of successive differences between heartbeats: the standard short-term HRV measure, and the one Google Health reports nightly." },
   { term: "Self-hosting", id: "self-hosting", definition: "Running software on a computer you control instead of a company's servers. Pulse runs as two Docker containers, the app and its Postgres database, and your data stays in that database on your machine." },

@@ -1,4 +1,3 @@
-// schema.org JSON-LD builders. Base.astro wraps a page's list in one @graph.
 import type { Faq } from "../data/metrics"
 import { LICENSE_URL, REPO, SITE_NAME } from "../config"
 
@@ -6,7 +5,6 @@ const strip = (html: string) => html.replace(/<[^>]+>/g, "")
 const abs = (path: string, site: URL) => new URL(path, site).href
 const org = (site: URL) => ({ "@id": abs("/#org", site) })
 
-/** On every page (Base.astro): the publisher and the site, which the other types refer to by @id. */
 export function siteGraph(site: URL) {
   return [
     { "@type": "Organization", "@id": abs("/#org", site), name: SITE_NAME, url: abs("/", site), sameAs: [REPO] },
@@ -61,5 +59,21 @@ export function article(site: URL, o: { type: "TechArticle" | "Article"; path: s
     publisher: org(site),
     about: { "@id": abs("/#app", site) },
     image: abs("/og.png", site),
+  }
+}
+
+export function collectionPage(site: URL, path: string, name: string, description: string, items: { name: string; path: string }[]) {
+  return {
+    "@type": "CollectionPage",
+    "@id": abs(`${path}#collection`, site),
+    url: abs(path, site),
+    name,
+    description,
+    isPartOf: { "@id": abs("/#website", site) },
+    mainEntity: {
+      "@type": "ItemList",
+      numberOfItems: items.length,
+      itemListElement: items.map((item, i) => ({ "@type": "ListItem", position: i + 1, name: item.name, url: abs(item.path, site) })),
+    },
   }
 }

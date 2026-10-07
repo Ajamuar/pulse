@@ -1,4 +1,3 @@
-// The per-metric sections of `/metric/[key]` (spec §11 MD1), one component per Section kind of the view model.
 import { clock, DAY, durationWords, formatDay, formatValue, hmm } from "@/lib/format"
 import { activityHref } from "@/lib/url"
 import type { Metric } from "@/lib/reasons"
@@ -10,7 +9,6 @@ import { SectionShell } from "@/components/shells/SectionShell"
 import type { MetricDetailVM, Section } from "@/server/queries/metric"
 import { CAPTION, LABEL, LEGEND, statProps } from "../../_lib/view"
 
-/** History beside its range stats from 1280 px, as on Trends. */
 export const METRIC_GRID = "grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] xl:items-start xl:gap-4"
 
 type Ctx = { vm: MetricDetailVM; timeZone: string; className?: string }
@@ -24,7 +22,7 @@ export function MetricSection({ s, ...c }: Ctx & { s: Section }) {
       return <Hourly s={s} {...c} />
     case "goal":
       return (
-        <SectionShell variant="card" level={2} title={`${formatValue("grouped", s.target)}-step days`} className={c.className}>
+        <SectionShell variant="card" level={2} title={`${formatValue("grouped", s.target)}-step days`} info={{ title: "Days reaching the step reference", body: "Recorded days that reached the displayed step reference. Missing data does not count as a completed day." }} className={c.className}>
           {rows(
             <>
               <KeyStatRow variant="row" label="Current streak" metric={ok(s.streak)} unit={s.streak === 1 ? "day" : "days"} format="int" direction="none" />

@@ -1,4 +1,4 @@
-# Cloudflare Pages response headers (copied to dist/ by the build). See docs/plans/2026-10-03-003-landing-and-programmatic-seo.md.
+# Cloudflare Pages applies these headers to static files; Astro endpoint headers only apply during development.
 
 # Hashed by Astro (CSS, JS, images, fonts): the file name changes with the content, so cache for a year.
 /_astro/*
@@ -16,8 +16,7 @@
   X-Frame-Options: DENY
   Permissions-Policy: camera=(), microphone=(), geolocation=()
 
-# Search robots: every page is meant to be indexed (the meta robots tag says the same). Listed by path so the rule
-# covers the HTML only, and so the 404 page, served for unknown URLs, is never indexed.
+# Markdown alternatives stay crawlable for agents without duplicating the HTML pages in search results.
 /
   X-Robots-Tag: index, follow, max-image-preview:large
 /metrics/*
@@ -28,3 +27,11 @@
   X-Robots-Tag: index, follow, max-image-preview:large
 /404.html
   X-Robots-Tag: noindex
+
+/*.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex, follow
+  Link: </llms.txt>; rel="describedby"
+/llms.txt
+  Content-Type: text/plain; charset=utf-8
+  X-Robots-Tag: noindex, follow

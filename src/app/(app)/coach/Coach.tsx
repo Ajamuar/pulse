@@ -30,7 +30,6 @@ const SUGGESTION_ICONS: Record<CoachSuggestion["key"], LucideIcon> = {
   brief: Activity, recovery: Activity, training: Dumbbell, hrv: Activity, sleep: Moon, strain: Dumbbell, sync: Moon,
 }
 
-/** One line while a tool runs, in the voice of the screen it reads. */
 const RUNNING: Record<string, string> = {
   get_day: "Looking at your day…",
   get_sleep: "Reading your sleep and bedtime plan…",
@@ -54,10 +53,6 @@ const REASON: Record<string, string> = {
 
 const MAX: Record<MiniRingVariant, number> = { recovery: 100, sleep: 100, strain: 21 }
 
-/**
- * One score as a tile: the label, the value in its band's colour (or the reason there is none), and a bar filled to
- * where the value sits on its scale. Same data language as Home, at a size that reads beside text.
- */
 function Stat({ variant, label, m, unit }: { variant: MiniRingVariant; label: string; m: Num; unit?: string }) {
   const color = m.value === null ? null : DATA_COLORS[dialColor(variant, m.value)]
   return (
@@ -73,7 +68,6 @@ function Stat({ variant, label, m, unit }: { variant: MiniRingVariant; label: st
   )
 }
 
-/** get_day's result as Pulse's own numbers, so the answer can point at them: three scores, then what moved Recovery. */
 function DayCard({ d }: { d: DayDigest }) {
   const movers = d.recovery.contributors.filter((c) => c.points !== null && Math.abs(c.points) >= 1).sort((a, b) => Math.abs(b.points!) - Math.abs(a.points!)).slice(0, 3)
   return (
@@ -132,12 +126,11 @@ const plain = (m: UIMessage) =>
     .join("\n\n")
     .trim()
 
-/** A message action (Copy, Regenerate, Edit): a quiet 36 px icon button, 40 px on touch screens. */
 const ACTION = "relative text-muted-foreground hover:text-foreground pointer-coarse:size-10"
 /** Shown on hover or focus of its message with a mouse; always on touch screens, which have no hover. */
 const REVEAL = "transition-[opacity,background-color,color] pointer-fine:opacity-0 pointer-fine:group-hover/msg:opacity-100 pointer-fine:group-focus-within/msg:opacity-100 pointer-fine:disabled:invisible"
 
-/** Copy an answer: the icon cross-fades to a check for a moment (both stay in the DOM, so it animates both ways). */
+// Both icons stay mounted so the copied state can animate in either direction.
 function CopyAnswer({ text }: { text: string }) {
   const [copied, setCopied] = React.useState(false)
   React.useEffect(() => {
@@ -154,7 +147,6 @@ function CopyAnswer({ text }: { text: string }) {
   )
 }
 
-/** The user's message: a bubble with Edit beside it, which turns it into a field (Enter saves, Escape cancels). */
 function UserMessage({ m, busy, onEdit }: { m: UIMessage; busy: boolean; onEdit: (text: string) => void }) {
   const text = m.parts.map((p) => (p.type === "text" ? p.text : "")).join("")
   const [draft, setDraft] = React.useState<string | null>(null)
@@ -216,7 +208,6 @@ function UserMessage({ m, busy, onEdit }: { m: UIMessage; busy: boolean; onEdit:
   )
 }
 
-/** The coach's answer: its parts, then Copy (and Regenerate on the newest answer) once it has finished. */
 function AssistantMessage({ m, done, onRegenerate }: { m: UIMessage; done: boolean; onRegenerate?: () => void }) {
   const text = plain(m)
   return (
@@ -238,49 +229,21 @@ function AssistantMessage({ m, done, onRegenerate }: { m: UIMessage; done: boole
   )
 }
 
-/**
- * How far the on-screen keyboard covers the layout viewport's bottom edge (0 without one), so the composer can sit
- * on top of it. Phone browsers that overlay the keyboard (iOS, Android's default) would otherwise hide it.
- */
-function useKeyboardInset() {
-  const [inset, setInset] = React.useState(0)
-  React.useEffect(() => {
-    const vv = window.visualViewport
-    if (!vv) return
-    const update = () => setInset(Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop)))
-    vv.addEventListener("resize", update)
-    vv.addEventListener("scroll", update)
-    return () => {
-      vv.removeEventListener("resize", update)
-      vv.removeEventListener("scroll", update)
-    }
-  }, [])
-  return inset
-}
-
 const ERRORS: Record<string, string> = {
   limit: "Slow down a little. Try again in a moment.",
   key: "Your key stopped working. Add it again in Settings › Coach.",
   provider: "Your provider refused the request (key, quota or billing). Check your account with them.",
 }
 
-// The laptop chat panel's open state, remembered on this device.
 const chatsPanel = panelStore("pulse:coach-chats-open")
 const usePanelOpen = chatsPanel.use
 const setPanelOpen = chatsPanel.set
 
-/** A starter question: the app's card row (icon, label, chevron), as on More and Settings. */
 const SUGGESTION = cn(
   CARD_MATERIAL,
   "group/suggestion flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left text-[14px] leading-5 font-medium text-foreground outline-none transition-[scale,--tw-gradient-from] duration-150 ease-standard hover:from-card-hover focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96]",
 )
 
-/**
- * The chat (spec §7.21): the chat list beside the conversation from 1280 px (a Chats link to /coach/chats below it),
- * messages on the ground with the user's in a bubble, tool results as Pulse cards, and the composer pinned to the
- * bottom of the chat column. Sends only the newest message; the server holds the history.
- */
-/** The chat's actions below 1280 px, in the page header so they stay put (from 1280 px the chats panel carries all three). */
 export function CoachBarActions({ chatCount, chatOpen }: { chatCount: number; chatOpen: boolean }) {
   const btn = "text-foreground-secondary hover:text-foreground"
   return (
@@ -305,20 +268,19 @@ export function Coach({ id, initial, groups, next, prefill, auto, providerLabel,
   const [input, setInput] = React.useState(prefill)
   const [error, setError] = React.useState<string | null>(null)
   const area = React.useRef<HTMLTextAreaElement>(null)
-  const end = React.useRef<HTMLDivElement>(null)
+  const transcript = React.useRef<HTMLDivElement>(null)
   const { messages, sendMessage, regenerate, status, stop } = useChat({
     id,
     messages: initial,
     throttle: 50,
     transport: new DefaultChatTransport({
       api: "/api/coach",
-      // The newest user message (after an edit or regenerate useChat has already cut what follows), and what to do with
-      // it: the server replays its own saved history (src/app/api/coach/route.ts).
+      // Send only the newest message: the server replays its saved history.
       prepareSendMessagesRequest: ({ messages, id, trigger, messageId }) => ({ body: { id, message: messages.at(-1), trigger, messageId } }),
     }),
     onError: (e) => setError(ERRORS[/\b(limit|key|provider)\b/.exec(e.message)?.[1] ?? ""] ?? "Couldn’t get an answer. Try again."),
     onFinish: ({ message }) => {
-      // Read the finished answer once, as plain words (no ** marks); never re-read a saved chat on load.
+      // Announce completed answers once; saved chats must not be read again on load.
       setAnnounce(plain(message))
       if (initial.length === 0) router.replace(`/coach?c=${id}`, { scroll: false })
     },
@@ -326,10 +288,23 @@ export function Coach({ id, initial, groups, next, prefill, auto, providerLabel,
   const [announce, setAnnounce] = React.useState("")
   const busy = status === "submitted" || status === "streaming"
 
-  // A block body: newer browsers' scrollIntoView returns a promise, which React would take for a cleanup.
   React.useEffect(() => {
-    end.current?.scrollIntoView({ block: "end", behavior: "smooth" })
+    const scroller = transcript.current
+    if (scroller) scroller.scrollTop = scroller.scrollHeight
   }, [messages.length, status])
+
+  React.useEffect(() => {
+    const scroller = transcript.current
+    if (!scroller) return
+    let previousHeight = scroller.clientHeight
+    const observer = new ResizeObserver(() => {
+      const atEnd = scroller.scrollHeight - scroller.scrollTop - previousHeight <= 2
+      previousHeight = scroller.clientHeight
+      if (atEnd) scroller.scrollTop = scroller.scrollHeight
+    })
+    observer.observe(scroller)
+    return () => observer.disconnect()
+  }, [])
 
   const send = (text: string) => {
     const t = text.trim()
@@ -337,9 +312,9 @@ export function Coach({ id, initial, groups, next, prefill, auto, providerLabel,
     setError(null)
     setInput("")
     void sendMessage({ text: t })
-    area.current?.focus()
+    area.current?.focus({ preventScroll: true })
   }
-  // The morning-brief notification opens /coach?brief=1: its tap is the user's go-ahead, so the brief is asked once.
+  // Opening the morning notification authorizes one brief request.
   const asked = React.useRef(false)
   React.useEffect(() => {
     if (!auto || asked.current) return
@@ -351,7 +326,6 @@ export function Coach({ id, initial, groups, next, prefill, auto, providerLabel,
     setError(null)
     void sendMessage({ text, messageId })
   }
-  /** A new answer to the newest question: the last answer (Regenerate), or the one that failed (Retry). */
   const again = (messageId?: string) => {
     if (busy) return
     setError(null)
@@ -360,9 +334,7 @@ export function Coach({ id, initial, groups, next, prefill, auto, providerLabel,
   const lastAnswer = messages.at(-1)?.role === "assistant" ? messages.at(-1)!.id : null
 
   const listOpen = usePanelOpen()
-  const keyboard = useKeyboardInset()
   const PANEL_BTN = "rounded-full text-muted-foreground hover:bg-foreground/8 hover:text-foreground"
-  // Provider, key, chats and turning the coach off live in Settings › Coach.
   const settingsLink = (className: string, size: "icon-lg" | "icon-touch") => (
     <Button asChild variant="ghost" size={size} aria-label="Coach settings" className={className}>
       <Link href="/settings?s=coach">
@@ -371,12 +343,7 @@ export function Coach({ id, initial, groups, next, prefill, auto, providerLabel,
     </Button>
   )
   return (
-    // Cancels AppShell's bottom padding (room for the phone tab bar, which this screen hides), so the composer rests
-    // on the screen's bottom edge, above the safe area, with no gap under it.
-    // `data-chats` lets the page frame (page.tsx) make room for the fixed chats panel on laptop.
-    <div data-chats={listOpen ? "open" : "closed"} className="-mb-[calc(62px+max(env(safe-area-inset-bottom)-6px,12px)+24px)] md:-mb-10">
-      {/* Laptop: the chats beside the app's compact nav rail, in the same glass, radius and inset. Expanded, the list;
-          collapsed, a rail of its own (expand, New chat, settings). Remembered per device. */}
+    <div data-chats={listOpen ? "open" : "closed"} className="flex min-h-0 flex-1 flex-col">
       {listOpen ? (
         <aside aria-label="Chats panel" className={cn(GLASS, "fixed inset-y-3 left-[112px] z-30 hidden w-[272px] flex-col rounded-[28px] p-3 xl:flex")}>
           <div className="flex h-14 shrink-0 items-center justify-between gap-1 pl-3">
@@ -405,78 +372,70 @@ export function Coach({ id, initial, groups, next, prefill, auto, providerLabel,
         </aside>
       )}
 
-      {/* Fills exactly the viewport under the header (its height, the notch and the shell's top padding: 76/84/92 px),
-          so a short chat never scrolls by a few pixels. */}
-      <div className="mx-auto flex min-h-[calc(100svh-76px-env(safe-area-inset-top))] md:min-h-[calc(100svh-84px-env(safe-area-inset-top))] xl:min-h-[calc(100svh-92px)] w-full max-w-[760px] flex-col pb-[max(env(safe-area-inset-bottom),12px)] md:pb-6">
-        {messages.length === 0 ? (
-          <div className="my-auto flex flex-col items-center py-8 text-center">
-            <span aria-hidden className="grid size-12 place-items-center rounded-full bg-linear-to-br from-insight-from to-insight-to p-px">
-              <span className="grid size-full place-items-center rounded-full bg-background">
-                <Mark className="size-5" />
+      <div className="mx-auto flex min-h-0 w-full max-w-[760px] flex-1 flex-col pb-[max(env(safe-area-inset-bottom),12px)] md:pb-6">
+        <div ref={transcript} data-coach-transcript className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-none pb-6">
+          {messages.length === 0 ? (
+            <div className="my-auto flex flex-col items-center py-8 text-center">
+              <span aria-hidden className="grid size-12 place-items-center rounded-full bg-linear-to-br from-insight-from to-insight-to p-px">
+                <span className="grid size-full place-items-center rounded-full bg-background">
+                  <Mark className="size-5" />
+                </span>
               </span>
-            </span>
-            <h2 className="mt-5 text-[22px] leading-7 font-bold tracking-[-0.01em] text-balance md:text-[26px] md:leading-8">What would you like to know?</h2>
-            <p className="mt-2 max-w-[44ch] text-[15px] leading-[22px] text-pretty text-foreground-secondary">
-              The coach looks up your own Pulse numbers before it answers, using {providerLabel}. It’s not medical advice.
-            </p>
-            <ul className="mt-8 grid w-full max-w-[600px] gap-2 sm:grid-cols-2">
-              {suggestions.map(({ text, key }) => {
-                const Icon = SUGGESTION_ICONS[key]
-                return (
-                <li key={text} className="min-w-0">
-                  <button type="button" onClick={() => send(text)} className={SUGGESTION}>
-                    <Icon aria-hidden className="size-5 shrink-0 text-coach" strokeWidth={1.75} />
-                    <span className="min-w-0 flex-1 text-pretty">{text}</span>
-                    <ChevronRight aria-hidden className="size-4 shrink-0 text-muted-foreground transition-[translate] duration-150 ease-standard group-hover/suggestion:translate-x-0.5" strokeWidth={1.75} />
-                  </button>
-                </li>
-              )})}
-            </ul>
-            <SheetTrigger
-              sheet="checkin"
-              className="mt-3 inline-flex h-10 items-center gap-2 rounded-full px-4 text-[14px] font-medium text-foreground-secondary outline-none transition-[background-color,color,scale] duration-150 ease-standard hover:bg-foreground/[0.05] hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96]"
-            >
-              <NotebookPen aria-hidden className="size-4" strokeWidth={1.75} />
-              Check in for today
-            </SheetTrigger>
-          </div>
-        ) : (
-          <div role="log" aria-label="Chat with Pulse’s coach" className="mt-2 space-y-7">
-            {messages.map((m, i) =>
-              m.role === "user" ? (
-                <UserMessage key={m.id} m={m} busy={busy} onEdit={(text) => edit(m.id, text)} />
-              ) : (
-                <AssistantMessage key={m.id} m={m} done={!busy || i < messages.length - 1} onRegenerate={!busy && m.id === lastAnswer ? () => again(m.id) : undefined} />
-              ),
-            )}
-            {status === "submitted" && <Caption live>Thinking…</Caption>}
-          </div>
-        )}
+              <h2 className="mt-5 text-[22px] leading-7 font-bold tracking-[-0.01em] text-balance md:text-[26px] md:leading-8">What would you like to know?</h2>
+              <p className="mt-2 max-w-[44ch] text-[15px] leading-[22px] text-pretty text-foreground-secondary">
+                The coach looks up your own Pulse numbers before it answers, using {providerLabel}. It’s not medical advice.
+              </p>
+              <ul className="mt-8 grid w-full max-w-[600px] gap-2 sm:grid-cols-2">
+                {suggestions.map(({ text, key }) => {
+                  const Icon = SUGGESTION_ICONS[key]
+                  return (
+                  <li key={text} className="min-w-0">
+                    <button type="button" onClick={() => send(text)} className={SUGGESTION}>
+                      <Icon aria-hidden className="size-5 shrink-0 text-coach" strokeWidth={1.75} />
+                      <span className="min-w-0 flex-1 text-pretty">{text}</span>
+                      <ChevronRight aria-hidden className="size-4 shrink-0 text-muted-foreground transition-[translate] duration-150 ease-standard group-hover/suggestion:translate-x-0.5" strokeWidth={1.75} />
+                    </button>
+                  </li>
+                )})}
+              </ul>
+              <SheetTrigger
+                sheet="checkin"
+                className="mt-3 inline-flex h-10 items-center gap-2 rounded-full px-4 text-[14px] font-medium text-foreground-secondary outline-none transition-[background-color,color,scale] duration-150 ease-standard hover:bg-foreground/[0.05] hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96]"
+              >
+                <NotebookPen aria-hidden className="size-4" strokeWidth={1.75} />
+                Check in for today
+              </SheetTrigger>
+            </div>
+          ) : (
+            <div role="log" aria-label="Chat with Pulse’s coach" className="mt-2 space-y-7">
+              {messages.map((m, i) =>
+                m.role === "user" ? (
+                  <UserMessage key={m.id} m={m} busy={busy} onEdit={(text) => edit(m.id, text)} />
+                ) : (
+                  <AssistantMessage key={m.id} m={m} done={!busy || i < messages.length - 1} onRegenerate={!busy && m.id === lastAnswer ? () => again(m.id) : undefined} />
+                ),
+              )}
+              {status === "submitted" && <Caption live>Thinking…</Caption>}
+            </div>
+          )}
 
-        {/* The finished answer, once, for screen readers (not every token). */}
-        <p aria-live="polite" className="sr-only">
-          {announce}
-        </p>
+          {/* The finished answer, once, for screen readers (not every token). */}
+          <p aria-live="polite" className="sr-only">
+            {announce}
+          </p>
 
-        {error && (
-          <div role="alert" className="mt-6 flex items-center gap-3 rounded-xl bg-recovery-red/12 py-2 pr-2 pl-4 ring-1 ring-recovery-red/25">
-            <p className="min-w-0 flex-1 py-1 text-[14px] leading-5 text-pretty text-foreground">{error}</p>
-            <Button type="button" variant="ghost" disabled={busy} onClick={() => again()} className="h-9 shrink-0 gap-1.5 rounded-full px-3.5 text-[13px] font-semibold hover:bg-foreground/8 pointer-coarse:h-10">
-              <RotateCcw aria-hidden strokeWidth={1.75} className="size-4" />
-              Retry
-            </Button>
-          </div>
-        )}
+          {error && (
+            <div role="alert" className="mt-6 flex items-center gap-3 rounded-xl bg-recovery-red/12 py-2 pr-2 pl-4 ring-1 ring-recovery-red/25">
+              <p className="min-w-0 flex-1 py-1 text-[14px] leading-5 text-pretty text-foreground">{error}</p>
+              <Button type="button" variant="ghost" disabled={busy} onClick={() => again()} className="h-9 shrink-0 gap-1.5 rounded-full px-3.5 text-[13px] font-semibold hover:bg-foreground/8 pointer-coarse:h-10">
+                <RotateCcw aria-hidden strokeWidth={1.75} className="size-4" />
+                Retry
+              </Button>
+            </div>
+          )}
+        </div>
 
-        <div ref={end} className="h-6 scroll-mb-28" />
-
-        {/* Pinned to the bottom of the chat column (not the window), so it lines up with the messages at every width,
-            and lifted over the on-screen keyboard (--kb) on phones. Messages scrolling under it fade into the ground
-            (the page ground ends in --background), down to the screen's edge. */}
-        <div
-          style={{ "--kb": `${keyboard}px` } as React.CSSProperties}
-          className="sticky bottom-[calc(max(env(safe-area-inset-bottom),12px)+var(--kb))] z-20 mt-auto before:pointer-events-none before:absolute before:inset-x-0 before:-top-8 before:-bottom-[max(env(safe-area-inset-bottom),12px)] before:-z-10 before:bg-linear-to-b before:from-transparent before:to-background before:to-45% md:bottom-[calc(1.5rem+var(--kb))] md:before:-bottom-6"
-        >
+        <div className="z-20 shrink-0 pt-2">
           <form
             onSubmit={(e) => {
               e.preventDefault()

@@ -26,16 +26,14 @@ const STATUS_LEGEND = [
   ["bg-optimal", "Optimal"],
 ] as const
 
-/** Deep under REM, as WHOOP stacks them. */
 const RESTORATIVE_PARTS: readonly TrendSeries[] = [
   { key: "rem", label: "REM", color: DATA_COLORS["stage-rem"].css },
   { key: "deep", label: "Deep", color: DATA_COLORS["stage-deep"].css },
 ]
 const WEEK_MONTH = ["w", "m"] as const
 
-/** Sleep `/sleep?d=` (spec §7.5). */
 export default async function SleepPage({ searchParams }: PageProps<"/sleep">) {
-  const { d, timeZone, ctx } = await pageDay(searchParams as SearchParams, "/sleep")
+  const { d, today, timeZone, ctx } = await pageDay(searchParams as SearchParams, "/sleep")
   const vm = await getSleep(d, ctx)
   const p = vm.performance
 
@@ -54,7 +52,6 @@ export default async function SleepPage({ searchParams }: PageProps<"/sleep">) {
           nightsLeft={p.nightsLeft}
           provisional={p.provisional}
           tags={p.tags}
-          // Same cut-offs as the sleep insight: optimal from 85%, sufficient from 70% (server/queries/sleep.ts).
           status={p.value === null ? undefined : p.value >= 85 ? "optimal" : p.value >= 70 ? "sufficient" : "poor"}
         />
       }
@@ -62,7 +59,6 @@ export default async function SleepPage({ searchParams }: PageProps<"/sleep">) {
         <Card className="gap-0 px-4 py-1 ring-0">
           <div className="divide-y divide-border">
             {vm.summary.map((k) => (
-              // the reference app's sleep rows show the status segments instead of a 30-day comparison.
               <KeyStatRow key={k.key} variant="row" {...statProps(k)} average={null} direction="none" />
             ))}
           </div>
@@ -104,10 +100,10 @@ export default async function SleepPage({ searchParams }: PageProps<"/sleep">) {
         <SectionShell key="efficiency" variant="card" title="Sleep efficiency" level={2}>
           <TrendChart label="Sleep efficiency" unit="%" format="int" colorBy="sleep" direction="up" line defaultRange="w" {...trendProps(vm.efficiencyTrend)} />
         </SectionShell>,
-        <SectionShell key="details" variant="card" title="Details" level={2}>
+        <SectionShell key="details" variant="card" title="Details" info={{ title: "Sleep stages", body: "Time in each sleep stage during the main sleep session, as estimated by your Fitbit." }} level={2}>
           <div className="divide-y divide-border">
             {vm.details.map((k) => (
-              <KeyStatRow key={k.key} variant="row" {...statProps(k, undefined, false)} />
+              <KeyStatRow key={k.key} variant="row" {...statProps(k, { d, today }, false)} />
             ))}
           </div>
         </SectionShell>,

@@ -2,7 +2,6 @@ import fs from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
 import { DAY_KEYS, days, withDay, type DayKey } from "./days";
 
-// Every screen, at every viewport (the projects), on every scenario day that applies to it.
 const DAY_ROUTES = ["/", "/recovery", "/strain", "/sleep", "/health/healthspan", "/health/monitor", "/health/stress", "/journal"];
 const OTHER_ROUTES = [
   "/activity",
@@ -13,21 +12,23 @@ const OTHER_ROUTES = [
   "/reports/month",
   "/more",
   "/settings",
-  // The More hub (U21).
   "/reports",
   "/activities",
   "/trends",
   "/trends?metric=hrv&r=1y",
+  "/metric/hrv",
+  "/metric/rhr",
+  "/metric/resp",
+  "/metric/spo2",
+  "/metric/skin",
   "/more/behaviours",
   "/more/data",
   "/more/how-it-works",
   "/more/how-it-works/recovery",
 ];
 
-/** Text that is ellipsised by design, matched with `closest()`. */
 const ELLIPSIS_OK: string[] = [];
 
-/** Resolves the placeholder routes that need an id or period from the app itself. */
 async function resolve(page: Page, route: string) {
   if (route === "/activity") {
     await page.goto(withDay("/strain", days().past));
@@ -41,7 +42,6 @@ async function resolve(page: Page, route: string) {
   return route;
 }
 
-/** Fails on console errors and uncaught page errors. */
 function watchErrors(page: Page) {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(`pageerror: ${e.message}`));
@@ -58,7 +58,6 @@ async function settle(page: Page) {
   await page.waitForTimeout(800);
 }
 
-/** Layout and interaction checks on the rendered page; returns a list of problems. */
 function audit(ellipsisOk: string[]) {
   const problems: string[] = [];
   const root = document.documentElement;
@@ -78,7 +77,6 @@ function audit(ellipsisOk: string[]) {
     return `<${el.tagName.toLowerCase()}${el.id ? `#${el.id}` : ""}> "${label.slice(0, 60)}"`;
   };
 
-  // Dial values stay inside the ring's inner circle, horizontally, and inside the ring box vertically.
   for (const value of document.querySelectorAll("[data-dial-part=value]")) {
     const ring = value.closest("[data-dial-part=ring]");
     if (!ring || !visible(value)) continue;
@@ -93,13 +91,11 @@ function audit(ellipsisOk: string[]) {
   for (const el of all) {
     if (!(el instanceof HTMLElement) || !visible(el)) continue;
     const s = getComputedStyle(el);
-    // Ellipsis truncation that actually hides text.
     const clamped = s.webkitLineClamp !== "none" && s.webkitLineClamp !== "" && el.scrollHeight > el.clientHeight + 1;
     const ellipsed = s.textOverflow === "ellipsis" && el.scrollWidth > el.clientWidth + 1;
     if ((clamped || ellipsed) && !ellipsisOk.some((sel) => el.closest(sel))) problems.push(`text truncated: ${describe(el)}`);
   }
 
-  // Dead interactive elements: they look clickable but nothing handles the click.
   const reactProps = (el: Element): Record<string, unknown> | undefined => {
     const key = Object.keys(el).find((k) => k.startsWith("__reactProps$"));
     return key ? (el as unknown as Record<string, Record<string, unknown>>)[key] : undefined;
@@ -148,7 +144,6 @@ test.describe("sweep", () => {
   }
 
   test("headers share one top padding", async ({ page }) => {
-    // The first row of every screen's header sits at the same height: its controls' vertical centre.
     const centres: Record<string, number> = {};
     for (const route of ["/", "/recovery", "/strain", "/sleep", "/health", "/health/healthspan", "/health/monitor", "/health/stress", "/health/fitness", "/journal", "/journal/insights", "/more", "/settings", "/trends", "/reports", "/activities", "/more/behaviours"]) {
       await page.goto(route);

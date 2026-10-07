@@ -2,12 +2,13 @@
 import Base from "../../layouts/Base.astro"
 import GetStarted from "../../components/GetStarted.astro"
 import { COMPARISONS } from "../../data/compare"
-import { breadcrumbs } from "../../lib/schema"
+import { breadcrumbs, collectionPage } from "../../lib/schema"
 
 const title = "Pulse vs Fitbit Air, Google Health Premium and wearables"
 const description = "Dated comparisons for Fitbit Air owners: what the band does alone, what Google Health Premium adds, and how Pulse differs from a subscription wearable."
 const keywords = [...new Set(COMPARISONS.flatMap((c) => c.keywords.slice(0, 2)))]
 const schema = [
+  collectionPage(Astro.site!, "/compare/", title, description, COMPARISONS.map(c => ({ name: c.h1, path: `/compare/${c.slug}/` }))),
   breadcrumbs(Astro.site!, [
     { name: "Pulse", path: "/" },
     { name: "Compare", path: "/compare/" },

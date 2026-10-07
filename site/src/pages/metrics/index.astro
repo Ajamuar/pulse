@@ -2,7 +2,7 @@
 import Base from "../../layouts/Base.astro"
 import GetStarted from "../../components/GetStarted.astro"
 import { METRICS, metricPath } from "../../data/metrics"
-import { breadcrumbs } from "../../lib/schema"
+import { breadcrumbs, collectionPage } from "../../lib/schema"
 
 const title = "How Pulse scores your Fitbit Air data"
 const description = `Every score in Pulse, explained: what goes in, how it is weighted, what the bands mean and where it falls short. ${METRICS.length} metrics, with sources.`
@@ -13,10 +13,7 @@ const schema = [
     { name: "Pulse", path: "/" },
     { name: "Metrics", path: "/metrics/" },
   ]),
-  {
-    "@type": "ItemList",
-    itemListElement: METRICS.map((m, i) => ({ "@type": "ListItem", position: i + 1, url: new URL(metricPath(m), Astro.site).href, name: m.name })),
-  },
+  collectionPage(Astro.site!, "/metrics/", title, description, METRICS.map(m => ({ name: m.name, path: metricPath(m) }))),
 ]
 ---
 

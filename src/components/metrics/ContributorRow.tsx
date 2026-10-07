@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { ChevronRight, Triangle } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { deltaTone, type GoodDirection, type Tone } from "@/lib/bands"
@@ -13,7 +14,6 @@ type Common = {
   metric: Metric<number> | null | undefined
   unit?: string
   format: FormatKey
-  /** Overrides the reason caption (e.g. "No lean body mass: add weight and body fat in Fitbit"). */
   reasonCopy?: string
   className?: string
 }
@@ -21,15 +21,14 @@ type Common = {
 export type ContributorRowProps =
   | (Common & {
       variant: "recovery"
+      href?: string
       /** The personal normal: mean ± 1 σ is shaded, the track spans mean ± 3 σ. */
       baseline: { mean: number; sd: number }
-      /** Points this input moved today's Recovery. */
       points: number | null
       direction: GoodDirection
     })
   | (Common & {
       variant: "healthspan"
-      /** Axis ends, low to high value, left to right (the reference app). */
       domain: [number, number]
       target: number
       /** Years this input adds (positive, older) or removes (negative, younger). */
@@ -46,7 +45,7 @@ function Header({ p, value, right }: { p: Common; value: number | null; right?: 
   return (
     <span className="flex items-center gap-3">
       {p.icon && <span className="grid size-5 shrink-0 place-items-center text-muted-foreground [&_svg]:size-5 [&_svg]:stroke-[1.75]">{p.icon}</span>}
-      {/* Wraps, never clamps: at 0.1em caps tracking "Light and moderate zones" takes three lines on a 361 px phone. */}
+        {/* Long labels must wrap because tracked capitals can exceed narrow phone widths. */}
       <span className={cn(LABEL, "min-w-0 flex-1 text-balance")}>{p.label}</span>
       <span className="flex shrink-0 items-center gap-2">
         <ValueUnit
@@ -71,8 +70,8 @@ function RecoveryRow({ p, value, meta }: { p: Extract<ContributorRowProps, { var
     value === null
       ? `${p.label}: ${p.reasonCopy ?? "Not measured: left out of today’s score"}`
       : `${p.label} ${unitSpoken(value)}, ${value > mean + sd ? "above" : value < mean - sd ? "below" : "within"} your normal range of ${formatValue(p.format, mean - sd)} to ${formatValue(p.format, mean + sd)}${pts === null ? "" : pts === 0 ? ", no change" : `, ${pts > 0 ? "added" : "took off"} ${Math.abs(Math.round(pts))} points`}`
-  return (
-    <div className={cn("space-y-2 py-3", p.className)}>
+  const body = (
+    <div className="space-y-2">
       <span className="sr-only">{sentence}</span>
       <div aria-hidden className="space-y-2">
         <Header
@@ -107,10 +106,16 @@ function RecoveryRow({ p, value, meta }: { p: Extract<ContributorRowProps, { var
       </div>
     </div>
   )
+  if (p.href) return (
+    <Link href={p.href} className={cn("block rounded-lg py-3 outline-none transition-colors hover:bg-accent focus-visible:ring-3 focus-visible:ring-ring/50 active:bg-accent", p.className)}>
+      {body}
+    </Link>
+  )
+  return <div className={cn("py-3", p.className)}>{body}</div>
 }
 
 /**
- * "Target X" centred under its ▲ (spec §11 M5). The box is centred on the marker and reaches only to the near end
+ * "Target X" centred under its ▲. The box is centred on the marker and reaches only to the near end
  * label (its width bounded by `ch`: digits are tabular, punctuation narrower), so when the label is wider than the
  * box, `safe center` pins it to that end label instead of overlapping it or the row edge. Right of centre the box runs
  * right to left, so the pinned side is the right one.
@@ -201,7 +206,6 @@ function HealthspanRow({ p, value, meta }: { p: Extract<ContributorRowProps, { v
   return <div className={cn("flex items-center py-3", p.className)}>{body}</div>
 }
 
-/** One input's value against its normal band and its effect on the score (spec §5.3). */
 export function ContributorRow(p: ContributorRowProps) {
   const render = (value: number | null, meta?: MetricMeta) =>
     p.variant === "recovery" ? <RecoveryRow p={p} value={value} meta={meta} /> : <HealthspanRow p={p} value={value} meta={meta} />
@@ -215,7 +219,6 @@ export function ContributorRow(p: ContributorRowProps) {
 export function ContributorRowSkeleton({ variant = "recovery" }: { variant?: ContributorRowProps["variant"] }) {
   if (variant === "healthspan")
     return (
-      // The healthspan row's box: the header line, the gradient track with its marker room, the end labels.
       <div aria-hidden className="space-y-1.5 py-3">
         <div className="flex items-center gap-3">
           <SkeletonText className={cn(LABEL, "w-36 flex-1")} />
@@ -228,7 +231,6 @@ export function ContributorRowSkeleton({ variant = "recovery" }: { variant?: Con
       </div>
     )
   return (
-    // The recovery row's box: a 24 px header line, the 6 px track, a caption line.
     <div aria-hidden className="space-y-2 py-3">
       <div className="flex items-center gap-3">
         <SkeletonText className={cn(LABEL, "w-36 flex-1")} />

@@ -1,5 +1,3 @@
-// Trends `/trends?metric=&r=` (More): one daily metric over up to a year, with each range's average against
-// the range before it. The same metric table feeds the daily-scores export (src/app/export/daily).
 import type { GoodDirection } from "@/lib/bands";
 import { EXTRA_METRICS, type ExtraKey } from "@/lib/extraMetrics";
 import type { FormatKey } from "@/lib/format";
@@ -17,13 +15,14 @@ export type TrendMetricKey =
   | "hrv"
   | "rhr"
   | "resp"
+  | "spo2"
+  | "skin"
   | "stress"
   | "steps"
   | "weight"
   | "body_fat"
   | ExtraKey;
 
-/** The Trends picker's sections, in order. */
 export const TREND_GROUPS = ["Recovery & sleep", "Activity", "Body", "Nutrition", "Vitals"] as const;
 export type TrendGroup = (typeof TREND_GROUPS)[number];
 
@@ -35,9 +34,7 @@ export type TrendMetric = {
   format: FormatKey;
   colorBy: "band" | "strain" | "sleep" | "single" | "stress";
   direction: GoodDirection;
-  /** The metric's own screen. */
   href: string;
-  /** Column name in the daily export. */
   column: string;
   pick: (r: DayRow) => number | null | undefined;
   provisional?: (r: DayRow) => boolean;
@@ -76,16 +73,17 @@ const CORE: readonly TrendMetric[] = [
   { key: "sleep", group: "Recovery & sleep", label: "Sleep performance", unit: "%", format: "int", colorBy: "sleep", direction: "up", href: "/sleep", column: "sleep_performance_pct", pick: (r) => r.sleep?.performance },
   { key: "hours", group: "Recovery & sleep", label: "Hours of sleep", format: "duration", colorBy: "sleep", direction: "up", href: "/sleep", column: "sleep_minutes", pick: (r) => r.sleep?.main?.asleepMin },
   { key: "consistency", group: "Recovery & sleep", label: "Sleep consistency", unit: "%", format: "int", colorBy: "sleep", direction: "up", href: "/sleep", column: "sleep_consistency_pct", pick: (r) => r.sleep?.consistency },
-  { key: "hrv", group: "Vitals", label: "Heart rate variability", unit: "ms", format: "int", colorBy: "single", direction: "up", href: "/recovery", column: "hrv_ms", pick: (r) => r.metrics?.hrvMs },
-  { key: "rhr", group: "Vitals", label: "Resting heart rate", unit: "bpm", format: "int", colorBy: "single", direction: "down", href: "/recovery", column: "resting_hr_bpm", pick: (r) => r.metrics?.rhrBpm },
-  { key: "resp", group: "Vitals", label: "Respiratory rate", unit: "rpm", format: "decimal1", colorBy: "single", direction: "neutral", href: "/health/monitor", column: "respiratory_rate_rpm", pick: (r) => r.metrics?.respBpm },
+  { key: "hrv", group: "Vitals", label: "Heart rate variability", unit: "ms", format: "int", colorBy: "single", direction: "up", href: metricHref("hrv"), column: "hrv_ms", pick: (r) => r.metrics?.hrvMs },
+  { key: "rhr", group: "Vitals", label: "Resting heart rate", unit: "bpm", format: "int", colorBy: "single", direction: "down", href: metricHref("rhr"), column: "resting_hr_bpm", pick: (r) => r.metrics?.rhrBpm ?? r.sessionRhr },
+  { key: "resp", group: "Vitals", label: "Respiratory rate", unit: "rpm", format: "decimal1", colorBy: "single", direction: "neutral", href: metricHref("resp"), column: "respiratory_rate_rpm", pick: (r) => r.metrics?.respBpm },
+  { key: "spo2", group: "Vitals", label: "Blood oxygen", unit: "%", format: "int", colorBy: "single", direction: "up", href: metricHref("spo2"), column: "spo2_pct", pick: (r) => r.metrics?.spo2Pct },
+  { key: "skin", group: "Vitals", label: "Skin temperature", unit: "°C", format: "decimal1", colorBy: "single", direction: "toward_zero", href: metricHref("skin"), column: "skin_temperature_deviation_c", pick: (r) => r.recovery?.inputs.skinTempDev },
   { key: "stress", group: "Recovery & sleep", label: "Stress", format: "decimal1", colorBy: "stress", direction: "down", href: "/health/stress", column: "stress_avg", pick: (r) => r.stress?.average, provisional: (r) => !!r.stress?.provisional, partialToday: true },
   { key: "steps", group: "Activity", label: "Steps", format: "grouped", colorBy: "single", direction: "up", href: metricHref("steps"), column: "steps", pick: (r) => r.metrics?.steps, partialToday: true },
   { key: "weight", group: "Body", label: "Weight", unit: "kg", format: "decimal1", colorBy: "single", direction: "neutral", href: metricHref("weight"), column: "weight_kg", pick: (r) => r.metrics?.weightKg },
   { key: "body_fat", group: "Body", label: "Body fat", unit: "%", format: "decimal1", colorBy: "single", direction: "down", href: metricHref("body_fat"), column: "body_fat_pct", pick: (r) => r.metrics?.bodyFatPct },
 ];
 
-/** Every metric: Pulse's own first, then Google's extras from their catalogue, each in a picker section. */
 export const TREND_METRICS: readonly TrendMetric[] = [
   ...CORE,
   ...EXTRA_METRICS.map((m): TrendMetric => ({
@@ -108,7 +106,6 @@ export const parseTrendMetric = (raw: string | string[] | undefined): TrendMetri
   return TREND_METRICS.find((m) => m.key === v) ?? TREND_METRICS[0];
 };
 
-/** The longest range, and the days the chart gets. */
 const SPAN = RANGE_DAYS["1y"];
 
 export type TrendsVM = {
@@ -124,7 +121,6 @@ const mean = (xs: (number | null)[]) => {
   return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
 };
 
-/** Why a metric has nothing to show yet: Recovery calibrates for its first nights, the rest just have no data. */
 function emptyReason(m: TrendMetric, rows: Map<string, DayRow>, today: string): Metric<DayPoint[]> {
   const r = rows.get(today)?.recovery ?? rows.get(addDays(today, -1))?.recovery;
   if (m.key === "recovery" && r?.reason === "calibrating") return none("calibrating", r.nightsLeft);

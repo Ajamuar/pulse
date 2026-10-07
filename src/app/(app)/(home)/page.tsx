@@ -420,7 +420,7 @@ function MonitorLine({ chip, chipClass, top, topClass, bottom }: { chip: React.R
 function MonitorCard({ vm, href }: { vm: HomeVM; href: string }) {
   const m = vm.monitor
   return (
-    <SectionShell variant="card" title="Health Monitor" href={href} level={2}>
+    <SectionShell variant="card" title="Health Monitor" info={false} href={href} level={2}>
       {m.value === null || m.value.inRange + m.value.flagged === 0 ? (
         // No vital judged yet (no readings, or every baseline still calibrating): never "Within range".
         <MonitorLine
@@ -455,7 +455,7 @@ function StressCard({ vm, href, timeZone }: { vm: HomeVM; href: string; timeZone
   const s = vm.stress
   if (s.value === null)
     return (
-      <SectionShell variant="card" title="Stress Monitor" href={href} level={2}>
+      <SectionShell variant="card" title="Stress Monitor" info={false} href={href} level={2}>
         <MonitorLine
           chip={MISSING}
           chipClass="bg-secondary font-numeric text-base font-bold text-muted-foreground"
@@ -467,7 +467,7 @@ function StressCard({ vm, href, timeZone }: { vm: HomeVM; href: string; timeZone
     )
   const tone = STRESS_TONE[s.value.level]
   return (
-    <SectionShell variant="card" title="Stress Monitor" href={href} level={2}>
+    <SectionShell variant="card" title="Stress Monitor" info={false} href={href} level={2}>
       <MonitorLine
         chip={formatValue("decimal1", s.value.value)}
         chipClass={cn("font-numeric text-lg font-bold tabular-nums", tone.chip)}

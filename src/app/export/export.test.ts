@@ -1,5 +1,3 @@
-// The /export/* route handlers (U21): formats, the session check inside each handler, only the user's own data, and
-// no secrets in any file.
 import { NextRequest } from "next/server";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import type { Db } from "@/server/db";
@@ -34,7 +32,6 @@ beforeAll(async () => {
   await saveProfile(db, USER, { birthDate: "1990-01-01", sex: "male", maxHr: null, heightCm: null, timeZone: TZ });
   await addTag(db, USER, "=cmd", "=HYPERLINK(\"x\")");
   await db.insert(journalEntries).values({ userId: USER, day: "2026-10-01", tag: "=cmd", value: 1 });
-  // Another user's journal: never in this user's export.
   const other = await addUser(db);
   await addTag(db, other, "other_tag", OTHER_LABEL);
   await db.insert(journalEntries).values({ userId: other, day: "2026-10-01", tag: "other_tag", value: 1 });
@@ -54,11 +51,10 @@ describe("/export/daily and /export/journal", () => {
     const text = await res.text();
     const lines = text.trimEnd().split("\r\n");
     expect(lines[0]).toBe(
-      "day,recovery_pct,strain,sleep_performance_pct,sleep_minutes,sleep_consistency_pct,hrv_ms,resting_hr_bpm,respiratory_rate_rpm,stress_avg,steps,weight_kg,body_fat_pct," +
+      "day,recovery_pct,strain,sleep_performance_pct,sleep_minutes,sleep_consistency_pct,hrv_ms,resting_hr_bpm,respiratory_rate_rpm,spo2_pct,skin_temperature_deviation_c,stress_avg,steps,weight_kg,body_fat_pct," +
         "distance_km,floors,elevation_m,active_minutes,light_minutes,azm_minutes,active_calories_kcal,sedentary_minutes,avg_hr_bpm," +
         "water_ml,calories_in_kcal,protein_g,carbs_g,fat_g,glucose_mg_dl,core_temp_c,swim_strokes",
     );
-    // A seeded day has the activity extras, distance to the 10 m; nutrition stays empty.
     const head = lines[0].split(",");
     const seededDay = lines.find((l) => l.startsWith("2026-10-01,"))!.split(",");
     expect(seededDay[head.indexOf("distance_km")]).toMatch(/^\d+\.\d{1,2}$/);

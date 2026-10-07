@@ -234,10 +234,10 @@ export default async function HealthPage() {
         <SectionShell variant="card" level={2} title="Healthspan" href="/health/healthspan" className="xl:col-span-2">
           <Healthspan m={vm.healthspan} />
         </SectionShell>
-        <SectionShell variant="card" level={2} title="Health Monitor" href="/health/monitor">
+        <SectionShell variant="card" level={2} title="Health Monitor" info={false} href="/health/monitor">
           <Monitor m={vm.monitor} />
         </SectionShell>
-        <SectionShell variant="card" level={2} title="Stress Monitor" href="/health/stress">
+        <SectionShell variant="card" level={2} title="Stress Monitor" info={false} href="/health/stress">
           <Stress m={vm.stress} />
         </SectionShell>
         <SectionShell variant="card" level={2} title="Fitness" href="/health/fitness">

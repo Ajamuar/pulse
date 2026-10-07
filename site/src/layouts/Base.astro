@@ -8,6 +8,7 @@ import { REPO, SETUP_GUIDE, LICENSE_URL, SITE_NAME, UMAMI, CONTACT_EMAIL, GOOGLE
 import { METRICS, metricPath } from "../data/metrics"
 import { COMPARISONS } from "../data/compare"
 import { siteGraph } from "../lib/schema"
+import { markdownPath } from "../lib/markdown"
 
 interface Props {
   title: string
@@ -17,20 +18,19 @@ interface Props {
   /** OG image path under public/, absolute from the site root. */
   ogImage?: string
   ogType?: "website" | "article"
-  /** Search phrases the page answers, for the keywords meta tag. */
   keywords: string[]
-  /** Keep the page out of search results (the 404 page). */
   noindex?: boolean
 }
 const { title, description, schema = [], ogImage = "/og.png", ogType = "website", keywords, noindex = false } = Astro.props
 const canonical = new URL(Astro.url.pathname, Astro.site)
 const og = new URL(ogImage, Astro.site)
-// The site name follows the page title only while the whole stays within about 60 characters, so it is never cut.
+// Keep the combined page title and site name short enough to avoid search-result truncation.
 const suffixed = `${title} | ${SITE_NAME}`
 const fullTitle = Astro.url.pathname === "/" || suffixed.length > 60 ? title : suffixed
-// Every page's graph names the publisher, so the pages' own types can point at it by @id.
-const ld = JSON.stringify({ "@context": "https://schema.org", "@graph": [...siteGraph(Astro.site!), ...schema] })
+// Include the publisher in every graph so page objects can resolve its @id.
+const ld = JSON.stringify({ "@context": "https://schema.org", "@graph": [...siteGraph(Astro.site!), ...schema] }).replace(/</g, "\\u003c")
 const path = Astro.url.pathname
+const hasMarkdown = path === "/" || path === "/glossary/" || METRICS.some(m => metricPath(m) === path) || COMPARISONS.some(c => `/compare/${c.slug}/` === path)
 const nav = [
   { href: "/#features", label: "Features" },
   { href: "/metrics/", label: "Metrics" },
@@ -56,6 +56,8 @@ const nav = [
     <link rel="canonical" href={canonical} />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="sitemap" href="/sitemap.xml" />
+    <link rel="describedby" href="/llms.txt" type="text/plain" />
+    {hasMarkdown && <link rel="alternate" type="text/markdown" href={markdownPath(path)} title={`${title} in Markdown`} />}
     <meta name="theme-color" content="#1d2529" />
 
     <meta property="og:type" content={ogType} />
@@ -71,6 +73,7 @@ const nav = [
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={og} />
+    <meta name="twitter:image:alt" content="Pulse: recovery, sleep and strain dials from a Fitbit Air, on a dark screen" />
 
     <script type="application/ld+json" set:html={ld} />
     {UMAMI.src && UMAMI.websiteId && <script is:inline defer src={UMAMI.src} data-website-id={UMAMI.websiteId} />}
@@ -170,7 +173,6 @@ const nav = [
     top: 12px;
   }
 
-  /* A floating glass pill (the app's tab-bar material), stuck 12 px under the top of the window. */
   .site-header {
     position: sticky;
     top: 12px;
@@ -281,7 +283,6 @@ const nav = [
     .bar nav a {
       padding: 0 9px;
     }
-    /* Phones: the mark alone, in a 44 px square (the link keeps its name). */
     .bar nav a.gh {
       justify-content: center;
       width: 44px;
@@ -318,7 +319,6 @@ const nav = [
   .site-footer {
     margin-top: clamp(64px, 7vw, 96px);
     padding: 64px 0 48px;
-    /* A darker floor, see-through so the grain runs on, with the brand's teal low on the left. */
     background:
       radial-gradient(40% 70% at 0% 100%, rgb(0 241 159 / 0.05), transparent 70%),
       rgb(10 12 14 / 0.6);

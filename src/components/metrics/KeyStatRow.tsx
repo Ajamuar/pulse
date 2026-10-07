@@ -13,12 +13,9 @@ import { Sparkline } from "./Sparkline"
 export type SleepStatus = "poor" | "sufficient" | "optimal"
 
 export type KeyStatRowProps = {
-  /** `row` inside a card's list; `card` is a row that is its own card (Home "My Dashboard", V9); `tile` for grids. */
   variant: "row" | "card" | "tile"
-  /** A lucide icon element (20 px, muted) or a swatch. */
   icon?: React.ReactNode
   label: string
-  /** A caption under the label ("Typical 5-10%"). */
   caption?: string
   metric: Metric<number> | null | undefined
   unit?: string
@@ -30,18 +27,12 @@ export type KeyStatRowProps = {
   /** Good direction for the arrow tone; "none" hides the arrow (Strain Target, stage rows). */
   direction: GoodDirection | "none"
   sd?: number
-  /** Sleep summary rows: three segments before the value. */
   status?: SleepStatus
-  /** Tile status chip ("within 16.1 - 16.9"); warning or alert rings the tile. */
   chip?: { tone: ChipTone; text: string }
   href?: string
   /** Client parents only: the tile or row becomes a button (opens a sheet). */
   onSelect?: () => void
-  /**
-   * Tile spanning a full grid row (an odd count): a short strip with the comparison spelled out on the right
-   * ("30-day avg", the average and the difference), so the extra width carries information instead of empty space.
-   * `md` / `xl`: only below that breakpoint, where the grid has two columns.
-   */
+  /** Restricts a full-width tile to the named breakpoint, where an odd item would leave a gap. */
   wide?: boolean | "md" | "xl"
   /** A wide tile's recent values (oldest first) drawn on its right as a sparkline, with `band` shaded as the normal range. */
   spark?: { values: (number | null)[]; band?: { low: number; high: number } | null; caption?: string }
@@ -68,7 +59,6 @@ function compute(p: KeyStatRowProps, value: number | null, meta?: MetricMeta, re
   return { valueText: formatValue(p.format, value), avgText: avg !== null ? formatValue(p.format, avg) : undefined, diffText, dir: t?.dir, tone: t?.tone, meta }
 }
 
-/** Interactive wrapper: a link, a button, or a plain element. */
 function Frame({ p, className, children, sentence }: { p: KeyStatRowProps; className: string; children: React.ReactNode; sentence: string }) {
   const body = (
     <>
@@ -96,7 +86,6 @@ function Frame({ p, className, children, sentence }: { p: KeyStatRowProps; class
 function rowClass(p: KeyStatRowProps) {
   const tappable = !!(p.href || p.onSelect)
   if (p.variant === "card")
-    // 56 px, one card per metric [latest-home-dashboard-1]; presses in like every card link.
     return cn(CARD_MATERIAL, "flex min-h-14 items-center gap-3 px-4 py-2", tappable && "hover:from-card-hover active:scale-[0.96]", p.className)
   return cn("flex min-h-14 items-center gap-3 py-2", tappable && "-mx-2 rounded-lg px-2 hover:bg-accent active:bg-accent", p.className)
 }
@@ -112,10 +101,10 @@ function Row({ p, c }: { p: KeyStatRowProps; c: Computed }) {
       <span aria-hidden className="contents">
         {p.icon && <span className="grid size-5 shrink-0 place-items-center text-muted-foreground [&_svg]:size-5 [&_svg]:stroke-[1.75]">{p.icon}</span>}
         <span className="min-w-0 flex-1">
-          {/* Wraps rather than truncates: "Heart rate variability" overflows a 361 px phone by 2 px. */}
+          {/* Long metric labels must wrap to fit narrow phone widths. */}
           {p.label ? <span className={cn(LABEL, "block text-balance")}>{p.label}</span> : <SkeletonText className={cn(LABEL, "w-32")} />}
           {(c.reason || p.caption) && <span className={cn(CAPTION, "mt-0.5 block truncate")}>{c.reason ?? p.caption}</span>}
-          {/* Tags sit under the label, not after the unit, so a phone never truncates the label (spec §11 note). */}
+          {/* Tags sit under the label so a phone never truncates it. */}
           {c.meta && <MetricTags provisional={c.meta.provisional} tags={c.meta.tags} className="mt-1 justify-start" />}
         </span>
         {p.status && (
@@ -136,7 +125,6 @@ function Row({ p, c }: { p: KeyStatRowProps; c: Computed }) {
             <span className="font-numeric text-[13px] leading-4 font-medium text-muted-foreground tabular-nums">{c.avgText}</span>
           )}
         </span>
-        {/* My Dashboard's cards carry no chevron in the reference app [latest-home-dashboard-1] (spec §11 F10); the card still presses in. */}
         {p.href && p.variant !== "card" && <ChevronRight className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />}
       </span>
     </Frame>
@@ -171,15 +159,12 @@ function Tile({ p, c }: { p: KeyStatRowProps; c: Computed }) {
       )}
     >
       <span aria-hidden className="contents">
-        {/* the reference app's v2 tile [latest-health-monitor-1]: icon and a 10 px caps label on one line, then a 30 px value and a
-            compact chip (spec §11 F16). */}
         <span
           className={cn(
             "contents",
             p.wide === true && "flex min-w-0 flex-1 flex-col gap-2",
             p.wide === "md" && "max-md:flex max-md:min-w-0 max-md:flex-1 max-md:flex-col max-md:gap-2",
             p.wide === "xl" && "max-xl:flex max-xl:min-w-0 max-xl:flex-1 max-xl:flex-col max-xl:gap-2",
-            // With a sparkline the numbers keep their natural width and the line takes the rest.
             p.spark && "flex-none! basis-auto"
           )}
         >
@@ -206,7 +191,6 @@ function Tile({ p, c }: { p: KeyStatRowProps; c: Computed }) {
             ) : (
               <>
                 {c.meta && <MetricTags provisional={c.meta.provisional} tags={c.meta.tags} className="justify-start" />}
-                {/* A wide tile states the comparison on its right instead (below). */}
                 <span className={cn("contents", !p.spark && p.wide === true && "hidden", !p.spark && p.wide === "md" && "max-md:hidden", !p.spark && p.wide === "xl" && "max-xl:hidden")}>
                   {p.chip ? (
                     <StatusChip tone={p.chip.tone} className={TILE_CHIP}>
@@ -259,7 +243,6 @@ function Tile({ p, c }: { p: KeyStatRowProps; c: Computed }) {
   )
 }
 
-/** One metric with label, value, unit, average and a direction-aware arrow (spec §5.2). */
 export function KeyStatRow(p: KeyStatRowProps) {
   const View = p.variant === "tile" ? Tile : Row
   return (
@@ -274,10 +257,6 @@ export function KeyStatRow(p: KeyStatRowProps) {
   )
 }
 
-/**
- * Loading shape (spec §5.19): the row or tile's own box, with its real icon and label when known
- * (they are static) and a bar for the value.
- */
 export function KeyStatRowSkeleton({ variant, label = "", icon }: { variant: KeyStatRowProps["variant"]; label?: string; icon?: React.ReactNode }) {
   const p: KeyStatRowProps = { variant, label, icon, metric: undefined, format: "int", direction: "none" }
   return (

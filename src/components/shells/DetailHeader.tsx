@@ -1,11 +1,11 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname, useSearchParams } from "next/navigation"
 import { ChevronLeft, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { COLUMN_WIDTH } from "./column"
-import { dayHref, parentHref, tabForPath } from "@/lib/url"
+import { detailBackHref, useAppNavigationRoot } from "./AppNavigation"
 import { Button } from "@/components/ui/button"
 import { DateSwitcher, type DateSwitcherProps } from "./DateSwitcher"
 import { InfoButton, type InfoContent } from "./InfoButton"
@@ -16,26 +16,16 @@ export type DetailHeaderProps = {
   title: string
   subtitle?: string
   info?: InfoContent
-  /** Back target without history (default: the parent tab root). */
   backHref?: string
-  /** Recovery, Strain, Sleep: the date is the title, with day chevrons beside it (spec §4.4, C7). */
   dateTitle?: DateSwitcherProps
-  /** `close`: an X instead of the back chevron, for modal-style screens (Settings, [latest-settings-1]). */
   dismiss?: "back" | "close"
-  /** `start`: back, an optional 24 px icon, then the title over the subtitle, all left-aligned (Activity, [latest-activity-1]). */
   align?: "center" | "start"
   titleIcon?: React.ReactNode
-  /** The bar's right side in place of the info button (Coach: chats, new chat, settings). Pinned with the bar. */
   action?: React.ReactNode
 }
 
-/**
- * The 44 px bar (the reference app's, [latest-recovery-collapsed-1]): 52 px from 768. From 768 its edges follow the content
- * column (D-L2); the inset puts the back chevron and the info ring on the content edges.
- */
 export const DETAIL_ROW = cn("h-11 md:h-13 xl:px-6", COLUMN_WIDTH)
 
-/** Back, the date or the screen name (+ subtitle), the ringed info button (spec §4.4). */
 export function DetailHeaderRow({
   title,
   subtitle,
@@ -49,43 +39,25 @@ export function DetailHeaderRow({
   centerClassName,
   className,
 }: DetailHeaderProps & { centerClassName?: string; className?: string }) {
-  const router = useRouter()
   const pathname = usePathname()
+  const params = useSearchParams()
+  const root = useAppNavigationRoot()
   const { today } = useShellCalendar()
 
-  // A real link to the parent, so Cmd/Ctrl-click and middle-click open it in a new tab; a plain click goes back.
-  const parent = backHref ?? parentHref(pathname)
-  const back = (e: React.MouseEvent) => {
-    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return
-    e.preventDefault()
-    // The Navigation API lists only this origin's entries, so canGoBack means "an in-app page is behind this one".
-    // document.referrer never changes on client navigation, so alone it sent Home → Recovery → Back to a pushed copy
-    // of Home, and the browser's Back then looped to Recovery (U18 N-01). It stays as the fallback.
-    const nav = (window as Window & { navigation?: { canGoBack: boolean } }).navigation
-    const canGoBack = nav ? nav.canGoBack : window.history.length > 1 && document.referrer.startsWith(window.location.origin)
-    if (canGoBack) return router.back()
-    // Home details return to Home on the same day.
-    const d = new URLSearchParams(window.location.search).get("d")
-    router.push(!backHref && tabForPath(pathname) === "home" && d ? dayHref(parent, d, today) : parent)
-  }
+  const parent = detailBackHref(pathname, root, today, params.get("d"), backHref)
   const Icon = dismiss === "close" ? X : ChevronLeft
   const backButton = (
     <Button
       asChild
       variant="ghost"
       size="icon-touch"
-      // Close dismisses a screen opened over the tabs (Settings); from 768 px the sidebar is the way out, so it hides but keeps its slot.
       className={cn("hover:bg-foreground/8", dismiss === "close" && "md:invisible")}
     >
-      <Link href={parent} aria-label={dismiss === "close" ? "Close" : "Back"} onClick={back}>
+      <Link href={parent} replace aria-label={dismiss === "close" ? "Close" : "Back"}>
         <Icon aria-hidden strokeWidth={1.75} className={dismiss === "close" ? "size-6" : "size-[26px]"} />
       </Link>
     </Button>
   )
-
-  // A subtitle never moves the title: the title line keeps the plain bar's position (centred in the 44 / 52 px row,
-  // level with back and info) and the subtitle hangs under it, so the bar grows downward. Before, the title and
-  // subtitle were centred together and the title sat 4 px from the top (Healthspan, Activity; U18 header check).
   const sideLine = "flex h-11 shrink-0 items-center md:h-13"
   if (align === "start")
     return (
@@ -98,7 +70,6 @@ export function DetailHeaderRow({
         )}
         <div data-collapse-keep className="min-w-0 flex-1 pt-3 md:pt-4">
           <h1 className={cn(HEADER_TITLE, "truncate")}>{title}</h1>
-          {/* 13 px under the 12 px title, the reference app's activity time range [latest-activity-1] (spec §11 F14). */}
           {subtitle && <p className="truncate text-[13px] leading-[18px] text-foreground-secondary tabular-nums">{subtitle}</p>}
         </div>
         {info && (
@@ -125,7 +96,6 @@ export function DetailHeaderRow({
           ) : (
             <>
               <h1 className={cn(HEADER_TITLE, "max-w-full truncate")}>{title}</h1>
-              {/* Caps and tracked, the reference app's "NEXT UPDATE IN 7 DAYS" [latest-age-orb-cyan-1] (spec §11 F15). */}
               {subtitle && <p className="max-w-full truncate text-[11px] leading-4 font-semibold tracking-[0.1em] text-muted-foreground uppercase">{subtitle}</p>}
             </>
           )}
@@ -136,7 +106,6 @@ export function DetailHeaderRow({
   )
 }
 
-/** Detail-route header (spec §4.4, §4.3a): a plain pinned bar on the page ground with the 24 px fade; nothing collapses. */
 export function DetailHeader(props: DetailHeaderProps) {
   return (
     <HeaderFrame>

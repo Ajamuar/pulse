@@ -21,7 +21,6 @@ const ICON: Record<string, React.ReactNode> = {
   restingHr: <Heart />,
 }
 
-/** How each Healthspan input is shown: sleep hours in h:mm, weekly minutes in h:mm (spec §7.7). */
 const SHOW: Record<string, { format: FormatKey; unit?: string; scale?: number }> = {
   sleepHours: { format: "duration", scale: 60 },
   sri: { format: "int", unit: "%" },
@@ -42,7 +41,6 @@ function yearsLine(years: number | null) {
   return v === "0.0" ? "No change from your age" : `${v}\u00a0years ${years < 0 ? "younger" : "older"} than your age`
 }
 
-/** One Healthspan group card ("Sleep", "Strain", "Fitness"); each row opens its contributor sheet (journey 5). */
 export function ContributorCard({ title, items, className }: { title: string; items: HealthspanContributor[]; className?: string }) {
   // `?contributor=` deep-links the sheet (each group card opens only its own rows); Back closes it.
   const [open, setOpen] = useSheetParam("contributor")
@@ -53,8 +51,7 @@ export function ContributorCard({ title, items, className }: { title: string; it
   const scale = (v: number) => v * (show?.scale ?? 1)
 
   return (
-    // Stretched to its row (Strain beside Sleep and Fitness), the rows share the spare height evenly (SYM6).
-    <SectionShell variant="card" title={title} className={className} fill>
+    <SectionShell variant="card" title={title} info={{ title: `${title} and Pulse Age`, body: "These contributors show how your recent measurements compare with targets for your profile. Select a contributor to see its source and estimated effect on Pulse Age." }} className={className} fill>
       <div className="flex flex-1 flex-col divide-y divide-border">
         {items.map((c) => {
           const s = SHOW[c.key] ?? { format: "decimal1" as const }
@@ -73,7 +70,6 @@ export function ContributorCard({ title, items, className }: { title: string; it
                 years={c.years}
                 higherIsBetter={c.higherIsBetter}
                 reasonCopy={c.metric.value === null ? c.caption : undefined}
-                // A caption under the row tucks up to it (4 px) instead of a negative margin pulling it in.
                 className={c.caption && c.metric.value !== null ? "pb-1" : undefined}
                 onSelect={() => {
                   setOpen(c.key)

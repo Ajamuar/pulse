@@ -1,3 +1,4 @@
+import { metricHref } from "@/lib/url";
 import { and, eq } from "drizzle-orm";
 import { sleepSegments } from "../db/schema";
 import { readHr } from "../samples";
@@ -42,7 +43,6 @@ const restorativePct = (r: DayRow) => {
   return m && m.asleepMin > 0 && m.deepMin != null && m.remMin != null ? ((m.deepMin + m.remMin) / m.asleepMin) * 100 : null;
 };
 
-/** Sleep `/sleep` for `day` (spec §7.5). */
 export async function getSleep(day: string, ctx: QueryCtx): Promise<SleepVM> {
   const today = todayOf(ctx);
   const isToday = day === today;
@@ -86,7 +86,7 @@ export async function getSleep(day: string, ctx: QueryCtx): Promise<SleepVM> {
   const details = [
     { ...stat("timeInBed", "Time in bed", (r) => r.sleep?.main?.inBedMin, "min"), direction: "neutral" as const },
     { ...stat("wakeEvents", "Wake events", (r) => r.sleep?.main?.wakeEvents, undefined), direction: "down" as const },
-    { ...stat("resp", "Respiratory rate", (r) => r.metrics?.respBpm, "rpm", undefined, vitalReason(row, isToday)), direction: "neutral" as const },
+    { ...stat("resp", "Respiratory rate", (r) => r.metrics?.respBpm, "rpm", undefined, vitalReason(row, isToday)), direction: "neutral" as const, href: metricHref("resp") },
     { ...stat("debt", "Sleep debt", (r) => (r.sleep?.main ? r.sleep.debtMin : null), "min"), direction: "down" as const },
   ];
 

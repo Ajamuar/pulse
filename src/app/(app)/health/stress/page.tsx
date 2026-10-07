@@ -46,7 +46,6 @@ const LEVEL_KEYS = [
   { key: "highMin", word: "High", bar: "bg-stress-high", text: "text-stress-high" },
 ] as const
 
-/** One three-segment bar, each level as wide as its share of the day's scored minutes. */
 function LevelBar({ m, className }: { m: { lowMin: number; mediumMin: number; highMin: number }; className: string }) {
   return (
     <div aria-hidden className={cn("flex gap-0.5 overflow-hidden rounded-sm", className)}>
@@ -55,10 +54,6 @@ function LevelBar({ m, className }: { m: { lowMin: number; mediumMin: number; hi
   )
 }
 
-/**
- * the reference app's "Total day" [latest-stress-monitor-1]: the day's minutes per level over the typical same weekday
- * (dimmed), then the three durations in their level colours.
- */
 function TotalDay({ l, day }: { l: NonNullable<StressVM["levels"]["value"]>; day: string }) {
   const total = l.lowMin + l.mediumMin + l.highMin
   if (!total) return <EmptyState body={EMPTY} />
@@ -100,7 +95,6 @@ function typicalLine(l: NonNullable<StressVM["levels"]["value"]>) {
   return `vs. your typical ${l.weekday}: ${delta}`
 }
 
-/** Stress Monitor `/health/stress?d=` (spec §7.9). */
 export default async function StressPage({ searchParams }: PageProps<"/health/stress">) {
   const { d, today, timeZone, ctx } = await pageDay(searchParams as SearchParams, "/health/stress")
   const vm = await getStress(d, ctx)
@@ -126,7 +120,7 @@ export default async function StressPage({ searchParams }: PageProps<"/health/st
       }
       insight={vm.insight && <InsightCard body={vm.insight} />}
       primary={
-        <SectionShell variant="card" title={vm.isToday ? "Today" : dayLabel(d, today)}>
+        <SectionShell variant="card" title={vm.isToday ? "Today" : dayLabel(d, today)} info={{ title: "Stress throughout the day", body: "Body activation during still minutes, from 0 to 3. Movement, workouts and sleep appear as excluded periods rather than stress scores." }}>
           <StressChart
             variant="full"
             data={
@@ -145,12 +139,12 @@ export default async function StressPage({ searchParams }: PageProps<"/health/st
         </SectionShell>
       }
       secondary={[
-        <SectionShell key="levels" variant="card" title="Total day">
+        <SectionShell key="levels" variant="card" title="Total day" info={{ title: "Time at each stress level", body: "Scored still minutes split into low, medium and high activation. When available, the faded bar compares the same weekday in your recent history." }}>
           <MetricState metric={vm.levels} skeleton={<Skeleton className="h-24 w-full" />} renderReason={() => <EmptyState body={EMPTY} />}>
             {(l) => <TotalDay l={l} day={vm.isToday ? "Today" : dayLabel(d, today)} />}
           </MetricState>
         </SectionShell>,
-        <SectionShell key="trend" variant="card" title="30-day trend">
+        <SectionShell key="trend" variant="card" title="30-day trend" info={{ title: "Daily stress trend", body: "Average activation across each day's scored still minutes over the last 30 days. Days without enough data remain gaps." }}>
           <TrendChart
             label="Stress"
             data={{ value: vm.trend.points.map((p) => ({ date: p.day, value: p.value })), reason: null, provisional: false }}

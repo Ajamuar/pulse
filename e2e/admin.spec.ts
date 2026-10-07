@@ -1,18 +1,14 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
 
-// The admin dashboard, invites and the AI coach, on the third e2e server (playwright.config.ts, project "admin"): a
-// Google instance with ADMIN_EMAILS=owner@pulse.test, the scripted coach model and no accounts. Journeys in order,
-// since each builds on the last. Screenshots land in test-results/admin/.
 const OWNER = { name: "Olive Owner", username: "olive", email: "owner@pulse.test" };
 const SAM = { name: "Sam Member", username: "sam.member", email: "sam@pulse.test" };
 const PASSWORD = "e2e-password-long";
 
-// In order: later journeys sign in as the owner the first one created.
+// These journeys share the owner account created by the first test.
 test.describe.configure({ mode: "serial" });
 
 const shot = (page: Page, name: string) => page.screenshot({ path: `test-results/admin/${name}.png`, fullPage: true });
 
-/** A signed-out phone in its own browser context. */
 async function guest(browser: Browser) {
   const ctx = await browser.newContext({ baseURL: test.info().project.use.baseURL, viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
   return ctx.newPage();
@@ -34,7 +30,6 @@ async function signIn(page: Page) {
   await expect(page).toHaveURL(/\/$/);
 }
 
-/** Onboarding: birth date and sex, then Home. */
 async function onboard(page: Page) {
   await expect(page).toHaveURL(/\/onboarding$/);
   await page.getByRole("button", { name: "Birth date" }).click();
@@ -46,7 +41,7 @@ async function onboard(page: Page) {
   await expect(page).toHaveURL(/\/$/);
 }
 
-/** Opens /admin: true when the dashboard renders, false on the not-found page (checked by content, not status). */
+// A not-found response can have a successful HTTP status, so check the rendered content.
 async function seesAdmin(p: Page) {
   await p.goto("/admin");
   const dashboard = p.getByRole("navigation", { name: "Admin" }).first();
@@ -58,7 +53,6 @@ const personRow = (page: Page, username: string) => page.getByRole("row").filter
 const choice = (page: Page, name: string) => page.getByRole("radio", { name: new RegExp(`^${name}`) });
 
 test("owner starts the server, invites a member, manages people and access", async ({ page, browser }) => {
-  // A new server: the form shows, but only the ADMIN_EMAILS address may use it without an invite.
   await page.goto("/signup");
   await expect(page.getByRole("heading", { name: "Create your account" })).toBeVisible();
   await expect(page.getByText("This server has no accounts yet")).toBeVisible();
@@ -70,7 +64,6 @@ test("owner starts the server, invites a member, manages people and access", asy
   await signUp(page, OWNER);
   await onboard(page);
 
-  // The dashboard is its own place, not part of the app: More has no Admin row.
   await page.goto("/more");
   await expect(page.getByRole("link", { name: /Admin/ })).toHaveCount(0);
   await page.goto("/admin");
@@ -78,11 +71,9 @@ test("owner starts the server, invites a member, manages people and access", asy
   await expect(page.getByRole("region", { name: "At a glance" })).toContainText("People");
   await shot(page, "02-admin-overview");
 
-  // Access: invite only by default.
   await page.goto("/admin/access");
   await expect(choice(page, "Invite only")).toHaveAttribute("aria-checked", "true");
 
-  // An invite link, shown once.
   await page.goto("/admin/invites");
   await page.getByLabel("Who is it for?").fill("Sam");
   await page.getByRole("button", { name: "Create invite link" }).click();
@@ -91,14 +82,12 @@ test("owner starts the server, invites a member, manages people and access", asy
   const link = await linkField.inputValue();
   await shot(page, "03-invite-created");
 
-  // Without the link, a visitor is told it's invite-only.
   const visitor = await guest(browser);
   await visitor.goto("/signup");
   await expect(visitor.getByRole("heading", { name: "Pulse here is invite-only" })).toBeVisible();
   await expect(visitor.getByRole("button", { name: "Create account" })).toHaveCount(0);
   await shot(visitor, "04-signup-without-invite");
 
-  // With it, Sam signs up and onboards; the same link then no longer works.
   const sam = await guest(browser);
   await sam.goto(link);
   await expect(sam.getByRole("heading", { name: "Create your account" })).toBeVisible();
@@ -108,10 +97,8 @@ test("owner starts the server, invites a member, manages people and access", asy
   await expect(visitor.getByRole("heading", { name: "This invite has expired" })).toBeVisible();
   await shot(visitor, "05-invite-used");
 
-  // Sam is a member: /admin is a 404.
   expect(await seesAdmin(sam)).toBe(false);
 
-  // The owner sees who used the invite, and Sam in People.
   await page.goto("/admin/invites");
   await page.getByRole("tab", { name: /Used/ }).click();
   await expect(page.getByText(`Used by ${SAM.username}`)).toBeVisible();
@@ -119,10 +106,9 @@ test("owner starts the server, invites a member, manages people and access", asy
   await expect(personRow(page, OWNER.username)).toContainText("Owner");
   await expect(personRow(page, SAM.username)).toContainText("Member");
   await page.getByPlaceholder("Search people").fill("sam");
-  await expect(page.getByRole("row")).toHaveCount(2); // the header and Sam
+  await expect(page.getByRole("row")).toHaveCount(2);
   await page.getByPlaceholder("Search people").fill("");
 
-  // Manage opens Sam's panel. Admin on: Sam now opens the dashboard. Off: back to a member.
   await page.getByRole("button", { name: `Manage ${SAM.name}` }).click();
   const panel = page.getByRole("dialog", { name: SAM.name });
   await expect(panel).toContainText("Signed in on");
@@ -134,7 +120,6 @@ test("owner starts the server, invites a member, manages people and access", asy
   await expect(page.getByText(`${SAM.name} is no longer an admin.`)).toBeVisible();
   expect(await seesAdmin(sam)).toBe(false);
 
-  // Reset password (owners only): a temporary password, shown once; Sam is signed out and it works for signing in.
   await panel.getByRole("button", { name: "Reset" }).click();
   await page.getByRole("dialog", { name: `Reset ${SAM.name}’s password?` }).getByRole("button", { name: "Reset password" }).click();
   const temp = await page.getByRole("textbox", { name: "Temporary password" }).inputValue();
@@ -150,7 +135,6 @@ test("owner starts the server, invites a member, manages people and access", asy
   await page.reload();
   await expect(personRow(page, SAM.username)).toContainText("Member");
 
-  // Sign-up mode: Open shows the form to anyone; Closed sends /signup to sign-in.
   await page.goto("/admin/access");
   await choice(page, "Open to anyone").click();
   await expect(choice(page, "Open to anyone")).toHaveAttribute("aria-checked", "true");
@@ -166,21 +150,17 @@ test("owner starts the server, invites a member, manages people and access", asy
   await expect(choice(page, "Invite only")).toHaveAttribute("aria-checked", "true");
   await shot(page, "07-access");
 
-  // Delete Sam from his panel (on a phone the row opens it): a confirmation, then the account and its session are gone.
   await page.goto("/admin/people");
   await page.getByRole("button", { name: `Manage ${SAM.name}` }).click();
   await page.getByRole("dialog", { name: SAM.name }).getByRole("button", { name: `Delete ${SAM.name}` }).click();
   await expect(page.getByRole("dialog")).toContainText(`Delete ${SAM.name}’s account?`);
   await page.getByRole("dialog").getByRole("button", { name: "Delete account" }).click();
-  // Done when the dialog closes on the server's answer (while it is open the page behind is hidden from the
-  // accessibility tree, so the row would look gone too early).
+  // Wait for the dialog to close: it hides background rows from the accessibility tree.
   await expect(page.getByText(`${SAM.name}’s account was deleted.`)).toBeVisible();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(personRow(page, SAM.username)).toHaveCount(0);
-  // Sam's browser still holds the cookie, but the session behind it is gone.
   expect(await (await sam.request.get("/api/auth/get-session")).json()).toBeNull();
 
-  // The owner has no actions of their own (owners are changed in .env); the dashboard on a laptop.
   await expect(page.getByRole("button", { name: `Manage ${OWNER.name}` })).toHaveCount(0);
   await expect(personRow(page, OWNER.username)).toContainText("Set in .env");
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -191,11 +171,9 @@ test("owner starts the server, invites a member, manages people and access", asy
 test("coach: an admin turns it on, the P button opens it, set-up, a question with a data card, saved chats", async ({ page }) => {
   await signIn(page);
 
-  // Off by default: the round P button is still Check in.
   await expect(page.getByRole("button", { name: /^Check in for/ })).toBeVisible();
   expect(await (await page.goto("/coach"))?.text()).toContain("could not be found");
 
-  // The admin turns it on for everyone; the P button now opens Coach.
   await page.goto("/admin/access");
   await choice(page, "Everyone").click();
   await expect(choice(page, "Everyone")).toHaveAttribute("aria-checked", "true");
@@ -204,7 +182,6 @@ test("coach: an admin turns it on, the P button opens it, set-up, a question wit
   await page.getByRole("link", { name: "Open Coach" }).click();
   await expect(page).toHaveURL(/\/coach$/);
 
-  // Consent, then the provider (the e2e server's scripted model needs no key).
   await expect(page.getByRole("heading", { name: "Before you start" })).toBeVisible();
   await shot(page, "09-coach-consent");
   await page.getByRole("button", { name: "Allow" }).click();
@@ -214,41 +191,69 @@ test("coach: an admin turns it on, the P button opens it, set-up, a question wit
   await page.getByRole("radio", { name: "Test model" }).click();
   await page.getByRole("button", { name: "Test and save" }).click();
 
-  // The empty chat: suggestions and the check-in. Ask one.
   await expect(page.getByRole("heading", { name: "What would you like to know?" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Check in for today" })).toBeVisible();
   await shot(page, "11-coach-empty");
   await page.getByRole("button", { name: "Today's brief" }).click();
 
-  // The tool runs and renders Pulse's own card, then the reply.
   const log = page.getByRole("log", { name: "Chat with Pulse’s coach" });
   await expect(log.getByText("Today's brief")).toBeVisible();
   await expect(log.getByText("Recovery", { exact: true })).toBeVisible();
   await expect(log.getByText("Take it easy", { exact: true })).toBeVisible();
   await expect(page).toHaveURL(/\/coach\?c=[\w-]+$/);
-  await page.locator("textarea").blur();
+  const input = page.getByRole("textbox", { name: "Ask Coach", exact: true });
+  const back = page.getByRole("link", { name: "Back", exact: true });
+  const headerTop = (await back.boundingBox())!.y;
+  for (let i = 0; i < 3; i++) {
+    await input.click();
+    await expect(input).toBeFocused();
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+    await expect.poll(async () => Math.abs((await back.boundingBox())!.y - headerTop)).toBeLessThan(1);
+    await input.blur();
+  }
+  await page.setViewportSize({ width: 390, height: 480 });
+  await input.click();
+  await expect(input).toBeFocused();
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+  await expect.poll(async () => Math.abs((await back.boundingBox())!.y - headerTop)).toBeLessThan(1);
+  const composer = await input.boundingBox();
+  expect(composer!.y + composer!.height).toBeLessThanOrEqual(480);
+  await input.blur();
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.emulateMedia({ colorScheme: "light" });
   await shot(page, "12-coach-answer-light");
   await page.emulateMedia({ colorScheme: "dark" });
   await shot(page, "13-coach-answer-dark");
 
-  // Saved: a reload brings the chat back. On a phone the chats are their own page, grouped by day.
   await page.reload();
   await expect(page.getByText("Take it easy", { exact: true })).toBeVisible();
-  await page.getByRole("link", { name: /^Chats/ }).click(); // the history icon
+  await page.getByRole("link", { name: /^Chats/ }).click();
   await expect(page).toHaveURL(/\/coach\/chats$/);
   const chats = page.getByRole("navigation", { name: "Chats" });
   await expect(chats.getByRole("region", { name: "Today" }).getByRole("link", { name: "Today's brief" })).toBeVisible();
   await shot(page, "14-coach-chats-phone");
+  await chats.getByRole("link", { name: "Today's brief", exact: true }).click();
+  await expect(log.getByText("Take it easy", { exact: true })).toBeVisible();
+  await page.getByRole("link", { name: "Back", exact: true }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await page.getByRole("navigation", { name: "Primary", exact: true }).getByRole("link", { name: "Health", exact: true }).click();
+  await expect(page).toHaveURL(/\/health$/);
+  await page.getByRole("link", { name: "Open Coach" }).click();
+  await page.getByRole("link", { name: /^Chats/ }).click();
+  await chats.getByRole("link", { name: "Today's brief", exact: true }).click();
+  await expect(log.getByText("Take it easy", { exact: true })).toBeVisible();
+  await page.getByRole("link", { name: "Back", exact: true }).click();
+  await expect(page).toHaveURL(/\/health$/);
+  await page.getByRole("link", { name: "Open Coach" }).click();
+  await page.getByRole("link", { name: /^Chats/ }).click();
+  await expect(page).toHaveURL(/\/coach\/chats$/);
 
-  // Delete it from its menu, with a confirmation.
   await page.getByRole("button", { name: "Options for “Today's brief”" }).click();
   await page.getByRole("menuitem", { name: "Delete chat" }).click();
   await page.getByRole("dialog").getByRole("button", { name: "Delete chat" }).click();
   await expect(page.getByText("Chat deleted.")).toBeVisible();
   await expect(chats.getByRole("link", { name: "Today's brief" })).toHaveCount(0);
 
-  // On a laptop the chat list sits beside the conversation.
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/coach");
   await page.getByRole("button", { name: "How can I improve tonight's sleep?" }).click();
@@ -257,7 +262,6 @@ test("coach: an admin turns it on, the P button opens it, set-up, a question wit
   await shot(page, "15-coach-laptop");
   await page.setViewportSize({ width: 390, height: 844 });
 
-  // Settings › Coach: provider and model, never a key; the Your data page offers the chats.
   await page.goto("/settings");
   const coach = page.locator("#coach");
   await expect(coach).toContainText("Test model");
@@ -270,7 +274,7 @@ test("coach wording: an admin edits a tool description, it is versioned, and res
   await page.goto("/admin/coach?item=get_day");
   await expect(page.getByRole("heading", { level: 1, name: "AI coach" })).toBeVisible();
   const tool = page.locator("#tool-get_day");
-  const description = tool.getByLabel("Description").first(); // the tool's; its parameter has one too
+  const description = tool.getByLabel("Description").first();
   const original = await description.inputValue();
   await description.fill("One day of the person’s scores.");
   await tool.getByRole("button", { name: "Save" }).click();
@@ -278,7 +282,6 @@ test("coach wording: an admin edits a tool description, it is versioned, and res
   await expect(tool.getByText(/^Edited/)).toBeVisible();
   await shot(page, "16-admin-coach-edited");
 
-  // History shows the version; Reset saves the default as the newest.
   await tool.getByRole("button", { name: /versions? of Description/ }).first().click();
   await expect(page.getByRole("dialog")).toContainText("One day of the person’s scores.");
   await page.keyboard.press("Escape");

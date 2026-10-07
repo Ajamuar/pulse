@@ -1,6 +1,7 @@
 import { Activity, Heart, Moon, Thermometer, Wind } from "lucide-react"
 import { BAND_COLOR } from "@/lib/bands"
 import type { FormatKey } from "@/lib/format"
+import { dayHref, metricHref } from "@/lib/url"
 import { reasonCopy } from "@/lib/reasons"
 import { TrendChart } from "@/components/charts/TrendChart"
 import { ContributorRow } from "@/components/metrics/ContributorRow"
@@ -23,9 +24,8 @@ export const metadata = { title: "Recovery", description: "What shaped your Reco
 const ICON: Record<Contributor["key"], React.ReactNode> = { hrv: <Activity />, rhr: <Heart />, resp: <Wind />, sleep: <Moon />, skinTemp: <Thermometer /> }
 const FORMAT: Record<Contributor["key"], FormatKey> = { hrv: "int", rhr: "int", resp: "decimal1", sleep: "int", skinTemp: "signed1" }
 
-/** Recovery `/recovery?d=` (spec §7.2). */
 export default async function RecoveryPage({ searchParams }: PageProps<"/recovery">) {
-  const { d, weekly, ctx } = await pageDay(searchParams as SearchParams, "/recovery")
+  const { d, today, weekly, ctx } = await pageDay(searchParams as SearchParams, "/recovery")
   const vm = await getRecovery(d, ctx)
   const r = vm.recovery
   const trend = trendProps(vm.trend)
@@ -41,7 +41,7 @@ export default async function RecoveryPage({ searchParams }: PageProps<"/recover
         <Card className="gap-0 px-4 py-1 ring-0">
           <div className="divide-y divide-border">
             {vm.contributors.map((c) => (
-              <ContributorItem key={c.key} c={c} nightsLeft={r.nightsLeft} />
+              <ContributorItem key={c.key} c={c} nightsLeft={r.nightsLeft} href={dayHref(c.key === "sleep" ? "/sleep" : metricHref(c.key === "skinTemp" ? "skin" : c.key), d, today)} />
             ))}
           </div>
           <p className={LEGEND}>Dot: today. Shaded: your normal range.</p>
@@ -57,7 +57,6 @@ export default async function RecoveryPage({ searchParams }: PageProps<"/recover
         <SectionShell key="drivers" variant="card" title="What shaped it" id="drivers" level={2}>
           <Drivers vm={vm} />
         </SectionShell>,
-        // Stretched to What shaped it, the forecast centres in the card rather than leaving a 200 px hole under it (SYM7).
         <SectionShell key="forecast" variant="card" title="Tomorrow’s forecast" level={2} fill>
           <div className="my-auto">
             <Forecast vm={vm} />
@@ -69,12 +68,13 @@ export default async function RecoveryPage({ searchParams }: PageProps<"/recover
 }
 
 /** A contributor without a usable baseline (calibrating) reads as its reason rather than a bare number. */
-function ContributorItem({ c, nightsLeft }: { c: Contributor; nightsLeft?: number }) {
+function ContributorItem({ c, nightsLeft, href }: { c: Contributor; nightsLeft?: number; href: string }) {
   const metric = c.baseline || c.metric.value === null ? c.metric : { value: null, reason: "calibrating" as const, provisional: false, nightsLeft }
   const reason = metric.reason && metric.reason !== "no_data" ? reasonCopy(metric.reason, metric.nightsLeft ?? nightsLeft).long : undefined
   return (
     <ContributorRow
       variant="recovery"
+      href={href}
       icon={ICON[c.key]}
       label={c.label}
       unit={c.unit}
@@ -107,7 +107,6 @@ function Forecast({ vm }: { vm: RecoveryVM }) {
       />
     )
   return (
-    // Laptop: a centred stack, the card's one figure, in a card stretched to What shaped it (SYM7).
     <div className="flex items-center gap-4 xl:flex-col xl:gap-3 xl:text-center">
       <ScoreDial variant="stat" size="sm" value={f.value.value} max={100} color={BAND_COLOR[f.value.band]} unit="%" label="Tomorrow" extraTags={["estimate"]} />
       <p className={`${CAPTION} min-w-0 text-pretty xl:max-w-[32ch]`}>Estimate. Based on today’s strain and your recent trend.</p>

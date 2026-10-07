@@ -1,7 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { days, withDay } from "./days";
 
-// Spec §8 journeys 1-8, in demo mode. Runs at 390 (phone) and 1440 (laptop); see playwright.config.ts.
 
 const url = (path: string) => new RegExp(`${path.replace(/[?.]/g, "\\$&")}$`);
 
@@ -64,8 +63,7 @@ test("3. workout review: Strain → activity → HR and zones", async ({ page })
   await expect(page).toHaveURL(/\/activity\/[^/]+$/);
   await expect(page.getByRole("heading", { level: 1, name: "Running" })).toBeVisible();
   await expect(page.getByRole("region", { name: "Heart rate" }).getByRole("figure")).toBeVisible();
-  // Google's four named zones: Light, Moderate, Vigorous, Peak (853da01).
-  await expect(page.getByRole("region", { name: "Time in zones" }).getByRole("listitem")).toHaveCount(4);
+  await expect(page.getByRole("region", { name: "Time in zones" }).getByRole("listitem")).toHaveCount(6);
   await page.getByRole("link", { name: "Back" }).click();
   await expect(page).toHaveURL(url(withDay("/strain", d)));
 });
@@ -92,7 +90,6 @@ test("5. healthspan: Health → Healthspan → header collapses → contributor 
   const header = page.locator("main header[data-state]");
   await scrollUntil(page, async () => (await header.getAttribute("data-state")) === "collapsed");
   await expect(header).toHaveAttribute("data-state", "collapsed");
-  // The compact orb (between the two header stats) fades in once collapsed.
   const orb = header.locator("[data-collapse-row] > [aria-hidden] > div");
   await expect(orb).toContainText("Pulse Age");
   await expect.poll(() => orb.evaluate((el) => Number(getComputedStyle(el).opacity))).toBe(1);
@@ -116,13 +113,31 @@ test("6. illness week: Home alert → Health Monitor flags", async ({ page }) =>
   await expect(page).toHaveURL(url(withDay("/health/monitor", d)));
   await expect(page.getByRole("alert").filter({ hasText: "Possible illness signal" })).toBeVisible();
   const readings = page.getByRole("region", { name: "Last night’s readings" });
-  await expect(readings.getByRole("button", { name: /(Below|Above) / }).first()).toBeVisible();
+  const vital = readings.getByRole("link", { name: /(Below|Above) / }).first();
+  await expect(vital).toBeVisible();
+  await vital.click();
+  await expect(page).toHaveURL(new RegExp(`/metric/(hrv|rhr|resp|spo2|skin)\\?d=${d}$`));
+  await page.getByRole("link", { name: "Back", exact: true }).click();
+  await expect(page).toHaveURL(url(withDay("/", d)));
+});
+
+test("dashboard vital metrics open their own details and return to the selected Home day", async ({ page }) => {
+  const d = days().past!;
+  await page.goto(withDay("/", d));
+  for (const [label, key] of [
+    ["Heart rate variability", "hrv"], ["Resting heart rate", "rhr"], ["Respiratory rate", "resp"],
+    ["Blood oxygen", "spo2"], ["Skin temperature", "skin"],
+  ]) {
+    await page.getByRole("link", { name: new RegExp(`^${label}:? `) }).click();
+    await expect(page).toHaveURL(url(withDay(`/metric/${key}`, d)));
+    await expect(page.getByRole("heading", { level: 1, name: label })).toBeVisible();
+    await page.getByRole("link", { name: "Back", exact: true }).click();
+    await expect(page).toHaveURL(url(withDay("/", d)));
+  }
 });
 
 test("7. journal: check in with the round button or + → save → Insights shows the alcohol effect", async ({ page }) => {
   await page.goto("/");
-  // The round button on phone, the sidebar's "Check in" on laptop: the same button, one visible per width. The sheet
-  // opens over Home and closes back to it (spec §11 UX2).
   await page.getByRole("button", { name: "Check in for Today" }).filter({ visible: true }).click();
   await expect(page).toHaveURL(url("/?checkin=1"));
   const sheet = page.getByRole("dialog", { name: "Check in" });
@@ -160,13 +175,11 @@ test("9. More hub: Trends and a metric switch, a custom behaviour in the check-i
   await page.goto("/");
   await page.getByRole("navigation", { name: "Primary" }).filter({ visible: true }).first().getByRole("link", { name: "More" }).click();
   await expect(page).toHaveURL(url("/more"));
-  // Below 1280 px More lists the parts of Settings (Account & settings); the sidebar carries it from there.
   if (info.project.name === "390") await expect(page.getByRole("link", { name: /^Account/ })).toHaveAttribute("href", "/settings?s=account");
 
   await page.getByRole("link", { name: /^Trends/ }).click();
   await expect(page).toHaveURL(url("/trends"));
   await expect(page.getByRole("heading", { level: 2, name: "Recovery" })).toBeVisible();
-  // One picker row: a bottom sheet (sections as an accordion) on a phone, a popover of every section from 768 px.
   await page.getByRole("button", { name: /Recovery & sleep/ }).click();
   if (info.project.name === "390") await page.getByRole("button", { name: /^Vitals/ }).click();
   await page.getByRole("link", { name: "Heart rate variability" }).click();
