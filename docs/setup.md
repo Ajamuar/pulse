@@ -1,8 +1,8 @@
 # Self-hosting Pulse with Tailscale
 
 Pulse runs on your own machine or server: one Next.js app with its sync worker, and a Postgres database beside it.
-Anyone you share the URL with can create an account, connect their own Google account, and see only their own
-data. This guide takes you from a demo on your laptop to your Fitbit Air data on a home server that you open from
+People you invite create an account, connect their own Google account, and see only their own data (sign-up is
+invite-only by default; see [Invite people](adm_interactions.md#invite-people)). This guide takes you from a demo on your laptop to your Fitbit Air data on a home server that you open from
 your phone over [Tailscale](https://tailscale.com).
 
 For other ways to reach Pulse (Cloudflare Tunnel, a reverse proxy), see [alt_setups.md](alt_setups.md).
