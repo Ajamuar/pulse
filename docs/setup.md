@@ -2,11 +2,11 @@
 
 Pulse runs on your own machine or server: one Next.js app with its sync worker, and a Postgres database beside it.
 People you invite create an account, connect their own Google account, and see only their own data (sign-up is
-invite-only by default; see [Invite people](adm_interactions.md#invite-people)). This guide takes you from a demo on your laptop to your Fitbit Air data on a home server that you open from
+invite-only by default; see [Invite people](admin.md#invite-people)). This guide takes you from a demo on your laptop to your Fitbit Air data on a home server that you open from
 your phone over [Tailscale](https://tailscale.com).
 
-For other ways to reach Pulse (Cloudflare Tunnel, a reverse proxy), see [alt_setups.md](alt_setups.md).
-Curious how it works under the hood? See [tec_details.md](tec_details.md).
+For other ways to reach Pulse (Cloudflare Tunnel, a reverse proxy), see [other-setups.md](other-setups.md).
+Curious how it works under the hood? See [technical-details.md](technical-details.md).
 
 ## 1. Try the demo
 
@@ -168,9 +168,9 @@ With Tailscale connected on your phone, open `https://<your-host>` in your brows
 | `sudo docker ps` | Lists the running containers (`pulse` and `pulse-db`) |
 | `sudo docker logs pulse` | Shows Pulse's logs |
 | `sudo docker compose up -d --build` | Rebuilds and restarts Pulse after a `git pull` |
-| `scripts/deploy.sh` | Updates Pulse with a database dump and automatic rollback ([adm_interactions.md](adm_interactions.md#update-pulse)) |
+| `scripts/deploy.sh` | Updates Pulse with a database dump and automatic rollback ([admin.md](admin.md#update-pulse)) |
 
-For backups, password resets and inviting other people, see [adm_interactions.md](adm_interactions.md).
+For backups, password resets and inviting other people, see [admin.md](admin.md).
 
 ## Troubleshooting
 

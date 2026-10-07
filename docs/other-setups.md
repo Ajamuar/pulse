@@ -9,7 +9,7 @@ Whichever you pick:
 - Google needs an HTTPS hostname (plain `http` works only for `localhost`, and never with a raw IP address).
 - Add `https://<your-host>/oauth/callback` as a redirect URI on the OAuth client.
 - Setting `APP_URL=https://<your-host>` in `.env` is optional but recommended (see
-  [tec_details.md](tec_details.md#app_url)).
+  [technical-details.md](technical-details.md#app_url)).
 
 ## How the tunnel or proxy reaches Pulse
 

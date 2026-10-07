@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 
 export const metadata: Metadata = { title: "Forgot password" }
 
-const GUIDE = "https://github.com/adityaongit/pulse/blob/main/docs/adm_interactions.md#reset-a-password"
+const GUIDE = "https://github.com/adityaongit/pulse/blob/main/docs/admin.md#reset-a-password"
 
 /** A prefilled request, so the admin gets the one thing they need: which account. */
 const mailto = (to: string) =>
