@@ -3,9 +3,8 @@
 import { Bar, CartesianGrid, ComposedChart, LabelList, Line, XAxis, YAxis } from "recharts"
 import { recoveryBand } from "@/lib/bands"
 import { DAY, formatDay, formatValue } from "@/lib/format"
-import { ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { Skeleton } from "@/components/ui/skeleton"
-import { AXIS, ChartFigure, GRID, TOOLTIP_CLASS, TooltipLine, useSeriesAnimation } from "./ChartFrame"
+import { AXIS, ChartFigure, GRID, useSeriesAnimation } from "./ChartFrame"
 
 export type StrainRecoveryPoint = { day: string; strain: number | null; recovery: number | null }
 
@@ -128,27 +127,6 @@ export function StrainRecoveryChart({ points, today, grow }: { points: StrainRec
           tooltipType="none"
           shape={(b: { x?: number; y?: number; width?: number; height?: number }) =>
             b.height ? <rect x={b.x} y={b.y} width={b.width} height={b.height + TODAY_TAIL} rx={6} fill="color-mix(in srgb, var(--foreground) 6%, transparent)" /> : <g />
-          }
-        />
-        <ChartTooltip
-          isAnimationActive={false}
-          cursor={{ fill: "color-mix(in srgb, var(--foreground) 4%, transparent)" }}
-          allowEscapeViewBox={{ x: false, y: false }}
-          wrapperStyle={{ pointerEvents: "none" }}
-          content={
-            <ChartTooltipContent
-              className={TOOLTIP_CLASS}
-              hideIndicator
-              labelFormatter={(_, payload) => (payload?.[0]?.payload as Row | undefined)?.date ?? ""}
-              formatter={(value, name) => {
-                if (name === "hl" || value == null) return null
-                return name === "strain" ? (
-                  <TooltipLine color="var(--strain)">Strain {formatValue("decimal1", Number(value))}</TooltipLine>
-                ) : (
-                  <TooltipLine color={BAND_FILL[recoveryBand(Number(value))]}>Recovery {Math.round(Number(value))}%</TooltipLine>
-                )
-              }}
-            />
           }
         />
         <Line

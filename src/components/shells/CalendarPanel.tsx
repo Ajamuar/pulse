@@ -38,7 +38,7 @@ type Months = Record<string, Map<string, CalendarDayVM>>
 
 // Phone: drops from the very top over the top bar. ≥ 768: hangs under the top bar (56 px) beside the
 // rail (112 px) or sidebar (256 px from 1280), so the header and nav stay readable (CAL6, inferred).
-const REGION = "fixed inset-x-0 top-0 z-50 md:top-[calc(env(safe-area-inset-top)+3.5rem)] md:left-[112px] xl:left-[256px]"
+const REGION = "fixed inset-x-0 top-0 z-50 md:top-[calc(var(--inset-top)+3.5rem)] md:left-[112px] xl:left-[256px]"
 
 /**
  * the reference app's month calendar (spec §4.3, refs calendar-recovery-current-2026-05*.jpg): a flat panel that
@@ -76,7 +76,7 @@ export function CalendarPanel(props: CalendarPanelProps) {
         }}
         className={cn(
           REGION,
-          "border-b-[1.5px] border-background-top bg-background-mid pt-[env(safe-area-inset-top)] outline-none md:pt-0",
+          "border-b-[1.5px] border-background-top bg-background-mid pt-[var(--inset-top)] outline-none md:pt-0",
           // ≥ 768: a floating panel like the rail, sidebar and sheets, 12 px from the right edge with 28 px lower corners (U18 O-01).
           "md:right-3 md:rounded-b-[28px] md:shadow-overlay",
           "duration-200 ease-standard data-open:animate-in data-open:slide-in-from-top data-closed:animate-out data-closed:slide-out-to-top"

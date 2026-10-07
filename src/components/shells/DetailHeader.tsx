@@ -5,7 +5,7 @@ import { usePathname, useSearchParams } from "next/navigation"
 import { ChevronLeft, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { COLUMN_WIDTH } from "./column"
-import { detailBackHref, useAppNavigationRoot } from "./AppNavigation"
+import { detailBackHref, useAppBack, useAppNavigationRoot } from "./AppNavigation"
 import { Button } from "@/components/ui/button"
 import { DateSwitcher, type DateSwitcherProps } from "./DateSwitcher"
 import { InfoButton, type InfoContent } from "./InfoButton"
@@ -45,6 +45,7 @@ export function DetailHeaderRow({
   const { today } = useShellCalendar()
 
   const parent = detailBackHref(pathname, root, today, params.get("d"), backHref)
+  const back = useAppBack(parent)
   const Icon = dismiss === "close" ? X : ChevronLeft
   const backButton = (
     <Button
@@ -53,7 +54,17 @@ export function DetailHeaderRow({
       size="icon-touch"
       className={cn("hover:bg-foreground/8", dismiss === "close" && "md:invisible")}
     >
-      <Link href={parent} replace aria-label={dismiss === "close" ? "Close" : "Back"}>
+      {/* The href is the parent, for a new tab or no JavaScript; a tap pops to the previous screen (useAppBack). */}
+      <Link
+        href={parent}
+        replace
+        aria-label={dismiss === "close" ? "Close" : "Back"}
+        onClick={(e) => {
+          if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return
+          e.preventDefault()
+          back()
+        }}
+      >
         <Icon aria-hidden strokeWidth={1.75} className={dismiss === "close" ? "size-6" : "size-[26px]"} />
       </Link>
     </Button>

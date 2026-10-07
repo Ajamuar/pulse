@@ -34,3 +34,27 @@ test("with the worker installed, a page load while offline shows the offline pag
   await page.goto("/login").catch(() => {});
   await expect(page.getByRole("heading", { name: "You’re offline" })).toBeVisible();
 });
+
+test("offline, a page this device loaded comes back with the offline banner, and signing out forgets it", async ({ page, context }) => {
+  test.skip(!process.env.E2E_PROD, "the worker registers only in a production build");
+  await page.goto("/login");
+  await page.getByRole("button", { name: /demo data/i }).click();
+  await page.waitForURL("/");
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await page.reload(); // now controlled by the worker, which stores this load
+  await context.setOffline(true);
+  await page.goto("/").catch(() => {});
+  await expect(page.getByText("You’re offline")).toBeVisible();
+  await expect(page.getByText("RECOVERY", { exact: false }).first()).toBeVisible();
+
+  await context.setOffline(false);
+  await page.evaluate(() => {
+    const f = document.createElement("form");
+    f.method = "post";
+    f.action = "/logout";
+    document.body.append(f);
+    f.submit();
+  });
+  await page.waitForURL("/login");
+  await expect.poll(() => page.evaluate(async () => (await (await caches.open("pulse-pages-v1")).keys()).length)).toBe(0);
+});

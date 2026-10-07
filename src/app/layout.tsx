@@ -27,6 +27,12 @@ const barlow = Barlow({
 // light set first, unmarked, then the dark set, or iOS shows the light image in dark mode.
 const LAUNCH_SCREENS: { url: string; media: string }[] = launchScreens
 
+// An installed iPhone app gets a viewport short by its status bar (812 of 874 pt on an iPhone 17) while the page is
+// no taller than that, and paints nothing below it: a one-screen page like Coach lost its bottom 62 pt. A page at least
+// the screen's height gets the whole screen (measured in the iOS 26.5 simulator: 812 at rest, 874 with a 874 pt page).
+// CSS can't say it (100vh and 100lvh are the short viewport there); `navigator.standalone` is iOS's Home Screen flag.
+const IOS_APP_HEIGHT_SCRIPT = `if(navigator.standalone){var f=function(){var l=matchMedia("(orientation: landscape)").matches;document.documentElement.style.minHeight=(l?Math.min(screen.width,screen.height):Math.max(screen.width,screen.height))+"px"};f();addEventListener("resize",f)}`
+
 const DESCRIPTION =
   "Recovery, strain and sleep from your Fitbit Air: Healthspan, Energy Bank, stress and a journal, all on your own server.";
 
@@ -46,6 +52,9 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  // Android Chrome: the keyboard shrinks the page instead of sliding it up under the top of the screen, so a fixed
+  // header and a composer above the keyboard both stay in view (Coach). iOS ignores it (CoachViewport handles iOS).
+  interactiveWidget: "resizes-content",
   // First paint only; ThemeColor follows the theme and the page's ground from there. Values mirror --theme-color.
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#f6f8f9" },
@@ -59,12 +68,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${figtree.variable} ${barlow.variable} h-full scroll-pt-[calc(120px+env(safe-area-inset-top))] scroll-pb-[110px] antialiased md:scroll-pb-24`}
+      className={`${figtree.variable} ${barlow.variable} h-full scroll-pt-[calc(120px+var(--inset-top))] scroll-pb-[110px] antialiased md:scroll-pb-24`}
     >
       <head>
         {/* Settings › Appearance (system, light or dark, per device). Inline and first in <head>, so the class is on <html>
             before anything paints: next/script's beforeInteractive is queued and ran after first paint (a dark flash). */}
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: IOS_APP_HEIGHT_SCRIPT }} />
         {/* Production only, like PwaRuntime: in dev a worker would cache stale code. */}
         {process.env.NODE_ENV === "production" && <script dangerouslySetInnerHTML={{ __html: SW_SCRIPT }} />}
         {/* Next's own manifest link omits crossorigin outside Vercel previews; child layouts set manifest: null. */}

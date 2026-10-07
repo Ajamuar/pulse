@@ -1,7 +1,10 @@
-// Pulse service worker. Deliberately small: it never caches pages or health data (private, per user), only what
-// is the same for everyone: the build's static files and the offline page. Also receives Web Push.
+// Pulse service worker. Deliberately small: the build's static files and the offline page, the last copy of each
+// page this device opened (shown only when the network is down, cleared on sign-out), and Web Push.
 const CACHE = "pulse-static-v1"
+const PAGES = "pulse-pages-v1"
 const OFFLINE = "/offline.html"
+// ponytail: keeps the most recently stored pages by insertion order, not by last visit; enough for a few days of screens.
+const MAX_PAGES = 30
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll([OFFLINE, "/icons/icon-192.png"])))
@@ -15,7 +18,7 @@ self.addEventListener("message", (e) => {
 self.addEventListener("activate", (e) => {
   e.waitUntil(
     (async () => {
-      for (const k of await caches.keys()) if (k !== CACHE) await caches.delete(k)
+      for (const k of await caches.keys()) if (k !== CACHE && k !== PAGES) await caches.delete(k)
       await self.clients.claim()
     })(),
   )
@@ -24,12 +27,23 @@ self.addEventListener("activate", (e) => {
 self.addEventListener("fetch", (e) => {
   const req = e.request
   const url = new URL(req.url)
-  if (req.method !== "GET" || url.origin !== location.origin) return
-  // Pages: always the network (signed-in, per user); only when it is unreachable, the offline page.
+  if (url.origin !== location.origin) return
+  // Pages: always the network. Offline, the copy this device last loaded (the page says it is offline), else the
+  // offline page. Landing on /login (signing out, an ended session) drops every copy: the next person to sign in on
+  // this device must never see them. The sign-out POST is a navigation too, so it is checked before the GET filter.
   if (req.mode === "navigate") {
-    e.respondWith(fetch(req).catch(() => caches.match(OFFLINE)))
+    e.respondWith(
+      fetch(req)
+        .then((res) => {
+          if (new URL(res.url).pathname === "/login") e.waitUntil(caches.delete(PAGES))
+          else if (req.method === "GET" && res.ok && !res.redirected) e.waitUntil(keepPage(req, res.clone()))
+          return res
+        })
+        .catch(async () => (req.method === "GET" && (await caches.match(req, { cacheName: PAGES }))) || caches.match(OFFLINE)),
+    )
     return
   }
+  if (req.method !== "GET") return
   // Hashed build files never change: serve from cache, fill it on first use (fonts live here too).
   if (url.pathname.startsWith("/_next/static/")) {
     e.respondWith(
@@ -48,27 +62,43 @@ self.addEventListener("fetch", (e) => {
   }
 })
 
+async function keepPage(req, res) {
+  const c = await caches.open(PAGES)
+  await c.put(req, res)
+  const keys = await c.keys()
+  for (const k of keys.slice(0, -MAX_PAGES)) await c.delete(k)
+}
+
+// The app icon's badge counts the notifications still in the tray; opening the app clears it (AppLifecycle).
+async function badge() {
+  if (!self.navigator.setAppBadge) return
+  const n = (await self.registration.getNotifications()).length
+  await (n ? self.navigator.setAppBadge(n) : self.navigator.clearAppBadge()).catch(() => {})
+}
+
 self.addEventListener("push", (e) => {
   let d = {}
   try {
     d = e.data ? e.data.json() : {}
   } catch {}
   e.waitUntil(
-    Promise.all([
-      self.registration.showNotification(d.title || "Pulse", {
+    self.registration
+      .showNotification(d.title || "Pulse", {
         body: d.body || "",
         tag: d.tag,
         icon: "/icons/icon-192.png",
         badge: "/icons/icon-192.png",
         data: { url: d.url || "/" },
-      }),
-      self.navigator.setAppBadge ? self.navigator.setAppBadge(1).catch(() => {}) : null,
-    ]),
+      })
+      .then(badge),
   )
 })
 
+self.addEventListener("notificationclose", (e) => e.waitUntil(badge()))
+
 self.addEventListener("notificationclick", (e) => {
   e.notification.close()
+  e.waitUntil(badge())
   const url = new URL(e.notification.data?.url || "/", location.origin).href
   e.waitUntil(
     (async () => {

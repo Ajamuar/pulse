@@ -263,7 +263,7 @@ export function CoachBarActions({ chatCount, chatOpen }: { chatCount: number; ch
   )
 }
 
-export function Coach({ id, initial, groups, next, prefill, auto, providerLabel, suggestions }: { id: string; initial: UIMessage[]; groups: ChatGroup[]; next: ChatCursor | null; prefill: string; auto: boolean; providerLabel: string; suggestions: CoachSuggestion[] }) {
+export function Coach({ id, initial, groups, next, prefill, auto, suggestions }: { id: string; initial: UIMessage[]; groups: ChatGroup[]; next: ChatCursor | null; prefill: string; auto: boolean; suggestions: CoachSuggestion[] }) {
   const router = useRouter()
   const [input, setInput] = React.useState(prefill)
   const [error, setError] = React.useState<string | null>(null)
@@ -288,22 +288,44 @@ export function Coach({ id, initial, groups, next, prefill, auto, providerLabel,
   const [announce, setAnnounce] = React.useState("")
   const busy = status === "submitted" || status === "streaming"
 
+  // Pinned to the newest message: a saved chat opens at its end, and a growing answer, a late-rendering chart or the
+  // keyboard resizing the frame keep it there. Scrolling up unpins; scrolling back to the end pins again.
+  const pinned = React.useRef(true)
   React.useEffect(() => {
     const scroller = transcript.current
+    pinned.current = true
     if (scroller) scroller.scrollTop = scroller.scrollHeight
   }, [messages.length, status])
 
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     const scroller = transcript.current
     if (!scroller) return
-    let previousHeight = scroller.clientHeight
-    const observer = new ResizeObserver(() => {
-      const atEnd = scroller.scrollHeight - scroller.scrollTop - previousHeight <= 2
-      previousHeight = scroller.clientHeight
-      if (atEnd) scroller.scrollTop = scroller.scrollHeight
+    const toEnd = () => {
+      if (pinned.current) scroller.scrollTop = scroller.scrollHeight
+    }
+    const onScroll = () => {
+      pinned.current = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight <= 24
+    }
+    // The transcript's own size (the keyboard) and its direct children's (a growing answer, a late chart); a new direct
+    // child (the log replacing the empty state, an error) is watched as it arrives.
+    const observer = new ResizeObserver(toEnd)
+    const watch = () => {
+      observer.observe(scroller)
+      for (const child of scroller.children) observer.observe(child)
+    }
+    const added = new MutationObserver(() => {
+      watch()
+      toEnd()
     })
-    observer.observe(scroller)
-    return () => observer.disconnect()
+    watch()
+    toEnd()
+    added.observe(scroller, { childList: true })
+    scroller.addEventListener("scroll", onScroll, { passive: true })
+    return () => {
+      observer.disconnect()
+      added.disconnect()
+      scroller.removeEventListener("scroll", onScroll)
+    }
   }, [])
 
   const send = (text: string) => {
@@ -372,7 +394,7 @@ export function Coach({ id, initial, groups, next, prefill, auto, providerLabel,
         </aside>
       )}
 
-      <div className="mx-auto flex min-h-0 w-full max-w-[760px] flex-1 flex-col pb-[max(env(safe-area-inset-bottom),12px)] md:pb-6">
+      <div className="mx-auto flex min-h-0 w-full max-w-[760px] flex-1 flex-col pb-[max(env(safe-area-inset-bottom),12px)] in-data-keyboard:pb-2 md:pb-6">
         <div ref={transcript} data-coach-transcript className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-none pb-6">
           {messages.length === 0 ? (
             <div className="my-auto flex flex-col items-center py-8 text-center">
@@ -382,9 +404,6 @@ export function Coach({ id, initial, groups, next, prefill, auto, providerLabel,
                 </span>
               </span>
               <h2 className="mt-5 text-[22px] leading-7 font-bold tracking-[-0.01em] text-balance md:text-[26px] md:leading-8">What would you like to know?</h2>
-              <p className="mt-2 max-w-[44ch] text-[15px] leading-[22px] text-pretty text-foreground-secondary">
-                The coach looks up your own Pulse numbers before it answers, using {providerLabel}. It’s not medical advice.
-              </p>
               <ul className="mt-8 grid w-full max-w-[600px] gap-2 sm:grid-cols-2">
                 {suggestions.map(({ text, key }) => {
                   const Icon = SUGGESTION_ICONS[key]

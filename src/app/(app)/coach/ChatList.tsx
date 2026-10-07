@@ -2,19 +2,32 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { Ellipsis, MessageSquarePlus } from "lucide-react"
 import { toast } from "sonner"
 import { deleteChatAction, moreChatsAction } from "@/server/actions/coach"
 import type { ChatCursor, ChatGroup, ChatRow } from "@/server/coach/store"
 import { cn } from "@/lib/utils"
+import { replaceUnder } from "@/components/shells/AppNavigation"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 /** One chat: the link fills the row; its menu (Delete) shows on hover or focus, and always on touch screens. */
+/**
+ * Opening a chat or starting one replaces the screen instead of stacking on it, and from Chats (phone) it first
+ * pops Chats: Back from a chat returns to wherever Coach was opened, not to the list or to an earlier chat.
+ */
+function useOpenChat() {
+  const router = useRouter()
+  const pathname = usePathname()
+  return (href: string, then?: () => void) =>
+    pathname === "/coach/chats" ? replaceUnder(router, href, "/coach", then) : (router.replace(href, { scroll: false }), then?.())
+}
+
 function ChatItem({ chat, current }: { chat: ChatRow; current: boolean }) {
   const router = useRouter()
+  const open = useOpenChat()
   const [confirm, setConfirm] = React.useState(false)
   const [pending, start] = React.useTransition()
   const remove = () =>
@@ -30,6 +43,11 @@ function ChatItem({ chat, current }: { chat: ChatRow; current: boolean }) {
     <li className="group/chat relative">
       <Link
         href={`/coach?c=${chat.id}`}
+        onClick={(e) => {
+          if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return
+          e.preventDefault()
+          open(`/coach?c=${chat.id}`)
+        }}
         aria-current={current ? "page" : undefined}
         className={cn(
           "flex min-h-10 items-center rounded-full py-2 pr-11 pl-4 text-[14px] leading-5 font-medium outline-none transition-[background-color,color] duration-150 ease-standard focus-visible:ring-3 focus-visible:ring-ring/50 pointer-coarse:min-h-12 pointer-fine:pr-4 pointer-fine:group-focus-within/chat:pr-11 pointer-fine:group-hover/chat:pr-11",
@@ -85,10 +103,8 @@ function ChatItem({ chat, current }: { chat: ChatRow; current: boolean }) {
  */
 export function NewChatButton({ label, className }: { label?: boolean; className?: string }) {
   const router = useRouter()
-  const start = () => {
-    router.push("/coach")
-    router.refresh()
-  }
+  const open = useOpenChat()
+  const start = () => open("/coach", () => router.refresh())
   return label ? (
     // A nav row (AppNav's sidebar items): quiet until hovered.
     <Button

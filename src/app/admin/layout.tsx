@@ -51,7 +51,7 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
       </aside>
 
       <div className="lg:pl-64">
-        <header className="sticky top-0 z-20 border-b border-border bg-background/90 pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)] backdrop-blur-md">
+        <header className="sticky top-0 z-20 border-b border-border bg-background/90 pt-[var(--inset-top)] pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)] backdrop-blur-md">
           <div className="flex h-14 items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
             <span className="flex min-w-0 items-center gap-3">
               <Mark className="size-6 shrink-0 lg:hidden" />

@@ -139,10 +139,10 @@ export function PersonPanel({ person: p, now, chosen, canReset, me, children }: 
 
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="right" showCloseButton={false} className="gap-0 overflow-y-auto overscroll-none bg-background p-0 pb-[env(safe-area-inset-bottom)] data-[side=right]:w-full data-[side=right]:max-sm:border-l-0 data-[side=right]:sm:max-w-md">
-          <SheetHeader className="border-b border-border p-5 pt-[max(env(safe-area-inset-top),20px)] pr-14">
+          <SheetHeader className="border-b border-border p-5 pt-[max(var(--inset-top),20px)] pr-14">
             <SheetClose
               aria-label="Close"
-              className="absolute top-[max(env(safe-area-inset-top),12px)] right-3 grid size-10 place-items-center rounded-lg text-muted-foreground outline-none transition-[background-color,color] duration-150 ease-standard hover:bg-foreground/[0.05] hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="absolute top-[max(var(--inset-top),12px)] right-3 grid size-10 place-items-center rounded-lg text-muted-foreground outline-none transition-[background-color,color] duration-150 ease-standard hover:bg-foreground/[0.05] hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
             >
               <X aria-hidden className="size-5" strokeWidth={1.75} />
             </SheetClose>

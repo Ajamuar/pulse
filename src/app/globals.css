@@ -142,6 +142,9 @@
 }
 
 :root {
+  /* The top inset every header and fixed element clears: the notch on a phone, the window controls when the installed
+     desktop app draws into its title bar (manifest display_override "window-controls-overlay"). */
+  --inset-top: max(env(safe-area-inset-top), env(titlebar-area-height, 0px));
   color-scheme: dark;
   --radius: 0.625rem;
 
@@ -490,6 +493,26 @@
   summary,
   [role="button"] {
     touch-action: manipulation;
+  }
+  /* Typing on a touch screen: the keyboard shrinks the page (viewport interactive-widget), and the tab bar would ride
+     on top of it, so it steps aside like an app's. */
+  @media (pointer: coarse) {
+    body:has(:is(textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="button"], [type="submit"])):focus)
+      [data-tabbar] {
+      display: none;
+    }
+  }
+  /* Installed desktop app with the title bar hidden: the headers are the title bar, so dragging one moves the window;
+     its controls still take clicks. */
+  @media (display-mode: window-controls-overlay) {
+    header {
+      -webkit-app-region: drag;
+      app-region: drag;
+    }
+    header :is(a, button, input, select, textarea, [role="button"], [tabindex]) {
+      -webkit-app-region: no-drag;
+      app-region: no-drag;
+    }
   }
   /* App chrome is not text to select or long-press: no selection, no iOS callout on links and images. */
   a,

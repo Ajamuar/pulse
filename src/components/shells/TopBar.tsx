@@ -152,7 +152,7 @@ export function DemoChip() {
 export function HeaderFrame({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
     <header
-      className={cn("pointer-events-none sticky top-0 z-20 pt-[env(safe-area-inset-top)] *:pointer-events-auto", HEADER_FILL, HEADER_FADE, className)}
+      className={cn("pointer-events-none sticky top-0 z-20 pt-[var(--inset-top)] *:pointer-events-auto", HEADER_FILL, HEADER_FADE, className)}
     >
       {children}
     </header>

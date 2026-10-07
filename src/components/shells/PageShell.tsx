@@ -3,6 +3,7 @@ import { ConnectionBanner } from "@/components/metrics/ConnectionBanner"
 import { COLUMN_WIDTH } from "./column"
 import type { DateSwitcherProps } from "./DateSwitcher"
 import { HomeHeader, type HeaderRings } from "./HomeHeader"
+import { PageEnter } from "./PageEnter"
 import { TitleHeader } from "./TopBar"
 
 /** The content column (spec §2.5, §4.5). */
@@ -43,7 +44,7 @@ export function PageShell({ title, dateSwitcher, actions, layout = "stack", slot
   return (
     <div>
       {layout === "home" ? <HomeHeader rings={rings} /> : <TitleHeader title={title} dateSwitcher={dateSwitcher} />}
-      <div className={CONTENT_COLUMN} aria-busy={loading || undefined}>
+      <PageEnter className={CONTENT_COLUMN} aria-busy={loading || undefined}>
         {loading && <LoadingStatus title={title} />}
         {/* Home's top row pulls itself up under the header (-mt-2), so the banner keeps 24 px above the wordmark. */}
         <ConnectionBanner className={layout === "home" ? "mb-8 xl:mb-6" : "mb-4 xl:mb-6"} />
@@ -58,7 +59,7 @@ export function PageShell({ title, dateSwitcher, actions, layout = "stack", slot
         ) : (
           <div className={cn(layout === "grid-2" ? "grid grid-cols-1 gap-3 md:grid-cols-2 xl:gap-4" : "flex flex-col gap-8 xl:gap-10")}>{children}</div>
         )}
-      </div>
+      </PageEnter>
     </div>
   )
 }

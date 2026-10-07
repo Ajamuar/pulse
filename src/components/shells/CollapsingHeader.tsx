@@ -54,7 +54,7 @@ export function CollapsingHeader({ compact, stats, ...row }: DetailHeaderProps &
   useHeroCollapse(headerRef, heroRef)
 
   return (
-    <header ref={headerRef} data-state="top" className="group/ch pointer-events-none sticky top-0 z-20 pt-[env(safe-area-inset-top)] pb-6">
+    <header ref={headerRef} data-state="top" className="group/ch pointer-events-none sticky top-0 z-20 pt-[var(--inset-top)] pb-6">
       {/* The page ground with the 24 px fade: row 1 at rest, rows 1 and 2 once collapsed. */}
       <div
         aria-hidden

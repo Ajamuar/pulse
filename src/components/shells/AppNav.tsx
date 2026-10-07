@@ -11,6 +11,7 @@ import { dayLabel } from "@/lib/format"
 import { haptic } from "@/lib/haptics"
 import { parseDay, tabForPath, TAB_ROOT, type Tab } from "@/lib/url"
 import { SheetTrigger } from "./SheetTrigger"
+import { useTabNavigate } from "./AppNavigation"
 import { useShellCalendar, useShellStatus } from "./ShellStatus"
 import { DemoChip } from "./TopBar"
 
@@ -52,6 +53,7 @@ function Lens({ index, axis, className }: { index: number; axis: "x" | "y"; clas
 
 /** Phone tab bar: a 62 px glass squircle with four destinations (spec §4.2, G1). */
 function TabBar({ current }: { current: number }) {
+  const go = useTabNavigate()
   return (
     <nav aria-label="Primary" onClick={() => haptic(6)} className={cn(GLASS, "relative h-[62px] min-w-0 flex-1 rounded-[22px] p-1")}>
       <Lens index={current} axis="x" className="inset-y-1 left-1 w-[calc((100%-8px)/4)] rounded-[18px]" />
@@ -60,6 +62,7 @@ function TabBar({ current }: { current: number }) {
           <li key={tab} className="min-w-0">
             <Link
               href={TAB_ROOT[tab]}
+              onClick={(e) => go(TAB_ROOT[tab], e)}
               prefetch // full prefetch: the tabs open from the client cache, no skeleton flash
               aria-current={i === current ? "page" : undefined}
               className={cn(PRESS, ITEM_TONE(i === current), "flex h-full flex-col items-center justify-center gap-0.5 rounded-[18px] focus-visible:ring-inset")}
@@ -76,8 +79,9 @@ function TabBar({ current }: { current: number }) {
 
 /** Tablet rail, 88 px, floating (inferred, I2): the tab bar turned on its side. */
 function Rail({ current, wide, pathname }: { current: number; wide: boolean; pathname: string }) {
+  const go = useTabNavigate()
   return (
-    <nav aria-label="Primary" className={cn(GLASS, "fixed inset-y-3 left-3 z-30 hidden w-[88px] flex-col items-center rounded-[28px] py-4 md:flex", !wide && "xl:hidden")}>
+    <nav aria-label="Primary" className={cn(GLASS, "fixed top-[calc(var(--inset-top)+12px)] bottom-3 left-3 z-30 hidden w-[88px] flex-col items-center rounded-[28px] py-4 md:flex", !wide && "xl:hidden")}>
       <Link
         href="/"
         aria-label="Pulse home"
@@ -93,6 +97,7 @@ function Rail({ current, wide, pathname }: { current: number; wide: boolean; pat
           <li key={tab} className="relative">
             <Link
               href={TAB_ROOT[tab]}
+              onClick={(e) => go(TAB_ROOT[tab], e)}
               prefetch // full prefetch: the tabs open from the client cache, no skeleton flash
               aria-current={i === current ? "page" : undefined}
               className={cn(PRESS, ITEM_TONE(i === current), "flex h-16 w-[72px] flex-col items-center justify-center gap-1 rounded-[20px]")}
@@ -109,6 +114,7 @@ function Rail({ current, wide, pathname }: { current: number; wide: boolean; pat
           <div aria-hidden className="my-2 h-px w-12 bg-foreground/8" />
           <Link
             href="/settings"
+            onClick={(e) => go("/settings", e)}
             prefetch
             aria-current={pathname.startsWith("/settings") ? "page" : undefined}
             className={cn(PRESS, ITEM_TONE(pathname.startsWith("/settings")), "flex h-16 w-[72px] flex-col items-center justify-center gap-1 rounded-[20px]", pathname.startsWith("/settings") && "bg-glass-lens")}
@@ -133,10 +139,12 @@ function Sidebar({ current, pathname }: { current: number; pathname: string }) {
   const extra = [{ href: "/settings", match: "/settings", label: "Settings", icon: Settings }]
   const extraActive = extra.some((e) => pathname.startsWith(e.match))
   const tab = extraActive ? -1 : current
+  const go = useTabNavigate()
   const item = (href: string, label: string, Icon: LucideIcon, active: boolean, lit = false) => (
     <li key={label} className="relative">
       <Link
         href={href}
+        onClick={(e) => go(href, e)}
         prefetch
         aria-current={active ? "page" : undefined}
         className={cn(PRESS, ITEM_TONE(active), "flex h-12 items-center gap-3 rounded-full px-4 text-[15px] leading-5 font-semibold", lit && "bg-glass-lens")}
@@ -147,7 +155,7 @@ function Sidebar({ current, pathname }: { current: number; pathname: string }) {
     </li>
   )
   return (
-    <nav aria-label="Primary" className={cn(GLASS, "fixed inset-y-3 left-3 z-30 hidden w-[232px] flex-col rounded-[28px] p-3 xl:flex")}>
+    <nav aria-label="Primary" className={cn(GLASS, "fixed top-[calc(var(--inset-top)+12px)] bottom-3 left-3 z-30 hidden w-[232px] flex-col rounded-[28px] p-3 xl:flex")}>
       <Link
         href="/"
         aria-label="Pulse home"
@@ -254,7 +262,7 @@ export function AppNav() {
       {/* No tab is current on the coach (tabForPath files it under Home); the Coach button is where you are. */}
       <Rail current={pathname.startsWith("/coach") || pathname.startsWith("/settings") ? -1 : index} wide={railOnly} pathname={pathname} />
       {!railOnly && <Sidebar current={index} pathname={pathname} />}
-      <div className="pointer-events-none fixed inset-x-3 bottom-[max(calc(env(safe-area-inset-bottom)-6px),12px)] z-30 flex touch-manipulation justify-end gap-2 *:pointer-events-auto md:hidden">
+      <div className="pointer-events-none fixed inset-x-3 bottom-[max(calc(env(safe-area-inset-bottom)-6px),12px)] z-30 flex touch-manipulation justify-end gap-2 *:pointer-events-auto md:hidden" data-tabbar>
         {root && (
           <div className="flex min-w-0 flex-1">
             <TabBar current={index} />

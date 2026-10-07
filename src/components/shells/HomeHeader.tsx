@@ -298,9 +298,9 @@ export function HomeHeader({ rings }: { rings?: HeaderRings }) {
 
   return (
     // In flow: the top row and its fade only. Everything that grows does so over the content, never pushing it.
-    <header className="sticky top-0 z-20 h-[calc(env(safe-area-inset-top)+68px)] md:h-[calc(env(safe-area-inset-top)+76px)]">
+    <header className="sticky top-0 z-20 h-[calc(var(--inset-top)+68px)] md:h-[calc(var(--inset-top)+76px)]">
       <h1 className="sr-only">Home</h1>
-      <div ref={panel} data-state="top" className="group/hdr pointer-events-none absolute inset-x-0 top-0 pt-[env(safe-area-inset-top)]">
+      <div ref={panel} data-state="top" className="group/hdr pointer-events-none absolute inset-x-0 top-0 pt-[var(--inset-top)]">
         {/* The page ground with the 24 px fade, as a reveal: it covers the top row at rest and grows under it. */}
         <div
           ref={band}

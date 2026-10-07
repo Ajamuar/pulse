@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto"
 import { connection } from "next/server"
 import { notFound } from "next/navigation"
-import { providerLabel, providerOptions } from "@/server/coach/options"
+import { providerOptions } from "@/server/coach/options"
 import { coachAccess, coachSetup, groupChats, listChats, loadChat } from "@/server/coach/store"
 import { userCtx } from "@/server/queries/common"
 import { DetailShell } from "@/components/shells/DetailShell"
@@ -54,7 +54,7 @@ export default async function CoachPage({ searchParams }: { searchParams: Promis
         contained
         title="Coach"
         action={<CoachBarActions chatCount={chatCount} chatOpen={(saved?.length ?? 0) > 0} />}
-        primary={<Coach key={id} id={id} initial={saved ?? []} groups={groups} next={next} prefill={brief === "1" && !saved ? "Today's brief" : (q ?? "").slice(0, 500)} auto={brief === "1" && !saved} providerLabel={providerLabel(setup.provider)} suggestions={suggestions} />}
+        primary={<Coach key={id} id={id} initial={saved ?? []} groups={groups} next={next} prefill={brief === "1" && !saved ? "Today's brief" : (q ?? "").slice(0, 500)} auto={brief === "1" && !saved} suggestions={suggestions} />}
       />
     </CoachViewport>
   )

@@ -10,7 +10,6 @@ import { SW_URL } from "@/lib/sw"
  * Everything PWA that isn't a screen, mounted once in the root layout (signed out too):
  * - registers the service worker (production only: in dev it would cache stale code); a new build gets a new
  *   script URL, so the browser installs it, and the user is asked before the page swaps to it;
- * - says so when the connection drops or returns;
  * - turns "Failed to find Server Action" (an open app calling a newer server) into a reload prompt.
  */
 export function PwaRuntime() {
@@ -22,12 +21,6 @@ export function PwaRuntime() {
       if (String(e.reason?.message ?? e.reason).includes("Failed to find Server Action")) reload("stale-build")
     }
     addEventListener("unhandledrejection", onRejection)
-
-    const offline = () => toast.error("You’re offline", { id: "offline", description: "Changes to your check-in are kept and sent later.", duration: Infinity })
-    const online = () => toast.dismiss("offline")
-    if (!navigator.onLine) offline()
-    addEventListener("offline", offline)
-    addEventListener("online", online)
 
     let off = () => {}
     if (process.env.NODE_ENV === "production" && "serviceWorker" in navigator) {
@@ -66,8 +59,6 @@ export function PwaRuntime() {
     }
     return () => {
       removeEventListener("unhandledrejection", onRejection)
-      removeEventListener("offline", offline)
-      removeEventListener("online", online)
       off()
     }
   }, [])

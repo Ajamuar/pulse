@@ -12,10 +12,13 @@ configure and rebrand it for your fork, how to test it, and what each platform w
 | App icons | `public/icons/icon-*.png`, `icon-maskable-*.png` | The mark only. `any` for browsers and desktop; `maskable` keeps the mark inside the 80% safe zone and is what Android uses for the home-screen icon **and** its launch screen. |
 | Shortcut icons | `public/icons/shortcut-*.png` | Glyphs in deep brand tones on transparent: Android draws them on its own grey disc. |
 | iOS launch screens | `public/splash/`, `src/app/launch-screens.json` | 92 images: every iPhone and iPad, portrait and landscape, light and dark, with the mark and the PULSE wordmark. Linked from `src/app/layout.tsx`. |
-| Service worker | `public/sw.js` | Caches only `/_next/static/*` and `/offline.html`, never pages or health data. Shows the offline page when the network is gone. Receives Web Push. |
-| Registration | `src/lib/sw.ts` (head script), `src/components/pwa/PwaRuntime.tsx` | Production builds only. The `<head>` script registers `/sw.js?v=<build id>` on load; `PwaRuntime` watches it for updates ("New version available · Reload"), shows the offline toast, and turns a stale-build Server Action error into a reload prompt. |
+| Service worker | `public/sw.js` | Caches `/_next/static/*`, `/offline.html` and the last copy of each page this device opened (30 at most). Pages always come from the network; the copy is served only when the network is gone, else the offline page. Landing on `/login` (sign-out, an ended session) deletes every copy. Receives Web Push and keeps the app badge at the number of notifications in the tray. |
+| Registration | `src/lib/sw.ts` (head script), `src/components/pwa/PwaRuntime.tsx` | Production builds only. The `<head>` script registers `/sw.js?v=<build id>` on load; `PwaRuntime` watches it for updates ("New version available · Reload") and turns a stale-build Server Action error into a reload prompt. |
 | App lifecycle | `src/components/shells/AppLifecycle.tsx` | Signed-in screens: refresh after 5 min in the background, clear the app badge, send queued check-ins, pull down to sync. |
 | Offline check-ins | `src/lib/offline-queue.ts` | Check-in answers saved offline stay in `localStorage` and are sent when the connection returns. |
+| Offline banner | `src/components/metrics/ConnectionBanner.tsx` | Offline, every screen says so with the last sync time: the screen may be this device's stored copy. |
+| Screen transitions | `src/components/shells/PageEnter.tsx` | The content column animates in on navigation: deeper slides from the right, back to the tab root from the left, another tab fades through. Header and nav stay still. Fade only under reduced motion. |
+| Desktop title bar | `display_override` in the manifest, `--inset-top` in `src/app/globals.css` | Installed on desktop, the app draws into the title bar (Window Controls Overlay). Headers and the side rail clear the window controls with `--inset-top`, and dragging a header moves the window. |
 | Install and notifications UI | Settings › App (`src/app/(app)/settings/AppSettings.tsx`), `src/lib/install.ts`, `src/lib/push-client.ts` | Install button where the browser offers one, the Share › Add to Home Screen steps on iOS, the notifications switch. |
 | Push backend | `src/server/push.ts`, `src/app/push/route.ts` | "Recovery ready" once per local day, "Pulse can't sync" once per day when the Google grant is revoked. |
 | Android app link | `src/app/.well-known/assetlinks.json/route.ts` | Digital Asset Links for an APK (see [Android APK](#android-apk-with-pwabuilder)). 404 until configured. |
@@ -25,7 +28,9 @@ configure and rebrand it for your fork, how to test it, and what each platform w
 flowchart LR
   A[Open app] --> B{Network?}
   B -- yes --> C[Page from server]
-  B -- no --> D[sw.js serves offline.html]
+  B -- no --> X{Copy of this page stored?}
+  X -- yes --> Y[Stored copy + offline banner]
+  X -- no --> D[sw.js serves offline.html]
   C --> E[head script registers /sw.js?v=build]
   E --> F{New build deployed?}
   F -- yes --> G[Toast: New version, Reload]
@@ -42,6 +47,31 @@ flowchart LR
   Q --> W
   W --> SW[sw.js push event: notification and badge]
   SW --> K[Tap opens the url]
+```
+
+## Navigation like an app
+
+Back works like an app's navigation stack, not like a website's history of every URL:
+
+- **Back** (the header chevron, Android's back gesture, iOS's edge swipe) pops to the screen this one was opened
+  from: Strain › Steps › Back is Strain. When there is nothing to return to (opened from a shortcut, a notification
+  or a shared link), Back replaces the screen with its parent instead (`useAppBack` in
+  `src/components/shells/AppNavigation.tsx`, using the Navigation API).
+- **Tabs don't stack.** From Home a tab opens on top of Home; from any other tab it replaces the screen, so Back from
+  any tab returns Home and never walks through tabs (`useTabNavigate`).
+- **Steps on the way don't stay.** Picking a chat in Chats pops Chats and replaces Coach with the chat, and a new
+  chat replaces the open one: Back from a chat returns to wherever Coach was opened (`replaceUnder`).
+- **Changes within a screen** (the day, a chart range, Settings sections) replace the URL and add no Back step.
+  Sheets add one, so Back closes the sheet first.
+
+```mermaid
+flowchart LR
+  H[Home] -- tap Strain --> S[Strain] -- tap Steps --> T[Steps]
+  T -- Back --> S -- Back --> H
+  H -- Health tab --> HE[Health] -- Journal tab: replaces --> J[Journal]
+  J -- Back --> H
+  C[Coach] -- history --> L[Chats] -- pick a chat: pop Chats, replace Coach --> CH[Chat]
+  CH -- Back --> O[Where Coach was opened]
 ```
 
 ## Configure
@@ -109,7 +139,9 @@ install.
 - `src/app/manifest.test.ts`: the manifest's shape, and that every icon, shortcut icon and screenshot exists.
 - `src/lib/offline-queue.test.ts`, `src/server/push.test.ts`, `src/server/config.test.ts`.
 - `e2e/pwa.spec.ts`: everything is served without a session, the 92 launch screen links. The offline-page test runs
-  only against a production build (`E2E_PROD=1 pnpm e2e`).
+  only against a production build (`E2E_PROD=1 pnpm e2e`), and so does the stored-copy test (offline banner, cleared
+  on sign-out).
+- `src/components/shells/PageEnter.test.ts`: which screen change gets which motion.
 - [PWABuilder's report card](https://www.pwabuilder.com/reportcard) is a good outside check of a deployed site.
 
 ## Android APK with PWABuilder
@@ -166,13 +198,26 @@ Play's app signing fingerprint to `ANDROID_CERT_SHA256` as well.
 
 ## Decisions and dead ends
 
-- **No route cross-fade.** React View Transitions snapshot the page, and the glass nav and headers
-  (`backdrop-filter`) flickered on every route change. A cross-fade would need every sticky and glass element
-  named separately.
+- **No View Transitions for routes.** React View Transitions snapshot the page, and the glass nav and headers
+  (`backdrop-filter`) flickered on every route change. Screen transitions animate only the content column instead,
+  with the Web Animations API (`PageEnter`), so the header and nav are never snapshotted. The cost: the old screen
+  does not slide out, it is replaced and the new one slides in. When a skeleton hands over to the content mid-slide,
+  the content continues the same slide from where the skeleton was.
+- **An installed iPhone app's page is at least the screen's height** (`IOS_APP_HEIGHT_SCRIPT` in `src/app/layout.tsx`).
+  iOS gives a Home Screen app a viewport short by the status bar (812 of 874 pt on an iPhone 17) while the page is no
+  taller than that, and paints nothing below it, so a one-screen page like Coach lost its bottom 62 pt. Measured in the
+  iOS 26.5 simulator: 812 with a one-screen page, 874 once the page is the screen's height. `100vh` and `100lvh` both
+  resolve to 812 there, so it is set from `screen` in a head script, only when `navigator.standalone`.
+- **Keyboard and Coach.** Android Chrome: `interactive-widget=resizes-content` in the viewport, so the keyboard shrinks
+  the page and Coach's frame follows; the tab bar hides while a text field has focus. iOS ignores that, so
+  `CoachViewport` sizes and moves the frame to the visual viewport. Coach locks the page behind it with
+  `position: fixed` on the body, never `overflow: hidden`: on iOS that clips the frame with the page.
 - **Icons carry no name.** On Android 12+ the launch screen is the home-screen icon, so a name on the launch screen
   means a name on the home screen too.
-- **Pages and data are never cached** by the service worker: they are private, and a shared cache would show stale
-  scores.
+- **Pages are cached only as an offline fallback.** The network always wins, so scores are never stale while online.
+  The copies are on this device only and are deleted on the way to `/login`, so the next person to sign in on a
+  shared device never sees them. Only full page loads are stored (a launch, a reload); in-app navigations fetch RSC
+  payloads, which are not stored, so offline the app shows the screen it opened on.
 - **Coach actions live in the header.** A sticky in-page toolbar's resting position depended on the banners above it.
 
 ## Troubleshooting

@@ -28,8 +28,8 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: "/",
     scope: "/",
     display: "standalone",
-    // Standalone first wherever display_override is read, before falling back to display.
-    display_override: ["standalone"],
+    // Desktop installs draw into the title bar (the headers clear it with --inset-top, globals.css); elsewhere standalone.
+    display_override: ["window-controls-overlay", "standalone"],
     orientation: "portrait",
     // A second launch (a shortcut, a notification) reuses the open window instead of stacking another.
     launch_handler: { client_mode: "navigate-existing" },
