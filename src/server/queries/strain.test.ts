@@ -1,6 +1,6 @@
 // Strain's activity extras and the distance on activities (spec §11 EX1, EX3).
 import { beforeAll, describe, expect, it } from "vitest";
-import { type Db, row, rows, sql } from "../db";
+import { type Db, row, sql } from "../db";
 import { ctxFor, dayAt, seeded, USER } from "../testing";
 import { getActivity } from "./activity";
 import { activityItem, distanceOf, type ExerciseRow } from "./common";
@@ -12,13 +12,13 @@ beforeAll(async () => {
 });
 
 const one = async <T>(q: ReturnType<typeof sql>) => Object.values((await row<Record<string, T>>(db, q))!)[0];
-const caloriesOn = (d: string) => one<number>(sql`select calories from daily_metrics where user_id = ${USER} and day = ${d}`);
-const valueOn = (d: string, key: string) => one<number>(sql`select value from daily_values where user_id = ${USER} and day = ${d} and key = ${key}`);
 
 describe("getStrain summary", () => {
   it("lists the extras after Steps with the catalogue's unit, format and direction, and a 30-day average", async () => {
     const vm = await getStrain(dayAt(178), ctxFor(db));
     expect(vm.summary.map((k) => k.key)).toEqual(["zones13", "zones45", "strength", "steps", ...STRAIN_EXTRAS]);
+    // The reference app's four rows open their Trend Views; the extras keep their metric screens (spec §11 R35).
+    expect(vm.summary.slice(0, 4).map((k) => k.href)).toEqual(["/trend/zones13", "/trend/zones45", "/trend/strength", "/trend/steps"]);
     const distance = vm.summary.find((k) => k.key === "distance")!;
     expect(distance).toMatchObject({ label: "Distance", unit: "km", format: "decimal2", direction: "up" });
     expect(distance.metric.value).toBeGreaterThan(0);
@@ -34,44 +34,6 @@ describe("getStrain summary", () => {
     await db.execute(sql`delete from daily_values where user_id = ${USER} and day = ${dayAt(170)} and key = 'floors'`);
     const missing = (await getStrain(dayAt(170), ctxFor(db))).summary.find((k) => k.key === "floors")!;
     expect(missing.metric).toMatchObject({ value: null, reason: "no_data" });
-  });
-});
-
-describe("getStrain calories and workouts", () => {
-  it("splits each day's total into active and resting, with today faded as a running total", async () => {
-    const ctx = ctxFor(db);
-    const today = await getStrain(dayAt(179), ctx);
-    expect(today.isToday).toBe(true);
-    expect(today.calories).toHaveLength(30);
-    const last = today.calories.at(-1)!;
-    expect(last).toMatchObject({ day: dayAt(179), provisional: true });
-    const total = await caloriesOn(dayAt(178));
-    const active = await valueOn(dayAt(178), "active_calories");
-    const past = (await getStrain(dayAt(178), ctx)).calories.at(-1)!;
-    expect(past).toEqual({ day: dayAt(178), value: total, parts: { active, resting: total - active } });
-  });
-
-  it("says no breakdown when active is missing and never puts resting below 0", async () => {
-    const ctx = ctxFor(db);
-    await db.execute(sql`delete from daily_values where user_id = ${USER} and day = ${dayAt(175)} and key = 'active_calories'`);
-    await db.execute(sql`update daily_values set value = 99999 where user_id = ${USER} and day = ${dayAt(174)} and key = 'active_calories'`);
-    const pts = (await getStrain(dayAt(176), ctx)).calories;
-    expect(pts.find((p) => p.day === dayAt(175))).toEqual({ day: dayAt(175), value: await caloriesOn(dayAt(175)), parts: null });
-    expect(pts.find((p) => p.day === dayAt(174))!.parts).toEqual({ active: await caloriesOn(dayAt(174)), resting: 0 });
-  });
-
-  it("sums workout minutes per day, 0 on a day with data and none", async () => {
-    const ctx = ctxFor(db);
-    const pts = (await getStrain(dayAt(178), ctx)).workouts.points;
-    expect(pts).toHaveLength(60);
-    const minutes = await rows<{ day: string; m: number }>(
-      db,
-      sql`select day::text, (sum(end_ts - start_ts) / 60.0)::float8 m from exercises where user_id = ${USER} and day >= ${dayAt(119)} and day <= ${dayAt(178)} group by day`,
-    );
-    expect(minutes.length).toBeGreaterThan(0);
-    for (const { day, m } of minutes) expect(pts.find((p) => p.day === day)!.value).toBeCloseTo(m, 6);
-    const rest = pts.find((p) => !minutes.some((x) => x.day === p.day))!;
-    expect(rest.value).toBe(0);
   });
 });
 
@@ -91,12 +53,25 @@ describe("activity distance", () => {
     const ctx = ctxFor(db);
     const first = (type: string) => one<string>(sql`select id from exercises where user_id = ${USER} and type = ${type} order by start_ts desc limit 1`);
     const keys = async (type: string) => (await getActivity(await first(type), ctx))!.stats.map((k) => k.key);
-    expect(await keys("RUNNING")).toEqual(["duration", "distance", "pace", "avgHr", "maxHr", "calories"]);
-    expect(await keys("BIKING")).toEqual(["duration", "distance", "avgHr", "maxHr", "calories"]);
-    expect(await keys("STRENGTH_TRAINING")).toEqual(["duration", "avgHr", "maxHr", "calories"]);
+    expect(await keys("RUNNING")).toEqual(["calories", "avgHr", "maxHr", "duration", "distance", "pace"]);
+    expect(await keys("BIKING")).toEqual(["calories", "avgHr", "maxHr", "duration", "distance"]);
+    expect(await keys("STRENGTH_TRAINING")).toEqual(["calories", "avgHr", "maxHr", "duration"]);
     const run = (await getActivity(await first("RUNNING"), ctx))!.stats;
     expect(run.find((k) => k.key === "pace")).toMatchObject({ unit: "/km", format: "pace" });
     expect(run.find((k) => k.key === "pace")!.metric.value).toBeGreaterThan(180);
     expect(run.find((k) => k.key === "pace")!.average).not.toBeNull();
+  });
+
+  it("the activity hero: this kind's strain average, steps inside a run only, no split, and typical zone ranges", async () => {
+    const ctx = ctxFor(db);
+    const first = (type: string) => one<string>(sql`select id from exercises where user_id = ${USER} and type = ${type} order by start_ts desc limit 1`);
+    const run = (await getActivity(await first("RUNNING"), ctx))!;
+    expect(run.strainAverage).toBeGreaterThan(0);
+    expect(run.steps!.value).toBeGreaterThan(0);
+    expect(run.steps!.average).toBeGreaterThan(0);
+    expect(run.split).toBeNull();
+    for (const z of run.zones.value!) expect(z.typical!.low).toBeLessThanOrEqual(z.typical!.high);
+    const lift = (await getActivity(await first("STRENGTH_TRAINING"), ctx))!;
+    expect(lift.steps).toBeNull();
   });
 });

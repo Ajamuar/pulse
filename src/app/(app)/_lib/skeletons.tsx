@@ -4,11 +4,9 @@ import { Fragment } from "react"
 import { DASHBOARD_DEFAULT, DASHBOARD_LABEL, type DashboardKey } from "@/lib/dashboard"
 import { IntradayHrChartSkeleton } from "@/components/charts/IntradayHrChart"
 import { EnergyBankChartSkeleton } from "@/components/charts/EnergyBankChart"
-import { TrendChartSkeleton } from "@/components/charts/TrendChart"
 import { ZoneBarsSkeleton } from "@/components/charts/ZoneBars"
 import { TimelineSkeleton } from "@/components/metrics/ActivityCard"
-import { ContributorRowSkeleton } from "@/components/metrics/ContributorRow"
-import { DriverListSkeleton } from "@/components/metrics/DriverList"
+import { WeeklyTrendsSkeleton } from "@/components/metrics/WeeklyTrends"
 import { InsightCardSkeleton } from "@/components/metrics/InsightCard"
 import { KeyStatRowSkeleton } from "@/components/metrics/KeyStatRow"
 import { Wordmark } from "@/components/brand/Wordmark"
@@ -27,7 +25,7 @@ const rows = (n: number, Row: (i: number) => React.ReactNode) => Array.from({ le
 
 const SUMMARY: Record<string, string[]> = {
   Strain: ["Strain Target", "Heart rate zones 1-3", "Heart rate zones 4-5", "Strength activity time", "Steps"],
-  Sleep: ["Hours vs. needed", "Sleep consistency", "Sleep efficiency", "Restorative sleep"],
+  Sleep: ["Hours vs. needed", "Sleep consistency", "Sleep efficiency"],
 }
 
 function CardSkeleton({ title, className, children }: { title: string; className?: string; children: React.ReactNode }) {
@@ -181,6 +179,7 @@ function DialDetail({
   primary,
   secondary,
   action = false,
+  footer,
 }: {
   title: string
   dial: "recovery" | "strain" | "sleep"
@@ -189,11 +188,13 @@ function DialDetail({
   summary: React.ReactNode
   primary: React.ReactNode
   secondary: React.ReactNode[]
+  footer?: React.ReactNode
 }) {
   return (
     <DetailShell loading
+      footer={footer}
       title={title}
-      dateSwitcher={{ mode: "day", placement: "header" }}
+      dateSwitcher={{ mode: "day", placement: "header", steppers: false }}
       notch
       hero={<ScoreDialSkeleton size="lg" variant={dial} />}
       summary={
@@ -224,29 +225,13 @@ export function RecoverySkeleton() {
       action
       summary={
         <>
-          <div className="divide-y divide-border">{rows(5, () => <ContributorRowSkeleton />)}</div>
-          <p className={LEGEND}>Dot: today. Shaded: your normal range.</p>
+          {statRows(["Heart rate variability", "Resting heart rate", "Respiratory rate", "Sleep performance"])}
+          <p className={LEGEND}>Today vs. last 30 days</p>
         </>
       }
-      primary={
-        <CardSkeleton title="Recovery trend">
-          <TrendChartSkeleton chip />
-        </CardSkeleton>
-      }
-      secondary={[
-        <SectionShell key="drivers" variant="card" title="What shaped it" level={2}>
-          <DriverListSkeleton variant="recovery" unit="pts" rows={5} />
-        </SectionShell>,
-        <SectionShell key="forecast" variant="card" title="Tomorrow’s forecast" level={2} fill>
-          <div aria-hidden className="my-auto flex items-center gap-4 xl:flex-col xl:gap-3">
-            <ScoreDialSkeleton size="sm" label="Tomorrow" />
-            <span className="min-w-0 flex-1 xl:w-full xl:max-w-[32ch] xl:flex-none">
-              <SkeletonText className={`${CAPTION} w-full`} />
-              <SkeletonText className={`${CAPTION} w-2/3 xl:hidden`} />
-            </span>
-          </div>
-        </SectionShell>,
-      ]}
+      primary={null}
+      footer={<WeeklyTrendsSkeleton titles={["Recovery", "Heart Rate Variability", "Resting Heart Rate", "Respiratory Rate", "Sleep Performance"]} />}
+      secondary={[]}
     />
   )
 }
@@ -278,16 +263,8 @@ export function StrainSkeleton() {
         <CardSkeleton key="activities" title="Activities">
           <TimelineSkeleton rows={1} />
         </CardSkeleton>,
-        <CardSkeleton key="trend" title="Strain trend">
-          <TrendChartSkeleton chip caption />
-        </CardSkeleton>,
-        <CardSkeleton key="calories" title="Calories burned">
-          <TrendChartSkeleton ranges={["w", "m"]} day legend />
-        </CardSkeleton>,
-        <CardSkeleton key="workouts" title="Workout duration">
-          <TrendChartSkeleton ranges={["w", "m"]} chip />
-        </CardSkeleton>,
       ]}
+      footer={<WeeklyTrendsSkeleton titles={["Strain", "HR Zones 1-3", "HR Zones 4-5", "Steps", "Calories", "Strength Activity Time"]} />}
     />
   )
 }
@@ -339,17 +316,13 @@ export function SleepSkeleton() {
             <Skeleton className="h-52 rounded-lg" />
           </div>
         </CardSkeleton>,
-        <CardSkeleton key="restorative" title="Restorative sleep">
-          <TrendChartSkeleton chip />
-        </CardSkeleton>,
         <CardSkeleton key="efficiency" title="Sleep efficiency">
-          <TrendChartSkeleton chip />
-        </CardSkeleton>,
-        <CardSkeleton key="details" title="Details">
-          {statRows(["Time in bed", "Wake events", "Respiratory rate", "Sleep debt"])}
-        </CardSkeleton>,
-        <CardSkeleton key="debt" title="Sleep debt">
-          <TrendChartSkeleton chip />
+          <div aria-hidden className="space-y-4">
+            <SkeletonText className="w-24 font-numeric text-4xl leading-10 font-bold" />
+            <Skeleton className="h-3.5 rounded-[3px]" />
+            <Skeleton className="h-3.5 rounded-[3px] bg-muted/60" />
+            <SkeletonText className={`${LABEL} w-32`} />
+          </div>
         </CardSkeleton>,
         <SectionShell key="planner" variant="card" title="Tonight’s sleep" info={TONIGHT_INFO} level={2}>
           <div aria-hidden className="space-y-2">
@@ -368,6 +341,7 @@ export function SleepSkeleton() {
           </div>
         </SectionShell>,
       ]}
+      footer={<WeeklyTrendsSkeleton titles={["Sleep Performance", "Hours vs. Needed (hours)", "Hours vs. Needed (%)", "Restorative Sleep", "Sleep Consistency", "Time in Bed", "Sleep Efficiency"]} />}
     />
   )
 }

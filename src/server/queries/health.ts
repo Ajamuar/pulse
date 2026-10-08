@@ -1,4 +1,7 @@
 // Health hub and its four detail screens (spec §7.6–7.10).
+import { factorCopy } from "@/core/algorithms/healthspanFactor";
+import { trendHref } from "@/lib/url";
+import type { TrendViewKey } from "./trendView";
 import type { HealthspanContribution } from "@/core/algorithms/healthspan";
 import { minChronic } from "@/core/scoring/readiness";
 import { standardConfig } from "@/core/scoring/trainingLoad";
@@ -29,7 +32,7 @@ import {
   todayOf,
   vitalReason,
   trendPoints,
-  daySpansOf,
+  stressChartOf,
   exercisesBetween,
 } from "./common";
 import type {
@@ -113,7 +116,7 @@ async function latestHr(ctx: QueryCtx) {
 
 // ── Healthspan ──────────────────────────────────────────────────────────────
 
-const HS_META: Record<string, Omit<HealthspanContributor, "metric" | "target" | "years" | "caption" | "key">> = {
+const HS_META: Record<string, Omit<HealthspanContributor, "metric" | "recent" | "target" | "years" | "caption" | "key" | "state" | "trendHref">> = {
   sleepHours: {
     group: "sleep",
     label: "Hours of sleep",
@@ -198,6 +201,18 @@ const HS_META: Record<string, Omit<HealthspanContributor, "metric" | "target" | 
   },
 };
 const HS_ORDER = ["sleepHours", "sri", "zone13", "zone45", "strength", "steps", "vo2max", "restingHr", "leanMass"];
+/** Each factor's Trend View (health-03's VIEW TREND). */
+const HS_TREND: Record<string, TrendViewKey> = {
+  sleepHours: "hours",
+  sri: "consistency",
+  zone13: "zones13",
+  zone45: "zones45",
+  strength: "strength",
+  steps: "steps",
+  vo2max: "vo2max",
+  restingHr: "rhr",
+  leanMass: "lean_mass",
+};
 
 /** Healthspan `/health/healthspan` for the ISO week containing `day` (spec §7.7). Updated weekly. */
 export async function getHealthspan(day: string, ctx: QueryCtx): Promise<HealthspanVM> {
@@ -235,8 +250,11 @@ export async function getHealthspan(day: string, ctx: QueryCtx): Promise<Healths
       ...meta,
       domain,
       metric: c ? ok(display(c.value), result.provisional) : none("no_data"),
+      recent: c?.recent != null ? display(c.recent) : null,
       target,
       years: c ? c.years : null,
+      state: c ? factorCopy(meta.label, c.years) : null,
+      trendHref: trendHref(HS_TREND[key]),
       ...(caption && { caption }),
     };
   });
@@ -318,7 +336,7 @@ export async function getMonitor(day: string, ctx: QueryCtx, preloaded?: Map<str
     const tags = hm && hm.reason === null && hm.stale.includes(v.key === "restingHr" ? "rhr" : v.key === "skinTempDev" ? "skinTemp" : v.key) ? (["stale_baseline"] as const) : [];
     return {
       key: v.key,
-      label: v.key === "skinTempDev" ? "Skin temp (from baseline)" : VITAL_LABEL[v.key],
+      label: VITAL_LABEL[v.key],
       short: v.short,
       unit: v.unit,
       metric: finite(value) ? ok(value, false, [...tags]) : none(reason),
@@ -453,21 +471,19 @@ export async function getStress(day: string, ctx: QueryCtx): Promise<StressVM> {
   const row = rows.get(day);
   const st = row?.stress;
   const gauge = stressNow(row, isToday);
-  const start = dayStartOf(ctx, day);
   const sameStress = [7, 14, 21, 28].map((k) => rows.get(addDays(day, -k))?.stress).filter((x) => !!x && x.average != null);
   const typicalOf = (pick: (x: NonNullable<DayRow["stress"]>) => number) => meanSd(sameStress.map((x) => pick(x!))).mean ?? 0;
   const typical = sameStress.length ? typicalOf((x) => x.highMin) : null;
 
-  const spans = daySpansOf(row, start, exs);
   const scored = st && st.average != null;
-  const empty = row?.s1?.hrCount ? "no_data" : "band_not_worn";
+  const chart = stressChartOf(ctx, row, day, isToday, series, exs);
 
   return {
     day,
     isToday,
     gauge,
     insight: scored ? stressInsight(st, ctx.timeZone) : null,
-    chart: scored ? ok({ points: minutePoints(series, start, 2), spans, now: isToday && st.latest ? ms(st.latest.ts) : null }, st.provisional) : none(empty),
+    chart,
     levels: scored
       ? ok(
           {
@@ -480,7 +496,7 @@ export async function getStress(day: string, ctx: QueryCtx): Promise<StressVM> {
           },
           st.provisional,
         )
-      : none(empty),
+      : none(chart.reason ?? "no_data"),
     trend: {
       points: trendPoints(rows, day, (r) => r.stress?.average, 30),
     },

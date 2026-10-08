@@ -13,7 +13,7 @@ import { useReducedMotion } from "@/hooks/use-reduced-motion"
 import { ChartContainer } from "@/components/ui/chart"
 import { SkeletonText } from "@/components/ui/skeleton"
 import { Wordmark } from "@/components/brand/Wordmark"
-import { MetricTags, type TagKind } from "./primitives"
+import { MetricTags, type TagKind, CAP_TRIM } from "./primitives"
 
 export type DialSize = "sm" | "md" | "lg"
 export type DialVariant = "recovery" | "strain" | "sleep" | "stat" | "gauge"
@@ -63,10 +63,8 @@ const SIZE = {
   lg: { box: "size-64 md:size-70", d: 256, ring: 17, value: "text-[31cqi] tracking-[-0.01em]" },
 } as const
 const COMPACT = { box: "size-16", d: 64, ring: 5, value: "text-[40cqi]" } as const
-// The reference app's strain hero runs larger than its percentages (cap 64 vs 48 pt) [latest-strain-1].
-const STRAIN_LG = "text-[40cqi]"
-// Trims each text box to cap height and baseline, so the cqi gaps between rows are the visible gaps.
-const TRIM = "leading-none [text-box:trim-both_cap_alphabetic]"
+// Each text box is trimmed to cap height and baseline, so the cqi gaps between rows are the visible gaps.
+const TRIM = CAP_TRIM
 
 const DIAL_LABEL = "text-xs leading-4 font-bold tracking-[0.1em] uppercase"
 const STATUS_LIT = { poor: "bg-warning", sufficient: "bg-foreground-secondary", optimal: "bg-optimal" } as const
@@ -139,7 +137,9 @@ export function ScoreDial(props: ScoreDialProps) {
     const ring = compact ? 4 : lg ? 7 : 4
     const pct = (px: number) => `${Math.round((px / r) * 1000) / 10}%`
     const inner = r - 4 - ring
-    return { ring, outer: pct(r - 4), inner: pct(inner), needleInner: pct(inner - 22), tailStart: (inner - 22) / r, headStart: (inner - 2) / r }
+    // Where the arc's ends (215° and −35°, on the stroke's centre line) fall across the dial, for the 0.0 and 3.0 labels.
+    const end = 50 * (1 - Math.cos((35 * Math.PI) / 180) * ((inner + ring / 2) / r))
+    return { ring, outer: pct(r - 4), inner: pct(inner), needleInner: pct(inner - 22), tailStart: (inner - 22) / r, headStart: (inner - 2) / r, end }
   })()
   const target = variant === "strain" ? props.target : null
   const tagNode = (
@@ -256,12 +256,14 @@ export function ScoreDial(props: ScoreDialProps) {
       )}
 
       {/* The hole: the square inside the stroke. One centred column whose type and gaps scale with the inner
-          diameter, so wordmark, value, label and tags keep the same clearance from the ring at every size (spec §11 F23). */}
+          diameter, so wordmark, value, label and tags keep the same clearance from the ring at every size (spec §11 F23).
+          Gaps follow the reference app's dials (recovery-01, sleep-01): about 8.5% of the ring's width over the value
+          and 8% under it, 10 and 9 cqi of the hole. */}
       <div className="absolute @container grid place-content-center justify-items-center text-center" style={{ inset: radii.hole }}>
         {lg && (!empty || loading) && !gauge && (
           // The wordmark over the value, as the reference app's ring carries its own (spec §11 F11; brand.md: never "PULSE" in a font).
           // Never under the brand minimum (h 15 px); `block` drops the inline line box that pushed it into the stroke.
-          <Wordmark className="mb-[6cqi] block h-[max(15px,6.8cqi)] text-foreground-secondary" />
+          <Wordmark className="mb-[10cqi] block h-[max(15px,6.8cqi)] text-foreground-secondary" />
         )}
         {loading ? (
           size !== "sm" && <SkeletonText className={cn("font-numeric font-bold", TRIM, s.value, lg ? "w-[2.4ch]" : "w-[2.2ch]")} />
@@ -274,7 +276,6 @@ export function ScoreDial(props: ScoreDialProps) {
               "font-numeric font-bold tabular-nums",
               TRIM,
               s.value,
-              lg && variant === "strain" && STRAIN_LG,
               empty && "text-muted-foreground",
               compact && gauge && r.word?.className,
             )}
@@ -283,27 +284,33 @@ export function ScoreDial(props: ScoreDialProps) {
             {r.unit && !empty && <span className="text-[0.55em]">{r.unit}</span>}
           </span>
         )}
-        {gauge && !compact && r.word && <span className={cn(DIAL_LABEL, TRIM, "mt-[4cqi]", r.word.className)}>{r.word.text}</span>}
-        {gauge && !compact && props.caption && <span className={cn("mt-[3cqi] text-xs font-medium text-foreground-secondary", TRIM)}>{props.caption}</span>}
+        {gauge && !compact && r.word && <span className={cn(DIAL_LABEL, TRIM, "mt-[8cqi]", r.word.className)}>{r.word.text}</span>}
+        {gauge && !compact && props.caption && <span className={cn("mt-[5cqi] text-xs font-medium text-foreground-secondary", TRIM)}>{props.caption}</span>}
         {lg && !gauge && (
           <>
-            <span className={cn(DIAL_LABEL, TRIM, "mt-[6cqi] max-w-36 text-balance")}>{r.label}</span>
-            {r.word && <span className={cn(DIAL_LABEL, TRIM, "mt-[3cqi]", r.word.className)}>{r.word.text}</span>}
+            <span className={cn(DIAL_LABEL, TRIM, "mt-[9cqi] max-w-36 text-balance")}>{r.label}</span>
+            {/* No band word under the large ring: the colour carries it on screen, as in the reference app, and the
+                dial's accessible name still says it (spec §11 R34). */}
             {props.status && !empty && !loading && (
-              <span aria-hidden className="mt-[4cqi] flex gap-1">
+              <span aria-hidden className="mt-[8cqi] flex gap-1">
                 {(["poor", "sufficient", "optimal"] as const).map((k) => (
                   <span key={k} className={cn("h-1 w-5 rounded-full", props.status === k ? STATUS_LIT[k] : "bg-dial-track")} />
                 ))}
               </span>
             )}
-            {!loading && <span className="mt-[4cqi] flex max-w-[70cqi] justify-center empty:hidden">{tagNode}</span>}
+            {!loading && <span className="mt-[6cqi] flex max-w-[70cqi] justify-center empty:hidden">{tagNode}</span>}
           </>
         )}
       </div>
       {gauge && lg && (
-        <div aria-hidden className="absolute inset-x-[3%] top-[79%] flex justify-between font-numeric text-xs font-medium text-muted-foreground tabular-nums">
-          <span>0.0</span>
-          <span>3.0</span>
+        <div aria-hidden className="absolute inset-x-0 top-[79%] font-numeric text-xs font-medium text-muted-foreground tabular-nums">
+          {/* Each label centred under its end of the arc. */}
+          <span className="absolute -translate-x-1/2" style={{ left: `${gauge_.end}%` }}>
+            0.0
+          </span>
+          <span className="absolute translate-x-1/2" style={{ right: `${gauge_.end}%` }}>
+            3.0
+          </span>
         </div>
       )}
     </div>

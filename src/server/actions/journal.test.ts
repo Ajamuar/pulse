@@ -1,12 +1,12 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import type { Db } from "../db";
-import { intradayDirty, journalEntries, journalTags } from "../db/schema";
+import { intradayDirty, journalEntries, journalNotes, journalTags } from "../db/schema";
 import { DEFAULT_JOURNAL_TAGS, ensureDefaultTags, MAX_TAGS } from "../journalTags";
 import { needsRecompute } from "../pipeline";
 import { saveProfile } from "../profile";
 import { addUser, freshDb, USER } from "../testing";
-import { addCustomTag, loadCheckIn, reorderBehaviours, saveJournalEntry, setBehaviourHidden } from "./journal";
+import { addCustomTag, loadBehaviours, loadCheckIn, saveBehaviors, saveJournalEntry, saveJournalNote } from "./journal";
 
 const h = vi.hoisted(() => ({ db: undefined as unknown, revalidate: vi.fn(), requestSync: vi.fn(), user: null as unknown }));
 vi.mock("../worker", () => ({ requestSync: h.requestSync }));
@@ -152,43 +152,32 @@ describe("addCustomTag", () => {
   });
 
   it("puts a new behaviour after every existing one", async () => {
-    await reorderBehaviours({ tags: ["late_workout", "cold_plunge"] });
+    const before = await order(eq(journalTags.isDefault, false));
     await addCustomTag({ label: "Nap" });
-    expect(await order(eq(journalTags.isDefault, false))).toEqual(["late_workout", "cold_plunge", "nap"]);
+    expect(await order(eq(journalTags.isDefault, false))).toEqual([...before, "nap"]);
   });
 });
 
-describe("setBehaviourHidden and reorderBehaviours", () => {
+describe("saveBehaviors", () => {
   const tag = async (t: string) => (await allTags()).find((x) => x.tag === t)!;
+  const everyoneBut = async (t: string) => (await allTags()).map((x) => x.tag).filter((x) => x !== t);
 
-  it("signed out, both are refused and nothing changes", async () => {
+  it("signed out, it is refused and nothing changes", async () => {
     h.user = null;
-    expect(await setBehaviourHidden({ tag: "sauna", hidden: true })).toEqual({ ok: false, error: "Signed out. Sign in again." });
-    expect(await reorderBehaviours({ tags: ["sauna", "meditation"] })).toEqual({ ok: false, error: "Signed out. Sign in again." });
-    expect(await tag("sauna")).toMatchObject({ hidden: false, position: 0 });
+    expect(await saveBehaviors({ tags: [] })).toEqual({ ok: false, error: "Signed out. Sign in again." });
+    expect((await tag("sauna")).hidden).toBe(false);
   });
 
-  it("hides and shows a behaviour without touching its answers", async () => {
+  it("hides a behaviour left out without touching its answers, and shows it again", async () => {
     await saveJournalEntry({ day: "2026-10-01", tag: "sauna", value: true });
-    expect(await setBehaviourHidden({ tag: "sauna", hidden: true })).toEqual({ ok: true, data: undefined });
+    expect(await saveBehaviors({ tags: await everyoneBut("sauna") })).toEqual({ ok: true, data: undefined });
     expect((await tag("sauna")).hidden).toBe(true);
     expect(await entries()).toEqual([{ day: "2026-10-01", tag: "sauna", value: 1 }]);
     // A hidden behaviour can still be answered (an old check-in edited) and is shown again on request.
     expect(await saveJournalEntry({ day: "2026-09-30", tag: "sauna", value: false })).toMatchObject({ ok: true });
-    expect(await setBehaviourHidden({ tag: "sauna", hidden: false })).toMatchObject({ ok: true });
+    expect(await saveBehaviors({ tags: (await allTags()).map((x) => x.tag) })).toMatchObject({ ok: true });
     expect((await tag("sauna")).hidden).toBe(false);
     expect(h.revalidate).toHaveBeenCalledWith("/more/behaviours");
-    expect(await setBehaviourHidden({ tag: "nope", hidden: true })).toEqual({ ok: false, error: "Unknown tag: nope" });
-  });
-
-  it("writes one group's order and refuses unknown or repeated tags whole", async () => {
-    expect(await reorderBehaviours({ tags: ["stretching", "sauna", "meditation"] })).toMatchObject({ ok: true });
-    expect(await order(inArray(journalTags.tag, ["meditation", "stretching", "sauna"]))).toEqual(["stretching", "sauna", "meditation"]);
-    expect(await reorderBehaviours({ tags: ["sauna", "nope"] })).toMatchObject({ ok: false });
-    expect(await reorderBehaviours({ tags: ["sauna", "sauna"] })).toMatchObject({ ok: false });
-    expect(await reorderBehaviours({ tags: [] })).toMatchObject({ ok: false });
-    expect((await tag("stretching")).position).toBe(0);
-    expect((await tag("sauna")).position).toBe(1);
   });
 });
 
@@ -196,11 +185,51 @@ describe("per user", () => {
   it("another user's behaviours and answers are untouched; their custom tag is unknown here", async () => {
     await db.insert(journalTags).values({ userId: other, tag: "their_tag", label: "Their tag" });
     expect(await saveJournalEntry({ day: "2026-10-01", tag: "their_tag", value: true })).toEqual({ ok: false, error: "Unknown tag: their_tag" });
-    await setBehaviourHidden({ tag: "alcohol", hidden: true });
+    const mine = (await allTags()).map((x) => x.tag);
+    await saveBehaviors({ tags: mine.filter((x) => x !== "alcohol") });
     const [theirs] = await db.select().from(journalTags).where(and(eq(journalTags.userId, other), eq(journalTags.tag, "alcohol")));
     expect(theirs.hidden).toBe(false);
-    await setBehaviourHidden({ tag: "alcohol", hidden: false });
+    await saveBehaviors({ tags: mine });
     // Same key, two users: both can have it.
     expect(await addCustomTag({ label: "Their tag" })).toEqual({ ok: true, data: { tag: "their_tag" } });
+  });
+});
+
+describe("follow-ups, notes and Select Behaviors", () => {
+  it("keeps a follow-up answer only with a yes", async () => {
+    await saveJournalEntry({ day: "2026-10-01", tag: "alcohol", value: true, detail: 3 });
+    await saveJournalEntry({ day: "2026-10-02", tag: "alcohol", value: false, detail: 3 });
+    const rows = await db.select({ day: journalEntries.day, detail: journalEntries.detail }).from(journalEntries).where(eq(journalEntries.userId, USER)).orderBy(journalEntries.day);
+    expect(rows).toEqual([{ day: "2026-10-01", detail: 3 }, { day: "2026-10-02", detail: null }]);
+    expect(await saveJournalEntry({ day: "2026-10-01", tag: "alcohol", value: true, detail: 2000 })).toMatchObject({ ok: false });
+    const r = await loadCheckIn("2026-10-01");
+    expect(r.ok && r.data.checkIn.details).toEqual({ alcohol: 3 });
+  });
+
+  it("saves, replaces and clears a day's note, for this user only, never for a future day", async () => {
+    const notes = () => db.select({ userId: journalNotes.userId, day: journalNotes.day, text: journalNotes.text }).from(journalNotes);
+    expect(await saveJournalNote({ day: "2026-10-03", text: "  Slept at a friend's  " })).toEqual({ ok: true, data: undefined });
+    await saveJournalNote({ day: "2026-10-03", text: "Slept badly" });
+    expect(await notes()).toEqual([{ userId: USER, day: "2026-10-03", text: "Slept badly" }]);
+    const r = await loadCheckIn("2026-10-03");
+    expect(r.ok && r.data.checkIn.note).toBe("Slept badly");
+    expect(await saveJournalNote({ day: "2026-10-04", text: "Later" })).toMatchObject({ ok: false });
+    await saveJournalNote({ day: "2026-10-03", text: "   " });
+    expect(await notes()).toEqual([]);
+  });
+
+  it("asks exactly the chosen behaviours: adds catalogue ones, hides the rest, refuses unknown keys whole", async () => {
+    expect(await saveBehaviors({ tags: ["mouth_tape", "illness", "electrolytes"] })).toEqual({ ok: true, data: undefined });
+    const shown = async () => (await allTags()).filter((t) => !t.hidden).map((t) => t.tag).sort();
+    expect(await shown()).toEqual(["electrolytes", "illness", "mouth_tape"]);
+    expect((await allTags()).find((t) => t.tag === "mouth_tape")).toMatchObject({ label: "Mouth tape", isDefault: false });
+    expect(await saveBehaviors({ tags: ["illness", "not_a_behaviour"] })).toMatchObject({ ok: false });
+    expect(await shown()).toEqual(["electrolytes", "illness", "mouth_tape"]);
+    // The other user's list is untouched.
+    const theirs = await db.select().from(journalTags).where(eq(journalTags.userId, other));
+    expect(theirs.every((t) => !t.hidden) && theirs.some((t) => t.tag === "mouth_tape")).toBe(false);
+    await saveBehaviors({ tags: DEFAULT_JOURNAL_TAGS.map((d) => d.tag) });
+    const r = await loadBehaviours();
+    expect(r.ok && r.data.tags.find((t) => t.tag === "mouth_tape")).toMatchObject({ hidden: true, section: "nighttime", question: "Wore mouth tape while sleeping?" });
   });
 });

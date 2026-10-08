@@ -1,4 +1,5 @@
-import { metricHref } from "@/lib/url";
+import { FEATURES } from "@/lib/features";
+import { metricHref, trendHref } from "@/lib/url";
 import { and, eq } from "drizzle-orm";
 import { sleepSegments } from "../db/schema";
 import { readHr } from "../samples";
@@ -18,7 +19,6 @@ import {
   sleepMetric,
   todayOf,
   vitalReason,
-  trendPoints,
 } from "./common";
 import type { KeyStat, Metric, SleepStatus, SleepVM, TimePoint } from "./types";
 
@@ -38,10 +38,6 @@ const hoursPct = (r: DayRow) => {
   return m && r.sleep ? (m.asleepMin / (r.sleep.needHours * 60)) * 100 : null;
 };
 const efficiencyPct = (r: DayRow) => (r.sleep?.main ? r.sleep.main.efficiency * 100 : null);
-const restorativePct = (r: DayRow) => {
-  const m = r.sleep?.main;
-  return m && m.asleepMin > 0 && m.deepMin != null && m.remMin != null ? ((m.deepMin + m.remMin) / m.asleepMin) * 100 : null;
-};
 
 export async function getSleep(day: string, ctx: QueryCtx): Promise<SleepVM> {
   const today = todayOf(ctx);
@@ -60,11 +56,13 @@ export async function getSleep(day: string, ctx: QueryCtx): Promise<SleepVM> {
     const sv = st?.(v);
     return { key, label, metric: maybe(v, r), ...(unit && { unit }), average: mean, ...(sd !== undefined && { sd }), direction: "up", ...(sv && { status: sv }) };
   };
+  // The reference app's four rows, each opening its Trend View; restorative sleep sits under the stages instead.
   const summary = [
-    stat("hours", "Hours vs. needed", hoursPct, "%", (v) => status(v, 85, 70)),
-    stat("consistency", "Sleep consistency", (r) => r.sleep?.consistency, "%", (v) => status(v, 80, 70), main ? "calibrating" : reason),
-    stat("efficiency", "Sleep efficiency", efficiencyPct, "%", (v) => status(v, 85, 75)),
-    stat("restorative", "Restorative sleep", restorativePct, "%", (v) => status(v, 40, 30)),
+    { ...stat("hours", "Hours vs. needed", hoursPct, "%", (v) => status(v, 85, 70)), href: trendHref("hours_need") },
+    { ...stat("consistency", "Sleep consistency", (r) => r.sleep?.consistency, "%", (v) => status(v, 80, 70), main ? "calibrating" : reason), href: trendHref("consistency") },
+    { ...stat("efficiency", "Sleep efficiency", efficiencyPct, "%", (v) => status(v, 85, 75)), href: trendHref("efficiency") },
+    // Built, off until Pulse scores stress during sleep (the stress model leaves sleep minutes out).
+    ...(FEATURES.sleepStress ? [{ ...stat("sleepStress", "High sleep stress", () => null, "%", undefined, "no_data"), href: trendHref("sleep_stress") }] : []),
   ];
 
   // Last night's need is the plan made the evening before.
@@ -86,12 +84,35 @@ export async function getSleep(day: string, ctx: QueryCtx): Promise<SleepVM> {
   const details = [
     { ...stat("timeInBed", "Time in bed", (r) => r.sleep?.main?.inBedMin, "min"), direction: "neutral" as const },
     { ...stat("wakeEvents", "Wake events", (r) => r.sleep?.main?.wakeEvents, undefined), direction: "down" as const },
-    { ...stat("resp", "Respiratory rate", (r) => r.metrics?.respBpm, "rpm", undefined, vitalReason(row, isToday)), direction: "neutral" as const, href: metricHref("resp") },
+    { ...stat("resp", "Respiratory rate", (r) => r.metrics?.respBpm, "rpm", undefined, vitalReason(row, isToday)), direction: "down" as const, href: metricHref("resp") },
     { ...stat("debt", "Sleep debt", (r) => (r.sleep?.main ? r.sleep.debtMin : null), "min"), direction: "down" as const },
   ];
 
+  const restorativeMin = (r: DayRow) => (r.sleep?.main?.deepMin != null && r.sleep.main.remMin != null ? r.sleep.main.deepMin + r.sleep.main.remMin : null);
+  const restPrior = priorStats(rows, day, restorativeMin);
+  const restNow = row ? restorativeMin(row) : null;
+  const restorative: SleepVM["restorative"] = finite(restNow)
+    ? ok({ minutes: restNow, average: restPrior.mean, ...(restPrior.sd !== undefined && { sd: restPrior.sd }) })
+    : fromReason(noNight, isToday);
+
   const plan = planVM(ctx, row, isToday);
   const [stages, nightHr] = await Promise.all([stagesOf(ctx, row, noNight), main ? nightHrOf(ctx, main.start, main.end) : fromReason<never>(noNight, isToday)]);
+  const effPrior = priorStats(rows, day, efficiencyPct);
+  const span = main ? Math.max(1, main.end - main.start) * 1000 : 1;
+  const efficiency: SleepVM["efficiency"] = main
+    ? ok({
+        pct: main.efficiency * 100,
+        average: effPrior.mean,
+        ...(effPrior.sd !== undefined && { sd: effPrior.sd }),
+        asleepMin: main.asleepMin,
+        awakeMin: main.awakeMin,
+        wakeEvents: main.wakeEvents,
+        // Spells awake after falling asleep and before the final wake; the first and last stretches are not wake-ups.
+        wakes: (stages?.value?.segments ?? [])
+          .filter((g, i, all) => g.stage === "awake" && i > 0 && i < all.length - 1)
+          .map((g) => ({ at: (g.start - main.start * 1000) / span, width: (g.end - g.start) / span })),
+      })
+    : fromReason(noNight, isToday);
   return {
     day,
     isToday,
@@ -103,15 +124,10 @@ export async function getSleep(day: string, ctx: QueryCtx): Promise<SleepVM> {
     nightHr,
     hoursVsNeed,
     consistency,
-    restorative: trendPoints(rows, day, (r) => (r.sleep?.main?.deepMin != null && r.sleep.main.remMin != null ? r.sleep.main.deepMin + r.sleep.main.remMin : null), 30).map((p) => {
-      const m = rows.get(p.day)?.sleep?.main;
-      return { ...p, parts: p.value !== null && m ? { deep: m.deepMin!, rem: m.remMin! } : null };
-    }),
-    efficiencyTrend: { points: trendPoints(rows, day, efficiencyPct) },
     details,
-    debtTrend: {
-      points: trendPoints(rows, day, (r) => (r.sleep?.main ? r.sleep.debtMin / 60 : null)),
-    },
+    restorative,
+    efficiency,
+    sleepStress: none("no_data"),
     planner: plan.value ? ok({ ...plan.value, weekdayWake: !plan.value.weekend }) : (plan as Metric<never>),
   };
 }
@@ -177,7 +193,7 @@ export function consistencyOf(rows: Map<string, DayRow>, day: string, tz: string
   if (!finite(pct)) return none(noScore ?? "calibrating");
   const night = (d: string) => {
     const m = rows.get(d)?.sleep?.main;
-    return m ? { day: d, label: WEEKDAY.format(new Date(`${d}T12:00:00Z`)), bed: bedMin(m.start, tz), wake: localMinutes(m.end, tz) } : null;
+    return m ? { day: d, label: `${WEEKDAY.format(new Date(`${d}T12:00:00Z`))}.`, bed: bedMin(m.start, tz), wake: localMinutes(m.end, tz) } : null;
   };
   const withTypical = (d: string) => {
     const n = night(d);

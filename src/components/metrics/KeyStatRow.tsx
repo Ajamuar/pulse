@@ -87,7 +87,13 @@ function rowClass(p: KeyStatRowProps) {
   const tappable = !!(p.href || p.onSelect)
   if (p.variant === "card")
     return cn(CARD_MATERIAL, "flex min-h-14 items-center gap-3 px-4 py-2", tappable && "hover:from-card-hover active:scale-[0.96]", p.className)
-  return cn("flex min-h-14 items-center gap-3 py-2", tappable && "-mx-2 rounded-lg px-2 hover:bg-accent active:bg-accent", p.className)
+  // The hover fill sits on a pseudo-element just past the row's edges, so the row itself (and the divider drawn on it)
+  // stays square and full width.
+  return cn(
+    "flex min-h-14 items-center gap-3 py-2",
+    tappable && "relative isolate before:absolute before:-inset-x-2 before:inset-y-0.5 before:-z-1 before:rounded-lg before:transition-[background-color] before:duration-150 hover:before:bg-accent active:before:bg-accent",
+    p.className
+  )
 }
 
 function Row({ p, c }: { p: KeyStatRowProps; c: Computed }) {
@@ -118,11 +124,16 @@ function Row({ p, c }: { p: KeyStatRowProps; c: Computed }) {
           {c.loading ? (
             <SkeletonText className="w-[4ch] font-numeric text-xl leading-6 font-bold" />
           ) : (
-            <ValueUnit value={c.valueText} unit={p.unit} className={cn("font-numeric text-xl leading-6 font-bold", c.reason && "text-muted-foreground")} />
+            // A My Dashboard card prints the number alone ("43", "5,185"), percent kept, as the reference app does
+            // (dashboard-01); the spoken sentence keeps the unit.
+            <ValueUnit value={c.valueText} unit={p.variant === "card" && p.unit !== "%" ? undefined : p.unit} className={cn("font-numeric text-xl leading-6 font-bold", c.reason && "text-muted-foreground")} />
           )}
           {p.direction !== "none" && (c.dir ? <DeltaMark dir={c.dir} tone={c.tone!} /> : <span />)}
           {c.avgText && !c.reason && (
-            <span className="font-numeric text-[13px] leading-4 font-medium text-muted-foreground tabular-nums">{c.avgText}</span>
+            <span className="font-numeric text-[13px] leading-4 font-medium text-muted-foreground tabular-nums">
+              {c.avgText}
+              {p.unit === "%" && "%"}
+            </span>
           )}
         </span>
         {p.href && p.variant !== "card" && <ChevronRight className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />}
@@ -229,7 +240,7 @@ function Tile({ p, c }: { p: KeyStatRowProps; c: Computed }) {
               <>
                 <ValueUnit value={c.avgText!} unit={p.unit} className="font-numeric text-lg leading-6 font-bold" unitClassName="text-xs leading-4 font-medium text-muted-foreground" />
                 {c.diffText && (
-                  <span className={cn("font-numeric text-xs leading-4 font-bold tabular-nums", c.tone === "good" ? "text-optimal" : c.tone === "bad" ? "text-warning" : "text-foreground-secondary")}>
+                  <span className={cn("font-numeric text-xs leading-4 font-bold tabular-nums", c.tone === "good" ? "text-optimal-text" : c.tone === "bad" ? "text-warning-text" : "text-foreground-secondary")}>
                     {c.diffText}
                     {p.unit && (p.unit === "%" ? "%" : `\u00a0${p.unit}`)} vs avg
                   </span>

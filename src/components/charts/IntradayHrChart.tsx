@@ -1,9 +1,9 @@
 "use client"
 
 import * as React from "react"
-import { Activity, Moon } from "lucide-react"
+import { Activity, Moon, PersonStanding } from "lucide-react"
 import { Area, AreaChart, CartesianGrid, ReferenceArea, ReferenceLine, XAxis, YAxis } from "recharts"
-import { DATA_COLORS } from "@/lib/bands"
+import { DATA_COLORS, ZONE_COLOR } from "@/lib/bands"
 import { bandColor } from "@/lib/charts"
 import { clockTicks, hourTicks, paddedDomain } from "@/lib/charts"
 import { clock } from "@/lib/format"
@@ -15,7 +15,6 @@ import { MetricState } from "@/components/shells/MetricState"
 import { useOptionalShellCalendar } from "@/components/shells/ShellStatus"
 import { ReasonPlaceholder } from "@/components/metrics/ReasonPlaceholder"
 import { AXIS, BandGradient, bandPaint, ChartFigure, FadeGradient, GlowDot, GRID, LINE_CURSOR, TOOLTIP_CLASS, TooltipLine, useSeriesAnimation, type Band } from "./ChartFrame"
-import { ZONE_COLOR } from "./ZoneBars"
 
 /** A marked stretch on an intraday chart. `label` is the short name: "Run", "Ride", "Strength", "Sleep", "Nap". */
 export type ChartSpan = { kind: "workout" | "sleep"; start: number; end: number; label: string }
@@ -38,10 +37,20 @@ export type IntradayHrChartProps = {
 
 const SPAN_COLOR = { workout: "var(--strain)", sleep: "var(--sleep)" } as const
 
-/** A marked stretch's header: a 2 px accent along its top edge, and an icon with its name centred above it (WHOOP's day chart). */
-function SpanMark({ viewBox, kind, text }: { viewBox?: { x?: number; y?: number; width?: number }; kind: ChartSpan["kind"]; text: string }) {
+/**
+ * A marked stretch's header: a 2 px accent along its top edge, and an icon with its name centred above it (WHOOP's day
+ * chart). `iconOnly`: the Stress Monitor's moon and walker, drawn over even a narrow stretch (dashboard-08).
+ */
+function SpanMark({ viewBox, kind, text, iconOnly }: { viewBox?: { x?: number; y?: number; width?: number }; kind: ChartSpan["kind"]; text: string; iconOnly?: boolean }) {
   const { x = 0, y = 0, width = 0 } = viewBox ?? {}
-  const Icon = kind === "sleep" ? Moon : Activity
+  const Icon = kind === "sleep" ? Moon : iconOnly ? PersonStanding : Activity
+  if (iconOnly)
+    return (
+      <g pointerEvents="none">
+        <rect x={x} y={y} width={width} height={2} fill={SPAN_COLOR[kind]} />
+        <Icon x={x + width / 2 - 7} y={y - 18} width={14} height={14} color="var(--foreground)" strokeWidth={2} />
+      </g>
+    )
   const w = 14 + Math.ceil(text.length * 6.2)
   // A header stays inside its own stretch, so back-to-back spans never overprint: the name when it fits, else the icon alone.
   const named = width >= w
@@ -59,17 +68,17 @@ function SpanMark({ viewBox, kind, text }: { viewBox?: { x?: number; y?: number;
   )
 }
 
-/** `shade: false` keeps the header but drops the fill (an activity chart is all workout, so shading it says nothing). */
-export function spanAreas(spans: ChartSpan[] | undefined, shade = true) {
+/** Each marked stretch shaded, with its header along the top. */
+export function spanAreas(spans: ChartSpan[] | undefined, iconOnly = false) {
   return (spans ?? []).map((s) => (
     <ReferenceArea
       key={`${s.kind}-${s.start}`}
       x1={s.start}
       x2={s.end}
       fill={s.kind === "workout" ? "var(--strain-deep)" : "var(--sleep)"}
-      fillOpacity={!shade ? 0 : s.kind === "workout" ? 0.12 : 0.08}
+      fillOpacity={s.kind === "workout" ? 0.12 : 0.08}
       ifOverflow="hidden"
-      label={({ viewBox }: { viewBox?: { x?: number; y?: number; width?: number } }) => <SpanMark viewBox={viewBox} kind={s.kind} text={s.label} />}
+      label={({ viewBox }: { viewBox?: { x?: number; y?: number; width?: number } }) => <SpanMark viewBox={viewBox} kind={s.kind} text={s.label} iconOnly={iconOnly} />}
     />
   ))
 }
@@ -139,11 +148,13 @@ function Chart({ hr, variant }: { hr: HrSeries; variant: "day" | "activity" }) {
   const hotTop = hot.length ? Math.max(...hot) : 0
   const hotBottom = hot.length ? Math.min(...hot) : 0
   const bands = zoneBands(hr.zones ?? [])
+  // An activity marks its start and end with dashed lines and bold times under them (activity-01, activity-05).
+  const workout = variant === "activity" ? workouts[0] : undefined
 
   return (
     <div>
       <ChartFigure summary={summary} config={{ bpm: { label: "Heart rate", color: "var(--strain)" } }} className={variant === "day" ? "h-[200px]" : "h-[180px]"}>
-        <AreaChart data={rows} accessibilityLayer margin={{ top: 18, right: 28, bottom: 0, left: 0 }}>
+        <AreaChart data={rows} accessibilityLayer margin={{ top: workout ? 8 : 18, right: workout ? 8 : 28, bottom: 0, left: 0 }}>
           <defs>
             <BandGradient id={`hr-line-${id}`} top={hotTop} bottom={hotBottom} bands={bands} />
             {/* The fill is one soft fade in the peak's colour: band stops in a fill read as stacked blocks. */}
@@ -151,18 +162,30 @@ function Chart({ hr, variant }: { hr: HrSeries; variant: "day" | "activity" }) {
             <FadeGradient id={`hr-cool-${id}`} color="var(--foreground)" from={0.1} />
           </defs>
           <CartesianGrid {...GRID} />
-          {spanAreas(hr.spans, variant === "day")}
-          {zoneStrips(hr.zones, domain)}
+          {variant === "day" && spanAreas(hr.spans)}
+          {variant === "day" && zoneStrips(hr.zones, domain)}
+          {workout &&
+            [workout.start, workout.end].map((x) => (
+              <ReferenceLine
+                key={x}
+                x={x}
+                stroke="var(--foreground-secondary)"
+                strokeDasharray="3 3"
+                ifOverflow="hidden"
+                label={({ viewBox }: { viewBox?: { x?: number; y?: number; height?: number } }) => <circle cx={viewBox?.x ?? 0} cy={(viewBox?.y ?? 0) + (viewBox?.height ?? 0)} r={2.5} fill="var(--foreground)" />}
+              />
+            ))}
           <XAxis
             dataKey="t"
             type="number"
             scale="time"
             domain={[first, last]}
-            ticks={variant === "day" ? hourTicks(first, last, 6, tz) : clockTicks(first, last, last - first <= 3_600_000 ? 15 : last - first <= 3 * 3_600_000 ? 30 : 60, tz)}
+            ticks={workout ? [workout.start, workout.end] : variant === "day" ? hourTicks(first, last, 6, tz) : clockTicks(first, last, last - first <= 3_600_000 ? 15 : last - first <= 3 * 3_600_000 ? 30 : 60, tz)}
             tickFormatter={(v: number) => clock(v, tz)}
-            interval="preserveStartEnd"
+            interval={workout ? 0 : "preserveStartEnd"}
             minTickGap={24}
             {...AXIS}
+            {...(workout && { tick: { fill: "var(--foreground)", fontSize: 12, fontWeight: 700 } })}
           />
           <YAxis domain={domain} width={32} tickCount={4} {...AXIS} />
           {hr.now && <ReferenceLine x={hr.now} stroke="var(--chart-cursor)" strokeDasharray="4 4" ifOverflow="hidden" />}

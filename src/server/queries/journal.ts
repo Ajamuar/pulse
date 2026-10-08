@@ -1,22 +1,12 @@
 import type { ImpactMetric, TagImpact } from "@/core/algorithms/journalImpact";
 import type { JournalImpactRow } from "../pipeline";
 import { addDays } from "../time";
-import { and, count, desc, eq, gte, isNotNull, lte } from "drizzle-orm";
-import { dailyScores, journalEntries, journalTags } from "../db/schema";
+import { and, desc, eq, gte, isNotNull, lte } from "drizzle-orm";
+import { behavior, questionOf } from "@/lib/behaviors";
+import { dailyScores, journalEntries, journalNotes, journalTags } from "../db/schema";
 import { finite, loadDays, meanSd, type QueryCtx, todayOf } from "./common";
 import type { BehavioursVM, ImpactMetricKey, JournalInsightsVM, JournalTag, JournalVM } from "./types";
 
-const GROUP: Record<string, JournalTag["group"]> = {
-  alcohol: "evening",
-  late_caffeine: "evening",
-  late_meal: "evening",
-  screen_in_bed: "evening",
-  meditation: "recovery",
-  stretching: "recovery",
-  sauna: "recovery",
-  travel: "context",
-  illness: "context",
-};
 
 /** Every tag, hidden ones included, in check-in order (position inside a group, then insertion order). */
 async function tagsOf(ctx: QueryCtx): Promise<JournalTag[]> {
@@ -26,24 +16,18 @@ async function tagsOf(ctx: QueryCtx): Promise<JournalTag[]> {
     .from(t)
     .where(eq(t.userId, ctx.userId))
     .orderBy(t.position, t.seq);
-  return rows.map((r) => ({ tag: r.tag, label: r.label, isDefault: r.isDefault, hidden: r.hidden, group: GROUP[r.tag] ?? "custom" }));
+  return rows.map((r) => ({ tag: r.tag, label: r.label, question: questionOf(r.tag, r.label), section: behavior(r.tag)?.section ?? "custom", isDefault: r.isDefault, hidden: r.hidden }));
 }
 
-/** More › Behaviours: every tag, hidden ones included, with how many days answered it. */
+/** More › Behaviours and Select Behaviors: every tag, hidden ones included. */
 export async function getBehaviours(ctx: QueryCtx): Promise<BehavioursVM> {
-  const j = journalEntries;
-  const [tags, n] = await Promise.all([
-    tagsOf(ctx),
-    ctx.db.select({ tag: j.tag, n: count() }).from(j).where(eq(j.userId, ctx.userId)).groupBy(j.tag),
-  ]);
-  const counts = new Map(n.map((r) => [r.tag, r.n]));
-  return { tags: tags.map((t) => ({ ...t, answers: counts.get(t.tag) ?? 0 })) };
+  return { tags: await tagsOf(ctx) };
 }
 
 function entriesBetween(ctx: QueryCtx, from: string, to: string) {
   const j = journalEntries;
   return ctx.db
-    .select({ day: j.day, tag: j.tag, value: j.value })
+    .select({ day: j.day, tag: j.tag, value: j.value, detail: j.detail })
     .from(j)
     .where(and(eq(j.userId, ctx.userId), gte(j.day, from), lte(j.day, to)))
     .orderBy(j.day, j.tag);
@@ -65,7 +49,13 @@ async function latestImpact(ctx: QueryCtx): Promise<{ asOf: string; impacts: Tag
 export async function getJournal(day: string, ctx: QueryCtx): Promise<JournalVM> {
   const today = todayOf(ctx);
   const stripStart = day < addDays(today, -29) ? day : addDays(today, -29);
-  const [tags, entries, impact] = await Promise.all([tagsOf(ctx), entriesBetween(ctx, stripStart, today), latestImpact(ctx)]);
+  const n = journalNotes;
+  const [tags, entries, impact, [note]] = await Promise.all([
+    tagsOf(ctx),
+    entriesBetween(ctx, stripStart, today),
+    latestImpact(ctx),
+    ctx.db.select({ text: n.text }).from(n).where(and(eq(n.userId, ctx.userId), eq(n.day, day))),
+  ]);
   const label = new Map(tags.map((t) => [t.tag, t.label]));
   const byDay = new Map<string, typeof entries>();
   for (const e of entries) byDay.set(e.day, [...(byDay.get(e.day) ?? []), e]);
@@ -95,7 +85,13 @@ export async function getJournal(day: string, ctx: QueryCtx): Promise<JournalVM>
     strip,
     // Hidden behaviours leave the check-in sheet; their answers stay, still label History and still count in insights.
     tags: tags.filter((t) => !t.hidden),
-    checkIn: { done: mine.length > 0, entries: Object.fromEntries(mine.map((e) => [e.tag, e.value])), yes: yesOf(mine) },
+    checkIn: {
+      done: mine.length > 0,
+      entries: Object.fromEntries(mine.map((e) => [e.tag, e.value])),
+      details: Object.fromEntries(mine.flatMap((e) => (e.detail === null ? [] : [[e.tag, e.detail]]))),
+      note: note?.text ?? "",
+      yes: yesOf(mine),
+    },
     teaser,
     history,
   };

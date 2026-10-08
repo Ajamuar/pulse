@@ -107,7 +107,7 @@ export const vitals = [
   { key: "spo2", label: "Blood oxygen", metric: ok(92), unit: "%", format: "int", chip: { tone: "warning", text: "below 95 - 100" } },
   { key: "rhr", label: "Resting heart rate", metric: ok(58, { provisional: true }), unit: "bpm", format: "int", chip: { tone: "alert", text: "above 50 - 54" } },
   { key: "hrv", label: "Heart rate variability", metric: why<number>("no_hrv_last_night"), unit: "ms", format: "int" },
-  { key: "temp", label: "Skin temp (from baseline)", metric: ok(-0.6), unit: "°C", format: "signed1", chip: { tone: "neutral", text: "low < −0.4" } },
+  { key: "temp", label: "Skin temperature", metric: ok(-0.6), unit: "°C", format: "signed1", chip: { tone: "neutral", text: "low < −0.4" } },
 ] satisfies Keyed<Omit<KeyStatRowProps, "variant" | "direction">>[]
 
 export const activityTiles = [
@@ -126,9 +126,9 @@ export const contributors = [
 ] satisfies RecoveryContributor[]
 
 export const healthspan = [
-  { key: "vo2", label: "VO2 max", metric: ok(58), unit: "ml/kg/min", format: "int", domain: [15, 70], target: 52, years: -5.3, higherIsBetter: true },
-  { key: "rhr", label: "Resting heart rate", metric: ok(47.3), unit: "bpm", format: "decimal1", domain: [35, 100], target: 55, years: -0.7, higherIsBetter: false },
-  { key: "lean", label: "Lean body mass", metric: why<number>("no_data"), unit: "%", format: "int", domain: [50, 90], target: 75, years: null, higherIsBetter: true },
+  { key: "vo2", label: "VO2 max", metric: ok(58), unit: "ml/kg/min", format: "int", domain: [15, 70], recent: 55, years: -5.3, higherIsBetter: true },
+  { key: "rhr", label: "Resting heart rate", metric: ok(47.3), unit: "bpm", format: "decimal1", domain: [35, 100], recent: 49, years: -0.7, higherIsBetter: false },
+  { key: "lean", label: "Lean body mass", metric: why<number>("no_data"), unit: "%", format: "int", domain: [50, 90], recent: null, years: null, higherIsBetter: true },
 ] satisfies HealthspanContributor[]
 
 // --- Drivers ---
@@ -180,12 +180,12 @@ export const hrActivity: HrSeries = {
 }
 
 export const zones: ZoneRow[] = [
-  { zone: 5, label: "Zone 5", min: 173, max: null, seconds: 61, typical: { seconds: 120, share: 0.02 } },
-  { zone: 4, label: "Zone 4", min: 160, max: 172, seconds: 840, typical: { seconds: 600, share: 0.08 } },
-  { zone: 3, label: "Zone 3", min: 147, max: 159, seconds: 1360, typical: { seconds: 1500, share: 0.17 } },
-  { zone: 2, label: "Zone 2", min: 134, max: 146, seconds: 2108, typical: { seconds: 2400, share: 0.25 } },
-  { zone: 1, label: "Zone 1", min: 121, max: 133, seconds: 5371, typical: { seconds: 4800, share: 0.48 } },
-  { zone: 0, label: "Zone 0", min: 0, max: 120, seconds: 3600, typical: { seconds: 3000, share: 0.3 } },
+  { zone: 5, label: "Zone 5", min: 173, max: null, seconds: 61, typical: { low: 0, high: 0.06 } },
+  { zone: 4, label: "Zone 4", min: 160, max: 172, seconds: 840, typical: { low: 0.04, high: 0.12 } },
+  { zone: 3, label: "Zone 3", min: 147, max: 159, seconds: 1360, typical: { low: 0.13, high: 0.21 } },
+  { zone: 2, label: "Zone 2", min: 134, max: 146, seconds: 2108, typical: { low: 0.21, high: 0.29 } },
+  { zone: 1, label: "Zone 1", min: 121, max: 133, seconds: 5371, typical: { low: 0.44, high: 0.52 } },
+  { zone: 0, label: "Zone 0", min: 0, max: 120, seconds: 3600, typical: { low: 0.26, high: 0.34 } },
 ]
 export const recoveryBreakdown: StackedSegment[] = [
   { key: "green", label: "Green (67-100%)", count: 4, color: "recovery-green" },

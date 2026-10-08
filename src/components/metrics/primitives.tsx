@@ -10,13 +10,27 @@ import { TAG_COPY, type MetricTag } from "@/lib/reasons"
 /** Shared type styles: the uppercase small label and the muted caption. */
 export const LABEL = "text-xs leading-4 font-bold tracking-[0.1em] uppercase"
 export const CAPTION = "text-xs leading-4 font-medium text-muted-foreground"
+/** Trims a text box to cap height and baseline, so a number centres optically beside an icon or between gaps. */
+export const CAP_TRIM = "leading-none [text-box:trim-both_cap_alphabetic]"
+/** A caps text link with an arrow ("Explore your sleep insights →", "View trend →"), the coach blue. */
+export const TEXT_LINK =
+  "relative inline-flex items-center gap-1.5 self-start rounded-md text-xs leading-4 font-bold tracking-[0.1em] text-coach-text uppercase underline-offset-4 outline-none after:absolute after:-inset-x-1 after:-inset-y-3.5 hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+/** The 48 px secondary button at a card's foot ("+ Add activity", "Behaviour insights", "Edit alarm"). */
+export const CARD_BUTTON =
+  "flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-secondary text-[13px] leading-4 font-bold tracking-[0.1em] uppercase transition-[background-color,scale] duration-150 ease-standard outline-none hover:bg-accent focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96]"
 
-export type TagKind = keyof typeof TAG_COPY | "so_far" | "partial_week" | "partial_month" | "estimate"
+/** The W / M / 6M segmented control: its track and one segment (on: `data-[state=on]` or `aria-[current=page]`). */
+export const SEGMENT_TRACK = "flex shrink-0 gap-0.5 rounded-lg bg-muted p-0.5"
+export const SEGMENT_ITEM =
+  "grid h-10 min-w-11 place-items-center rounded-md px-3 font-numeric text-[13px] font-bold text-muted-foreground transition-[background-color,color] duration-150 ease-standard outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 data-[state=on]:bg-secondary data-[state=on]:text-foreground aria-[current=page]:bg-secondary aria-[current=page]:text-foreground"
+
+export type TagKind = keyof typeof TAG_COPY | "so_far" | "partial_week" | "partial_month" | "estimate" | "beta"
 const EXTRA_TAGS: Record<Exclude<TagKind, keyof typeof TAG_COPY>, string> = {
   so_far: "So far",
   partial_week: "Partial week",
   partial_month: "Partial month",
   estimate: "Estimate",
+  beta: "Beta",
 }
 export const tagLabel = (kind: TagKind) =>
   kind in TAG_COPY ? TAG_COPY[kind as keyof typeof TAG_COPY].label : EXTRA_TAGS[kind as keyof typeof EXTRA_TAGS]
@@ -93,8 +107,8 @@ export function StatusChip({
 }
 
 const DELTA_TONE: Record<Tone, string> = {
-  good: "text-optimal",
-  bad: "text-warning",
+  good: "text-optimal-text",
+  bad: "text-warning-text",
   neutral: "text-foreground-secondary",
 }
 

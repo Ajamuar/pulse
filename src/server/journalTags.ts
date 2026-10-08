@@ -1,7 +1,8 @@
 // The Journal's default behaviours, shared by both data sources.
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, notInArray } from "drizzle-orm";
 import { type Db, rows, sql } from "./db";
 import { journalTags } from "./db/schema";
+import { behavior } from "@/lib/behaviors";
 
 export const DEFAULT_JOURNAL_TAGS = [
   { tag: "alcohol", label: "Alcohol" },
@@ -50,32 +51,24 @@ export async function addTag(db: Db, userId: number, tag: string, label: string)
   return n >= MAX_TAGS ? "full" : "exists";
 }
 
-/** Hides a tag from the check-in sheet or shows it again. Its answers are untouched. False for an unknown tag. */
-export async function setTagHidden(db: Db, userId: number, tag: string, hidden: boolean): Promise<boolean> {
-  const r = await db
-    .update(journalTags)
-    .set({ hidden })
-    .where(and(eq(journalTags.userId, userId), eq(journalTags.tag, tag)))
-    .returning({ tag: journalTags.tag });
-  return r.length > 0;
-}
+
 
 /**
- * Orders `tags` (one check-in group, in its new order) by writing their positions 0..n-1. Other groups keep
- * theirs: groups render apart, so only the order inside a group matters. False, writing nothing, if any tag is unknown.
+ * Makes `tags` the behaviours the journal asks: adds catalogue behaviours the user has no row for (at the end), shows
+ * the chosen ones and hides the rest. "unknown" for a key neither in the catalogue nor the user's; "full" past MAX_TAGS.
  */
-export async function reorderTags(db: Db, userId: number, tags: string[]): Promise<boolean> {
-  if (new Set(tags).size !== tags.length) return false;
-  if (!tags.length) return true;
-  const known = await db
-    .select({ tag: journalTags.tag })
-    .from(journalTags)
-    .where(and(eq(journalTags.userId, userId), inArray(journalTags.tag, tags)));
-  if (known.length !== tags.length) return false;
+export async function selectTags(db: Db, userId: number, tags: string[]): Promise<"saved" | "unknown" | "full"> {
+  const mine = new Set((await db.select({ tag: journalTags.tag }).from(journalTags).where(eq(journalTags.userId, userId))).map((r) => r.tag));
+  const added = [...new Set(tags)].filter((t) => !mine.has(t));
+  if (added.some((t) => !behavior(t))) return "unknown";
+  if (mine.size + added.length > MAX_TAGS) return "full";
+  const [{ max }] = await rows<{ max: number }>(db, sql`select coalesce(max(position), 0)::int as max from journal_tags where user_id = ${userId}`);
   await db.transaction(async (tx) => {
-    for (const [i, t] of tags.entries()) {
-      await tx.update(journalTags).set({ position: i }).where(and(eq(journalTags.userId, userId), eq(journalTags.tag, t)));
+    if (added.length) {
+      await tx.insert(journalTags).values(added.map((t, i) => ({ userId, tag: t, label: behavior(t)!.label, position: max + 1 + i }))).onConflictDoNothing();
     }
+    await tx.update(journalTags).set({ hidden: true }).where(and(eq(journalTags.userId, userId), notInArray(journalTags.tag, tags.length ? tags : [""])));
+    if (tags.length) await tx.update(journalTags).set({ hidden: false }).where(and(eq(journalTags.userId, userId), inArray(journalTags.tag, tags)));
   });
-  return true;
+  return "saved";
 }

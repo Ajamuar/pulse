@@ -46,6 +46,13 @@ export async function setCoachAllowed(db: Db, userId: number, allowed: boolean):
 /** What the browser may know about the user's setup: never the key itself. */
 export type CoachSetup = { provider: string | null; model: string | null; last4: string | null; consent: boolean; instructions: string | null; briefMinute: number | null };
 
+/** Access, consent and a provider: the coach can answer without a set-up step. */
+export async function coachReady(db: Db, userId: number): Promise<boolean> {
+  if (!(await coachAccess(db, userId))) return false;
+  const s = await coachSetup(db, userId);
+  return s.consent && s.provider !== null;
+}
+
 export async function coachSetup(db: Db, userId: number): Promise<CoachSetup> {
   const [r] = await db.select().from(coachSettings).where(eq(coachSettings.userId, userId));
   return { provider: r?.provider ?? null, model: r?.model ?? null, last4: r?.keyLast4 ?? null, consent: r?.consentAt != null, instructions: r?.customInstructions ?? null, briefMinute: r?.briefMinute ?? null };

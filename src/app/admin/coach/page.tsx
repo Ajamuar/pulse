@@ -15,12 +15,19 @@ const requestTime = () => Date.now()
  * Admin › AI coach `/admin/coach?item=`: the coach's instructions and its tools' wording, one at a time, editable and
  * versioned in the database. Parameter types and what each tool reads are shown, not editable: they live in code.
  */
+/** The coach's prose texts, above the tools. */
+const PROSE = {
+  instructions: { label: "Instructions", description: "Keep the safety rules: no numbers without a tool, honest missing data, not medical advice.", rows: 18 },
+  summary_instructions: { label: "Conversation summaries", description: "Preserve user preferences and earlier decisions. Measurements must be fetched fresh.", rows: 18 },
+  workout_glance: { label: "Workout glance", description: "The one-line take on a workout, shown on its screen. The workout's numbers are added after it.", rows: 6 },
+} as const
+
 export default async function CoachConfigPage({ searchParams }: { searchParams: Promise<{ item?: string }> }) {
   const { db } = await adminGate()
   const [t, history, { item }] = await Promise.all([coachTexts(db), textHistory(db), searchParams])
   const now = requestTime()
   const tools = Object.entries(TOOL_DOCS)
-  const selected = item && (item in TOOL_DOCS || item === "summary_instructions") ? item : "instructions"
+  const selected = item && (item in TOOL_DOCS || item in PROSE) ? item : "instructions"
 
   const byKey = new Map<string, Omit<TextVersion, "key">[]>()
   for (const { key, ...v } of history) byKey.set(key, [...(byKey.get(key) ?? []), v])
@@ -31,10 +38,11 @@ export default async function CoachConfigPage({ searchParams }: { searchParams: 
   }
   /** Whether any of a tool's (or the instructions') wording differs from the default. */
   const edited = (name: string) =>
-    name === "instructions" || name === "summary_instructions" ? t(name) !== DEFAULTS[name] : [`tool.${name}`, ...Object.keys(TOOL_DOCS[name].params).map((p) => `tool.${name}.${p}`)].some((k) => t(k) !== DEFAULTS[k])
+    name in PROSE ? t(name) !== DEFAULTS[name] : [`tool.${name}`, ...Object.keys(TOOL_DOCS[name].params).map((p) => `tool.${name}.${p}`)].some((k) => t(k) !== DEFAULTS[k])
 
-  const items = [{ id: "instructions", label: "Instructions", icon: FileText }, { id: "summary_instructions", label: "Conversation summaries", icon: FileText }, ...tools.map(([name]) => ({ id: name, label: name, icon: Wrench }))]
-  const doc = selected === "instructions" || selected === "summary_instructions" ? null : TOOL_DOCS[selected]
+  const items = [...Object.entries(PROSE).map(([id, p]) => ({ id, label: p.label, icon: FileText })), ...tools.map(([name]) => ({ id: name, label: name, icon: Wrench }))]
+  const doc = selected in PROSE ? null : TOOL_DOCS[selected]
+  const prose = PROSE[selected as keyof typeof PROSE]
 
   return (
     <>
@@ -48,7 +56,7 @@ export default async function CoachConfigPage({ searchParams }: { searchParams: 
             {items.map(({ id, label, icon: Icon }, i) => {
               const on = id === selected
               return (
-                <li key={id} className={cn("shrink-0", i === 1 && "lg:mt-3 lg:border-t lg:border-border lg:pt-3")}>
+                <li key={id} className={cn("shrink-0", i === Object.keys(PROSE).length && "lg:mt-3 lg:border-t lg:border-border lg:pt-3")}>
                   <Link
                     href={id === "instructions" ? "/admin/coach" : `/admin/coach?item=${id}`}
                     aria-current={on ? "page" : undefined}
@@ -74,10 +82,10 @@ export default async function CoachConfigPage({ searchParams }: { searchParams: 
         </nav>
 
         {doc === null ? (
-          <Panel className="min-w-0" title={selected === "summary_instructions" ? "Conversation summaries" : "Instructions"} description={selected === "summary_instructions" ? "Preserve user preferences and earlier decisions. Measurements must be fetched fresh." : "Keep the safety rules: no numbers without a tool, honest missing data, not medical advice."}>
-            {editor(field(selected, selected === "summary_instructions" ? "Conversation summaries" : "Instructions"), {
-              rows: 18,
-              hint: (
+          <Panel className="min-w-0" title={prose.label} description={prose.description}>
+            {editor(field(selected, prose.label), {
+              rows: prose.rows,
+              hint: (selected === "instructions" || selected === "summary_instructions") && (
                 <>
                   Placeholders:{" "}
                   {Object.entries(PLACEHOLDERS).map(([k, v], i) => (
@@ -95,7 +103,7 @@ export default async function CoachConfigPage({ searchParams }: { searchParams: 
             <Panel>
               <div className="flex items-start gap-3">
                 <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-lg bg-coach/12">
-                  <Bot className="size-5 text-coach" strokeWidth={1.75} />
+                  <Bot className="size-5 text-coach-text" strokeWidth={1.75} />
                 </span>
                 <div className="min-w-0">
                   <h2 className="font-mono text-[16px] leading-6 font-semibold">{selected}</h2>

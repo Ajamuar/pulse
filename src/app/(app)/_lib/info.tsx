@@ -52,10 +52,10 @@ export const STRAIN_INFO: InfoContent = {
       </p>
       <Rows
         rows={[
-          [null, "Light: 0 - 9.9"],
-          [null, "Moderate: 10 - 13.9"],
-          [null, "Strenuous: 14 - 17.9"],
-          [null, "All out: 18 - 21"],
+          [null, "Light: up to 10.0"],
+          [null, "Moderate: 10.1 - 14.0"],
+          [null, "Strenuous: 14.1 - 18.0"],
+          [null, "All Out: 18.1 - 21"],
         ]}
       />
       <p>
@@ -74,25 +74,6 @@ export const STRAIN_TARGET_INFO: InfoContent = {
       Your Strain Target is a range for today, set from your Recovery and your training load over the last 28&nbsp;days. Inside it, training builds
       fitness without digging a recovery hole.
     </p>
-  ),
-}
-
-export const CALORIES_INFO: InfoContent = {
-  title: "Calories burned",
-  body: (
-    <>
-      <p>
-        Each bar is the day’s total from Google Health, split into what you burned by moving and what your body burned at rest. Today’s bar is a
-        running total until midnight.
-      </p>
-      <Rows
-        rows={[
-          ["bg-energy-active", "Active: walking, workouts and other movement."],
-          ["bg-energy-resting", "Resting: the rest of the total, your body’s baseline burn."],
-          ["border border-dashed border-muted-foreground", "Dashed: a day with a total but no active figure, so Pulse shows no split."],
-        ]}
-      />
-    </>
   ),
 }
 
@@ -149,6 +130,17 @@ export const STRAIN_RECOVERY_INFO: InfoContent = {
     <>
       <p>Your last 7&nbsp;days side by side: Day Strain in blue on the left scale, from 0 to 21, and Recovery on the right scale, from 0 to 100%.</p>
       <p>High strain on one day often shows up as lower Recovery the next morning. Days without a score are left as gaps.</p>
+    </>
+  ),
+}
+
+/** "Add activity" (Home's card button and the "+" menu): Pulse imports workouts, so this explains where they come from (§11 R2). */
+export const ADD_ACTIVITY_INFO: InfoContent = {
+  title: "Add an activity",
+  body: (
+    <>
+      <p>Pulse reads your workouts from Fitbit through Google Health, so it cannot add one here.</p>
+      <p>Start or log the workout in the Fitbit app. It appears in your activities after the next sync, with its Strain.</p>
     </>
   ),
 }

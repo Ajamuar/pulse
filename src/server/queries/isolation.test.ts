@@ -13,6 +13,7 @@ import {
   healthRecords,
   intradaySeries,
   journalEntries,
+  journalNotes,
   journalTags,
   loggedEntries,
   oauthTokens,
@@ -28,7 +29,7 @@ import { getActivity } from "./activity";
 import { getCalendarMonth } from "./calendar";
 import type { QueryCtx } from "./common";
 import { getFitness, getHealthHub, getHealthspan, getMonitor, getStress } from "./health";
-import { dashboardKeys, getHome } from "./home";
+import { dashboardKeys, getHome, activityLogContext } from "./home";
 import { getBehaviours, getJournal, getJournalInsights } from "./journal";
 import { getLog } from "./log";
 import { DETAIL_KEYS, getMetricDetail } from "./metric";
@@ -38,6 +39,7 @@ import { getMore, getSettings, getShellStatus, getWearStreak, getYourData } from
 import { getSleep } from "./sleep";
 import { getStrain } from "./strain";
 import { getTrends } from "./trends";
+import { getTrendView } from "./trendView";
 
 const TODAY = dayAt(179);
 const PAST = dayAt(170);
@@ -61,8 +63,10 @@ async function screens(ctx: QueryCtx, activityId: string | null, period: string 
   }
   for (const key of DETAIL_KEYS) out[`metric:${key}`] = await getMetricDetail(key, TODAY, ctx);
   for (const m of ["recovery", "hrv", "steps", "weight", "glucose"] as const) out[`trends:${m}`] = await getTrends(m, ctx);
+  for (const m of ["hrv", "zones13", "strength", "time_in_bed"] as const) out[`trendView:${m}`] = await getTrendView(m, TODAY, "m", 0, ctx);
   for (const m of ["recovery", "hrv", "sleep"] as const) out[`insights:${m}`] = await getJournalInsights(m, ctx);
   Object.assign(out, {
+    activityLog: await activityLogContext(ctx),
     hub: await getHealthHub(ctx),
     fitness: await getFitness(ctx),
     activities: await getActivities(3650, ctx),
@@ -146,8 +150,9 @@ beforeAll(async () => {
   ]);
   await db.insert(journalEntries).values([
     { ...user, day: TODAY, tag: "intruder_tag", value: 1 },
-    { ...user, day: PAST, tag: "alcohol", value: 1 },
+    { ...user, day: PAST, tag: "alcohol", value: 1, detail: 777 },
   ]);
+  await db.insert(journalNotes).values({ ...user, day: TODAY, text: "INTRUDER note" });
   await db.insert(reports).values({ ...user, period: "1999-W01", data: { ...(r1.data as object), start: "1999-01-04", end: "1999-01-10" } });
   await db.insert(healthRecords).values([
     { ...user, id: "INTRUDER-ecg", kind: "ecg", ts: NOW - 86400, day: dayAt(178), data: { result: "ATRIAL_FIBRILLATION", avgBpm: 177.7 } },
@@ -198,9 +203,9 @@ describe("screen queries are scoped to one user", () => {
     expect(archive.weeks.map((w) => w.period)).toEqual(["1999-W01"]);
     expect(archive.months).toEqual([]);
     const behaviours = vms.behaviours as Awaited<ReturnType<typeof getBehaviours>>;
-    expect(behaviours.tags.map((t) => [t.tag, t.label, t.answers])).toEqual([
-      ["alcohol", "INTRUDER Alcohol", 1],
-      ["intruder_tag", "INTRUDER tag", 1],
+    expect(behaviours.tags.map((t) => [t.tag, t.label])).toEqual([
+      ["alcohol", "INTRUDER Alcohol"],
+      ["intruder_tag", "INTRUDER tag"],
     ]);
     const yourData = vms.yourData as Awaited<ReturnType<typeof getYourData>>;
     expect(yourData).toMatchObject({ first: "2026-01-01", days: 1, answers: 2 });

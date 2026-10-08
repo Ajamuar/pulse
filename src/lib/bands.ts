@@ -10,11 +10,11 @@ export const DATA_COLORS = {
   "recovery-red": { bg: "bg-recovery-red", text: "text-recovery-red-text", css: "var(--recovery-red)" },
   strain: { bg: "bg-strain", text: "text-strain-text", css: "var(--strain)" },
   sleep: { bg: "bg-sleep", text: "text-sleep", css: "var(--sleep)" },
-  optimal: { bg: "bg-optimal", text: "text-optimal", css: "var(--optimal)" },
-  warning: { bg: "bg-warning", text: "text-warning", css: "var(--warning)" },
-  "stress-low": { bg: "bg-stress-low", text: "text-stress-low", css: "var(--stress-low)" },
-  "stress-medium": { bg: "bg-stress-medium", text: "text-stress-medium", css: "var(--stress-medium)" },
-  "stress-high": { bg: "bg-stress-high", text: "text-stress-high", css: "var(--stress-high)" },
+  optimal: { bg: "bg-optimal", text: "text-optimal-text", css: "var(--optimal)" },
+  warning: { bg: "bg-warning", text: "text-warning-text", css: "var(--warning)" },
+  "stress-low": { bg: "bg-stress-low", text: "text-stress-low-text", css: "var(--stress-low)" },
+  "stress-medium": { bg: "bg-stress-medium", text: "text-stress-medium-text", css: "var(--stress-medium)" },
+  "stress-high": { bg: "bg-stress-high", text: "text-stress-high-text", css: "var(--stress-high)" },
   "stage-awake": { bg: "bg-stage-awake", text: "text-stage-awake", css: "var(--stage-awake)" },
   "stage-rem": { bg: "bg-stage-rem", text: "text-stage-rem", css: "var(--stage-rem)" },
   "stage-light": { bg: "bg-stage-light", text: "text-stage-light", css: "var(--stage-light)" },
@@ -25,6 +25,36 @@ export const DATA_COLORS = {
   muted: { bg: "bg-muted-foreground", text: "text-muted-foreground", css: "var(--muted-foreground)" },
 } as const;
 export type DataColor = keyof typeof DATA_COLORS;
+
+/** Each zone's fill, cool to hot as WHOOP colours them: grey-blue, blue, green, orange, red. */
+export const ZONE_COLOR: Record<number, DataColor> = { 1: "sleep", 2: "strain", 3: "optimal", 4: "warning", 5: "recovery-red" };
+
+/**
+ * The colour of a Trend View part or breakdown band by its key (stack series, day bands, zones). Unknown keys, such
+ * as strength activity types, take strain blue.
+ */
+export function partColor(key: string): string {
+  const zone = /^z([1-5])$/.exec(key);
+  if (zone) return DATA_COLORS[ZONE_COLOR[Number(zone[1])]].css;
+  const strainBand = ["all_out", "strenuous", "moderate", "light"].indexOf(key);
+  if (strainBand >= 0) return `var(--strain-band-${strainBand + 1})`;
+  const named: Record<string, DataColor> = {
+    optimal: "optimal",
+    sufficient: "muted",
+    poor: "warning",
+    green: "recovery-green",
+    yellow: "recovery-yellow",
+    red: "recovery-red",
+    rem: "stage-rem",
+    asleep: "sleep",
+    need: "optimal",
+    deep: "stage-deep",
+    low: "stress-low",
+    medium: "stress-medium",
+    high: "stress-high",
+  };
+  return DATA_COLORS[named[key] ?? "strain"].css;
+}
 
 // --- Recovery (and Energy Bank, which bands exactly like Recovery) ---
 
@@ -77,7 +107,7 @@ export type DeltaDir = "up" | "down" | "flat";
 export const GOOD_DIRECTION = {
   hrv: "up",
   resting_hr: "down",
-  respiratory_rate: "neutral",
+  respiratory_rate: "down",
   sleep_performance: "up",
   hours: "up",
   consistency: "up",
@@ -114,8 +144,8 @@ export function deltaTone(
 
 export type ChipTone = "optimal" | "warning" | "alert" | "neutral";
 export const CHIP_TONE_CLASS: Record<ChipTone, string> = {
-  optimal: "bg-optimal/15 text-optimal",
-  warning: "bg-warning/15 text-warning",
+  optimal: "bg-optimal/15 text-optimal-text",
+  warning: "bg-warning/15 text-warning-text",
   alert: "bg-recovery-red/15 text-recovery-red-text",
   neutral: "bg-secondary text-foreground-secondary",
 };

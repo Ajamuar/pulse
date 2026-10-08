@@ -65,6 +65,12 @@
   --color-sleep: var(--sleep);
   --color-sleep-deep: var(--sleep-deep);
   --color-optimal: var(--optimal);
+  --color-optimal-text: var(--optimal-text);
+  --color-warning-text: var(--warning-text);
+  --color-stress-low-text: var(--stress-low-text);
+  --color-stress-medium-text: var(--stress-medium-text);
+  --color-stress-high-text: var(--stress-high-text);
+  --color-coach-text: var(--coach-text);
   --color-warning: var(--warning);
   --color-stress-low: var(--stress-low);
   --color-stress-medium: var(--stress-medium);
@@ -76,6 +82,16 @@
   --color-banner-to: var(--banner-to);
   --color-outlook-from: var(--outlook-from);
   --color-outlook-to: var(--outlook-to);
+  --color-outlook-accent: var(--outlook-accent);
+  --color-glow-sand: var(--glow-sand);
+  --color-answer-yes: var(--answer-yes);
+  --color-on-color: var(--on-color);
+  --color-on-strain: var(--on-strain);
+  --color-menu-from: var(--menu-from);
+  --color-menu-to: var(--menu-to);
+  --color-key-from: var(--key-from);
+  --color-key-to: var(--key-to);
+  --color-key-foreground: var(--key-foreground);
   --color-dial-track: var(--dial-track);
   --color-dial-target: var(--dial-target);
   --color-chart-grid: var(--chart-grid);
@@ -171,12 +187,13 @@
   --popover-top: #2a373f;
   --popover-foreground: #ffffff;
   /* Calls to action: the reference brand's teal, with ink on it, in both themes. */
-  --primary: #00f19f;
+  /* Actions are white with ink (spec §5 "default": the "+", SAVE); green stays a data colour (--optimal). */
+  --primary: #ffffff;
   --primary-foreground: #101518;
   --secondary: #3b4244;
   --secondary-foreground: #ffffff;
   --muted: #22282c;
-  --muted-foreground: #999ea3;
+  --muted-foreground: #a9aeb3;
   --accent: #41484b;
   --accent-foreground: #ffffff;
   --inset: #111619;
@@ -212,6 +229,13 @@
   --stress-low: var(--recovery-blue);
   --stress-medium: #00f19f;
   --stress-high: #ffa722;
+  /* Status colours as text: the data colours themselves in dark; darker in light so 12 px text passes 4.5:1. */
+  --optimal-text: var(--optimal);
+  --warning-text: var(--warning);
+  --stress-low-text: var(--stress-low);
+  --stress-medium-text: var(--stress-medium);
+  --stress-high-text: var(--stress-high);
+  --coach-text: var(--coach);
 
   /* Coach / insight language */
   --coach: #7095fe;
@@ -221,6 +245,21 @@
   --banner-to: #2b3f50;
   --outlook-from: #6a5a45;
   --outlook-to: #2f4a5e;
+  --outlook-accent: #e8d6b4;
+  /* The "+" action menu: a blue-violet panel, lighter at its top edge */
+  /* The Journal's sand glow at the top of its screen (journal-01). */
+  --glow-sand: #8c7a63;
+  /* A journal "yes" (journal-01's blue check), and the ink drawn on any data-coloured fill (that check, a done badge). */
+  --answer-yes: var(--recovery-blue);
+  --on-color: #101518;
+  /* Type on a strain-blue fill (Start Activity's heart-rate circle), white in both themes. */
+  --on-strain: #ffffff;
+  --menu-from: #343f6b;
+  --menu-to: #2a3150;
+  /* Light key: the white "+" tile with a soft top light */
+  --key-from: #ffffff;
+  --key-to: #dfe2e6;
+  --key-foreground: #101518;
 
   /* Dials and charts */
   --dial-track: #33383c;
@@ -233,12 +272,22 @@
   --chart-3: #7ba1bb;
   --chart-4: #ffa722;
   --chart-5: var(--recovery-blue);
+  /* Trend View (spec §11 R29): the selected day's column, the faint daily trace behind 6M month segments, and the
+     Day Strain breakdown's four bands, All Out to Light, as fading strain blue. Built on other tokens, so one set
+     serves both themes. */
+  --chart-highlight: color-mix(in srgb, var(--foreground) 7%, transparent);
+  --chart-faint: color-mix(in srgb, var(--chart-5) 30%, transparent);
+  --strain-band-1: var(--strain);
+  --strain-band-2: color-mix(in srgb, var(--strain) 78%, var(--card));
+  --strain-band-3: color-mix(in srgb, var(--strain) 58%, var(--card));
+  --strain-band-4: color-mix(in srgb, var(--strain) 40%, var(--card));
 
-  /* Hypnogram lanes, Google Health's hues so each stage reads apart: awake pink, REM pale cyan, light blue, deep violet */
-  --stage-awake: #f48fb1;
-  --stage-rem: #a8dcff;
-  --stage-light: #7fa8f5;
-  --stage-deep: #9370db;
+  /* Sleep stages in the reference app's 2026 hues (sleep-17, sleep-18; spec §11 R33): awake near-white, light lavender,
+     SWS (deep) pink, REM purple. Bars, labels, the hypnogram and the restorative stack share them. */
+  --stage-awake: #dfe3e8;
+  --stage-rem: #a35cf0;
+  --stage-light: #a9a6f4;
+  --stage-deep: #f39ae4;
 
   /* Calories burned, stacked: active (movement and workouts) in strain blue over resting in a quiet light grey */
   --energy-active: #0093e7;
@@ -329,12 +378,12 @@
   --popover: #ffffff;
   --popover-top: #ffffff;
   --popover-foreground: #101518;
-  --primary: #00f19f;
-  --primary-foreground: #101518;
+  --primary: #101518;
+  --primary-foreground: #ffffff;
   --secondary: #e4e8eb;
   --secondary-foreground: #101518;
   --muted: #eef1f3;
-  --muted-foreground: #646e75;
+  --muted-foreground: #5a646b;
   --accent: #dde2e6;
   --accent-foreground: #101518;
   --inset: #eef1f3;
@@ -360,6 +409,12 @@
   --stress-low: var(--recovery-blue);
   --stress-medium: #00b377;
   --stress-high: #d97900;
+  --optimal-text: #007a52;
+  --warning-text: #a85a00;
+  --stress-low-text: #2a6fa8;
+  --stress-medium-text: #007a52;
+  --stress-high-text: #a85a00;
+  --coach-text: #3d5bd9;
   --coach: #4f6fe0;
   --insight-from: #e6e2fb;
   --insight-to: #dceef7;
@@ -367,6 +422,13 @@
   --banner-to: #e3ecf3;
   --outlook-from: #f3ebdf;
   --outlook-to: #e2ebf2;
+  --outlook-accent: #8a6a32;
+  --glow-sand: #eadfcd;
+  --menu-from: #eef0fb;
+  --menu-to: #e2e6f6;
+  --key-from: #101518;
+  --key-to: #2a3034;
+  --key-foreground: #ffffff;
 
   --dial-track: #e2e6e9;
   --dial-target: #b3bbc1;
@@ -378,10 +440,10 @@
   --chart-3: #6690ad;
   --chart-4: #d97900;
   --chart-5: var(--recovery-blue);
-  --stage-awake: #d9577f;
-  --stage-rem: #3a9fd8;
-  --stage-light: #4f7fe0;
-  --stage-deep: #6a48b8;
+  --stage-awake: #8a939c;
+  --stage-rem: #8236d4;
+  --stage-light: #5f5ad6;
+  --stage-deep: #c93b9f;
   --energy-active: #0093e7;
   --energy-resting: #c9d1d8;
   --pattern-hatch: repeating-linear-gradient(-45deg, rgb(16 21 24 / 0.08) 0 1.5px, transparent 1.5px 5px);
