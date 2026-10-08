@@ -1,6 +1,8 @@
 // Pulse service worker. Deliberately small: the build's static files and the offline page, the last copy of each
 // page this device opened (shown only when the network is down, cleared on sign-out), and Web Push.
-const CACHE = "pulse-static-v1"
+// One static cache per build: the page registers /sw.js?v=<build id>, so each deploy installs a new worker whose
+// activate step deletes the previous build's cache. Without this, every deploy's hashed files piled up forever.
+const CACHE = `pulse-static-${new URL(self.location).searchParams.get("v") || "0"}`
 const PAGES = "pulse-pages-v1"
 const OFFLINE = "/offline.html"
 // ponytail: keeps the most recently stored pages by insertion order, not by last visit; enough for a few days of screens.
