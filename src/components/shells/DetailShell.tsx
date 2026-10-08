@@ -44,13 +44,11 @@ export function DetailShell({ title, subtitle, info, backHref, dateSwitcher, dis
   const headerProps = { title, subtitle, info, backHref, dismiss, align, titleIcon, action, dateTitle: inHeader ? dateSwitcher : undefined }
   // Render the compact hero on the server so server-component wrappers can accept it too.
   const compact = collapse && isValidElement<{ compact?: boolean }>(hero) ? cloneElement(hero, { compact: true }) : null
-  // Full-screen screens (Coach) don't animate in: a transform on the column would carry their fixed panels with it.
-  const Column = contained ? "div" : PageEnter
   const header = compact ? <CollapsingHeader {...headerProps} compact={compact} stats={stats} /> : <DetailHeader {...headerProps} />
   return (
     <div data-ground={ground === "healthspan" ? "healthspan" : undefined} className={contained ? "flex h-full min-h-0 flex-col" : undefined}>
       {contained ? <div className="shrink-0">{header}</div> : header}
-      <Column className={cn(CONTENT_COLUMN, contained && "flex min-h-0 flex-1 flex-col")} aria-busy={loading || undefined}>
+      <PageEnter className={cn(CONTENT_COLUMN, contained && "flex min-h-0 flex-1 flex-col")} aria-busy={loading || undefined}>
         {loading && <LoadingStatus title={title} />}
         <ConnectionBanner className="mb-4 shrink-0 xl:mb-6" />
         {dateSwitcher && !inHeader && (
@@ -90,7 +88,7 @@ export function DetailShell({ title, subtitle, info, backHref, dateSwitcher, dis
           )}
           {footer}
         </div>
-      </Column>
+      </PageEnter>
     </div>
   )
 }

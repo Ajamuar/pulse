@@ -20,10 +20,10 @@ const fade = (duration: number, from = 0): Motion => ({ keyframes: [{ opacity: f
  * in from the left, another tab fades through, and the same screen (its skeleton handing over to the content) fades.
  * Exported for the test.
  */
-export function motionFor(from: string | null, to: string, reduce: boolean): Motion | null {
+export function motionFor(from: string | null, to: string, fadeOnly: boolean): Motion | null {
   if (from === null) return null // the launch: the splash screen hands over, nothing to animate
   if (from === to) return fade(180, 0.4)
-  if (reduce) return fade(150)
+  if (fadeOnly) return fade(150)
   const sameTab = tabForPath(from) === tabForPath(to)
   if (ROOTS.has(to)) {
     if (sameTab) return slide(-48)
@@ -44,7 +44,8 @@ const entered = new WeakSet<Element>()
 /**
  * The content column of a screen, animated in on navigation. Only the column moves: the sticky header and the glass
  * nav stay put (snapshotting them for a View Transition made the glass flicker, docs/pwa.md). Transform and opacity
- * only, on the compositor; nothing is left on the element afterwards, so sticky and fixed children behave as before.
+ * only, on the compositor; nothing is left on the element afterwards. A screen with a fixed panel inside its column
+ * (`data-fixed-panel`) only fades: during a slide the panel would move with the column.
  */
 export function PageEnter(props: React.ComponentProps<"div">) {
   const ref = useRef<HTMLDivElement>(null)
@@ -53,14 +54,16 @@ export function PageEnter(props: React.ComponentProps<"div">) {
     // Strict Mode runs this twice on one element; the second run must not swap the slide for a fade.
     if (!ref.current || entered.has(ref.current)) return
     entered.add(ref.current)
-    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches
+    // A transform makes the column the containing block of its fixed children, so a fixed side panel (Coach's chats,
+    // Settings' sections; marked data-fixed-panel) would slide in with it. Those screens only fade.
+    const fadeOnly = matchMedia("(prefers-reduced-motion: reduce)").matches || !!ref.current.querySelector("[data-fixed-panel]")
     const now = performance.now()
     // The content replacing its skeleton mid-slide picks the slide up where the skeleton left it, instead of jumping.
-    if (shown === pathname && last && now - last.at < last.m.duration) {
+    if (shown === pathname && last && now - last.at < last.m.duration && !fadeOnly) {
       ref.current.animate(last.m.keyframes, { duration: last.m.duration, easing: EASE_OUT }).currentTime = now - last.at
       return
     }
-    const m = motionFor(shown, pathname, reduce)
+    const m = motionFor(shown, pathname, fadeOnly)
     shown = pathname
     last = m && { m, at: now }
     if (m) ref.current.animate(m.keyframes, { duration: m.duration, easing: EASE_OUT })

@@ -367,7 +367,7 @@ export function Coach({ id, initial, groups, next, prefill, auto, suggestions }:
   return (
     <div data-chats={listOpen ? "open" : "closed"} className="flex min-h-0 flex-1 flex-col">
       {listOpen ? (
-        <aside aria-label="Chats panel" className={cn(GLASS, "fixed inset-y-3 left-[112px] z-30 hidden w-[272px] flex-col rounded-[28px] p-3 xl:flex")}>
+        <aside data-fixed-panel aria-label="Chats panel" className={cn(GLASS, "fixed top-[calc(var(--inset-top)+12px)] bottom-3 left-[112px] z-30 hidden w-[272px] flex-col rounded-[28px] p-3 xl:flex")}>
           <div className="flex h-14 shrink-0 items-center justify-between gap-1 pl-3">
             <h2 className="text-[15px] leading-5 font-semibold">Chats</h2>
             <span className="flex items-center">
@@ -384,7 +384,7 @@ export function Coach({ id, initial, groups, next, prefill, auto, suggestions }:
           </div>
         </aside>
       ) : (
-        <aside aria-label="Chats panel" className={cn(GLASS, "fixed inset-y-3 left-[112px] z-30 hidden w-16 flex-col items-center gap-1 rounded-[28px] py-3 xl:flex")}>
+        <aside data-fixed-panel aria-label="Chats panel" className={cn(GLASS, "fixed top-[calc(var(--inset-top)+12px)] bottom-3 left-[112px] z-30 hidden w-16 flex-col items-center gap-1 rounded-[28px] py-3 xl:flex")}>
           <Button variant="ghost" size="icon-touch" aria-label="Expand chats" aria-expanded={false} onClick={() => setPanelOpen(true)} className={PANEL_BTN}>
             <PanelLeftOpen aria-hidden strokeWidth={1.6} />
           </Button>
