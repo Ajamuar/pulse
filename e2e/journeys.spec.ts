@@ -118,8 +118,9 @@ test("6. illness week: Home alert → Health Monitor flags", async ({ page }) =>
   await expect(vital).toBeVisible();
   await vital.click();
   await expect(page).toHaveURL(new RegExp(`/metric/(hrv|rhr|resp|spo2|skin)\\?d=${d}$`));
+  // Back pops to the screen the metric was opened from (useAppBack), here Health Monitor, on the same day.
   await page.getByRole("link", { name: "Back", exact: true }).click();
-  await expect(page).toHaveURL(url(withDay("/", d)));
+  await expect(page).toHaveURL(url(withDay("/health/monitor", d)));
 });
 
 test("dashboard metrics open their own details and return to the selected Home day", async ({ page }) => {
