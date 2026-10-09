@@ -2,8 +2,9 @@
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { CalendarHeart, Droplet, FlaskConical, Scale, Smile, Thermometer, Trash2, Utensils, type LucideIcon } from "lucide-react"
+import { CalendarHeart, Droplet, FlaskConical, Plus, Scale, Smile, Thermometer, Utensils, type LucideIcon } from "lucide-react"
 import { toast } from "sonner"
+import { DAY, dayLabel, formatDay } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import {
   CYCLE_SYMPTOMS,
@@ -16,23 +17,22 @@ import {
   SYMPTOMS,
   VALENCES,
   WATER_STEPS,
+  type LogData,
   type LogKind,
-  type LogType,
 } from "@/lib/log"
-import { deleteLogEntry, logEntry, type LogInput } from "@/server/actions/log"
+import { logEntry, type LogInput } from "@/server/actions/log"
 import type { LogVM } from "@/server/queries/log"
 import { CAPTION } from "@/components/metrics/primitives"
 import { ResponsiveSheet, SHEET_SECTION } from "@/components/shells/ResponsiveSheet"
 import { closeSheet, openSheet } from "@/components/shells/SheetTrigger"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
-import { CARD_MATERIAL, Card } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { CARD_MATERIAL } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 
-const ICON: Record<LogKind, LucideIcon> = {
+export const ICON: Record<LogKind, LucideIcon> = {
   water: Droplet,
   food: Utensils,
   weight: Scale,
@@ -41,17 +41,6 @@ const ICON: Record<LogKind, LucideIcon> = {
   period: CalendarHeart,
   ovulation: FlaskConical,
 }
-const TYPE_ICON: Record<LogType, LucideIcon> = {
-  "hydration-log": Droplet,
-  "nutrition-log": Utensils,
-  weight: Scale,
-  "body-fat": Scale,
-  moods: Smile,
-  symptoms: Thermometer,
-  "menstrual-period": CalendarHeart,
-  "ovulation-test": FlaskConical,
-}
-
 /** A selectable chip, as the check-in's Yes/No toggles: white when on. */
 const CHIP =
   "h-11 rounded-full border-border px-4 text-[15px] font-medium transition-[background-color,color,border-color] duration-150 ease-standard data-[state=on]:border-foreground data-[state=on]:bg-foreground data-[state=on]:text-background"
@@ -68,14 +57,6 @@ const wallNow = (timeZone: string) => {
   return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`
 }
 const num = (s: string) => (s.trim() === "" ? null : NUM.test(s.trim()) ? Number(s.trim().replace(",", ".")) : NaN)
-
-const when = (ts: number, today: string, timeZone: string) => {
-  const d = new Date(ts * 1000)
-  const day = new Intl.DateTimeFormat("en-CA", { timeZone }).format(d)
-  const time = new Intl.DateTimeFormat("en-US", { timeZone, hour: "numeric", minute: "2-digit" }).format(d)
-  if (day === today) return `Today, ${time}`
-  return `${new Intl.DateTimeFormat("en-US", { timeZone, weekday: "short", month: "short", day: "numeric" }).format(d)}, ${time}`
-}
 
 type Form = Record<string, string | string[]>
 const EMPTY: Record<LogKind, Form> = {
@@ -172,7 +153,32 @@ const Section = ({ title, children }: { title: string; children: React.ReactNode
 
 export type LogProps = { vm: LogVM }
 
-/** Journal's Log (spec §11 LG1): one tile per thing to log, each opening its sheet, and what was logged lately. */
+const n = (v: number) => v.toLocaleString("en-US")
+const MOOD_LABEL = Object.fromEntries([...MOODS, ...VALENCES].map(([v, l]) => [v, l]))
+
+/** Each tile's figure for the day shown: a total, the latest reading, or nothing yet. */
+function tileValue(k: LogKind, vm: LogVM): { value: string; sub?: string } | null {
+  switch (k) {
+    case "water":
+      return vm.water.total ? { value: `${n(vm.water.total)} ml` } : { value: "None" }
+    case "food":
+      return vm.food.total ? { value: `${n(vm.food.total.kcal)} kcal` } : { value: "None" }
+    case "weight": {
+      const w = vm.body.latest
+      return w ? { value: `${w.kg} kg`, sub: w.day === vm.day ? undefined : formatDay(w.day, DAY.monthDay) } : null
+    }
+    case "mood": {
+      const m = vm.moods.at(-1)?.data as LogData["moods"] | undefined
+      return m ? { value: MOOD_LABEL[m.moods[0] ?? m.valence ?? ""] ?? "Logged" } : null
+    }
+    case "symptoms":
+      return { value: vm.symptoms.length ? `${vm.symptoms.length} logged` : "None" }
+    default:
+      return null
+  }
+}
+
+/** Journal's Log tiles (spec §11 LG1): one per thing to log, with the day's figure, each opening its sheet. */
 export function Log({ vm }: LogProps) {
   const { demo } = vm
   const router = useRouter()
@@ -184,14 +190,12 @@ export function Log({ vm }: LogProps) {
   const [error, setError] = React.useState<string | null>(null)
   const [reconnect, setReconnect] = React.useState(false)
   const [saving, setSaving] = React.useState(false)
-  const [remove, setRemove] = React.useState<LogVM["recent"][number] | null>(null)
-  const [removing, setRemoving] = React.useState(false)
-  const [all, setAll] = React.useState(false)
 
   const open = (k: LogKind) => {
     setShown(k)
     setForm(EMPTY[k])
-    setAt(wallNow(vm.timeZone))
+    // A past day logs at noon of that day by default; today at the time it is.
+    setAt(vm.day === vm.today ? wallNow(vm.timeZone) : `${vm.day}T12:00`)
     setError(null)
     setReconnect(vm.access[k] === "reconnect")
     setKind(k)
@@ -237,20 +241,8 @@ export function Log({ vm }: LogProps) {
     void send(input)
   }
 
-  const confirmRemove = async () => {
-    if (!remove) return
-    setRemoving(true)
-    const r = await deleteLogEntry({ id: remove.id }).catch(() => ({ ok: false as const, error: "network" }))
-    setRemoving(false)
-    setRemove(null)
-    if (!r.ok) return toast.error(r.error === RECONNECT ? "Reconnect Google in Settings to delete it there." : "Couldn’t delete. Try again.")
-    toast.success("Deleted")
-    router.refresh()
-  }
-
   const access = vm.access[shown]
   const blocked = reconnect || access === "not_connected"
-  const recent = all ? vm.recent : vm.recent.slice(0, 6)
   const timeField = shown !== "period" && (
     <Field id="log-at" label="Time">
       <Input id="log-at" type="datetime-local" value={at} max={wallNow(vm.timeZone)} onChange={(e) => setAt(e.target.value)} className={FIELD} />
@@ -263,27 +255,32 @@ export function Log({ vm }: LogProps) {
       <ul aria-label="Log" className="-mx-4 flex snap-x scroll-px-4 gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:mx-0 md:grid md:grid-flow-col md:auto-cols-fr md:overflow-visible md:px-0">
         {vm.kinds.map((k) => {
           const Icon = ICON[k]
+          const t = tileValue(k, vm)
+          const label = KIND_LABEL[k] === "Ovulation test" ? "Ovulation" : KIND_LABEL[k]
           return (
             <li key={k} className="shrink-0 snap-start">
               <button
                 type="button"
                 aria-haspopup="dialog"
                 onClick={() => openSheet("log", k)}
-                aria-label={k === "water" ? `Water, ${vm.waterToday ? `${vm.waterToday.toLocaleString("en-US")} ml` : "none"} today` : undefined}
+                aria-label={t ? `${label}, ${t.value}${t.sub ? ` on ${t.sub}` : ""}. Log ${label.toLowerCase()}` : `Log ${label.toLowerCase()}`}
                 className={cn(
                   CARD_MATERIAL,
-                  "flex h-23 w-[84px] flex-col items-start justify-between p-3 text-left md:px-2.5 transition-[scale,--tw-gradient-from] duration-150 ease-standard outline-none hover:from-card-hover focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96] md:w-full"
+                  "flex h-24 w-24 flex-col items-start justify-between p-3 text-left md:px-2.5 transition-[scale,--tw-gradient-from] duration-150 ease-standard outline-none hover:from-card-hover focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96] md:w-full"
                 )}
               >
-                <Icon aria-hidden className="size-5 text-foreground-secondary" strokeWidth={1.75} />
-                {/* Every label on one baseline; water's running total sits above its label. */}
-                <span className="flex flex-col">
-                  {k === "water" && (
-                    <span className="font-numeric text-xs leading-4 font-medium text-muted-foreground tabular-nums">
-                      {vm.waterToday ? `${vm.waterToday.toLocaleString("en-US")} ml` : "None today"}
+                <span className="flex w-full items-start justify-between text-foreground-secondary">
+                  <Icon aria-hidden className="size-5" strokeWidth={1.75} />
+                  <Plus aria-hidden className="size-4" strokeWidth={2} />
+                </span>
+                <span className="flex min-w-0 flex-col">
+                  {t && (
+                    <span className="truncate font-numeric text-[15px] leading-5 font-bold tabular-nums">
+                      {t.value}
+                      {t.sub && <span className="font-medium text-muted-foreground"> · {t.sub}</span>}
                     </span>
                   )}
-                  <span className="text-[13px] leading-[18px] font-semibold">{KIND_LABEL[k] === "Ovulation test" ? "Ovulation" : KIND_LABEL[k]}</span>
+                  <span className="text-[13px] leading-[18px] font-semibold">{label}</span>
                 </span>
               </button>
             </li>
@@ -292,39 +289,6 @@ export function Log({ vm }: LogProps) {
       </ul>
 
       {demo && <p className={cn(CAPTION, "mt-3")}>Demo: what you log stays in Pulse and never reaches Google.</p>}
-
-      {vm.recent.length > 0 && (
-        <Card className="mt-4 gap-0 px-4 py-1 xl:px-5">
-          <ul aria-label="Logged in the last 14 days">
-            {recent.map((e, i) => {
-              const Icon = TYPE_ICON[e.type]
-              return (
-                <li key={e.id} className={cn("flex min-h-14 items-center gap-3 py-2", i > 0 && "border-t border-border")}>
-                  <Icon aria-hidden className="size-5 shrink-0 text-muted-foreground" strokeWidth={1.75} />
-                  <span className="flex min-w-0 flex-1 flex-col">
-                    <span className="truncate text-[15px] leading-[22px]">
-                      {e.title} <span className="text-foreground-secondary">{e.detail}</span>
-                    </span>
-                    <span className={cn(CAPTION, "tabular-nums")}>
-                      {e.type === "menstrual-period" ? e.day : when(e.ts, vm.today, vm.timeZone)}
-                      {!e.atGoogle && !demo && ", in Pulse only"}
-                      {e.fromApp && ", from another app"}
-                    </span>
-                  </span>
-                  <Button variant="ghost" size="icon-touch" aria-label={`Delete ${e.title.toLowerCase()}, ${e.detail}`} onClick={() => setRemove(e)} className="-mr-2 text-muted-foreground hover:text-foreground">
-                    <Trash2 aria-hidden strokeWidth={1.75} />
-                  </Button>
-                </li>
-              )
-            })}
-          </ul>
-          {vm.recent.length > 6 && (
-            <Button variant="ghost" size="touch" className="-mx-2 mb-1 self-start text-foreground-secondary" onClick={() => setAll((x) => !x)}>
-              {all ? "Show less" : `Show all ${vm.recent.length}`}
-            </Button>
-          )}
-        </Card>
-      )}
 
       <ResponsiveSheet
         open={kind !== null}
@@ -378,7 +342,7 @@ export function Log({ vm }: LogProps) {
                     ))}
                   </div>
                   <p className={cn(CAPTION, "tabular-nums")} aria-live="polite">
-                    Today: {vm.waterToday.toLocaleString("en-US")} ml
+                    {dayLabel(vm.day, vm.today)}: {vm.water.total.toLocaleString("en-US")} ml
                   </p>
                 </Section>
                 <Section title="Other amount">
@@ -487,25 +451,6 @@ export function Log({ vm }: LogProps) {
         )}
       </ResponsiveSheet>
 
-      <Dialog open={remove !== null} onOpenChange={(o) => !o && !removing && setRemove(null)}>
-        <DialogContent showCloseButton={false} className="ring-1 ring-border">
-          <DialogHeader>
-            <DialogTitle>Delete this entry?</DialogTitle>
-            <DialogDescription>
-              {remove && `${remove.title}, ${remove.detail}. `}
-              {remove?.fromApp ? "Pulse asks Google Health to delete it. If the app that logged it says no, delete it there." : remove?.atGoogle ? "It is deleted from Google Health too." : "It is deleted from Pulse."}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="secondary" size="touch" onClick={() => setRemove(null)} disabled={removing}>
-              Keep
-            </Button>
-            <Button variant="outline" size="touch" className="text-recovery-red-text" onClick={confirmRemove} disabled={removing}>
-              {removing ? "Deleting…" : "Delete"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   )
 }

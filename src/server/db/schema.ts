@@ -475,6 +475,8 @@ export const loggedEntries = pgTable(
     googleName: text("google_name"),
     /** `pulse`: logged in Pulse. `google`: logged in another app and brought home by the sync. */
     source: text("source").notNull().default("pulse"),
+    /** Google's `dataSource.platform` for an entry from another app (`FITBIT`, `HEALTH_CONNECT`, ...); null for Pulse's own. */
+    app: text("app"),
     createdAt: ts("created_at").notNull(),
   },
   (t) => [primaryKey({ columns: [t.userId, t.id] }), index("logged_entries_ts").on(t.userId, t.ts), index("logged_entries_day_type").on(t.userId, t.day, t.type)],

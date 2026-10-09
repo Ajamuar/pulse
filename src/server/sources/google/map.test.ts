@@ -214,7 +214,7 @@ describe("logged entries", () => {
     for (const [type, data] of cases) {
       const { entries, complete } = mapLogEntries(type, [point("p1", toDataPoint(type, data, T, TZ))], TZ);
       expect(complete).toBe(true);
-      expect(entries).toEqual([{ name: "users/123/dataTypes/x/dataPoints/p1", ts: T, day: "2026-10-03", data }]);
+      expect(entries).toEqual([{ name: "users/123/dataTypes/x/dataPoints/p1", ts: T, day: "2026-10-03", data, app: "FITBIT" }]);
     }
   });
 

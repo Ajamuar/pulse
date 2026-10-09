@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { scopeUrl } from "@/lib/log";
 import type { Db } from "./db";
 import { dailyValues, loggedEntries, oauthTokens, syncState } from "./db/schema";
-import { deleteEntry, entriesOn, IMPORT_GRACE_S, importEntries, logAccess, PRUNE_CHECKS, pruneEntries, recentEntries, saveEntries, waterOn, type LogWriter, type PointCheck } from "./log";
+import { deleteEntry, entriesOn, IMPORT_GRACE_S, importEntries, logAccess, PRUNE_CHECKS, pruneEntries, entriesOnDay, rewindSync, saveEntries, totalsBetween, waterOn, type LogWriter, type PointCheck } from "./log";
 import type { MappedEntry } from "./sources/google/map";
 import { GoogleError } from "./sources/google/oauth";
 import { addUser, freshDb, USER } from "./testing";
@@ -55,7 +55,7 @@ describe("saveEntries / deleteEntry", () => {
   it("demo (no writer) keeps entries locally only", async () => {
     await saveEntries(db, USER, [{ type: "symptoms", ts: T, data: { symptoms: ["HEADACHE"] } }], { tz: TZ, writer: null, now: T });
     expect((await all())[0].googleName).toBeNull();
-    expect(await recentEntries(db, USER, T - 60)).toMatchObject([{ type: "symptoms", title: "Symptoms", detail: "Headache", atGoogle: false }]);
+    expect(await entriesOnDay(db, USER, "2026-10-02")).toMatchObject([{ type: "symptoms", title: "Symptoms", detail: "Headache", atGoogle: false }]);
   });
 
   it("a 403 asks for a reconnect and stores nothing; other Google errors fail softly", async () => {
@@ -114,7 +114,7 @@ describe("importEntries", () => {
     expect(await water([pt("a", T, 300)])).toBe(true);
     expect(await water([pt("a", T, 300)])).toBe(false);
     expect(await all()).toMatchObject([{ type: "hydration-log", ts: T, day: "2026-10-02", data: { ml: 300 }, source: "google", googleName: expect.stringContaining("/a") }]);
-    expect(await recentEntries(db, USER, 0)).toMatchObject([{ title: "Water", detail: "300 ml", atGoogle: true }]);
+    expect(await entriesOnDay(db, USER, "2026-10-02")).toMatchObject([{ title: "Water", detail: "300 ml", atGoogle: true, app: "Another app" }]);
   });
 
   it("matches Pulse's own entries by point id whatever the user part of the name, and takes Google's edits", async () => {
@@ -237,11 +237,38 @@ describe("importEntries", () => {
   });
 });
 
+describe("rewindSync and totalsBetween", () => {
+  it("moves a synced type's cursor back to the day, never forward, and leaves an unsynced type alone", async () => {
+    await db.insert(syncState).values([
+      { userId: USER, type: "hydration-log", syncedThrough: T },
+      { userId: USER, type: "weight", syncedThrough: null },
+    ]);
+    await rewindSync(db, USER, "hydration-log", "2026-09-20", TZ);
+    await rewindSync(db, USER, "hydration-log", "2026-09-25", TZ);
+    await rewindSync(db, USER, "weight", "2026-09-20", TZ);
+    const s = Object.fromEntries((await db.select().from(syncState)).map((r) => [r.type, r.syncedThrough]));
+    expect(s).toEqual({ "hydration-log": Date.parse("2026-09-20T00:00:00+05:30") / 1000, weight: null });
+  });
+
+  it("totals each day as waterOn does: roll-up plus pending Pulse entries, null for a day with nothing", async () => {
+    await saveEntries(db, USER, [{ type: "hydration-log", ts: T, data: { ml: 250 } }, { type: "nutrition-log", ts: T, data: { name: null, meal: "SNACK", kcal: 100, protein: null, carbs: null, fat: null } }], { tz: TZ, writer: null, now: T });
+    await db.insert(dailyValues).values([{ userId: USER, day: "2026-10-01", key: "water", value: 900 }]);
+    expect(await totalsBetween(db, USER, "2026-09-30", "2026-10-02")).toEqual([
+      { day: "2026-09-30", water: null, kcal: null },
+      { day: "2026-10-01", water: 900, kcal: null },
+      { day: "2026-10-02", water: 250, kcal: 100 },
+    ]);
+    expect((await totalsBetween(db, USER, "2026-10-02", "2026-10-02"))[0].water).toBe(await waterOn(db, USER, "2026-10-02"));
+    await db.insert(syncState).values({ userId: USER, type: "nutrition-log", lastSuccessAt: T + 60 });
+    expect((await totalsBetween(db, USER, "2026-10-02", "2026-10-02"))[0].kcal).toBeNull(); // synced: the roll-up owns it
+  });
+});
+
 describe("per user", () => {
   it("another user's entries are invisible and undeletable", async () => {
     const other = await addUser(db);
     await saveEntries(db, other, [{ type: "hydration-log", ts: T, data: { ml: 300 } }], { tz: TZ, writer: null, now: T });
-    expect(await recentEntries(db, USER, 0)).toEqual([]);
+    expect(await entriesOnDay(db, USER, "2026-10-02")).toEqual([]);
     expect(await waterOn(db, USER, "2026-10-02")).toBe(0);
     const id = (await all())[0].id;
     await deleteEntry(db, USER, id, null);

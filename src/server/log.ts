@@ -2,15 +2,15 @@
 // `logged_entries`, the only copy Pulse can read of the write-only types. Demo mode keeps it local. The other way,
 // the sync brings the readable types logged in other apps home here too (`importEntries`).
 import { randomUUID } from "node:crypto";
-import { and, desc, eq, gte, inArray, lt } from "drizzle-orm";
-import { describeEntry, LOG_TYPES, READABLE, scopeUrl, type LogType } from "@/lib/log";
-import { type Db, row, sql } from "./db";
-import { loggedEntries, oauthTokens } from "./db/schema";
+import { and, eq, gte, inArray, isNotNull, lt } from "drizzle-orm";
+import { appLabel, describeEntry, LOG_TYPES, READABLE, scopeUrl, type LogType } from "@/lib/log";
+import { type Db, row, rows, sql } from "./db";
+import { loggedEntries, oauthTokens, syncState } from "./db/schema";
 import type { GoogleClient } from "./sources/google/client";
 import { GoogleError } from "./sources/google/oauth";
 import type { MappedEntry, ReadableLogType } from "./sources/google/map";
 import { toDataPoint } from "./sources/google/write";
-import { localDay } from "./time";
+import { localDay, localMidnight } from "./time";
 
 /** `demo`: kept in Pulse only. `reconnect`: the grant lacks this type's write scope (or was revoked). */
 export type LogAccess = "demo" | "ok" | "reconnect" | "not_connected";
@@ -66,7 +66,7 @@ export async function saveEntries(db: Db, userId: number, entries: NewEntry[], o
  * except for another app's entry: Google may answer 404 for a point Pulse cannot touch, and deleting it here would
  * only bring it back on the next sync, so it stays and the user is sent to that app.
  */
-export async function deleteEntry(db: Db, userId: number, id: string, writer: LogWriter | null): Promise<LogResult & { type?: LogType }> {
+export async function deleteEntry(db: Db, userId: number, id: string, writer: LogWriter | null): Promise<LogResult & { type?: LogType; day?: string }> {
   const mine = and(eq(loggedEntries.userId, userId), eq(loggedEntries.id, id));
   const [row] = await db.select().from(loggedEntries).where(mine);
   if (!row) return { ok: true };
@@ -84,11 +84,23 @@ export async function deleteEntry(db: Db, userId: number, id: string, writer: Lo
     }
   }
   await db.delete(loggedEntries).where(mine);
-  return { ok: true, type: row.type as LogType };
+  return { ok: true, type: row.type as LogType, day: row.day };
 }
 
-/** `fromApp`: logged in another app and brought home by the sync. */
-export type LoggedEntry = { id: string; type: LogType; ts: number; day: string; title: string; detail: string; atGoogle: boolean; fromApp: boolean };
+/** `fromApp`: logged in another app and brought home by the sync; `app` says which ("Pulse" for Pulse's own). */
+export type LoggedEntry = {
+  id: string;
+  type: LogType;
+  ts: number;
+  day: string;
+  title: string;
+  detail: string;
+  data: unknown;
+  atGoogle: boolean;
+  fromApp: boolean;
+  app: string;
+  createdAt: number;
+};
 
 /** A data point's id at Google: names carry the user as `users/{id}/` or `users/me/`, so only the tail is compared. */
 const pointKey = (name: string) => name.slice(name.lastIndexOf("/") + 1);
@@ -129,8 +141,9 @@ export async function importEntries(
     seen.add(key);
     const r = byKey.get(key);
     if (r) {
-      if (r.ts !== e.ts || r.day !== e.day || !same(r.data, e.data)) {
-        await db.update(loggedEntries).set({ ts: e.ts, day: e.day, data: e.data }).where(and(eq(loggedEntries.userId, userId), eq(loggedEntries.id, r.id)));
+      const app = r.source === "google" ? (e.app ?? null) : r.app;
+      if (r.ts !== e.ts || r.day !== e.day || r.app !== app || !same(r.data, e.data)) {
+        await db.update(loggedEntries).set({ ts: e.ts, day: e.day, data: e.data, app }).where(and(eq(loggedEntries.userId, userId), eq(loggedEntries.id, r.id)));
         changed = true;
       }
       continue;
@@ -140,7 +153,7 @@ export async function importEntries(
       const [u] = unnamed.splice(i, 1);
       await db.update(loggedEntries).set({ googleName: e.name }).where(and(eq(loggedEntries.userId, userId), eq(loggedEntries.id, u.id)));
     } else {
-      await db.insert(loggedEntries).values({ userId, id: randomUUID(), type, ts: e.ts, day: e.day, data: e.data, googleName: e.name, source: "google", createdAt: o.now });
+      await db.insert(loggedEntries).values({ userId, id: randomUUID(), type, ts: e.ts, day: e.day, data: e.data, googleName: e.name, source: "google", app: e.app ?? null, createdAt: o.now });
     }
     changed = true;
   }
@@ -173,26 +186,33 @@ export async function pruneEntries(db: Db, userId: number, missing: { id: string
   return { deleted: gone.length, error };
 }
 
-/** Entries logged at or after `fromTs`, newest first. */
-export async function recentEntries(db: Db, userId: number, fromTs: number, limit = 500): Promise<LoggedEntry[]> {
-  const rows = await db
-    .select()
-    .from(loggedEntries)
-    .where(and(eq(loggedEntries.userId, userId), gte(loggedEntries.ts, fromTs)))
-    .orderBy(desc(loggedEntries.ts), desc(loggedEntries.createdAt))
-    .limit(limit);
-  return rows.map(toEntry);
-}
-
 const toEntry = (r: typeof loggedEntries.$inferSelect): LoggedEntry => ({
   id: r.id,
   type: r.type as LogType,
   ts: r.ts,
   day: r.day,
   ...describeEntry(r.type as LogType, r.data),
+  data: r.data,
   atGoogle: r.googleName !== null,
   fromApp: r.source === "google",
+  app: appLabel(r.source, r.app),
+  createdAt: r.createdAt,
 });
+
+/** Every entry of a local day, oldest first, plus any period that runs through it. */
+export async function entriesOnDay(db: Db, userId: number, day: string): Promise<LoggedEntry[]> {
+  const rows = await db
+    .select()
+    .from(loggedEntries)
+    .where(
+      and(
+        eq(loggedEntries.userId, userId),
+        sql`(${loggedEntries.day} = ${day} or (${loggedEntries.type} = 'menstrual-period' and ${loggedEntries.data}->>'start' <= ${day} and ${loggedEntries.data}->>'end' >= ${day}))`,
+      ),
+    )
+    .orderBy(loggedEntries.ts, loggedEntries.createdAt);
+  return rows.map(toEntry);
+}
 
 /** One type's entries on one local day, oldest first. No limit: another app can log many a day. */
 export async function entriesOn(db: Db, userId: number, type: LogType, day: string): Promise<LoggedEntry[]> {
@@ -218,6 +238,72 @@ export async function waterOn(db: Db, userId: number, day: string): Promise<numb
           and created_at > coalesce((select last_success_at from sync_state where user_id = ${userId} and type = 'hydration-log'), 0)), 0) pending`,
   );
   return Number(r?.synced ?? 0) + Number(r?.pending ?? 0);
+}
+
+/**
+ * Makes the next sync re-read `type` from `day`: its incremental run only re-reads the last few days, so a total for an
+ * older day would keep Google's old roll-up while the entry stops counting as pending. Never moves a cursor forward,
+ * and leaves a type that has not synced yet alone (its first backfill covers the day).
+ */
+export async function rewindSync(db: Db, userId: number, type: LogType, day: string, tz: string): Promise<void> {
+  const at = localMidnight(day, tz);
+  await db
+    .update(syncState)
+    .set({ syncedThrough: sql`least(${syncState.syncedThrough}, ${at})` })
+    .where(and(eq(syncState.userId, userId), eq(syncState.type, type), isNotNull(syncState.syncedThrough)));
+}
+
+export type DayTotals = { day: string; water: number | null; kcal: number | null };
+
+/** `waterOn` and `foodOn`'s kcal for every day in [from, to], in one query; null for a day with nothing. */
+export async function totalsBetween(db: Db, userId: number, from: string, to: string): Promise<DayTotals[]> {
+  const r = await rows<{ day: string; water: number | null; kcal: number | null; pw: number; pk: number; nw: number; nk: number }>(
+    db,
+    sql`with d as (select generate_series(${from}::date, ${to}::date, interval '1 day')::date as day),
+      v as (select day, key, value from daily_values where user_id = ${userId} and day between ${from}::date and ${to}::date and key in ('water', 'calories_in')),
+      p as (select l.day, l.type, l.data from logged_entries l where l.user_id = ${userId} and l.source = 'pulse' and l.day between ${from}::date and ${to}::date
+        and l.type in ('hydration-log', 'nutrition-log')
+        and l.created_at > coalesce((select last_success_at from sync_state s where s.user_id = ${userId} and s.type = l.type), 0))
+    select to_char(d.day, 'YYYY-MM-DD') as day,
+      (select value from v where v.day = d.day and key = 'water') water,
+      (select value from v where v.day = d.day and key = 'calories_in') kcal,
+      coalesce((select sum((data->>'ml')::numeric) from p where p.day = d.day and type = 'hydration-log'), 0) pw,
+      coalesce((select sum((data->>'kcal')::numeric) from p where p.day = d.day and type = 'nutrition-log'), 0) pk,
+      (select count(*) from p where p.day = d.day and type = 'hydration-log')::int nw,
+      (select count(*) from p where p.day = d.day and type = 'nutrition-log')::int nk
+    from d order by d.day`,
+  );
+  const sum = (synced: number | null, pending: number, n: number) => (synced === null && !n ? null : Math.round(Number(synced ?? 0) + Number(pending)));
+  return r.map((x) => ({ day: x.day, water: sum(x.water, x.pw, x.nw), kcal: sum(x.kcal, x.pk, x.nk) }));
+}
+
+export type Food = { kcal: number; protein: number; carbs: number; fat: number };
+
+/**
+ * What was eaten on `day`, as `waterOn` counts water: Google's roll-up plus what Pulse logged after the last food sync.
+ * Null when there is neither.
+ */
+export async function foodOn(db: Db, userId: number, day: string): Promise<Food | null> {
+  const r = await row<{ synced: number; kcal: number | null; protein: number | null; carbs: number | null; fat: number | null; pk: number; pp: number; pc: number; pf: number; n: number }>(
+    db,
+    sql`with v as (select key, value from daily_values where user_id = ${userId} and day = ${day} and key in ('calories_in', 'protein', 'carbs', 'fat')),
+      p as (select data from logged_entries where user_id = ${userId} and type = 'nutrition-log' and day = ${day} and source = 'pulse'
+        and created_at > coalesce((select last_success_at from sync_state where user_id = ${userId} and type = 'nutrition-log'), 0))
+    select
+      (select count(*) from v)::int synced,
+      (select value from v where key = 'calories_in') kcal,
+      (select value from v where key = 'protein') protein,
+      (select value from v where key = 'carbs') carbs,
+      (select value from v where key = 'fat') fat,
+      coalesce((select sum((data->>'kcal')::numeric) from p), 0) pk,
+      coalesce((select sum((data->>'protein')::numeric) from p), 0) pp,
+      coalesce((select sum((data->>'carbs')::numeric) from p), 0) pc,
+      coalesce((select sum((data->>'fat')::numeric) from p), 0) pf,
+      (select count(*) from p)::int n`,
+  );
+  if (!r || (Number(r.synced) === 0 && Number(r.n) === 0)) return null;
+  const add = (a: number | null, b: number) => Math.round((Number(a ?? 0) + Number(b)) * 10) / 10;
+  return { kcal: Math.round(Number(r.kcal ?? 0) + Number(r.pk)), protein: add(r.protein, r.pp), carbs: add(r.carbs, r.pc), fat: add(r.fat, r.pf) };
 }
 
 export const isReadable = (t: LogType) => READABLE.has(t);

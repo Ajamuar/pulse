@@ -6,7 +6,7 @@ import { CYCLE_SYMPTOMS, FLOWS, isCycleKind, MEALS, MOODS, OVULATION_RESULTS, RE
 import { currentUser, SIGNED_OUT } from "../auth";
 import { getConfig } from "../config";
 import { getDb } from "../db";
-import { deleteEntry, isReadable, logAccess, saveEntries, type LogResult, type LogWriter, type NewEntry } from "../log";
+import { deleteEntry, isReadable, logAccess, rewindSync, saveEntries, type LogResult, type LogWriter, type NewEntry } from "../log";
 import { getProfile, userTimeZone } from "../profile";
 import { createGoogleClient } from "../sources/google/client";
 import { addDays, fromWall, localDay } from "../time";
@@ -127,8 +127,12 @@ export async function logEntry(input: LogInput): Promise<ActionResult<{ demo: bo
   const res = await saveEntries(db, userId, entries, { tz, writer: dataSource === "google" ? writer(userId, tz) : null, now });
   revalidatePath("/journal");
   if (!res.ok) return { ok: false, error: MESSAGE[res.reason] };
-  // Water, food and weight come back through the sync, which owns their totals: fetch them now.
-  if (dataSource === "google" && entries.some((e) => isReadable(e.type))) requestSync({ userId, force: true });
+  // Water, food and weight come back through the sync, which owns their totals: fetch them now, from the entry's day.
+  const readable = entries.filter((e) => isReadable(e.type));
+  if (dataSource === "google" && readable.length) {
+    for (const e of readable) await rewindSync(db, userId, e.type, localDay(e.ts, tz), tz);
+    requestSync({ userId, force: true });
+  }
   return { ok: true, data: { demo: dataSource !== "google" } };
 }
 
@@ -146,6 +150,9 @@ export async function deleteLogEntry(input: z.input<typeof Delete>): Promise<Act
   const res = await deleteEntry(getDb(), userId, r.data.id, dataSource === "google" ? writer(userId, tz) : null);
   revalidatePath("/journal");
   if (!res.ok) return { ok: false, error: MESSAGE[res.reason] };
-  if (dataSource === "google" && res.type && isReadable(res.type)) requestSync({ userId, force: true });
+  if (dataSource === "google" && res.type && res.day && isReadable(res.type)) {
+    await rewindSync(getDb(), userId, res.type, res.day, tz);
+    requestSync({ userId, force: true });
+  }
   return { ok: true, data: undefined };
 }

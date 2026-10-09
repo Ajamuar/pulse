@@ -1,7 +1,10 @@
+import { cookies } from "next/headers"
 import Link from "next/link"
 import { ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { DAY, dayLabel, formatDay } from "@/lib/format"
+import { FOLDED_COOKIE, parseFolded } from "@/lib/folded"
+import { addDays } from "@/server/time"
 import { dayHref } from "@/lib/url"
 import { getJournal } from "@/server/queries/journal"
 import { getLog } from "@/server/queries/log"
@@ -9,11 +12,14 @@ import { DayStrip } from "@/components/metrics/DayStrip"
 import { InsightCard } from "@/components/metrics/InsightCard"
 import { EmptyState } from "@/components/shells/EmptyState"
 import { PageShell } from "@/components/shells/PageShell"
-import { SectionShell } from "@/components/shells/SectionShell"
+import { CollapsibleSection } from "@/components/shells/CollapsibleSection"
+import { ActionLink, SectionShell } from "@/components/shells/SectionShell"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
 import { CheckIn, TAG_CLASS } from "./CheckIn"
+import { DayLog } from "./DayLog"
 import { Log } from "./Log"
+import { WeekCard } from "./WeekCard"
 import { pageDay, type SearchParams } from "../_lib/day"
 
 export const metadata = { title: "Journal" }
@@ -27,8 +33,10 @@ export default async function JournalPage({ searchParams }: PageProps<"/journal"
   const allHistory = (await searchParams).history === "all"
   const base = dayHref("/journal", d, today)
   const historyHref = allHistory ? base : `${base}${d === today ? "?" : "&"}history=all`
-  const [vm, log] = await Promise.all([getJournal(d, ctx), getLog(ctx)])
+  const [vm, log] = await Promise.all([getJournal(d, ctx), getLog(d, ctx)])
   const date = formatDay(d, DAY.short)
+  const closed = parseFolded((await cookies()).get(FOLDED_COOKIE)?.value)
+  const open = (id: string) => !closed.has(id)
 
   return (
     <PageShell title="Journal" dateSwitcher={{ mode: "day" }}>
@@ -38,27 +46,35 @@ export default async function JournalPage({ searchParams }: PageProps<"/journal"
         <DayStrip indicator="journal" days={vm.strip.map((s) => ({ date: s.day, done: s.done }))} />
       </div>
 
-      {/* Phone: log, check-in, insights, history, top to bottom. From 1280 px the day's work (log over check-in) takes
-          the wide column and the look back (insights over a week of history) the other, so neither column runs on alone
+      {/* Phone: log tiles, check-in, the day's log, insights, the week, history, top to bottom. From 1280 px the day's work
+          takes the wide column and the look back (insights, the week, history) the other, so neither column runs on alone
           (J-02: a 30-row history under the check-in left the right column empty). */}
       <div className="flex flex-col gap-8 xl:grid xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] xl:items-start xl:gap-x-6 xl:gap-y-10">
-        {/* Log first: a drink or a weigh-in is a two-tap job, the check-in an evening one (spec §11 LG1). */}
+        {/* Log tiles first: a drink or a weigh-in is a two-tap job; then the check-in, then what the day holds (spec §11 LG1). */}
         <div className="flex flex-col gap-8">
         <SectionShell variant="section" title="Log">
           <Log vm={log} />
         </SectionShell>
 
-        <SectionShell variant="section" title="Check-in">
+        <CollapsibleSection id="check-in" title="Check-in" defaultOpen={open("check-in")}>
           <CheckIn dayLabel={date} checkIn={vm.checkIn} />
-        </SectionShell>
+        </CollapsibleSection>
+
+        <CollapsibleSection id="logged" title={`Logged ${d === today ? "today" : d === addDays(today, -1) ? "yesterday" : `on ${date}`}`} defaultOpen={open("logged")}>
+          <DayLog vm={log} />
+        </CollapsibleSection>
         </div>
 
         <div className="flex flex-col gap-8">
-          <SectionShell variant="section" title="Insights" action={{ label: "See all", href: "/journal/insights" }}>
+          <CollapsibleSection id="insights" title="Insights" defaultOpen={open("insights")} action={<ActionLink label="See all" href="/journal/insights" />}>
             <InsightCard body={vm.teaser.text} action={vm.teaser.ready ? { label: "See all insights", href: "/journal/insights" } : undefined} />
+          </CollapsibleSection>
+
+          <SectionShell variant="section" title="This week">
+            <WeekCard week={log.week} day={d} />
           </SectionShell>
 
-          <SectionShell variant="section" title="History">
+          <CollapsibleSection id="history" title="History" defaultOpen={open("history")}>
           {vm.history.length ? (
             <Card className="gap-0 px-4 py-1 xl:px-5">
               <ul>
@@ -105,7 +121,7 @@ export default async function JournalPage({ searchParams }: PageProps<"/journal"
               action={{ label: "Check in", sheet: "checkin" }}
             />
           )}
-          </SectionShell>
+          </CollapsibleSection>
         </div>
       </div>
     </PageShell>
