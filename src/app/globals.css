@@ -87,8 +87,6 @@
   --color-answer-yes: var(--answer-yes);
   --color-on-color: var(--on-color);
   --color-on-strain: var(--on-strain);
-  --color-menu-from: var(--menu-from);
-  --color-menu-to: var(--menu-to);
   --color-key-from: var(--key-from);
   --color-key-to: var(--key-to);
   --color-key-foreground: var(--key-foreground);
@@ -254,8 +252,6 @@
   --on-color: #101518;
   /* Type on a strain-blue fill (Start Activity's heart-rate circle), white in both themes. */
   --on-strain: #ffffff;
-  --menu-from: #343f6b;
-  --menu-to: #2a3150;
   /* Light key: the white "+" tile with a soft top light */
   --key-from: #ffffff;
   --key-to: #dfe2e6;
@@ -424,8 +420,6 @@
   --outlook-to: #e2ebf2;
   --outlook-accent: #8a6a32;
   --glow-sand: #eadfcd;
-  --menu-from: #eef0fb;
-  --menu-to: #e2e6f6;
   --key-from: #101518;
   --key-to: #2a3034;
   --key-foreground: #ffffff;

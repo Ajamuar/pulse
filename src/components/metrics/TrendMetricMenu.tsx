@@ -12,13 +12,13 @@ const ICON = "grid size-6 shrink-0 place-items-center text-muted-foreground [&_s
 
 /**
  * The Trend View's metric switch (spec §11 R29): a full-width card naming the metric in caps with its icon and a
- * chevron; it opens a list of the screen's other metrics, on the "+" menu's panel. A choice keeps the range and day.
+ * chevron; it opens a list of the screen's other metrics, on the shared menu panel. A choice keeps the range and day.
  */
 export function TrendMetricMenu({ current, options }: { current: string; options: TrendMetricOption[] }) {
   const on = options.find((o) => o.key === current) ?? options[0]
   return (
     <DropdownMenu modal={false}>
-      <DropdownMenuTrigger className={cn(CARD_LINK, "group/menu flex min-h-14 w-full items-center gap-3 rounded-xl px-4 text-left")}>
+      <DropdownMenuTrigger className={cn(CARD_LINK, "group/menu flex min-h-14 w-full items-center gap-3 rounded-xl px-4 text-left active:scale-[0.99]")}>
         <span aria-hidden className={ICON}>
           {on.icon}
         </span>
