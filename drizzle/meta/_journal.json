@@ -57,6 +57,13 @@
       "when": 1791528957124,
       "tag": "0007_colossal_thor",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791532653305,
+      "tag": "0008_youthful_peter_parker",
+      "breakpoints": true
     }
   ]
 }

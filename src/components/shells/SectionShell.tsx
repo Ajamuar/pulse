@@ -27,7 +27,7 @@ const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(
 const isLinkAction = (a: SectionShellProps["action"]): a is { label: string; href: string } =>
   !!a && typeof a === "object" && "href" in a && "label" in a
 
-function ActionLink({ label, href }: { label: string; href: string }) {
+export function ActionLink({ label, href }: { label: string; href: string }) {
   return (
     <Link
       href={href}

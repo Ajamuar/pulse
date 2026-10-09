@@ -405,7 +405,7 @@ export function mapRecords(type: "electrocardiogram" | "irregular-rhythm-notific
 // --- Logged entries -------------------------------------------------------------------------------
 
 export type ReadableLogType = "hydration-log" | "nutrition-log" | "weight" | "body-fat";
-export type MappedEntry = { name: string; ts: number; day: string; data: LogData[ReadableLogType] };
+export type MappedEntry = { name: string; ts: number; day: string; data: LogData[ReadableLogType]; app?: string | null };
 
 const MEAL_TYPES: ReadonlySet<string> = new Set(MEALS.map((m) => m[0]));
 const tenth = (v: number) => Math.round(v * 10) / 10;
@@ -455,7 +455,7 @@ export function mapLogEntries(type: ReadableLogType, points: unknown[], tz: stri
     const name = str(at(p, "name"));
     const o = at(p, bodyKey(type));
     const { ts, data } = isObj(o) ? LOGGED[type](o) : { ts: null, data: null };
-    if (name !== null && ts !== null && data !== null) entries.push({ name, ts, day: localDay(ts, tz), data });
+    if (name !== null && ts !== null && data !== null) entries.push({ name, ts, day: localDay(ts, tz), data, app: platform(p) });
   }
   return { entries, complete: entries.length === points.length };
 }

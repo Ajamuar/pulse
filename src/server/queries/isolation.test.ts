@@ -77,7 +77,7 @@ async function screens(ctx: QueryCtx, activityId: string | null, period: string 
     intruderReport: await getReport("1999-W01", ctx),
     archive: await getReportArchive(ctx),
     behaviours: await getBehaviours(ctx),
-    log: await getLog(ctx),
+    log: await getLog(TODAY, ctx),
     more: await getMore(ctx),
     yourData: await getYourData(ctx),
     settings: await getSettings(ctx),
@@ -218,7 +218,7 @@ describe("screen queries are scoped to one user", () => {
     expect(monitor.heartRhythm.ecg.map((e) => e.id)).toEqual(["INTRUDER-ecg"]);
     expect(monitor.measurements.find((m) => m.key === "weight")!.metric.value).toBe(177.7);
     const log = vms.log as Awaited<ReturnType<typeof getLog>>;
-    expect(log.recent.map((e) => e.id).sort()).toEqual(["INTRUDER-food", "INTRUDER-water"]);
+    expect([...log.water.entries, ...log.food.meals.flatMap((m) => m.entries)].map((e) => e.id).sort()).toEqual(["INTRUDER-food", "INTRUDER-water"]);
   });
 
   it("user 1's settings and shell still read user 1's own sync rows and grant", async () => {
