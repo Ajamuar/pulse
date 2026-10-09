@@ -17,11 +17,18 @@ const all = (a: LogAccess) => Object.fromEntries(LOG_KINDS.map((k) => [k, a])) a
 const vm = (o: Partial<LogVM> = {}): LogVM => ({
   kinds: LOG_KINDS.filter((k) => k !== "period" && k !== "ovulation"),
   access: all("demo"),
-  waterToday: 750,
-  recent: [],
+  day: "2026-10-02",
   today: "2026-10-02",
   timeZone: "Asia/Kolkata",
+  listed: true,
   demo: true,
+  water: { total: 750, entries: [] },
+  food: { total: null, meals: [] },
+  body: { latest: { kg: 70.6, day: "2026-09-30" }, change: null, weighins: [] },
+  moods: [],
+  symptoms: [],
+  cycle: [],
+  week: [],
   ...o,
 })
 const tiles = () => within(screen.getByRole("list", { name: "Log" })).getAllByRole("button").map((b) => b.textContent)
@@ -31,7 +38,7 @@ beforeEach(() => window.history.replaceState(null, "", "/journal"))
 describe("Log", () => {
   it("a male profile gets no cycle tiles; a female one does", () => {
     const { unmount } = render(<Log vm={vm()} />)
-    expect(tiles()).toEqual(["750 mlWater", "Food", "Weight", "Mood", "Symptoms"])
+    expect(tiles()).toEqual(["750 mlWater", "NoneFood", "70.6 kg · Sep 30Weight", "Mood", "NoneSymptoms"])
     unmount()
     render(<Log vm={vm({ kinds: [...LOG_KINDS] })} />)
     expect(tiles()).toContain("Period")
@@ -47,9 +54,15 @@ describe("Log", () => {
     await waitFor(() => expect(h.log).toHaveBeenCalledWith(expect.objectContaining({ kind: "water", ml: 250 })))
   })
 
+  it("logging on a past day defaults the time to that day's noon", async () => {
+    render(<Log vm={vm({ day: "2026-09-30" })} />)
+    fireEvent.click(screen.getByRole("button", { name: /^Weight/ }))
+    expect(await screen.findByLabelText("Time")).toHaveValue("2026-09-30T12:00")
+  })
+
   it("a sheet whose write scope is missing offers Reconnect Google instead of a form", async () => {
     render(<Log vm={vm({ demo: false, access: { ...all("ok"), mood: "reconnect" } })} />)
-    fireEvent.click(screen.getByRole("button", { name: "Mood" }))
+    fireEvent.click(screen.getByRole("button", { name: "Log mood" }))
     expect(await screen.findByRole("link", { name: "Reconnect Google" })).toHaveAttribute("href", "/oauth/start")
     expect(screen.queryByRole("button", { name: "Save" })).toBeNull()
   })

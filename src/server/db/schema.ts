@@ -459,8 +459,9 @@ export const avatars = pgTable("avatars", {
 });
 
 /**
- * What the user logged in Pulse (water, food, weight, mood, symptoms, cycle), one row per Google data point.
- * `google_name` is the data point's name at Google (null: kept locally only, as in demo mode).
+ * What the user logged in Pulse (water, food, weight, mood, symptoms, cycle), plus the water, food, weight and body fat
+ * logged in other apps, one row per Google data point. `google_name` is the data point's name at Google (null: kept
+ * locally only, as in demo mode).
  */
 export const loggedEntries = pgTable(
   "logged_entries",
@@ -472,6 +473,10 @@ export const loggedEntries = pgTable(
     day: day("day").notNull(),
     data: jsonb("data").notNull(),
     googleName: text("google_name"),
+    /** `pulse`: logged in Pulse. `google`: logged in another app and brought home by the sync. */
+    source: text("source").notNull().default("pulse"),
+    /** Google's `dataSource.platform` for an entry from another app (`FITBIT`, `HEALTH_CONNECT`, ...); null for Pulse's own. */
+    app: text("app"),
     createdAt: ts("created_at").notNull(),
   },
   (t) => [primaryKey({ columns: [t.userId, t.id] }), index("logged_entries_ts").on(t.userId, t.ts), index("logged_entries_day_type").on(t.userId, t.day, t.type)],

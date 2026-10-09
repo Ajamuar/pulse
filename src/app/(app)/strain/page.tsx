@@ -101,7 +101,7 @@ function TargetRow({ vm }: { vm: StrainVM }) {
         <Flame strokeWidth={1.75} />
       </span>
       <span aria-hidden className="min-w-0 flex-1">
-        <span className={cn(LABEL, "block truncate")}>Strain Target</span>
+        <span className={cn(LABEL, "block text-balance")}>Strain Target</span>
         {reason && <span className={cn(CAPTION, "mt-0.5 block truncate")}>{reason}</span>}
         {t.value?.estimate && <MetricTags extra={["estimate"]} className="mt-1 justify-start" />}
       </span>

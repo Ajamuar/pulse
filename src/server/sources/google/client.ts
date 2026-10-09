@@ -312,6 +312,21 @@ export function createGoogleClient({
     },
 
     /**
+     * Whether Google still has a data point (`dataPoints.get`, which the write-only scopes allow too). Only a 404 is
+     * "no"; any other error throws. The body is health data and is neither kept nor logged.
+     */
+    async exists(type: string, name: string): Promise<boolean> {
+      const id = encodeURIComponent(name.slice(name.lastIndexOf("/") + 1));
+      try {
+        await request(`${API}/${type}/dataPoints/${id}`, `${type} get`);
+        return true;
+      } catch (err) {
+        if (err instanceof GoogleError && err.status === 404) return false;
+        throw err;
+      }
+    },
+
+    /**
      * `rollupDataPoints` for civil days [fromDay, toDay) (exclusive end), in ranges of at most the
      * type's `maxDays` (and ROLLUP_MAX_DAYS). One POST per range: rollups do not paginate. Days with no data are omitted.
      */
