@@ -95,6 +95,7 @@ export const CHARTS: KitEntry[] = [
     props: ["points: { day, strain, recovery }[]", "today", "grow"],
     states: [
       { name: "a week with a missing strain and recovery", full: true, node: <StrainRecoveryChart points={fx.strainRecoveryWeek} today={fx.TODAY} /> },
+      { name: "calibrating: Strain only, peaks and valleys", full: true, node: <StrainRecoveryChart points={fx.strainOnlyWeek} today={fx.TODAY} /> },
       { name: "loading", node: <StrainRecoveryChartSkeleton /> },
       { name: "at 320 px", narrow: true, node: <StrainRecoveryChart points={fx.strainRecoveryWeek} today={fx.TODAY} /> },
     ],

@@ -285,3 +285,9 @@ export const strainRecoveryWeek: StrainRecoveryPoint[] = days.slice(-7).map((day
   strain: i === 4 ? null : strainTrend[175 + i].value,
   recovery: i === 2 ? null : recoveryTrend[175 + i].value,
 }))
+/** Calibrating: Strain only, zig-zagging off the floor, so labels must clear peaks and valleys of their own line. */
+export const strainOnlyWeek: StrainRecoveryPoint[] = days.slice(-7).map((day, i) => ({
+  day,
+  strain: [null, null, 0, 9.1, 0, 10, 8.9][i],
+  recovery: null,
+}))

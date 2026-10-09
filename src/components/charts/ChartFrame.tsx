@@ -55,6 +55,8 @@ export function useSeriesAnimation() {
 /** Dashed, faint horizontal lines (WHOOP and Bevel both dash theirs). */
 export const GRID = { vertical: false, stroke: "var(--chart-grid)", strokeDasharray: "3 4" } as const
 export const AXIS = { tickLine: false, axisLine: false, tickMargin: 8 } as const
+/** A card-coloured outline under a point label, so a line crossing it never strikes through the digits. */
+export const LABEL_HALO = { stroke: "var(--card)", strokeWidth: 4, strokeLinejoin: "round", paintOrder: "stroke" } as const
 /** Characters to px at 11 px bold, for pills and gutters. */
 const textWidth = (t: string) => Math.ceil(t.length * 6.6)
 

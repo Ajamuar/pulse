@@ -15,7 +15,7 @@ import { EmptyState } from "@/components/shells/EmptyState"
 import { MetricState } from "@/components/shells/MetricState"
 import { useOptionalShellCalendar } from "@/components/shells/ShellStatus"
 import { SEGMENT_ITEM, SEGMENT_TRACK, StatusChip, ValueUnit } from "@/components/metrics/primitives"
-import { AXIS, BAR_CURSOR, BandGradient, bandPaint, ChartFigure, FadeGradient, GlowDot, GRID, gutterLabel, labelGutter, LINE_CURSOR, useSeriesAnimation, wholeTick, type Band } from "./ChartFrame"
+import { AXIS, BAR_CURSOR, BandGradient, bandPaint, ChartFigure, FadeGradient, GlowDot, GRID, gutterLabel, LABEL_HALO, labelGutter, LINE_CURSOR, useSeriesAnimation, wholeTick, type Band } from "./ChartFrame"
 
 export type TrendPoint = {
   date: string
@@ -343,7 +343,7 @@ function Trend({ points, p }: { points: TrendPoint[]; p: TrendChartProps }) {
                 activeDot={(d: { cx?: number; cy?: number; payload?: (typeof rows)[number] }) => <GlowDot cx={d.cx} cy={d.cy} fill={d.payload?.fill} />}
                 {...anim}
               >
-                {p.line && range === "w" && <LabelList dataKey="text" position="top" offset={12} fill="var(--foreground-secondary)" fontSize={12} fontWeight={600} formatter={(v: unknown) => (v ? `${v}${p.unit === "%" ? "%" : ""}` : "")} />}
+                {p.line && range === "w" && <LabelList dataKey="text" position="top" offset={12} fill="var(--foreground-secondary)" fontSize={12} fontWeight={600} {...LABEL_HALO} formatter={(v: unknown) => (v ? `${v}${p.unit === "%" ? "%" : ""}` : "")} />}
               </Line>
             ) : p.stack ? (
               [

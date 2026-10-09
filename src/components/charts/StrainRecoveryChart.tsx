@@ -4,7 +4,7 @@ import { Bar, CartesianGrid, ComposedChart, LabelList, Line, XAxis, YAxis } from
 import { recoveryBand } from "@/lib/bands"
 import { DAY, formatDay, formatValue } from "@/lib/format"
 import { Skeleton } from "@/components/ui/skeleton"
-import { AXIS, ChartFigure, GRID, useSeriesAnimation } from "./ChartFrame"
+import { AXIS, ChartFigure, GRID, LABEL_HALO, useSeriesAnimation } from "./ChartFrame"
 
 export type StrainRecoveryPoint = { day: string; strain: number | null; recovery: number | null }
 
@@ -59,22 +59,28 @@ function RecoveryDot({ cx, cy, payload }: { cx?: number; cy?: number; payload?: 
 const heightOf = (r: Row | undefined, k: "strain" | "recovery") => (r?.[k] == null ? null : k === "strain" ? r.strain! / 21 : r.recovery! / 100)
 
 /**
- * Each label sits on the side away from the other series' dot that day: the higher dot's label above it, the lower
- * one's under it (above it near the floor, so it never sits on the day ticks). With one series missing, Recovery's
- * label goes above and Strain's under, as the reference app draws them.
+ * Each label sits where neither line runs: when the other series' dot is close, on the side away from it; otherwise
+ * above a peak and under a valley, off its own line; on a slope, away from the other dot (Recovery above, Strain under
+ * with one series missing, as the reference app draws them). Near the floor it always goes above, clear of the day ticks.
  */
 function labelDy(rows: Row[], index: number | undefined, k: "strain" | "recovery") {
-  const r = rows[index ?? -1]
-  const self = heightOf(r, k)
-  const other = heightOf(r, k === "strain" ? "recovery" : "strain")
-  const above = other === null ? k === "recovery" : self !== null && self >= other
+  const i = index ?? -1
+  const self = heightOf(rows[i], k)
+  const other = heightOf(rows[i], k === "strain" ? "recovery" : "strain")
+  const near = [heightOf(rows[i - 1], k), heightOf(rows[i + 1], k)].filter((v): v is number => v !== null)
+  const awayFromOther = other === null ? k === "recovery" : self !== null && self >= other
+  const above =
+    self === null || (other !== null && Math.abs(self - other) < 0.15) ? awayFromOther
+    : near.length && near.every((v) => v <= self) ? true
+    : near.length && near.every((v) => v >= self) ? false
+    : awayFromOther
   return above || (self ?? 0) < 0.17 ? -10 : 20
 }
 
 function RecoveryLabel({ x, y, value, index, rows = [] }: LabelProps) {
   if (typeof value !== "number" || x == null || y == null) return null
   return (
-    <text x={Number(x)} y={Number(y) + labelDy(rows, index, "recovery")} textAnchor="middle" fontSize={12} fontWeight={700} fill={BAND_TEXT[recoveryBand(value)]}>
+    <text x={Number(x)} y={Number(y) + labelDy(rows, index, "recovery")} textAnchor="middle" fontSize={12} fontWeight={700} fill={BAND_TEXT[recoveryBand(value)]} {...LABEL_HALO}>
       {Math.round(value)}%
     </text>
   )
@@ -83,7 +89,7 @@ function RecoveryLabel({ x, y, value, index, rows = [] }: LabelProps) {
 function StrainLabel({ x, y, value, index, rows = [] }: LabelProps) {
   if (typeof value !== "number" || x == null || y == null) return null
   return (
-    <text x={Number(x)} y={Number(y) + labelDy(rows, index, "strain")} textAnchor="middle" fontSize={12} fontWeight={700} fill="var(--strain-text)">
+    <text x={Number(x)} y={Number(y) + labelDy(rows, index, "strain")} textAnchor="middle" fontSize={12} fontWeight={700} fill="var(--strain-text)" {...LABEL_HALO}>
       {formatValue("decimal1", value)}
     </text>
   )

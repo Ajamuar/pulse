@@ -5,7 +5,7 @@ import { Area, Bar, CartesianGrid, Cell, ComposedChart, LabelList, Line, Rectang
 import { DATA_COLORS, deltaTone, partColor, recoveryColor, type GoodDirection } from "@/lib/bands"
 import { formatDay, formatValue, hmm, type FormatKey } from "@/lib/format"
 import type { MonthSegment, TrendViewBar, TrendViewRange } from "@/lib/trend"
-import { AXIS, ChartFigure, GRID, Pill, useSeriesAnimation, wholeTick } from "./ChartFrame"
+import { AXIS, ChartFigure, GRID, LABEL_HALO, Pill, useSeriesAnimation, wholeTick } from "./ChartFrame"
 
 export type TrendViewChartProps = {
   label: string
@@ -116,7 +116,7 @@ function Segments({ segments, format, direction, keys }: { segments: MonthSegmen
               </text>
             )}
             {x2 - x1 >= 34 && s.change !== null && s.change !== 0 && (
-              <text x={mid} y={cy + 18} textAnchor="middle" fontSize={12} fontWeight={700} fill={color}>
+              <text x={mid} y={cy + 18} textAnchor="middle" fontSize={12} fontWeight={700} fill={color} {...LABEL_HALO}>
                 {`${s.change > 0 ? "+" : ""}${s.change}%`}
               </text>
             )}
@@ -258,7 +258,7 @@ export function TrendViewChart(p: TrendViewChartProps) {
                       const other = rows[l.index ?? 0]?.parts?.[pair[1 - i].key]
                       const below = other != null && (Number(l.value) < other || (Number(l.value) === other && i === 0))
                       return (
-                        <text x={Number(l.x)} y={Number(l.y) + (below ? 20 : -10)} textAnchor="middle" fontSize={12} fontWeight={700} fill={color}>
+                        <text x={Number(l.x)} y={Number(l.y) + (below ? 20 : -10)} textAnchor="middle" fontSize={12} fontWeight={700} fill={color} {...LABEL_HALO}>
                           {fmt(Number(l.value))}
                         </text>
                       )
@@ -290,13 +290,13 @@ export function TrendViewChart(p: TrendViewChartProps) {
               }
               {...anim}
             >
-              {p.range === "w" && !faint && <LabelList dataKey="text" position="top" offset={10} fill={single} fontSize={12} fontWeight={700} />}
+              {p.range === "w" && !faint && <LabelList dataKey="text" position="top" offset={10} fill={single} fontSize={12} fontWeight={700} {...LABEL_HALO} />}
               {p.range === "m" && !faint && (
                 <LabelList
                   dataKey="text"
                   content={(l: { x?: number | string; y?: number | string; index?: number; value?: unknown }) =>
                     l.index === last ? (
-                      <text x={Number(l.x) + 9} y={Number(l.y) - 9} fontSize={12} fontWeight={700} fill={single}>
+                      <text x={Number(l.x) + 9} y={Number(l.y) - 9} fontSize={12} fontWeight={700} fill={single} {...LABEL_HALO}>
                         {String(l.value)}
                       </text>
                     ) : null
