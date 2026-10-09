@@ -81,10 +81,11 @@ export default async function ActivityPage({ params }: PageProps<"/activity/[id]
       secondary={[
         tiles.length > 0 && (
           <SectionShell key="stats" variant="section" title="Key statistics" aside="vs. 30-day average" level={2} className={cn("flex flex-col", noHr && "xl:col-span-2")}>
-            {/* One scrolling row, the next tile peeking at the edge (activity-03); bleeds to the phone's edges. */}
-            <ul className="-mx-4 flex flex-1 snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto overscroll-x-contain px-4 pb-1 [scrollbar-width:none] md:mx-0 md:scroll-px-0 md:px-0">
+            {/* Phone: one scrolling row, the next tile peeking at the edge (activity-03), bleeding to the edges. From md the
+                tiles wrap into a grid instead, so a half-width column never hides a tile behind a scrollbar-less scroll. */}
+            <ul className="-mx-4 flex flex-1 snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto overscroll-x-contain px-4 pb-1 [scrollbar-width:none] md:mx-0 md:grid md:grid-cols-[repeat(auto-fit,minmax(11rem,1fr))] md:overflow-visible md:px-0 md:pb-0">
               {tiles.map((k) => (
-                <li key={k.key} className="relative flex w-[calc((100%-12px)/2.15)] shrink-0 snap-start md:w-44">
+                <li key={k.key} className="relative flex w-[calc((100%-12px)/2.15)] shrink-0 snap-start md:w-auto">
                   <KeyStatRow variant="tile" {...statProps(k)} className="w-full" />
                 </li>
               ))}
