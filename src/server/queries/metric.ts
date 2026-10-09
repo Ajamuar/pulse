@@ -2,9 +2,9 @@ import type { BodyKey } from "@/lib/dashboard";
 import { EXTRA_KEYS, type ExtraKey } from "@/lib/extraMetrics";
 import { clock, DAY, formatDay, type FormatKey } from "@/lib/format";
 import { RANGE_DAYS, RANGES, type TrendRange, weekOf } from "@/lib/url";
-import { type LoggedEntry, recentEntries } from "../log";
+import { entriesOn, type LoggedEntry } from "../log";
 import { readSamples } from "../samples";
-import { addDays, localMidnight } from "../time";
+import { addDays } from "../time";
 import {
   ACTIVITY_NAME,
   activityKind,
@@ -375,8 +375,7 @@ const BUILD: Record<Exclude<SectionKind, "outliers">, (s: SectionCtx, key: Detai
 
   entries: async (s, key) => {
     const type = key === "water" ? "hydration-log" : "nutrition-log";
-    const start = localMidnight(s.day, s.ctx.timeZone);
-    return { kind: "entries", items: (await recentEntries(s.ctx.db, s.ctx.userId, start)).filter((e) => e.day === s.day && e.type === type).reverse() };
+    return { kind: "entries", items: await entriesOn(s.ctx.db, s.ctx.userId, type, s.day) };
   },
 
   balance: (s) => {

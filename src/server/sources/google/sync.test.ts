@@ -9,6 +9,7 @@ import {
   exercises,
   hrDays,
   intradayDirty,
+  loggedEntries,
   oauthTokens,
   rawPayloads,
   sleepSegments,
@@ -21,7 +22,7 @@ import { addUser, freshDb, USER } from "../../testing";
 import { RAW_RETENTION_DAYS } from "./client";
 import { recompute } from "../../pipeline";
 import { GoogleError } from "./oauth";
-import { BACKFILL_DAYS, createGoogleSource, DEVICES_KEY, NO_DEVICE_ERROR } from "./sync";
+import { BACKFILL_DAYS, createGoogleSource, DEVICES_KEY, LOG_IMPORT_KEY, NO_DEVICE_ERROR } from "./sync";
 
 const TZ = "Asia/Kolkata"; // fixed +05:30, which the stub's civil-time filter relies on
 const NOW = Date.parse("2026-10-02T06:00:00Z"); // 11:30 local
@@ -72,6 +73,8 @@ beforeEach(async () => {
   db = await freshDb();
   await grant(USER);
   data = Object.fromEntries(LIST_TYPES.map((t) => [t, fixture(t)]));
+  data["hydration-log"] = [];
+  data["nutrition-log"] = [];
   data["steps:rollup"] = fixture("steps.dailyRollUp");
   data["total-calories:rollup"] = fixture("total-calories.dailyRollUp");
   for (const t of ["time-in-heart-rate-zone", "daily-resting-heart-rate", "daily-heart-rate-variability"]) data[`${t}:rollup`] = fixture(`${t}.dailyRollUp`);
@@ -84,6 +87,12 @@ function setup(o: { failing?: string[]; failStatus?: number; onRequest?: (type: 
   const fetch = vi.fn(async (input: string | URL | Request, init: RequestInit = {}) => {
     const url = new URL(String(input));
     if (url.pathname.endsWith("/pairedDevices")) return o.devices?.() ?? json({ pairedDevices: [{ name: "users/me/pairedDevices/1" }] });
+    const get = /dataTypes\/([^/]+)\/dataPoints\/([^/:]+)$/.exec(url.pathname);
+    if (get) {
+      calls.push({ type: `${get[1]}:get`, filter: null });
+      const held = (data[get[1]] ?? []).some((p) => String(at(p, "name")).endsWith(`/${get[2]}`));
+      return held ? json({}) : json({ error: { code: 404, status: "NOT_FOUND" } }, 404);
+    }
     const [, type, rollup] = /dataTypes\/([^/]+)\/dataPoints(:dailyRollUp)?$/.exec(url.pathname)!;
     const filter = url.searchParams.get("filter");
     calls.push({ type, filter });
@@ -370,6 +379,36 @@ describe("google sync", () => {
       await source.pull(USER);
       expect((await counts()).hrSamples).toBe(5);
     });
+  });
+
+  it("brings entries logged in other apps home to Journal › Log, and drops the ones deleted there", async () => {
+    const drink = (id: string, start: string, ml: number) => ({
+      name: `users/me/dataTypes/hydration-log/dataPoints/${id}`,
+      dataSource: { platform: "FITBIT" },
+      hydrationLog: { interval: { startTime: start, endTime: start }, amountConsumed: { milliliters: ml } },
+    });
+    data["hydration-log"] = [drink("h1", "2026-10-02T03:00:00Z", 250), drink("old", "2026-09-01T03:00:00Z", 999)];
+    const { source, calls, advance } = setup();
+    await source.pull(USER);
+    const entries = () => db.select().from(loggedEntries).where(eq(loggedEntries.userId, USER));
+    expect((await entries()).filter((e) => e.type === "hydration-log")).toMatchObject([{ ts: Date.parse("2026-10-02T03:00:00Z") / 1000, day: "2026-10-02", data: { ml: 250 }, source: "google" }]);
+    expect((await entries()).filter((e) => e.type === "weight").map((e) => e.data)).toEqual(expect.arrayContaining([{ kg: 72.1 }, { kg: 72.5 }]));
+    const filter = calls.find((c) => c.type === "hydration-log" && c.filter)!.filter!;
+    expect(filter).toMatch(/^hydration_log\.interval\.civil_start_time >= "2026-09-19T00:00(:00)?" AND hydration_log\.interval\.civil_start_time < /); // 19 Sep, local midnight
+    expect(await state(LOG_IMPORT_KEY)).toMatchObject({ lastError: null });
+
+    data["hydration-log"] = [];
+    advance(60_000);
+    await source.pull(USER);
+    expect((await entries()).filter((e) => e.type === "hydration-log")).toEqual([]);
+    expect(calls.filter((c) => c.type === "hydration-log:get")).toHaveLength(1); // confirmed gone before deleting
+  });
+
+  it("a failing log import records its error and keeps the other types", async () => {
+    const { source } = setup({ failing: ["nutrition-log"] });
+    await source.pull(USER);
+    expect((await state(LOG_IMPORT_KEY))?.lastError).toContain("nutrition-log");
+    expect((await db.select().from(loggedEntries)).filter((e) => e.type === "weight")).toHaveLength(2);
   });
 
   it("syncs each user into their own rows; a user without a grant gets nothing", async () => {

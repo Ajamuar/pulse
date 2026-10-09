@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { mapDaily, mapExercises, mapExtra, mapHeartRate, mapHeight, mapRecords, mapRollup, mapSleep, mapStepsMinutes } from "./map";
+import { mapDaily, mapExercises, mapExtra, mapHeartRate, mapHeight, mapLogEntries, mapRecords, mapRollup, mapSleep, mapStepsMinutes } from "./map";
+import { toDataPoint } from "./write";
 
 const TZ = "Asia/Kolkata"; // UTC+5:30: a night's UTC date and its local wake day differ
 const fixture = (name: string): { dataPoints?: unknown[]; rollupDataPoints?: unknown[] } =>
@@ -195,5 +196,40 @@ describe("height and heart-rhythm records", () => {
   it("keeps an ECG's result and bpm, never its waveform", () => {
     const [r] = mapRecords("electrocardiogram", [{ name: "e1", electrocardiogram: { interval: { startTime: "2026-10-03T06:00:00Z" }, resultClassification: "NORMAL_SINUS_RHYTHM", beatsPerMinuteAvg: "64", waveformSamples: [1, 2, 3] } }], "Asia/Kolkata");
     expect(r).toEqual({ id: "e1", kind: "ecg", ts: 1791007200, day: "2026-10-03", data: { result: "NORMAL_SINUS_RHYTHM", avgBpm: 64 } });
+  });
+});
+
+describe("logged entries", () => {
+  const T = ts("2026-10-03T06:00:00Z"); // 11:30 local
+  const point = (name: string, body: Record<string, unknown>) => ({ name: `users/123/dataTypes/x/dataPoints/${name}`, dataSource: { platform: "FITBIT" }, ...body });
+
+  it("reads back what Pulse writes, unchanged", () => {
+    const cases = [
+      ["hydration-log", { ml: 250 }],
+      ["nutrition-log", { name: "Dal", meal: "LUNCH", kcal: 420, protein: 18, carbs: 60, fat: null }],
+      ["nutrition-log", { name: null, meal: "SNACK", kcal: 150, protein: null, carbs: null, fat: null }],
+      ["weight", { kg: 72.4 }],
+      ["body-fat", { pct: 18.5 }],
+    ] as const;
+    for (const [type, data] of cases) {
+      const { entries, complete } = mapLogEntries(type, [point("p1", toDataPoint(type, data, T, TZ))], TZ);
+      expect(complete).toBe(true);
+      expect(entries).toEqual([{ name: "users/123/dataTypes/x/dataPoints/p1", ts: T, day: "2026-10-03", data, app: "FITBIT" }]);
+    }
+  });
+
+  it("reads another app's entries: int64 strings, other units, unknown meals, no energy", () => {
+    const water = mapLogEntries("hydration-log", [point("w", { hydrationLog: { interval: { startTime: "2026-10-03T06:00:00Z" }, amountConsumed: { milliliters: 354.88, userProvidedUnit: "FLUID_OUNCES" } } })], TZ);
+    expect(water.entries[0].data).toEqual({ ml: 355 });
+    const food = mapLogEntries("nutrition-log", [point("f", { nutritionLog: { interval: { startTime: "2026-10-03T06:00:00Z" }, foodDisplayName: "Black coffee", mealType: "MEAL_TYPE_UNSPECIFIED" } })], TZ);
+    expect(food.entries[0].data).toEqual({ name: "Black coffee", meal: "SNACK", kcal: 0, protein: null, carbs: null, fat: null });
+    const scale = mapLogEntries("weight", [point("s", { weight: { sampleTime: { physicalTime: "2026-10-03T01:00:00Z" }, weightGrams: "72350" } })], TZ);
+    expect(scale.entries[0]).toMatchObject({ day: "2026-10-03", data: { kg: 72.4 } });
+  });
+
+  it("is incomplete when a point cannot be read, so nothing is taken for deleted", () => {
+    const r = mapLogEntries("weight", [point("a", { weight: { sampleTime: { physicalTime: "2026-10-03T01:00:00Z" }, weightGrams: 72000 } }), point("b", { weight: {} }), { weight: { weightGrams: 1 } }], TZ);
+    expect(r.entries).toHaveLength(1);
+    expect(r.complete).toBe(false);
   });
 });

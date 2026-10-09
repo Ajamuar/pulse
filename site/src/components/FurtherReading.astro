@@ -1,0 +1,70 @@
+---
+// Blog posts that link to this page, newest first: gives metric and comparison pages a way into the blog, and every
+// post that cites a page an inbound link back from it.
+import { getPosts, postPath } from "../lib/posts"
+
+interface Props {
+  /** The page's own path, e.g. /metrics/hrv/. */
+  path: string
+  max?: number
+}
+const { path, max = 4 } = Astro.props
+const posts = (await getPosts()).filter((p) => p.body?.includes(`](${path})`) || p.body?.includes(`](${path}#`)).slice(0, max)
+const fmt = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })
+---
+
+{
+  posts.length > 0 && (
+    <nav class="wrap block further" aria-labelledby="further-h">
+      <h2 id="further-h">Further reading</h2>
+      <ul>
+        {posts.map((p) => (
+          <li>
+            <a href={postPath(p.id)}>
+              <time datetime={p.data.published}>{fmt(p.data.published)}</time>
+              <span class="t">{p.data.title}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  )
+}
+
+<style>
+  .further {
+    margin-top: 96px;
+  }
+  .further h2 {
+    margin-bottom: 16px;
+    font-size: clamp(1.625rem, 3vw, 2.125rem);
+  }
+  .further ul {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .further a {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    height: 100%;
+    padding: 18px 20px;
+    border-radius: var(--radius-card);
+    background: linear-gradient(180deg, var(--card-top), var(--card));
+    box-shadow: inset 0 1px 0 var(--card-edge);
+    text-decoration: none;
+  }
+  .further time {
+    color: var(--muted-foreground);
+    font-size: 0.8125rem;
+  }
+  .further .t {
+    color: var(--foreground);
+    font-weight: 600;
+    line-height: 1.35;
+  }
+</style>

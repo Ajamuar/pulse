@@ -29,7 +29,8 @@ const GROUPS: { key: string; label: string; types: string[] }[] = [
   { key: "calories", label: "Calories", types: ["total-calories"] },
   { key: "weight", label: "Weight and body fat", types: ["weight", "body-fat", "height"] },
   { key: "activity", label: "Distance, floors and active minutes", types: ["distance", "floors", "altitude", "active-zone-minutes", "active-minutes", "active-energy-burned", "sedentary-period", "heart-rate-daily", "swim-lengths-data"] },
-  { key: "nutrition", label: "Food and water", types: ["hydration-log", "nutrition-log"] },
+  // logged-entries: Journal › Log's import of entries logged in other apps (sync.ts LOG_IMPORT_KEY).
+  { key: "nutrition", label: "Food and water", types: ["hydration-log", "nutrition-log", "logged-entries"] },
   { key: "vitals", label: "Glucose and core temperature", types: ["blood-glucose", "core-body-temperature"] },
   { key: "rhythm", label: "ECG and irregular rhythm", types: ["electrocardiogram", "irregular-rhythm-notification"] },
 ];

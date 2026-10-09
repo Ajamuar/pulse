@@ -7,7 +7,7 @@ const org = (site: URL) => ({ "@id": abs("/#org", site) })
 
 export function siteGraph(site: URL) {
   return [
-    { "@type": "Organization", "@id": abs("/#org", site), name: SITE_NAME, url: abs("/", site), sameAs: [REPO] },
+    { "@type": "Organization", "@id": abs("/#org", site), name: SITE_NAME, url: abs("/", site), logo: { "@type": "ImageObject", url: abs("/logo.png", site), width: 512, height: 512 }, sameAs: [REPO] },
     { "@type": "WebSite", "@id": abs("/#website", site), name: SITE_NAME, url: abs("/", site), inLanguage: "en", publisher: org(site) },
   ]
 }
@@ -35,7 +35,7 @@ export function softwareApp(site: URL, description: string) {
     url: abs("/", site),
     applicationCategory: "HealthApplication",
     operatingSystem: "Linux, macOS, Windows (Docker)",
-    softwareRequirements: "Docker, a Google account with Fitbit Air data in Google Health",
+    softwareRequirements: "Docker, a Google account with wearable data in Google Health (built and tested on Fitbit Air)",
     license: LICENSE_URL,
     isAccessibleForFree: true,
     offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
@@ -46,18 +46,18 @@ export function softwareApp(site: URL, description: string) {
   }
 }
 
-export function article(site: URL, o: { type: "TechArticle" | "Article"; path: string; headline: string; description: string; modified: string }) {
+export function article(site: URL, o: { type: "TechArticle" | "Article"; path: string; headline: string; description: string; modified: string; published: string }) {
   return {
     "@type": o.type,
     headline: o.headline,
     description: o.description,
     url: abs(o.path, site),
     mainEntityOfPage: abs(o.path, site),
+    datePublished: o.published,
     dateModified: o.modified,
     inLanguage: "en",
     author: { "@type": "Organization", name: "Pulse contributors", url: REPO },
     publisher: org(site),
-    about: { "@id": abs("/#app", site) },
     image: abs("/og.png", site),
   }
 }

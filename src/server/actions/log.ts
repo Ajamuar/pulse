@@ -5,7 +5,7 @@ import { z } from "zod";
 import { currentUser, SIGNED_OUT } from "../auth";
 import { getConfig } from "../config";
 import { getDb } from "../db";
-import { deleteEntry, isReadable } from "../log";
+import { deleteEntry, isReadable, rewindSync } from "../log";
 import { LOG_MESSAGE, logFor, logWriter, type LogInput } from "../logging";
 import { userTimeZone } from "../profile";
 import { requestSync } from "../worker";
@@ -34,6 +34,9 @@ export async function deleteLogEntry(input: z.input<typeof Delete>): Promise<Act
   const res = await deleteEntry(getDb(), userId, r.data.id, dataSource === "google" ? logWriter(userId, tz) : null);
   revalidatePath("/journal");
   if (!res.ok) return { ok: false, error: LOG_MESSAGE[res.reason] };
-  if (dataSource === "google" && res.type && isReadable(res.type)) requestSync({ userId, force: true });
+  if (dataSource === "google" && res.type && res.day && isReadable(res.type)) {
+    await rewindSync(getDb(), userId, res.type, res.day, tz);
+    requestSync({ userId, force: true });
+  }
   return { ok: true, data: undefined };
 }

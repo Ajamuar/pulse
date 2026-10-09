@@ -262,7 +262,8 @@ test("coach: an admin turns it on, the P button opens it, set-up, a question wit
   await shot(page, "15-coach-laptop");
   await page.setViewportSize({ width: 390, height: 844 });
 
-  await page.goto("/settings");
+  // Settings shows one section at a time; the coach's opens at ?s=coach (SettingsLayout).
+  await page.goto("/settings?s=coach");
   const coach = page.locator("#coach");
   await expect(coach).toContainText("Test model");
   await page.goto("/more/data");

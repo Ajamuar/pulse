@@ -8,7 +8,8 @@ import Icon from "../../components/Icon.astro"
 import { METRICS, metricPath, relatedOf, type Metric } from "../../data/metrics"
 import { isPhone } from "../../lib/screens"
 import { article, breadcrumbs, faqPage } from "../../lib/schema"
-import { ALGORITHMS_DIR, CONTENT_UPDATED } from "../../config"
+import { ALGORITHMS_DIR, CONTENT_UPDATED, SITE_LAUNCHED } from "../../config"
+import FurtherReading from "../../components/FurtherReading.astro"
 
 export function getStaticPaths() {
   return METRICS.map((metric) => ({ params: { slug: metric.slug }, props: { metric } }))
@@ -35,7 +36,7 @@ const spec = SPEC[metric.appSlug]
 const phone = metric.shot && isPhone(metric.shot)
 
 const schema = [
-  article(site, { type: "TechArticle", path, headline: metric.title, description: metric.description, modified: CONTENT_UPDATED }),
+  article(site, { type: "TechArticle", path, headline: metric.title, description: metric.description, published: SITE_LAUNCHED, modified: CONTENT_UPDATED }),
   breadcrumbs(site, [
     { name: "Pulse", path: "/" },
     { name: "Metrics", path: "/metrics/" },
@@ -152,6 +153,8 @@ const schema = [
         </nav>
       )
     }
+
+    <FurtherReading path={path} />
 
     <div class="wrap block">
       <GetStarted />

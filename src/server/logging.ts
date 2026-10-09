@@ -6,7 +6,7 @@ import { CYCLE_SYMPTOMS, FLOWS, isCycleKind, MEALS, MOODS, OVULATION_RESULTS, RE
 import type { ActionResult } from "./actions/journal";
 import { getConfig } from "./config";
 import { getDb } from "./db";
-import { isReadable, logAccess, saveEntries, type LogResult, type LogWriter, type NewEntry } from "./log";
+import { isReadable, logAccess, rewindSync, saveEntries, type LogResult, type LogWriter, type NewEntry } from "./log";
 import { getProfile } from "./profile";
 import { createGoogleClient } from "./sources/google/client";
 import { addDays, fromWall, localDay } from "./time";
@@ -16,6 +16,7 @@ const keys = <T extends readonly (readonly [string, ...unknown[]])[]>(list: T) =
 /** Local wall time `YYYY-MM-DDTHH:mm`; omitted means now. */
 const At = z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, "Choose a time").optional();
 const grams = z.number().min(0).max(1000).nullable();
+const tenth = (g: number | null) => (g === null ? null : Math.round(g * 10) / 10);
 
 const Input = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("water"), ml: z.number().int().min(10, "At least 10 ml").max(5000, "At most 5,000 ml"), at: At }),
@@ -50,6 +51,7 @@ export type LogInput = z.input<typeof Input>;
 export const LOG_MESSAGE: Record<Exclude<LogResult, { ok: true }>["reason"], string> = {
   reconnect: RECONNECT,
   failed: "Google Health didn’t take it. Try again in a minute.",
+  foreign: "This was logged in another app. Delete it there.",
 };
 
 /** One Google client per action: it holds the rate limiter. Null in demo mode, where nothing leaves Pulse. */
@@ -86,7 +88,8 @@ export async function logFor(userId: number, input: LogInput): Promise<ActionRes
       entries = [{ type: "hydration-log", ts, data: { ml: v.ml } }];
       break;
     case "food":
-      entries = [{ type: "nutrition-log", ts, data: { name: v.name, meal: v.meal, kcal: v.kcal, protein: v.protein, carbs: v.carbs, fat: v.fat } }];
+      // Grams to a tenth, as Google's copy comes back (map.ts), so the sync never rewrites what was logged.
+      entries = [{ type: "nutrition-log", ts, data: { name: v.name, meal: v.meal, kcal: v.kcal, protein: tenth(v.protein), carbs: tenth(v.carbs), fat: tenth(v.fat) } }];
       break;
     case "weight":
       entries = [
@@ -120,7 +123,11 @@ export async function logFor(userId: number, input: LogInput): Promise<ActionRes
   const res = await saveEntries(db, userId, entries, { tz, writer: dataSource === "google" ? logWriter(userId, tz) : null, now });
   revalidatePath("/journal");
   if (!res.ok) return { ok: false, error: LOG_MESSAGE[res.reason] };
-  // Water, food and weight come back through the sync, which owns their totals: fetch them now.
-  if (dataSource === "google" && entries.some((e) => isReadable(e.type))) requestSync({ userId, force: true });
+  // Water, food and weight come back through the sync, which owns their totals: fetch them now, from the entry's day.
+  const readable = entries.filter((e) => isReadable(e.type));
+  if (dataSource === "google" && readable.length) {
+    for (const e of readable) await rewindSync(db, userId, e.type, localDay(e.ts, tz), tz);
+    requestSync({ userId, force: true });
+  }
   return { ok: true, data: { demo: dataSource !== "google" } };
 }
