@@ -1,7 +1,7 @@
 ---
 title: "HRV 0 or \"not tracked\" on Fitbit Air? What to check"
 description: "When HRV shows 0 or nothing on a Fitbit Air, the night usually had too little sleep, unstaged sleep or a loose fit. What Google says, what forums report, and what to do."
-published: "2026-10-11"
+published: "2026-06-16"
 checked: "2026-10-09"
 tags: [fitbit, hrv, sleep]
 keywords: ["fitbit air hrv not tracked", "fitbit air hrv 0", "fitbit hrv not working", "fitbit hrv not showing", "pixel watch hrv 0"]

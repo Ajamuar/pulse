@@ -1,7 +1,8 @@
 ---
 title: "Does Fitbit Air have Body Battery? The closest match"
 description: "No. Body Battery is Garmin's metric. Here is what Google Health gives you instead, why it isn't the same, and how to get a running energy figure."
-published: "2026-10-15"
+published: "2026-07-17"
+updated: "2026-10-09"
 checked: "2026-10-09"
 tags: [fitbit, garmin, recovery]
 keywords: ["does fitbit air have body battery", "fitbit body battery equivalent", "fitbit daily readiness vs garmin body battery", "body battery equivalent"]

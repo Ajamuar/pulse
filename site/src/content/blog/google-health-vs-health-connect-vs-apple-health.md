@@ -1,7 +1,7 @@
 ---
 title: "Google Health vs Health Connect vs Apple Health"
 description: "What the Google Health app, Android's Health Connect, Apple Health and the Google Health API each do, how they sync, and what to check when data goes missing."
-published: "2026-12-04"
+published: "2026-09-25"
 checked: "2026-10-09"
 tags: [google-health, fitbit, data-export]
 keywords: [google health vs health connect, google health not syncing with apple health, health connect fitbit, fitbit apple health sync, google health api vs health connect]

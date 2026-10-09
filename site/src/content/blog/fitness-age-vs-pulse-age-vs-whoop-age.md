@@ -1,7 +1,7 @@
 ---
 title: "Fitness Age vs Pulse Age vs WHOOP Age"
 description: "Garmin Fitness Age, WHOOP Age and Pulse Age all put a number of years on your body, but they measure different things. How each works and how far to trust it."
-published: "2026-12-31"
+published: "2026-09-17"
 checked: "2026-10-09"
 tags: [garmin, whoop, recovery]
 keywords: ["garmin fitness age", "garmin fitness age vs whoop age", "whoop age vs fitness age", "biological age wearable", "fitness age accuracy"]

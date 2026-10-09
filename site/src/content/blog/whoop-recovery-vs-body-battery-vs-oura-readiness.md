@@ -1,7 +1,8 @@
 ---
 title: "WHOOP Recovery vs Body Battery vs Oura Readiness"
 description: "What WHOOP Recovery, Garmin Body Battery and Oura Readiness each take as inputs, how their scales read, and why they answer different questions."
-published: "2026-11-15"
+published: "2026-09-19"
+updated: "2026-10-09"
 checked: "2026-10-09"
 tags: [whoop, garmin, oura]
 keywords: ["whoop recovery vs body battery", "whoop recovery vs oura readiness", "body battery vs readiness", "garmin body battery vs whoop recovery", "recovery score comparison"]

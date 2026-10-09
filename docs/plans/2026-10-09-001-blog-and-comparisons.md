@@ -167,53 +167,53 @@ Proposed landing copy (from `strategy.md` §3):
 
 ## Schedule
 
-Every post has its own `published` date: the launch set first, one a day, then the next wave every 2 days and the rest every 3 days, to 2027-01-09. `getPosts()` in `site/src/lib/posts.ts` leaves out posts dated after the build day, so a post goes live on the first deploy on or after its date (`pnpm dev` shows them all, for review). Redeploy the site at least weekly while the schedule runs.
+Changed 2026-10-09 at the owner's request: every post carries a past date, between 2026-06-01 and 2026-10-09, one per day. No post is dated before an event it describes (the Apple Watch post follows Apple's September announcement; posts citing July or August events come after them). Posts that quote facts "as of October 2026", or list devices released since their date, carry `updated: "2026-10-09"`, shown on the page as the update date. `getPosts()` still hides a post dated after the build day, should a future date ever be used.
 
-| # | File (`site/src/content/blog/`) | Title | Published | Writer |
-|---|---|---|---|---|
-| 1 | `fitbit-readiness-always-low.md` | Fitbit readiness always low? Check these 6 things | 2026-10-09 | A |
-| 2 | `fitbit-daily-readiness-explained.md` | Fitbit Daily Readiness explained, and how Recovery differs | 2026-10-20 | A |
-| 3 | `cardio-load-vs-strain.md` | Cardio Load vs Strain: what the numbers mean | 2026-10-10 | A |
-| 4 | `fitbit-target-load.md` | Fitbit Target Load too high or low? How it is set | 2026-10-22 | A |
-| 5 | `fitbit-air-hrv-zero.md` | HRV 0 or "not tracked" on Fitbit Air? What to check | 2026-10-11 | A |
-| 6 | `good-hrv-by-age.md` | What is a good HRV by age? Why your baseline matters more | 2026-10-12 | B |
-| 7 | `fitbit-resilience-stress-score.md` | Fitbit Resilience replaced the stress score. Now what? | 2026-10-24 | B |
-| 8 | `fitbit-sleep-score-explained.md` | Fitbit sleep score: the six parts and what is good | 2026-10-26 | B |
-| 9 | `pixel-watch-readiness-sleep-score-missing.md` | Pixel Watch readiness or sleep score missing? What to check | 2026-10-28 | B |
-| 10 | `fitbit-resting-heart-rate-high.md` | Fitbit resting heart rate high? Likely causes | 2026-10-30 | B |
-| 11 | `fitbit-active-zone-minutes.md` | Active Zone Minutes: what your Fitbit really counts | 2026-11-25 | C |
-| 12 | `fitbit-vo2-max-accuracy.md` | Fitbit VO2 max and Cardio Fitness: how accurate? | 2026-11-28 | C |
-| 13 | `fitbit-pixel-metrics-by-device.md` | Which Fitbit and Pixel devices track which metrics | 2026-12-01 | C |
-| 14 | `google-health-vs-health-connect-vs-apple-health.md` | Google Health vs Health Connect vs Apple Health | 2026-12-04 | C |
-| 15 | `export-fitbit-data.md` | How to export your Fitbit data in 2026 | 2026-10-13 | C |
-| 16 | `google-health-api-for-self-hosters.md` | Google Health API for self-hosters: scopes and the 100-user cap | 2026-10-14 | D |
-| 17 | `fitbit-grafana-vs-pulse.md` | A Fitbit dashboard on your own server: Grafana vs Pulse | 2026-11-01 | D |
-| 18 | `google-health-premium-vs-free.md` | Google Health Premium vs free: what you actually lose | 2026-11-03 | D |
-| 19 | `sleep-regularity-index.md` | Sleep Regularity Index: what it is and how to improve it | 2026-11-05 | D |
-| 20 | `whoop-strain-explained.md` | WHOOP strain explained, and how to get it from a Fitbit | 2026-11-07 | E |
-| 21 | `whoop-recovery-score-explained.md` | What a WHOOP recovery score actually measures | 2026-11-09 | E |
-| 22 | `whoop-alternatives-no-subscription.md` | WHOOP alternatives with no subscription in 2026 | 2026-11-11 | E |
-| 23 | `open-source-whoop-alternatives.md` | Open-source WHOOP alternatives: what exists | 2026-11-13 | E |
-| 24 | `whoop-membership-cost.md` | WHOOP membership cost: One, Peak and Life in 2026 | 2026-12-07 | E |
-| 25 | `whoop-healthspan-pace-of-aging.md` | WHOOP Healthspan and Pace of Aging, explained | 2026-12-10 | F |
-| 26 | `whoop-strength-trainer-vs-heart-rate-strain.md` | WHOOP Strength Trainer vs heart-rate-only strain | 2026-12-13 | F |
-| 27 | `whoop-journal-behaviours.md` | WHOOP Journal: which behaviours move your recovery | 2026-12-16 | F |
-| 28 | `whoop-sleep-need-explained.md` | WHOOP sleep need and sleep performance, explained | 2026-12-19 | F |
-| 29 | `whoop-recovery-vs-body-battery-vs-oura-readiness.md` | WHOOP recovery vs Garmin Body Battery vs Oura Readiness | 2026-11-15 | D |
-| 30 | `fitbit-air-body-battery.md` | Does Fitbit Air have Body Battery? The closest match | 2026-10-15 | G |
-| 31 | `good-body-battery.md` | What is a good Body Battery? Garmin's bands explained | 2026-11-17 | G |
-| 32 | `garmin-training-readiness-always-low.md` | Garmin Training Readiness always low: causes | 2026-10-16 | G |
-| 33 | `garmin-hrv-status-unbalanced.md` | Garmin HRV Status unbalanced: what it means | 2026-11-19 | G |
-| 34 | `garmin-load-ratio-acute-load.md` | Garmin Load Ratio and Acute Load: the ACWR link | 2026-11-21 | G |
-| 35 | `garmin-training-status-unproductive.md` | Garmin Training Status unproductive: what to do | 2026-12-22 | H |
-| 36 | `garmin-sleep-score-explained.md` | Garmin sleep score explained, and a published alternative | 2026-12-25 | H |
-| 37 | `garmin-stress-level-always-high.md` | Garmin stress level always high? What it measures | 2026-12-28 | H |
-| 38 | `fitness-age-vs-pulse-age-vs-whoop-age.md` | Fitness Age vs Pulse Age vs WHOOP Age | 2026-12-31 | F |
-| 39 | `garmin-vo2-max-accuracy.md` | Garmin VO2 max accuracy: watch vs lab | 2027-01-03 | H |
-| 40 | `amazfit-pai-explained.md` | What is Amazfit PAI? Points, target and daily strain | 2026-10-18 | H |
-| 41 | `amazfit-biocharge-vs-garmin-body-battery.md` | Amazfit BioCharge vs Garmin Body Battery | 2026-11-23 | I |
-| 42 | `apple-watch-recovery-score.md` | Does Apple Watch have a recovery score? | 2027-01-06 | I |
-| 43 | `oura-readiness-explained.md` | Oura Readiness explained, and how Recovery differs | 2027-01-09 | I |
+| Published | File (`site/src/content/blog/`) | Title | Updated |
+|---|---|---|---|
+| 2026-06-01 | `fitbit-readiness-always-low.md` | Fitbit readiness always low? Check these 6 things |  |
+| 2026-06-05 | `good-hrv-by-age.md` | What is a good HRV by age? Your baseline matters more |  |
+| 2026-06-06 | `cardio-load-vs-strain.md` | Cardio Load vs Strain: what the numbers mean |  |
+| 2026-06-10 | `whoop-strain-explained.md` | WHOOP Strain explained: scale, levels, what is good |  |
+| 2026-06-14 | `garmin-training-readiness-always-low.md` | Garmin Training Readiness always low: causes |  |
+| 2026-06-16 | `fitbit-air-hrv-zero.md` | HRV 0 or \"not tracked\" on Fitbit Air? What to check |  |
+| 2026-06-19 | `amazfit-pai-explained.md` | What is Amazfit PAI? Points, target and daily strain |  |
+| 2026-06-24 | `fitbit-daily-readiness-explained.md` | Fitbit Daily Readiness explained, and how Recovery differs | 2026-10-09 |
+| 2026-06-26 | `whoop-recovery-score-explained.md` | What a WHOOP Recovery score actually measures |  |
+| 2026-06-28 | `good-body-battery.md` | What is a good Body Battery? Garmin's bands explained |  |
+| 2026-07-02 | `fitbit-sleep-score-explained.md` | Fitbit sleep score: the six parts and what is good |  |
+| 2026-07-06 | `fitbit-resilience-stress-score.md` | Fitbit Resilience replaced the stress score. Now what? | 2026-10-09 |
+| 2026-07-07 | `garmin-hrv-status-unbalanced.md` | Garmin HRV Status unbalanced: what it means |  |
+| 2026-07-11 | `fitbit-target-load.md` | Fitbit Target Load too high or low? How it is set | 2026-10-09 |
+| 2026-07-15 | `whoop-sleep-need-explained.md` | WHOOP sleep need and sleep performance, explained |  |
+| 2026-07-17 | `fitbit-air-body-battery.md` | Does Fitbit Air have Body Battery? The closest match | 2026-10-09 |
+| 2026-07-20 | `garmin-load-ratio-acute-load.md` | Garmin Load Ratio and Acute Load: the ACWR link |  |
+| 2026-07-25 | `sleep-regularity-index.md` | Sleep Regularity Index: what it is and how to improve it |  |
+| 2026-07-27 | `fitbit-resting-heart-rate-high.md` | Fitbit resting heart rate high? Likely causes |  |
+| 2026-07-29 | `whoop-healthspan-pace-of-aging.md` | WHOOP Healthspan and Pace of Aging, explained |  |
+| 2026-08-02 | `amazfit-biocharge-vs-garmin-body-battery.md` | Amazfit BioCharge vs Garmin Body Battery |  |
+| 2026-08-06 | `garmin-sleep-score-explained.md` | Garmin sleep score explained, and a published alternative |  |
+| 2026-08-07 | `fitbit-active-zone-minutes.md` | Active Zone Minutes: what your Fitbit really counts |  |
+| 2026-08-11 | `whoop-journal-behaviours.md` | WHOOP Journal: which behaviours move your recovery |  |
+| 2026-08-15 | `garmin-stress-level-always-high.md` | Garmin stress level always high? What it measures |  |
+| 2026-08-17 | `export-fitbit-data.md` | How to export your Fitbit data in 2026 | 2026-10-09 |
+| 2026-08-19 | `fitbit-vo2-max-accuracy.md` | Fitbit VO2 max and Cardio Fitness: how accurate? |  |
+| 2026-08-25 | `garmin-vo2-max-accuracy.md` | Garmin VO2 max accuracy: watch vs lab |  |
+| 2026-08-27 | `whoop-strength-trainer-vs-heart-rate-strain.md` | WHOOP Strength Trainer vs heart-rate-only strain |  |
+| 2026-08-29 | `google-health-premium-vs-free.md` | Google Health Premium vs free: what you actually lose | 2026-10-09 |
+| 2026-09-02 | `fitbit-grafana-vs-pulse.md` | Fitbit dashboard on your own server: Grafana or Pulse | 2026-10-09 |
+| 2026-09-06 | `garmin-training-status-unproductive.md` | Garmin Training Status 'Unproductive': what to do |  |
+| 2026-09-07 | `whoop-alternatives-no-subscription.md` | WHOOP alternatives with no subscription (Oct 2026) | 2026-10-09 |
+| 2026-09-11 | `oura-readiness-explained.md` | Oura Readiness explained, and how Recovery differs |  |
+| 2026-09-15 | `open-source-whoop-alternatives.md` | Open-source WHOOP alternatives: what exists in 2026 | 2026-10-09 |
+| 2026-09-17 | `fitness-age-vs-pulse-age-vs-whoop-age.md` | Fitness Age vs Pulse Age vs WHOOP Age |  |
+| 2026-09-19 | `whoop-recovery-vs-body-battery-vs-oura-readiness.md` | WHOOP Recovery vs Body Battery vs Oura Readiness | 2026-10-09 |
+| 2026-09-25 | `google-health-vs-health-connect-vs-apple-health.md` | Google Health vs Health Connect vs Apple Health |  |
+| 2026-09-27 | `pixel-watch-readiness-sleep-score-missing.md` | Pixel Watch readiness or sleep score missing? Checks |  |
+| 2026-09-29 | `whoop-membership-cost.md` | WHOOP membership cost: One, Peak and Life in 2026 | 2026-10-09 |
+| 2026-10-03 | `google-health-api-for-self-hosters.md` | Google Health API for self-hosters: scopes and the 100-user cap | 2026-10-09 |
+| 2026-10-07 | `fitbit-pixel-metrics-by-device.md` | Which Fitbit and Pixel devices track which metrics | 2026-10-09 |
+| 2026-10-09 | `apple-watch-recovery-score.md` | Does Apple Watch have a recovery score? |  |
 
 ## Writing process
 

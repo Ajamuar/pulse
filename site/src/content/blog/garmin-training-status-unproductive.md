@@ -1,7 +1,7 @@
 ---
 title: "Garmin Training Status 'Unproductive': what to do"
 description: "Unproductive means your fitness estimate is falling despite training, and Garmin says that is not always overtraining. What feeds it and what to check first."
-published: "2026-12-22"
+published: "2026-09-06"
 checked: "2026-10-09"
 tags: [garmin, training-load, recovery]
 keywords: ["garmin training status unproductive", "garmin unproductive what to do", "garmin training status strained", "garmin training status meaning", "why is my garmin training status unproductive"]

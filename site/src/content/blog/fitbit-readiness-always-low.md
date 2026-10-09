@@ -1,7 +1,7 @@
 ---
 title: "Fitbit readiness always low? Check these 6 things"
 description: "A low or stuck Daily Readiness score usually traces back to sleep length, a raised resting heart rate, a short baseline or missing HRV. Six checks, in order."
-published: "2026-10-09"
+published: "2026-06-01"
 checked: "2026-10-09"
 tags: [fitbit, google-health, recovery]
 keywords: ["fitbit readiness always low", "fitbit readiness stuck at 15", "fitbit daily readiness not calibrating", "fitbit air readiness calibration", "why is my fitbit readiness score low"]

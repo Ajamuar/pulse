@@ -1,7 +1,7 @@
 ---
 title: "Garmin HRV Status unbalanced: what it means"
 description: "Unbalanced means your seven-day HRV average has left your personal baseline range, high or low. What Garmin says it means and what to check before worrying."
-published: "2026-11-19"
+published: "2026-07-07"
 checked: "2026-10-09"
 tags: [garmin, hrv, recovery]
 keywords: ["garmin hrv status unbalanced", "garmin hrv status always unbalanced", "garmin hrv baseline", "garmin hrv status meaning", "garmin hrv status what is good"]

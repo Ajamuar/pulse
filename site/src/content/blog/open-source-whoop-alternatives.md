@@ -1,7 +1,8 @@
 ---
 title: "Open-source WHOOP alternatives: what exists in 2026"
 description: "A survey of open-source and source-available projects that stand in for a WHOOP subscription: licences, supported devices and activity, checked October 2026."
-published: "2026-11-13"
+published: "2026-09-15"
+updated: "2026-10-09"
 checked: "2026-10-09"
 tags: [whoop, self-hosting, data-export]
 keywords: ["whoop open source", "whoop alternative github", "open source whoop alternative", "whoop no subscription github", "self hosted fitness tracker dashboard"]

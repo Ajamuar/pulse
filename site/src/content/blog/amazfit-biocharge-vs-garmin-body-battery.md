@@ -1,7 +1,7 @@
 ---
 title: "Amazfit BioCharge vs Garmin Body Battery"
 description: "Both are 0-100 energy gauges. What Amazfit and Garmin actually publish about each, why BioCharge is now HybridCharge, and what a score can't tell you."
-published: "2026-11-23"
+published: "2026-08-02"
 checked: "2026-10-09"
 tags: [amazfit, garmin, recovery]
 keywords: ["amazfit biocharge vs garmin body battery", "amazfit biocharge explained", "amazfit biocharge always low", "zepp biocharge vs readiness", "amazfit hybridcharge"]

@@ -1,7 +1,7 @@
 ---
 title: "What is Amazfit PAI? Points, target and daily strain"
 description: "PAI is a weekly heart-rate score from Norwegian research. Reach 100 over any rolling seven days. How it works, where it came from, and how it differs from daily strain."
-published: "2026-10-18"
+published: "2026-06-19"
 checked: "2026-10-09"
 tags: [amazfit, strain, training-load]
 keywords: ["amazfit pai meaning", "what is pai on amazfit", "how to get pai points", "pai score explained", "personal activity intelligence"]

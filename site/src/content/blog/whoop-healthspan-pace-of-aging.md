@@ -1,7 +1,7 @@
 ---
 title: "WHOOP Healthspan and Pace of Aging, explained"
 description: "WHOOP Age is a six-month estimate from nine habits and vitals. Pace of Aging is the 30-day speedometer. What goes in, what it means, and what it can't tell you."
-published: "2026-12-10"
+published: "2026-07-29"
 checked: "2026-10-09"
 tags: [whoop, recovery, sleep]
 keywords: ["whoop healthspan", "whoop pace of aging", "whoop age meaning", "whoop age calculator", "pace of aging 2x"]

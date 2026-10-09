@@ -1,7 +1,7 @@
 ---
 title: "What a WHOOP Recovery score actually measures"
 description: "WHOOP Recovery is a 0-100% morning score from overnight HRV, resting heart rate, respiratory rate and sleep. What it can tell you, what WHOOP does not publish."
-published: "2026-11-09"
+published: "2026-06-26"
 checked: "2026-10-09"
 tags: [whoop, recovery, hrv]
 keywords: ["whoop recovery score meaning", "how is whoop recovery calculated", "what does whoop recovery mean", "whoop recovery green yellow red", "whoop recovery hrv"]

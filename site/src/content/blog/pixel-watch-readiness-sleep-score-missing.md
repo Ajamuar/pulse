@@ -1,7 +1,7 @@
 ---
 title: "Pixel Watch readiness or sleep score missing? Checks"
 description: "Why a Pixel Watch shows no readiness or sleep score: the 7-night baseline, 3-hour sleep minimum, missing sleep stages, fit and sync, in order of likelihood."
-published: "2026-10-28"
+published: "2026-09-27"
 checked: "2026-10-09"
 tags: [pixel-watch, google-health, sleep]
 keywords: ["pixel watch no readiness score", "pixel watch sleep score not showing", "pixel watch readiness not working", "pixel watch 4 readiness", "pixel watch sleep score missing"]

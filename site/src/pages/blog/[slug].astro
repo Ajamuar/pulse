@@ -10,9 +10,13 @@ export async function getStaticPaths() {
   return posts.map((post) => ({ params: { slug: post.id }, props: { post, posts } }))
 }
 const { post, posts } = Astro.props
-const { Content } = await render(post)
+const { Content, headings } = await render(post)
 const d = post.data
 const path = postPath(post.id)
+const toc = headings.filter((h) => h.depth === 2)
+// Prose words only: sketch specs and tables would inflate the count.
+const words = (post.body ?? "").replace(/```[\s\S]*?```/g, "").replace(/^\|.*$/gm, "").split(/\s+/).filter(Boolean).length
+const minutes = Math.max(1, Math.round(words / 230))
 // Three other posts, preferring ones that share a tag.
 const shared = (p: typeof post) => p.data.tags.filter((t: string) => d.tags.includes(t)).length
 const more = posts
@@ -37,12 +41,29 @@ const schema = [
       <h1>{d.title}</h1>
       <p class="meta">
         <time datetime={d.published}>{fmt(d.published)}</time>
+        <span> · {minutes} min read</span>
         {d.updated && <span> · Updated <time datetime={d.updated}>{fmt(d.updated)}</time></span>}
-        {d.checked && <span> · Facts about other products checked {fmt(d.checked)}</span>}
+        {d.checked && d.checked !== d.updated && <span> · Facts about other products checked {fmt(d.checked)}</span>}
       </p>
     </header>
 
-    <div class="wrap post"><Content /></div>
+    <div class="wrap layout">
+      <div class="post"><Content /></div>
+      {
+        toc.length > 2 && (
+          <nav class="toc" aria-labelledby="toc-h">
+            <h2 id="toc-h">On this page</h2>
+            <ol>
+              {toc.map((h) => (
+                <li>
+                  <a href={`#${h.slug}`}>{h.text}</a>
+                </li>
+              ))}
+            </ol>
+          </nav>
+        )
+      }
+    </div>
 
     {
       more.length > 0 && (
@@ -62,6 +83,25 @@ const schema = [
     <div class="wrap block"><GetStarted /></div>
   </article>
 </Base>
+
+<script>
+  // Marks the contents entry for the section being read. Without script the list still works as links.
+  const links = new Map([...document.querySelectorAll<HTMLAnchorElement>(".toc a")].map((a) => [decodeURIComponent(a.hash.slice(1)), a]))
+  if (links.size) {
+    const set = (id: string) => links.forEach((a, key) => a.setAttribute("aria-current", String(key === id)))
+    const io = new IntersectionObserver(
+      (entries) => {
+        const seen = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
+        if (seen[0]) set(seen[0].target.id)
+      },
+      { rootMargin: "-110px 0px -65% 0px" },
+    )
+    links.forEach((_, id) => {
+      const h = document.getElementById(id)
+      if (h) io.observe(h)
+    })
+  }
+</script>
 
 <style>
   .head {
@@ -89,14 +129,109 @@ const schema = [
     color: var(--muted-foreground);
     font-size: 0.875rem;
   }
-  .post {
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 64px;
     margin-top: 56px;
+  }
+  @media (min-width: 1100px) {
+    .layout {
+      grid-template-columns: minmax(0, 1fr) 220px;
+    }
+  }
+  .toc {
+    display: none;
+  }
+  @media (min-width: 1100px) {
+    .toc {
+      display: block;
+      position: sticky;
+      top: 112px;
+      align-self: start;
+      max-height: calc(100dvh - 140px);
+      overflow-y: auto;
+    }
+  }
+  .toc h2 {
+    margin-bottom: 12px;
+    color: var(--muted-foreground);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .toc ol {
+    display: grid;
+    gap: 2px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    box-shadow: inset 1px 0 0 rgb(255 255 255 / 0.1);
+  }
+  .toc a {
+    display: block;
+    padding: 6px 0 6px 14px;
+    color: var(--muted-foreground);
+    font-size: 0.875rem;
+    line-height: 1.35;
+    text-decoration: none;
+    transition: color 160ms;
+  }
+  .toc a:hover,
+  .toc a[aria-current="true"] {
+    color: var(--foreground);
+  }
+  .toc a[aria-current="true"] {
+    box-shadow: inset 2px 0 0 var(--optimal);
+  }
+  .post {
+    min-width: 0;
     color: var(--foreground-secondary);
     font-size: 1.0625rem;
     line-height: 1.7;
   }
   .post :global(> *) {
     max-width: 68ch;
+  }
+  .post :global(h2) {
+    scroll-margin-top: 110px;
+  }
+  .post :global(> figure.sketch) {
+    max-width: 100%;
+    margin: 2.2em 0;
+    container-type: inline-size;
+  }
+  .post :global(figure.sketch svg) {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-width: 820px;
+    overflow: visible;
+  }
+  /* Each figure carries a wide and a narrow drawing; the narrow one has larger text and stacked layouts. */
+  .post :global(figure.sketch svg.narrow) {
+    display: none;
+    max-width: 480px;
+  }
+  @container (max-width: 560px) {
+    .post :global(figure.sketch svg.wide) {
+      display: none;
+    }
+    .post :global(figure.sketch svg.narrow) {
+      display: block;
+    }
+  }
+  .post :global(figure.sketch text) {
+    font-family: "Caveat", cursive;
+    font-weight: 500;
+  }
+  .post :global(figure.sketch figcaption) {
+    max-width: 68ch;
+    margin-top: 10px;
+    color: var(--muted-foreground);
+    font-size: 0.875rem;
+    line-height: 1.5;
   }
   .post :global(> * + *) {
     margin-top: 1.1em;

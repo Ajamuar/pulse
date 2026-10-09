@@ -1,7 +1,7 @@
 ---
 title: "Garmin VO2 max accuracy: watch vs lab"
 description: "What peer-reviewed studies found when Garmin's VO2 max was compared with lab gas analysis: errors of roughly 3 to 10%, and worse for highly trained runners."
-published: "2027-01-03"
+published: "2026-08-25"
 checked: "2026-10-09"
 tags: [garmin, fitness, hrv]
 keywords: ["garmin vo2 max accuracy", "is garmin vo2 max accurate", "garmin vo2 max vs lab test", "garmin vo2 max too low", "watch vo2 max validation"]

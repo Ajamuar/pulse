@@ -1,7 +1,7 @@
 ---
 title: "WHOOP sleep need and sleep performance, explained"
 description: "How WHOOP sets your nightly sleep need, what Sleep Performance scores, why 100% is hard to hit, and what is and isn't published about the weights."
-published: "2026-12-19"
+published: "2026-07-15"
 checked: "2026-10-09"
 tags: [whoop, sleep]
 keywords: ["whoop sleep need", "whoop sleep performance", "whoop sleep need too high", "whoop sleep planner", "whoop sleep debt"]

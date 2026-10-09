@@ -1,7 +1,8 @@
 ---
 title: "Fitbit Daily Readiness explained, and how Recovery differs"
 description: "What Daily Readiness is built from, what its bands mean, what Google doesn't publish, and how a 0-100% Recovery with published weights differs."
-published: "2026-10-20"
+published: "2026-06-24"
+updated: "2026-10-09"
 checked: "2026-10-09"
 tags: [fitbit, google-health, recovery]
 keywords: ["fitbit readiness meaning", "how is fitbit readiness calculated", "fitbit daily readiness explained", "what is a good readiness score on google health", "fitbit readiness score range"]

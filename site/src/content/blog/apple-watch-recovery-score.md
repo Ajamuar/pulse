@@ -1,7 +1,7 @@
 ---
 title: "Does Apple Watch have a recovery score?"
 description: "Since September 2026, yes on two models: Readiness, 0-10. Older watches have Vitals, Training Load and Sleep Score but no single daily score."
-published: "2027-01-06"
+published: "2026-10-09"
 checked: "2026-10-09"
 tags: [apple-watch, recovery, hrv]
 keywords: ["apple watch recovery score", "apple watch readiness score", "apple watch recovery score like whoop", "apple watch training load", "apple watch vitals app"]

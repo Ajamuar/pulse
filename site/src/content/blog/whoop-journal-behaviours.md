@@ -1,7 +1,7 @@
 ---
 title: "WHOOP Journal: which behaviours move your recovery"
 description: "How WHOOP Journal turns yes/no entries into Behavior Insights, how many entries it needs, which behaviours to log first, and why the results are correlations."
-published: "2026-12-16"
+published: "2026-08-11"
 checked: "2026-10-09"
 tags: [whoop, recovery, sleep]
 keywords: ["whoop journal list", "whoop journal what to track", "whoop journal insights", "whoop behavior insights", "whoop journal tips"]

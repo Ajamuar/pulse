@@ -1,7 +1,7 @@
 ---
 title: "What is a good HRV by age? Your baseline matters more"
 description: "Real RMSSD and SDNN averages by age decade from a study of 1,906 healthy adults, why wearable HRV differs from lab values, and how to judge your own."
-published: "2026-10-12"
+published: "2026-06-05"
 checked: "2026-10-09"
 tags: [hrv, fitbit, google-health]
 keywords: ["what is a good hrv", "hrv by age", "fitbit hrv normal range", "average rmssd by age", "what should my hrv be"]

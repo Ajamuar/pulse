@@ -1,7 +1,7 @@
 ---
 title: "Garmin Training Readiness always low: causes"
 description: "Why Garmin Training Readiness sits at Low or Poor: the six inputs Garmin lists, which ones usually hold it down, and what to check first."
-published: "2026-10-16"
+published: "2026-06-14"
 checked: "2026-10-09"
 tags: [garmin, recovery, hrv]
 keywords: ["garmin training readiness always low", "garmin training readiness stuck at 1", "why is my garmin training readiness so low", "garmin training readiness poor"]

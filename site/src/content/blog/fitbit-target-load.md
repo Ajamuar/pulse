@@ -1,7 +1,8 @@
 ---
 title: "Fitbit Target Load too high or low? How it is set"
 description: "How Google sets Target Load on free and Premium plans, why it can feel wrong, and what to do. Plus how a daily Strain Target built from Recovery works."
-published: "2026-10-22"
+published: "2026-07-11"
+updated: "2026-10-09"
 checked: "2026-10-09"
 tags: [fitbit, google-health, training-load]
 keywords: ["fitbit target load too high", "fitbit target load is low", "fitbit no target load", "fitbit cardio load target", "fitbit target load meaning"]

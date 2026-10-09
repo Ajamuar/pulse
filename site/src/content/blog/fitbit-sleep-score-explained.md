@@ -1,7 +1,7 @@
 ---
 title: "Fitbit sleep score: the six parts and what is good"
 description: "Google lists six parts of the sleep score and four bands. What each part rewards, what counts as good, and what the help page leaves unsaid."
-published: "2026-10-26"
+published: "2026-07-02"
 checked: "2026-10-09"
 tags: [fitbit, google-health, sleep]
 keywords: ["what is a good sleep score on fitbit", "is 80 a good sleep score", "fitbit sleep score calculation", "fitbit sleep score not showing", "google health sleep score"]

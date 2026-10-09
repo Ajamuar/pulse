@@ -49,7 +49,7 @@ Run `pnpm typecheck && pnpm lint && pnpm test` before every commit. Run `pnpm e2
   - add, rename or remove the feature in `site/src/pages/index.astro` (hero, feature bento, "Also in Pulse", coach, FAQ) and in `site/src/data/metrics.ts` when it is a score;
   - keep `site/src/styles/global.css` tokens equal to `src/app/globals.css`;
   - check the landing page on a phone (390 px) and a laptop (1440 px) before pushing.
-- **Blog and comparisons.** Posts are Markdown in `site/src/content/blog/`; a post dated in the future stays hidden until a build on or after its date (plan and schedule: `docs/plans/2026-10-09-001-blog-and-comparisons.md`). No page that names WHOOP shows the app's screens: posts and comparison pages carry no device frames, and the landing page names WHOOP only in the not-affiliated notice. Never call Pulse "WHOOP-style" or say it looks like any product. A post links only to posts dated on or before its own date.
+- **Blog and comparisons.** Posts are Markdown in `site/src/content/blog/`, dated in the past, never before an event they describe (plan and dates: `docs/plans/2026-10-09-001-blog-and-comparisons.md`); a post that quotes newer facts gets an `updated` date. Diagrams are ```sketch blocks (`docs/blog-diagrams.md`). No page that names WHOOP shows the app's screens: posts and comparison pages carry no device frames, and the landing page names WHOOP only in the not-affiliated notice. Never call Pulse "WHOOP-style" or say it looks like any product.
 - **Tests.** Algorithms get golden-value or property tests beside the file. Queries get tests on a temp DB built with `src/server/testing.ts`.
 - **Design references.** `docs/design/reference/` is gitignored and holds third-party screenshots. Never commit or publish it.
 - **Git.**

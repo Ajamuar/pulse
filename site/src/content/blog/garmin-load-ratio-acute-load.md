@@ -1,7 +1,7 @@
 ---
 title: "Garmin Load Ratio and Acute Load: the ACWR link"
 description: "How Garmin's Acute Load and Load Ratio work, how they relate to the acute:chronic workload ratio (ACWR) from sports science, and why that idea is contested."
-published: "2026-11-21"
+published: "2026-07-20"
 checked: "2026-10-09"
 tags: [garmin, training-load]
 keywords: ["garmin load ratio", "garmin acute load very high", "garmin optimal load ratio", "garmin acute load vs chronic load", "acute chronic workload ratio"]

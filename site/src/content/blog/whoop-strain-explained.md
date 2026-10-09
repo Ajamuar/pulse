@@ -1,7 +1,7 @@
 ---
 title: "WHOOP Strain explained: scale, levels, what is good"
 description: "WHOOP Strain is a 0-21 score of cardiovascular load for the whole day. What the bands mean, why it is logarithmic, and how to get a similar number from a Fitbit."
-published: "2026-11-07"
+published: "2026-06-10"
 checked: "2026-10-09"
 tags: [whoop, strain, fitbit]
 keywords: ["whoop strain explained", "what is a good whoop strain", "whoop strain scale", "whoop strain levels", "whoop strain vs fitbit cardio load"]

@@ -1,7 +1,7 @@
 ---
 title: "Garmin stress level always high? What it measures"
 description: "Garmin's stress score is a 0-100 reading of heart rate variability while you are still, not a measure of feelings. Bands, why it runs high, and what to check."
-published: "2026-12-28"
+published: "2026-08-15"
 checked: "2026-10-09"
 tags: [garmin, stress, hrv]
 keywords: ["garmin stress level always high", "garmin stress score normal range", "what is a good garmin stress level", "garmin stress level high at rest", "how does garmin measure stress"]

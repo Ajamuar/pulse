@@ -1,7 +1,8 @@
 ---
 title: "Fitbit dashboard on your own server: Grafana or Pulse"
 description: "fitbit-grafana draws your raw Fitbit data in Grafana. Pulse computes scores like Recovery and Strain. What each needs, does and leaves out."
-published: "2026-11-01"
+published: "2026-09-02"
+updated: "2026-10-09"
 checked: "2026-10-09"
 tags: [fitbit, self-hosting, google-health]
 keywords: ["fitbit grafana", "fitbit dashboard self hosted", "fitbit grafana google health api", "fitbit data on your own server", "fitbit dashboard desktop"]

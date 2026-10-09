@@ -1,7 +1,8 @@
 ---
 title: "Google Health API for self-hosters: scopes and the 100-user cap"
 description: "What a self-hosted app needs from the Google Health API: the OAuth scopes Pulse asks for, the 100-user cap on unverified apps, and the Cloud project steps."
-published: "2026-10-14"
+published: "2026-10-03"
+updated: "2026-10-09"
 checked: "2026-10-09"
 tags: [google-health, self-hosting, data-export]
 keywords: ["google health api", "google health api scopes", "google health api pricing", "fitbit api for personal use", "google health api oauth 100 users"]

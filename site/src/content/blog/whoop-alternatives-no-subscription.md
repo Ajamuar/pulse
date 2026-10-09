@@ -1,7 +1,8 @@
 ---
 title: "WHOOP alternatives with no subscription (Oct 2026)"
 description: "A dated list of WHOOP alternatives that need no subscription: Fitbit Air, Garmin Cirqa, Polar Loop, Amazfit Helio Strap, Apple Watch apps and Pulse, with prices."
-published: "2026-11-11"
+published: "2026-09-07"
+updated: "2026-10-09"
 checked: "2026-10-09"
 tags: [whoop, fitbit, garmin]
 keywords: ["whoop alternative no subscription", "whoop free alternative", "whoop alternative app", "whoop without subscription", "screenless fitness band no subscription"]

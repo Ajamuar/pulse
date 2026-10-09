@@ -1,7 +1,8 @@
 ---
 title: "How to export your Fitbit data in 2026"
 description: "Three ways to get your Fitbit data out: Google Takeout, the Fitbit Data Export page and the Google Health API, with what each gives you and its limits."
-published: "2026-10-13"
+published: "2026-08-17"
+updated: "2026-10-09"
 checked: "2026-10-09"
 tags: [fitbit, google-health, data-export]
 keywords: [export fitbit data, fitbit takeout, fitbit data export format, google health data export, fitbit web api shutdown]

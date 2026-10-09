@@ -1,7 +1,7 @@
 ---
 title: "WHOOP Strength Trainer vs heart-rate-only strain"
 description: "Why heart rate alone underrates weightlifting, how WHOOP Strength Trainer adds muscular load, and what that means for any strain score built on heart rate."
-published: "2026-12-13"
+published: "2026-08-27"
 checked: "2026-10-09"
 tags: [whoop, strain, training-load]
 keywords: ["whoop strength trainer", "whoop muscular load", "strain for weightlifting", "whoop strain weightlifting low", "heart rate strain lifting"]

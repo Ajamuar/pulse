@@ -1,7 +1,7 @@
 ---
 title: "Sleep Regularity Index: what it is and how to improve it"
 description: "How the Sleep Regularity Index is calculated, what a good score looks like in the research, and what actually moves it. Worked examples included."
-published: "2026-11-05"
+published: "2026-07-25"
 tags: [sleep, recovery]
 keywords: ["sleep regularity index", "sleep regularity index formula", "sleep regularity index calculator", "sleep regularity vs duration", "how to improve sleep consistency"]
 ---

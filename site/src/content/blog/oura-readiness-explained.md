@@ -1,7 +1,7 @@
 ---
 title: "Oura Readiness explained, and how Recovery differs"
 description: "The nine contributors behind Oura's Readiness score, what each one measures, why it dips, and how it differs from a morning Recovery percentage."
-published: "2027-01-09"
+published: "2026-09-11"
 checked: "2026-10-09"
 tags: [oura, recovery, hrv]
 keywords: ["oura readiness score explained", "oura readiness score meaning", "oura readiness score always low", "oura readiness contributors", "oura hrv balance"]

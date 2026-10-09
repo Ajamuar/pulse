@@ -1,7 +1,7 @@
 ---
 title: "Fitbit VO2 max and Cardio Fitness: how accurate?"
 description: "What Fitbit's Cardio Fitness Score is built from, what the one lab validation I could find showed, and how to read the number you get."
-published: "2026-11-28"
+published: "2026-08-19"
 checked: "2026-10-09"
 tags: [fitbit, google-health]
 keywords: [fitbit vo2 max accurate, fitbit cardio fitness score, what is a good vo2 max, fitbit vo2 max overestimate, fitbit cardio fitness score no value]

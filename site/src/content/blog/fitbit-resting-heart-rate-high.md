@@ -1,7 +1,7 @@
 ---
 title: "Fitbit resting heart rate high? Likely causes"
 description: "A higher Fitbit resting heart rate usually has an ordinary cause: alcohol, caffeine, poor sleep, illness, a hard week. How to tell, and when to see a doctor."
-published: "2026-10-30"
+published: "2026-07-27"
 checked: "2026-10-09"
 tags: [fitbit, google-health, recovery]
 keywords: ["fitbit resting heart rate high", "fitbit resting heart rate suddenly increased", "why is my resting heart rate higher", "sleeping heart rate lower than resting heart rate", "fitbit resting heart rate not normal"]

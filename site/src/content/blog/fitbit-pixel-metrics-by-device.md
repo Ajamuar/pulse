@@ -1,7 +1,8 @@
 ---
 title: "Which Fitbit and Pixel devices track which metrics"
 description: "A device-by-metric table for Fitbit and Pixel Watch models: Readiness, Cardio Load, Active Zone Minutes, HRV, SpO2 and skin temperature, from Google's help pages."
-published: "2026-12-01"
+published: "2026-10-07"
+updated: "2026-10-09"
 checked: "2026-10-09"
 tags: [fitbit, pixel-watch, google-health]
 keywords: [fitbit charge 6 readiness, pixel watch skin temperature, which fitbit tracks hrv, fitbit spo2 which devices, pixel watch active zone minutes]

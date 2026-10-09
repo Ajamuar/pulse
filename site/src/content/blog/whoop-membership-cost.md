@@ -1,7 +1,8 @@
 ---
 title: "WHOOP membership cost: One, Peak and Life in 2026"
 description: "WHOOP One, Peak and Life cost $199, $239 and $359 a year in the US, and from ₹21,990 in India. Prices as of October 2026, what is included, and what is unconfirmed."
-published: "2026-12-07"
+published: "2026-09-29"
+updated: "2026-10-09"
 checked: "2026-10-09"
 tags: [whoop]
 keywords: ["whoop membership cost", "whoop price", "whoop price in india", "whoop one vs peak vs life", "cancel whoop membership"]

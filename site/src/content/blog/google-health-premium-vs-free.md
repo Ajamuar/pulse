@@ -1,7 +1,8 @@
 ---
 title: "Google Health Premium vs free: what you actually lose"
 description: "What stays free in the Google Health app and what moves behind Premium: scores, Target Load, sleep insights and the coach, with prices as of October 2026."
-published: "2026-11-03"
+published: "2026-08-29"
+updated: "2026-10-09"
 checked: "2026-10-09"
 tags: [google-health, fitbit]
 keywords: ["google health premium worth it", "fitbit without premium", "google health premium vs free", "fitbit readiness score without premium", "fitbit air subscription"]

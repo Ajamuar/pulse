@@ -1,7 +1,7 @@
 ---
 title: "Cardio Load vs Strain: what the numbers mean"
 description: "Fitbit's Cardio Load is an open-ended daily total with no published scale. Strain is a capped 0-21 score. What each measures and why you can't convert one to the other."
-published: "2026-10-10"
+published: "2026-06-06"
 checked: "2026-10-09"
 tags: [fitbit, training-load, strain]
 keywords: ["fitbit cardio load meaning", "cardio load vs whoop strain", "what is a good cardio load", "fitbit cardio load vs active zone minutes", "fitbit cardio load explained"]

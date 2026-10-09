@@ -1,7 +1,7 @@
 ---
 title: "What is a good Body Battery? Garmin's bands explained"
 description: "Garmin's four Body Battery bands, what counts as good in the morning and evening, why yours may sit low, and what the manual says does and doesn't move it."
-published: "2026-11-17"
+published: "2026-06-28"
 checked: "2026-10-09"
 tags: [garmin, recovery, sleep]
 keywords: ["what is a good body battery", "garmin body battery normal range", "garmin body battery always low", "garmin body battery low after sleep", "garmin body battery levels"]

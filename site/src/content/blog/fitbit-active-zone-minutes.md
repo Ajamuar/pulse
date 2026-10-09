@@ -1,7 +1,7 @@
 ---
 title: "Active Zone Minutes: what your Fitbit really counts"
 description: "How Fitbit's Active Zone Minutes are earned, how they differ from Cardio Load and active minutes, and why a number can look off after a workout."
-published: "2026-11-25"
+published: "2026-08-07"
 checked: "2026-10-09"
 tags: [fitbit, google-health, training-load]
 keywords: [fitbit active zone minutes, active zone minutes meaning, cardio load vs active zone minutes, fitbit air active zone minutes, pixel watch active zone minutes]

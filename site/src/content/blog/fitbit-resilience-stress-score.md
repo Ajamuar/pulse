@@ -1,7 +1,8 @@
 ---
 title: "Fitbit Resilience replaced the stress score. Now what?"
 description: "Google Health swapped the 0-100 Stress Management Score for Resilience on 19 May 2026. What Google documents, what it doesn't, and how to read a Low day."
-published: "2026-10-24"
+published: "2026-07-06"
+updated: "2026-10-09"
 checked: "2026-10-09"
 tags: [fitbit, google-health, stress]
 keywords: ["fitbit stress score gone", "fitbit resilience", "fitbit resilience always low", "fitbit resilience vs readiness", "google health stress management score"]

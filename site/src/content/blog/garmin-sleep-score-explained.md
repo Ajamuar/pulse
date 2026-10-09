@@ -1,7 +1,7 @@
 ---
 title: "Garmin sleep score explained, and a published alternative"
 description: "Garmin's 0-100 sleep score blends duration, quality and HRV-based stress, but the weights are not published. The bands, what a typical score is, and a published formula."
-published: "2026-12-25"
+published: "2026-08-06"
 checked: "2026-10-09"
 tags: [garmin, sleep]
 keywords: ["garmin sleep score explained", "garmin sleep score always low", "what is a good garmin sleep score", "how does garmin calculate sleep score", "garmin sleep score 71"]
