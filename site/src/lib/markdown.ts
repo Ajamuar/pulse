@@ -41,7 +41,7 @@ export function comparisonMarkdown(c: Comparison, site: URL) {
 
 export function overviewMarkdown(site: URL) {
   return [
-    "# Pulse", "> Open source, self-hosted health scores for Fitbit Air data from the Google Health API.",
+    "# Pulse", "> Open source, self-hosted health scores from Google Health API data, built and tested on Fitbit Air.",
     "Pulse shows Recovery, Strain, Sleep Performance, Pulse Age, Stress, Energy Bank, training insights, journal insights and a configurable AI coach. Its scores are wellness estimates, not medical diagnoses. Missing data is shown honestly; baselines use earlier days only.",
     `Canonical page: ${new URL("/", site).href}`,
     "## Run Pulse", `- ${link("Setup guide", SETUP_GUIDE, site)}\n- ${link("Source code", REPO, site)}\n- ${link("PolyForm Noncommercial 1.0.0 license", LICENSE_URL, site)}`,

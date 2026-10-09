@@ -35,7 +35,7 @@ img { position: absolute; right: 56px; top: 36px; width: 360px; }
     <svg viewBox="4.5 4.5 15 15" width="34" height="34"><rect x="6.9" y="4.5" width="4.2" height="11" rx="2.1" fill="#00f19f"/><rect x="12.9" y="8.5" width="4.2" height="11" rx="2.1" fill="#1fa0f0"/></svg>
     <svg class="wm" viewBox="${wm.viewBox}"><path d="${wm.d}" fill="none" stroke="#fff" stroke-width="${STROKE.bold}" stroke-miterlimit="8"/></svg>
   </div>
-  <h1>Recovery, strain and sleep scores for your Fitbit Air</h1>
+  <h1>Recovery, strain and sleep scores from your Google Health data</h1>
   <p>Open source and self-hosted.</p>
 </div>
 </body></html>`

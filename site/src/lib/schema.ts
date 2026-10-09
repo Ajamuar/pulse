@@ -35,7 +35,7 @@ export function softwareApp(site: URL, description: string) {
     url: abs("/", site),
     applicationCategory: "HealthApplication",
     operatingSystem: "Linux, macOS, Windows (Docker)",
-    softwareRequirements: "Docker, a Google account with Fitbit Air data in Google Health",
+    softwareRequirements: "Docker, a Google account with wearable data in Google Health (built and tested on Fitbit Air)",
     license: LICENSE_URL,
     isAccessibleForFree: true,
     offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },

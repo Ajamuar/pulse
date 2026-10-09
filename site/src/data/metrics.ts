@@ -102,9 +102,9 @@ const S = {
 
 const META: Record<string, Meta> = {
   recovery: {
-    title: "Recovery score for Fitbit Air: how Pulse works it out",
-    description: "Pulse turns Fitbit Air HRV, resting heart rate, sleep, breathing and skin temperature into a 0-100% Recovery score. The inputs, weights and limits.",
-    keywords: ["fitbit air recovery score", "recovery score explained", "how is recovery score calculated", "hrv recovery score"],
+    title: "Recovery score from Google Health data: how it works",
+    description: "Pulse turns Google Health HRV, resting heart rate, sleep, breathing and skin temperature into a 0-100% Recovery score. The inputs, weights and limits.",
+    keywords: ["fitbit air recovery score", "pixel watch recovery score", "recovery score explained", "how is recovery score calculated", "hrv recovery score"],
     scale: recoveryScale,
     shot: "phone-recovery",
     sources: [S.noop, S.plews2013, S.buchheit2014, S.altini2021],
@@ -126,8 +126,8 @@ const META: Record<string, Meta> = {
   },
   strain: {
     title: "Strain score from heart rate: the 0-21 scale explained",
-    description: "How Pulse scores a day's cardiovascular load on a 0-21 Strain scale from Fitbit Air heart rate, heart-rate reserve zones and a log curve.",
-    keywords: ["strain score explained", "strain 0-21 scale", "fitbit air strain", "cardio load score"],
+    description: "How Pulse scores a day's cardiovascular load on a 0-21 Strain scale from your wearable's heart rate, heart-rate reserve zones and a log curve.",
+    keywords: ["strain score explained", "strain 0-21 scale", "fitbit strain score", "cardio load score"],
     scale: {
       min: 0,
       max: 21,
@@ -163,8 +163,8 @@ const META: Record<string, Meta> = {
   sleep: {
     slug: "sleep-performance",
     title: "Sleep Performance score: hours, efficiency and consistency",
-    description: "How Pulse scores last night's sleep from 0-100% against your personal sleep need, using Fitbit Air sleep stages, efficiency and sleep regularity.",
-    keywords: ["sleep performance score", "fitbit air sleep score", "how much sleep do i need"],
+    description: "How Pulse scores last night's sleep from 0-100% against your personal sleep need, using your wearable's sleep stages, efficiency and sleep regularity.",
+    keywords: ["sleep performance score", "fitbit sleep score", "how much sleep do i need"],
     scale: {
       min: 0,
       max: 100,
@@ -226,7 +226,7 @@ const META: Record<string, Meta> = {
     slug: "stress-monitor",
     title: "Stress Monitor: a 0-3 stress score from heart rate",
     description: "Pulse scores each still, awake minute from 0 to 3 by how far your heart rate sits above your calm daytime level. Inputs, curve and limits.",
-    keywords: ["stress score from heart rate", "stress monitor without a subscription", "fitbit air stress"],
+    keywords: ["stress score from heart rate", "stress monitor without a subscription", "fitbit stress score"],
     scale: {
       min: 0,
       max: 3,
@@ -252,7 +252,7 @@ const META: Record<string, Meta> = {
   "health-monitor": {
     title: "Health Monitor: nightly vitals against your normal range",
     description: "Pulse checks last night's resting heart rate, HRV, respiratory rate, SpO2 and skin temperature against your own ranges, and flags an illness pattern.",
-    keywords: ["fitbit air health metrics", "spo2 skin temperature fitbit", "illness detection wearable"],
+    keywords: ["google health vitals", "spo2 skin temperature fitbit", "illness detection wearable"],
     shot: "laptop-health-monitor",
     sources: [
       S.noop,
@@ -343,7 +343,7 @@ const META: Record<string, Meta> = {
   "hr-recovery": {
     slug: "heart-rate-recovery",
     title: "Heart rate recovery: the one-minute drop after exercise",
-    description: "How Pulse measures heart rate recovery after a hard workout from Fitbit Air heart rate, and what 12 and 20 bpm mean.",
+    description: "How Pulse measures heart rate recovery after a hard workout from your wearable's heart rate, and what 12 and 20 bpm mean.",
     keywords: ["heart rate recovery", "what is a good heart rate recovery", "hrr one minute"],
     scale: {
       min: 0,
@@ -367,11 +367,11 @@ const EXTRA_DOCS: (ScoreDoc & Meta)[] = [
   {
     slug: "hrv",
     name: "Heart rate variability (HRV)",
-    summary: "The night-to-night signal Recovery leans on most, read from your Fitbit Air.",
+    summary: "The night-to-night signal Recovery leans on most, read from your Google Health data.",
     href: "/health/monitor",
-    title: "HRV on the Fitbit Air: what it is and how Pulse uses it",
-    description: "Where Pulse gets your Fitbit Air HRV, why it compares HRV only with your own baseline, and how it drives Recovery and the Health Monitor.",
-    keywords: ["fitbit air hrv", "what is a good hrv", "hrv baseline", "rmssd"],
+    title: "HRV from your wearable: what it is and how Pulse uses it",
+    description: "Where Pulse gets your HRV from Google Health, why it compares HRV only with your own baseline, and how it drives Recovery and the Health Monitor.",
+    keywords: ["fitbit air hrv", "pixel watch hrv", "what is a good hrv", "hrv baseline", "rmssd"],
     shot: "phone-health-monitor",
     sources: [S.googleHealthApi, S.plews2013, S.buchheit2014, S.altini2021],
     related: ["recovery", "resting-heart-rate", "health-monitor", "journal-impact"],
@@ -410,8 +410,8 @@ const EXTRA_DOCS: (ScoreDoc & Meta)[] = [
     name: "Resting heart rate",
     summary: "Your lowest sleeping heart rate, and the vital most scores lean on.",
     href: "/health/monitor",
-    title: "Resting heart rate on the Fitbit Air: how Pulse measures it",
-    description: "How Pulse takes resting heart rate from Fitbit Air sleep data, and how it feeds Recovery, Strain, the Health Monitor and Pulse Age.",
+    title: "Resting heart rate: how Pulse measures it from your sleep",
+    description: "How Pulse takes resting heart rate from your wearable's sleep data, and how it feeds Recovery, Strain, the Health Monitor and Pulse Age.",
     keywords: ["fitbit air resting heart rate", "sleeping heart rate", "what is a good resting heart rate"],
     shot: "laptop-health-monitor",
     sources: [S.zhang2016, S.altini2021, S.noop],
@@ -457,7 +457,7 @@ function merge(doc: ScoreDoc & Meta): Metric {
     slug: meta.slug ?? doc.slug,
     title: meta.title ?? `${doc.name}: how Pulse calculates it`,
     description: meta.description ?? doc.summary,
-    keywords: meta.keywords ?? [doc.name.toLowerCase(), `${doc.name.toLowerCase()} fitbit air`],
+    keywords: meta.keywords ?? [doc.name.toLowerCase(), `${doc.name.toLowerCase()} google health`],
   }
 }
 

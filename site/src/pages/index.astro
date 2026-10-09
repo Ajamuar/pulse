@@ -11,13 +11,15 @@ import { faqPage, softwareApp } from "../lib/schema"
 import type { Shot } from "../data/metrics"
 import type { Part } from "../lib/screens"
 
-const title = "Pulse: recovery and strain for Fitbit Air, self-hosted"
+const title = "Pulse: recovery and strain from your Google Health data"
 const description =
-  "Open-source, self-hosted app that turns your Fitbit Air’s Google Health data into daily Recovery, Strain, Sleep, Pulse Age, Stress and Energy Bank scores, with an optional AI coach."
+  "Open-source, self-hosted app that turns your Fitbit or Pixel Watch data in Google Health into daily Recovery, Strain, Sleep and Pulse Age scores."
 
 const keywords = [
+  "google health recovery score",
   "fitbit air recovery score",
-  "fitbit air strain",
+  "pixel watch recovery score",
+  "fitbit strain score",
   "recovery and strain tracking",
   "recovery tracker no subscription",
   "open source recovery app",
@@ -83,8 +85,8 @@ const story: { shot: Shot; name: string; icon: string; text: string }[] = [
 ]
 
 const flow = [
-  { name: "Fitbit Air", icon: "watch", detail: "Records heart rate, sleep and nightly vitals." },
-  { name: "Google Health", icon: "smartphone", detail: "Holds the band’s data in your Google account." },
+  { name: "Your wearable", icon: "watch", detail: "A Fitbit or Pixel Watch records heart rate, sleep and nightly vitals." },
+  { name: "Google Health", icon: "smartphone", detail: "Holds your wearable’s data in your Google account." },
   { name: "Health API", icon: "key-round", detail: "Read with an OAuth client from your own Google Cloud project." },
   { name: "Your server", icon: "server", detail: "Scores every day and keeps the history in Postgres, in Docker." },
   { name: "Your phone", icon: "app-window", detail: "Install it from the browser, like an app." },
@@ -103,7 +105,7 @@ const faq = [
   },
   {
     q: "What do I need to run it?",
-    a: `A Fitbit Air paired with the Google Health app, a Google Cloud project for the OAuth client, and any machine that runs Docker: a home server, a NAS or a small cloud VM. To reach it from your phone, give it an HTTPS address with a tunnel or reverse proxy. The <a href="${SETUP_GUIDE}">setup guide</a> covers each step.`,
+    a: `A wearable that syncs to the Google Health app (Pulse is built and tested on the Fitbit Air), a Google Cloud project for the OAuth client, and any machine that runs Docker: a home server, a NAS or a small cloud VM. To reach it from your phone, give it an HTTPS address with a tunnel or reverse proxy. The <a href="${SETUP_GUIDE}">setup guide</a> covers each step.`,
   },
   {
     q: "Can I try it before connecting my Google account?",
@@ -122,8 +124,8 @@ const faq = [
     a: "Pulse charges nothing. The coach uses your own API key with Anthropic, OpenAI, Google Gemini, Vercel AI Gateway or OpenRouter, so that provider bills you for what you use. A server owner can also point it at a local model.",
   },
   {
-    q: "Does it work with other Fitbit devices?",
-    a: "Pulse is built and tested with the Fitbit Air. It reads from the Google Health API, so other devices that sync to the Google Health app may work, but the scores are tuned to the data the Air records.",
+    q: "Does it work with a Pixel Watch or other Fitbits?",
+    a: "Pulse reads the Google Health API, which carries the same kinds of data from every device that syncs to the Google Health app, Pixel Watch and other Fitbits included. It is built and tested with the Fitbit Air, so treat other devices as untested: the scores are tuned to what the Air records, and a device that lacks a signal, such as overnight HRV, gets fewer scores.",
   },
   {
     q: "The old Fitbit Web API is shutting down. Does that affect Pulse?",
@@ -142,8 +144,8 @@ const schema = [softwareApp(Astro.site!, description), faqPage(faq)]
   <!-- Hero: one message, two actions, then the product rising out of the page. -->
   <section class="hero" aria-labelledby="hero-h">
     <div class="wrap hero-copy">
-      <h1 id="hero-h">Recovery, strain and sleep for your Fitbit&nbsp;Air.</h1>
-      <p class="sub">Pulse turns your Google Health data into daily scores, on a server you own. Free and self-hosted.</p>
+      <h1 id="hero-h">Recovery, strain and sleep from your Google&nbsp;Health&nbsp;data.</h1>
+      <p class="sub">Pulse turns what your Fitbit or Pixel Watch syncs to Google Health into daily scores, on a server you own. Built on Fitbit Air. Free and self-hosted.</p>
       <div class="actions">
         <a class="button button-primary" href={SETUP_GUIDE}>Self-host Pulse</a>
         <a class="button button-quiet" href="#features">See the features</a>
@@ -185,7 +187,7 @@ const schema = [softwareApp(Astro.site!, description), faqPage(faq)]
   <!-- Features: a bento of real app cards. -->
   <section id="features" class="wrap sec features" aria-labelledby="features-h">
     <div class="sec-head" data-reveal>
-      <h2 id="features-h">Everything your band records, made useful.</h2>
+      <h2 id="features-h">Everything your wearable records, made useful.</h2>
       <p class="lede">Every card below is the app itself, running on generated demo data.</p>
     </div>
     <ul class="bento">
@@ -411,7 +413,7 @@ const schema = [softwareApp(Astro.site!, description), faqPage(faq)]
   <!-- Closing call to action. -->
   <section class="wrap sec" aria-labelledby="cta-h">
     <div class="cta panel" data-reveal>
-      <h2 id="cta-h">See what your Fitbit Air already knows.</h2>
+      <h2 id="cta-h">See what your Google Health data already knows.</h2>
       <p class="lede">Free for personal use. Your server, your data.</p>
       <div class="actions">
         <a class="button button-primary" href={SETUP_GUIDE}>Self-host Pulse</a>

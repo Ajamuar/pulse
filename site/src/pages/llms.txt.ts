@@ -10,7 +10,7 @@ export const GET: APIRoute = async ({ site }) => {
   const link = (name: string, path: string, summary: string) => `- [${name}](${new URL(path, site).href}): ${summary}`
   const body = [
     "# Pulse",
-    "> Open source, self-hosted health scores for Fitbit Air owners using their Google Health API data.",
+    "> Open source, self-hosted health scores from Google Health API data, built and tested on Fitbit Air.",
     "This is the public project site, not a user's private health dashboard. Scores are estimates for wellness, not medical diagnoses. Product comparisons state when outside facts were checked. The optional AI coach uses the provider configured by the user.",
     "## Start here",
     link("Pulse overview", "/index.md", "Features, hosting and privacy."),
