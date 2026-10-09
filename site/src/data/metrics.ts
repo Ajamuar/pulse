@@ -159,6 +159,12 @@ const META: Record<string, Meta> = {
     shot: "phone-strain",
     sources: [S.gabbett2016, S.noop],
     related: ["strain", "recovery", "training-balance"],
+    faq: [
+      { q: "How much should I train today?", a: "Pulse gives you a Strain range for today, on the 0 to 21 scale. It starts from your average Strain over the last 28 days, then scales that by today's Recovery: green is 1.0 to 1.25 times the average, yellow 0.8 to 1.0, red 0.5 to 0.75. It is a guide to effort, not a plan, and it cannot see injuries, races or what you have scheduled." },
+      { q: "How is this different from Google's Target Load?", a: "Target Load is a weekly range. On the free plan it follows your average Cardio Load over the previous four weeks, and on Premium a coach sets it. Pulse's Strain Target is a daily range that starts from today's Recovery, and Google does not share Target Load with other apps. See <a href=\"/blog/fitbit-target-load/\">Fitbit Target Load</a>." },
+      { q: "Why does my target say 14.0 to 18.0 when I have barely trained?", a: "That is the starting range. With fewer than 14 days of Strain in the last 28, Pulse has no base of your own, so it uses a fixed range for your Recovery band and marks it as an estimate: green 14 to 18, yellow 10 to 14, red 6 to 10. Once you have 14 days of data, the range follows your own history." },
+      { q: "Why is the top of my range lower than I expected?", a: "Probably because your <a href=\"/metrics/training-balance/\">training balance</a> is above 1.3, meaning the last week is already well over your 28-day average. Pulse then caps the top of the range at your base so today does not add to the climb. Below 0.8 the opposite happens and both ends rise by 10%." },
+    ],
   },
   sleep: {
     slug: "sleep-performance",
@@ -178,6 +184,12 @@ const META: Record<string, Meta> = {
     shot: "phone-sleep",
     sources: [S.noop, S.phillips2017],
     related: ["sleep-planner", "sleep-consistency", "recovery"],
+    faq: [
+      { q: "How much sleep do I need?", a: "Pulse does not use a fixed figure. Your sleep need is the upper quartile of your last 28 nights, which is the amount you manage on your better nights, held between 8 and 9.5 hours (9 to 9.5 under 18). Until it has 7 nights it uses 8 hours. It is a statistical estimate from your own habits, not a medical measurement, so a persistent need for much more sleep is worth raising with a doctor." },
+      { q: "What is a good Sleep Performance score?", a: "In Pulse, 85% and above is Optimal, 70 to 84% is Sufficient, and below 70% is Poor. Hitting 100% needs enough hours, high efficiency, plenty of deep and REM sleep and a regular schedule on the same night, so most nights lose a few points somewhere. A run of scores in the 80s is a normal, healthy pattern. Judge the weekly trend, not a single night." },
+      { q: "How is this different from Google Health's Sleep Score?", a: "Google's Sleep Score combines six parts: duration, time to sound sleep, sound sleep, restlessness, full awakenings and interruptions. It does not publish weights, and the Google Health API does not expose it, so Pulse cannot show it. Pulse computes its own score from four published parts, with 50% on hours against your personal need. The two numbers are not interchangeable. <a href=\"/blog/fitbit-sleep-score-explained/\">Fitbit sleep score explained</a> covers Google's version." },
+      { q: "Why is my Sleep Performance low when I slept 8 hours?", a: "Hours are only half the score. Low efficiency, little deep or REM sleep, or an irregular week can each pull it down, and a night with no stage data scores its restorative part as zero. Your personal need can also sit above 8 hours. Stages come from a wrist sensor and are an estimate, so the restorative part is the least certain." },
+    ],
   },
   "sleep-planner": {
     title: "Sleep Planner: tonight's sleep need and bedtime",
@@ -186,6 +198,12 @@ const META: Record<string, Meta> = {
     shot: "laptop-sleep",
     sources: [S.noop],
     related: ["sleep", "sleep-consistency", "strain"],
+    faq: [
+      { q: "What time should I go to bed?", a: "It depends on when you need to wake and how much sleep you need. Pulse takes your usual wake time for the coming morning, from your recent weekdays or weekends, then subtracts tonight's need divided by your typical sleep efficiency. For an 8-hour need, a 07:00 wake and 90% efficiency, that is 22:07. It cannot see alarms or plans, so check the wake time it assumes." },
+      { q: "How does sleep debt work in the planner?", a: "Pulse runs a ledger over your last 14 nights with sleep. Each night, the debt becomes 55% of your need plus the debt so far, minus the sleep you got, with naps credited. Debt under 10 minutes clears to zero. Tonight's planner adds 20% of the current debt to your need, so a large debt is repaid over about five nights instead of in one long night." },
+      { q: "How is this different from WHOOP's Sleep Planner?", a: "The idea is the same: a need built from a baseline, extra for strain and debt, less for naps, turned into bedtimes at 100%, 85% and 70% of the need. WHOOP does not publish its amounts. Pulse does: 3 minutes per Strain point above your 28-day average, 20% of debt, and a baseline from your own upper-quartile nights. See <a href=\"/blog/whoop-sleep-need-explained/\">WHOOP sleep need explained</a>." },
+      { q: "Why does the planner show no bedtime?", a: "It needs 7 main sleeps in your history before it gives bedtimes, because the wake time and efficiency come from your recent nights. Until then it only has a default need of 8 hours. A very long nap can also bring tonight's need close to zero. The planner is a guide for scheduling, not a prescription." },
+    ],
   },
   "pulse-age": {
     title: "Pulse Age: a biological age estimate from your wearable",
@@ -284,6 +302,12 @@ const META: Record<string, Meta> = {
       { label: "Kaminsky LA, et al. Updated reference standards for cardiorespiratory fitness (FRIEND). Mayo Clin Proc 2022;97(2):285-93", url: "https://doi.org/10.1016/j.mayocp.2021.08.020" },
     ],
     related: ["pulse-age", "training-load", "hr-recovery"],
+    faq: [
+      { q: "What is a good VO2 max for my age?", a: "In Pulse, Good starts at the 40th percentile for your age and sex and Superior at the 80th. For men aged 30 to 39 that means roughly 40 and 52 ml/kg/min, and for women aged 30 to 39 roughly 28 and 38. Those cut-offs come from the published lab table, which gives one set per decade of age." },
+      { q: "Why is my percentile lower than I expected?", a: "Two reasons. The table behind it (Kaminsky 2015) runs 1.5 to 4.6 ml/kg/min higher than its 2022 update, so you may place a little low. And Fitbit's value is an estimate from your runs and heart rate, while the table is lab-measured. A device that reads a few points high or low moves the percentile by several places." },
+      { q: "Why is my Fitbit VO2 max marked Provisional?", a: "Pulse prefers the latest run value from the last 90 days. With no run in that window it falls back to Fitbit's latest daily estimate and marks it Provisional. Google says an outdoor run of about 10 minutes helps produce a reading, so a few outdoor runs are the usual way to replace a provisional number. See <a href=\"/blog/fitbit-vo2-max-accuracy/\">Fitbit VO2 max accuracy</a>." },
+      { q: "How is this different from Google Health's Cardio Fitness Score?", a: "The Cardio Fitness Score is Google's estimate of your VO2 max, and it also sorts you into Poor to Excellent using Google's own age and sex tables. Pulse uses that number as input and does not re-estimate it. It then places it among lab-measured adults and returns a percentile with five bands, so the two labels can disagree even when the VO2 max is the same." },
+    ],
   },
   "training-balance": {
     title: "Training balance: acute:chronic workload ratio (ACWR)",
@@ -302,6 +326,12 @@ const META: Record<string, Meta> = {
     },
     sources: [S.gabbett2016, S.impellizzeri2020, S.noop],
     related: ["training-load", "strain", "strain-target"],
+    faq: [
+      { q: "How do I calculate my ACWR?", a: "Average your Strain over the last 7 days, average it over the last 28 days, and divide the first by the second. Pulse counts rest days with the band on as zero and skips days without it, and needs at least 14 days of data. A result near 1 means this week matches your usual. Pulse does this for you on the Fitness screen." },
+      { q: "Am I overtraining?", a: "A high ratio is a flag, not a diagnosis. From 1.30 Pulse calls the load Pushing, and from 1.50 High risk, because the last week is well above what you are used to. It cannot see sleep, illness or stress, and the 0.8 to 1.3 sweet spot comes from team-sport injury research and is a rule of thumb. If you feel unwell, see a doctor." },
+      { q: "How is this different from Garmin's Load Ratio?", a: "The idea is the same: short-term load divided by long-term load. Garmin's manuals call 0.8 to 1.4 optimal, do not say how many days each window covers, and measure load from EPOC. Pulse uses 7 days against 28, from heart-rate Strain, and bands it Balanced at 0.80 to 1.29. See <a href=\"/blog/garmin-load-ratio-acute-load/\">Garmin Load Ratio and Acute Load</a>." },
+      { q: "Is the acute to chronic workload ratio reliable?", a: "It is contested. Critics argue the acute week sits inside the chronic window, and that the ratio adds nothing over a model with no predictors in some re-analyses. Pulse uses it as a description of how your last week compares with your last month, not as a prediction. It compares you only with yourself and says nothing about whether your usual load suits your goals." },
+    ],
   },
   "journal-impact": {
     slug: "behaviour-insights",
@@ -311,6 +341,12 @@ const META: Record<string, Meta> = {
     shot: "phone-journal",
     sources: [{ label: "Efron B, Tibshirani RJ. An Introduction to the Bootstrap. Chapman & Hall, 1993", url: "https://doi.org/10.1201/9780429246593" }],
     related: ["recovery", "hrv", "sleep"],
+    faq: [
+      { q: "Does alcohol lower my recovery and HRV?", a: "Pulse can show you what it did for you. Log alcohol yes or no each day, and after at least 5 days of each, it compares next-morning Recovery and HRV on the two groups. It cannot say alcohol caused the change, because late nights and poor sleep tend to come with drinking. A clear Negative label over 90 days is a strong hint, not proof." },
+      { q: "How many days of journalling do I need?", a: "At least 5 yes days and 5 no days for the same behaviour within the last 90 days. Below that, Pulse says Needs more data. A behaviour you do twice a month will take months to qualify. Fewer behaviours logged consistently work better than many logged now and then, and days you skip are left out for that behaviour." },
+      { q: "Why does a harmless habit show a clear effect?", a: "Pulse checks several behaviours against three scores, and its 90% range means about 1 in 10 behaviours with no real effect will still show a clear one by chance. It also does not adjust for other habits or training, so a tag you log on hard days can look harmful. Treat one result as a prompt to test, not a verdict." },
+      { q: "How is this different from WHOOP Journal's Behavior Insights?", a: "The idea is the same: compare yes days with no days on next-day scores. WHOOP's help page sets a 5 yes and 5 no threshold in 90 days and does not publish its statistics. Pulse uses the same threshold, shows the size of the difference and a bootstrap range, and explains that it is an association. See <a href=\"/blog/whoop-journal-behaviours/\">WHOOP Journal explained</a>." },
+    ],
   },
   "sleep-consistency": {
     title: "Sleep consistency: the Sleep Regularity Index explained",
@@ -329,6 +365,12 @@ const META: Record<string, Meta> = {
     shot: "laptop-sleep",
     sources: [S.phillips2017, S.windred2024],
     related: ["sleep", "sleep-planner", "pulse-age"],
+    faq: [
+      { q: "What is a good Sleep Regularity Index?", a: "In a 2024 UK Biobank study of about 61,000 adults, the median SRI was 81 and the middle half of people fell between 73.8 and 86.3. Pulse treats 80% and above as Optimal, 70 to 79% as Sufficient and anything lower as Poor. These are study-based reference points, not diagnoses. <a href=\"/blog/sleep-regularity-index/\">Sleep regularity explained</a> has the research." },
+      { q: "Do naps lower my sleep consistency?", a: "Yes. Pulse counts naps as sleep, so a nap at a time you were awake the day before creates a mismatch. A 1-hour nap on one day lowers the index by about 3 points. A nap at the same time each day matches itself and costs little. Days when the band was not worn are skipped, not counted as awake." },
+      { q: "How is this different from Google Health's Sleep Score?", a: "Google's Sleep Score is about one night: duration, time to sound sleep, sound sleep, restlessness, awakenings and interruptions. None of its six listed parts measures whether your timing repeats from day to day. Pulse's consistency looks at 7 days, minute by minute, and also feeds 10% of Sleep Performance. See <a href=\"/blog/fitbit-sleep-score-explained/\">Fitbit sleep score explained</a>." },
+      { q: "Why is my consistency missing?", a: "Pulse needs 2 worn days in a row within the 7-day window, and a day counts only if the band recorded heart rate for at least half of it. With fewer, there is no value. Sleep Performance then treats the consistency part as 50%. Fitbit's sleep sessions leave out brief wakes, so the figure reads a little higher than a lab measure." },
+    ],
   },
   "training-load": {
     slug: "fitness-fatigue-form",
@@ -339,6 +381,12 @@ const META: Record<string, Meta> = {
       { label: "Hellard P, et al. Assessing the limitations of the Banister model in monitoring training. J Sports Sci 2006;24(5):509-20", url: "https://doi.org/10.1080/02640410500244697" },
     ],
     related: ["training-balance", "strain", "fitness"],
+    faq: [
+      { q: "What do CTL, ATL and TSB mean?", a: "They are TrainingPeaks' names for the same idea. CTL (chronic training load) is Fitness, ATL (acute training load) is Fatigue, and TSB (training stress balance) is Form. Pulse uses 42-day and 7-day time constants, the usual ones, but feeds them daily Strain from heart rate rather than TrainingPeaks' own stress scores, so the numbers will not match theirs." },
+      { q: "Is a negative Form bad?", a: "Not by itself. Form below zero only says your recent load is heavier than your longer-term load, which is what a training block looks like. Pulse draws no further bands: it does not say how negative is too negative. Read it alongside <a href=\"/metrics/training-balance/\">training balance</a>, and treat a deep, long-running dip as a prompt to check how you feel." },
+      { q: "Why is my Fitness chart empty for the first two weeks?", a: "Pulse needs 14 days in a row with Strain data before it draws anything. A day without the band breaks the run and it starts counting again, though a day with the band on and little activity counts as a zero. Even then, treat the first six weeks or so as rough, because the early averages lean on your first week." },
+      { q: "How is this different from Google Health's Cardio Load?", a: "Cardio Load is a daily total with no published scale, which resets at midnight. Pulse's Fitness, Fatigue and Form are running averages built from daily Strain, so they show the trend, not one day. Google does not give third-party apps its Cardio Load, so Pulse cannot copy it. <a href=\"/blog/cardio-load-vs-strain/\">Cardio Load vs Strain</a> covers the difference." },
+    ],
   },
   "hr-recovery": {
     slug: "heart-rate-recovery",
@@ -359,6 +407,12 @@ const META: Record<string, Meta> = {
       { label: "Cole CR, et al. Heart-rate recovery immediately after exercise as a predictor of mortality. N Engl J Med 1999;341(18):1351-7", url: "https://doi.org/10.1056/NEJM199910283411804" },
     ],
     related: ["fitness", "strain", "resting-heart-rate"],
+    faq: [
+      { q: "Is a heart rate recovery of 25 bpm normal?", a: "In Pulse's bands, 20 bpm or more is Good, 12 to 19 is Typical and under 12 is Low, so 25 is Good. Those cut-offs follow research on treadmill tests, where a drop of 12 bpm or less after the first minute was linked to higher mortality (Cole 1999). A real workout is messier than a lab test, so read one number as a hint and watch your own trend." },
+      { q: "Why does my heart rate recovery change from workout to workout?", a: "Pulse takes one reading per eligible workout, so anything that changes the finish moves it: how hard the last minutes were, whether you kept walking or stopped, heat, caffeine, sleep and the wrist sensor's accuracy. Pulse's research notes call it sound as a personal trend, so compare similar workouts, such as the same run route, and ignore single swings." },
+      { q: "Why does Pulse say Not enough heart-rate data?", a: "Pulse only reports it when the last 5 minutes held 70% of max heart rate for 2 minutes in a row, the last 30 seconds have at least 3 readings, and the window 45 to 75 seconds after the end has at least 3 more. Fitbit does not always record that densely, and Pulse never fills the gap by guessing." },
+      { q: "How is this different from a clinical heart rate recovery test?", a: "The studies behind the 12 bpm line used a supervised treadmill test with a clear stop. Pulse measures free-living workouts from a wrist sensor, so the stop is less clean and the cut-offs do not transfer neatly. It is also unlike the training scores on your device, such as Cardio Load, which add up effort rather than the drop after it. See <a href=\"/metrics/fitness-level/\">Fitness level</a> for a longer-term fitness measure." },
+    ],
   },
 }
 
