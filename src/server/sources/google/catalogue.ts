@@ -62,8 +62,10 @@ export const DATA_TYPES = {
   "active-energy-burned": rollup,
   "sedentary-period": rollup,
   // dailyRollUp for the day's totals (every app); list for each entry, for Journal › Log (src/server/log.ts importEntries).
-  "hydration-log": { ...rollup, member: "interval.start_time" },
-  "nutrition-log": { ...rollup, member: "interval.start_time" },
+  // Only civil start time filters these: start_time, end_time and civil_end_time answer INVALID_DATA_POINT_FILTER
+  // (checked on a real account, 2026-10-09).
+  "hydration-log": { ...rollup, member: "interval.civil_start_time" },
+  "nutrition-log": { ...rollup, member: "interval.civil_start_time" },
   "blood-glucose": rollup,
   "core-body-temperature": rollup,
   "swim-lengths-data": rollup,

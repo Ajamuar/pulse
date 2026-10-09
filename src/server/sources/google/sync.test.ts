@@ -394,7 +394,7 @@ describe("google sync", () => {
     expect((await entries()).filter((e) => e.type === "hydration-log")).toMatchObject([{ ts: Date.parse("2026-10-02T03:00:00Z") / 1000, day: "2026-10-02", data: { ml: 250 }, source: "google" }]);
     expect((await entries()).filter((e) => e.type === "weight").map((e) => e.data)).toEqual(expect.arrayContaining([{ kg: 72.1 }, { kg: 72.5 }]));
     const filter = calls.find((c) => c.type === "hydration-log" && c.filter)!.filter!;
-    expect(filter).toMatch(/^hydration_log\.interval\.start_time >= "2026-09-18T18:30:00\.000Z" AND hydration_log\.interval\.start_time < /); // 19 Sep, local midnight
+    expect(filter).toMatch(/^hydration_log\.interval\.civil_start_time >= "2026-09-19T00:00(:00)?" AND hydration_log\.interval\.civil_start_time < /); // 19 Sep, local midnight
     expect(await state(LOG_IMPORT_KEY)).toMatchObject({ lastError: null });
 
     data["hydration-log"] = [];
