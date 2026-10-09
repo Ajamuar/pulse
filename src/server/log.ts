@@ -259,12 +259,13 @@ export type DayTotals = { day: string; water: number | null; kcal: number | null
 export async function totalsBetween(db: Db, userId: number, from: string, to: string): Promise<DayTotals[]> {
   const r = await rows<{ day: string; water: number | null; kcal: number | null; pw: number; pk: number; nw: number; nk: number }>(
     db,
-    sql`with d as (select generate_series(${from}::date, ${to}::date, interval '1 day')::date as day),
-      v as (select day, key, value from daily_values where user_id = ${userId} and day between ${from}::date and ${to}::date and key in ('water', 'calories_in')),
-      p as (select l.day, l.type, l.data from logged_entries l where l.user_id = ${userId} and l.source = 'pulse' and l.day between ${from}::date and ${to}::date
+    sql`with d as (select to_char(g, 'YYYY-MM-DD') as day from generate_series(${from}::date, ${to}::date, interval '1 day') g),
+      -- daily_values.day is text (it also holds 'latest'); logged_entries.day is a date.
+      v as (select day, key, value from daily_values where user_id = ${userId} and day between ${from} and ${to} and key in ('water', 'calories_in')),
+      p as (select to_char(l.day, 'YYYY-MM-DD') as day, l.type, l.data from logged_entries l where l.user_id = ${userId} and l.source = 'pulse' and l.day between ${from}::date and ${to}::date
         and l.type in ('hydration-log', 'nutrition-log')
         and l.created_at > coalesce((select last_success_at from sync_state s where s.user_id = ${userId} and s.type = l.type), 0))
-    select to_char(d.day, 'YYYY-MM-DD') as day,
+    select d.day,
       (select value from v where v.day = d.day and key = 'water') water,
       (select value from v where v.day = d.day and key = 'calories_in') kcal,
       coalesce((select sum((data->>'ml')::numeric) from p where p.day = d.day and type = 'hydration-log'), 0) pw,

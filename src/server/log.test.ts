@@ -47,7 +47,7 @@ describe("saveEntries / deleteEntry", () => {
     const [row] = await all();
     expect(row).toMatchObject({ type: "moods", ts: T, day: "2026-10-02", googleName: NAME, data: { moods: ["CALM"], valence: "PLEASANT" } });
 
-    expect(await deleteEntry(db, USER, row.id, w)).toEqual({ ok: true, type: "moods" });
+    expect(await deleteEntry(db, USER, row.id, w)).toEqual({ ok: true, type: "moods", day: "2026-10-02" });
     expect(w.batchDelete).toHaveBeenCalledWith("moods", [NAME]);
     expect(await all()).toEqual([]);
   });
@@ -80,7 +80,7 @@ describe("saveEntries / deleteEntry", () => {
     expect(await deleteEntry(db, USER, id, denied)).toEqual({ ok: false, reason: "reconnect" });
     expect(await all()).toHaveLength(1);
     const gone = fake({ batchDelete: vi.fn(async () => Promise.reject(new GoogleError("NOT_FOUND", 404))) });
-    expect(await deleteEntry(db, USER, id, gone)).toEqual({ ok: true, type: "moods" });
+    expect(await deleteEntry(db, USER, id, gone)).toEqual({ ok: true, type: "moods", day: "2026-10-02" });
     expect(await all()).toEqual([]);
   });
 });
@@ -218,7 +218,7 @@ describe("importEntries", () => {
     expect(await all()).toHaveLength(1);
     // Already deleted in that app: a 404 that Google cannot read back either is deleted here too.
     const gone = fake({ batchDelete: vi.fn(async () => Promise.reject(new GoogleError("x", 404))), exists: vi.fn(async () => false) });
-    expect(await deleteEntry(db, USER, id, gone)).toEqual({ ok: true, type: "hydration-log" });
+    expect(await deleteEntry(db, USER, id, gone)).toEqual({ ok: true, type: "hydration-log", day: "2026-10-02" });
     expect(await all()).toEqual([]);
   });
 
