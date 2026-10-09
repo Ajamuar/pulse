@@ -17,6 +17,10 @@ WHOOP does not publish the statistics it runs on top of that, such as whether it
 
 So the mechanism is a comparison between two piles of days. Take your 12 days with alcohol and your 40 without. Look at the average Recovery the following morning in each pile. If the first is lower by some distance, that behaviour is flagged.
 
+```sketch
+{"kind": "flow", "alt": "Days with a yes and days with a no for one behaviour are compared on next-day recovery and sleep.", "inputs": [{"label": "Days answered yes", "note": "at least 5", "tone": "orange"}, {"label": "Days answered no", "note": "at least 5", "tone": "blue"}], "output": "Compare next-day Recovery and sleep", "note": "Within a 90-day window", "caption": "Threshold from WHOOP's Journal help page."}
+```
+
 ## Which behaviours to log first
 
 The questions on offer are many and you choose which ones to answer. The sensible way to use it is to pick a small number and keep them for months, because the five-and-five rule is a floor, not a comfortable sample.
@@ -36,6 +40,10 @@ Avoid logging dozens at once. With many behaviours and a few months of data, som
 Everything in this feature rests on days being comparable apart from the one behaviour. Real days are not.
 
 Behaviours cluster. If you drink on Saturdays, you also stay up late and skip your morning routine on Saturdays. The alcohol "yes" pile is also the late-bedtime pile, and the insight can't separate them. Training load matters too: a hard session the day before lowers recovery on its own, and if you tend to log "stretching" on hard days, stretching can look harmful.
+
+```sketch
+{"kind": "flow", "alt": "Alcohol, a late bedtime and a skipped routine all land on the same days, so the insight cannot separate them.", "inputs": [{"label": "Drink on Saturday", "tone": "orange"}, {"label": "Stay up late", "tone": "orange"}, {"label": "Skip morning routine", "tone": "orange"}, {"label": "Hard session the day before", "tone": "orange"}], "output": "Lower recovery next morning", "tone": "red", "note": "Which one caused it?", "caption": "Illustration of how behaviours cluster."}
+```
 
 Illness is another confounder. A cold lowers HRV for several days and may coincide with a stretch of no alcohol, which makes abstinence look worse than it is.
 

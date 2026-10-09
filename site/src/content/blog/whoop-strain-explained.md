@@ -29,7 +29,15 @@ WHOOP does not publish the formula. What it does say, in its Strain articles, is
 - **Cardiovascular load.** Heart rate is tracked all day, not only during workouts. Time in your personal heart-rate zones counts, and higher zones are weighted more heavily. The zones are set from your own maximum and resting heart rate.
 - **Muscular load.** For strength work and similar activities, WHOOP adds an estimate of muscular effort, from motion sensors or from sets and reps you log with its Strength Trainer feature. This is the part that lets a weights session register even when your heart rate barely moves.
 
+```sketch
+{"kind": "flow", "alt": "Cardiovascular load and muscular load combine into the day's Strain score from 0 to 21.", "inputs": [{"label": "Cardiovascular load", "note": "heart rate, all day"}, {"label": "Muscular load", "note": "strength work"}], "output": "Strain, 0 to 21", "note": "WHOOP does not publish the formula.", "caption": "What WHOOP says goes into Strain."}
+```
+
 Because the scale is logarithmic, the first hours of moderate effort move the number quickly and the later hours barely move it. That is deliberate. It stops one long day from running off the end of the scale, and it means a 16 and an 18 are further apart in effort than the two-point gap suggests.
+
+```sketch
+{"kind": "line", "alt": "A curve that rises steeply at first and then flattens, showing how later effort moves Strain less.", "series": [{"label": "Strain", "points": [0, 6, 10, 13, 15, 16.5, 17.5, 18.2, 18.7, 19], "tone": "orange"}], "yLabel": "Strain", "min": 0, "max": 21, "notes": [{"at": 2, "text": "early effort moves it fast"}, {"at": 8, "text": "later effort barely moves it"}], "caption": "Illustration, not real data."}
+```
 
 Strain also counts the whole day. Illness, a stressful commute and caffeine can all raise your heart rate, and all of it can show up as Strain. If a rest day shows 9 and you did nothing, that is usually why.
 

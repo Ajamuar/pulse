@@ -15,6 +15,10 @@ That is a thin evidence base, so here is what is known and what is not.
 
 Fitbit's Cardio Fitness Score is an estimate of VO2 max, the most oxygen your body can use per kilogram of body weight per minute. Google's help page describes the method in three steps. The app compares your running pace with your heart rate to judge how hard your heart is working. It then compares that efficiency with your resting heart rate to estimate VO2 max. Finally it checks the result against benchmarks for your age, sex and weight.
 
+```sketch
+{"kind": "flow", "alt": "Running pace, heart rate and resting heart rate feed a VO2 max estimate that is checked against age, sex and weight benchmarks.", "inputs": [{"label": "Running pace", "note": "outdoor GPS run"}, {"label": "Heart rate on the run"}, {"label": "Resting heart rate"}, {"label": "Age, sex and weight", "note": "benchmarks"}], "output": "Cardio Fitness Score", "tone": "teal", "caption": "The three steps in Google's help page."}
+```
+
 Three consequences follow.
 
 - It only learns from outdoor runs with GPS. Walking, cycling and treadmill sessions do not produce a value. For a first reading Google says to track a 10-minute outdoor run, and if nothing shows you may need up to three runs within 30 days.
@@ -59,6 +63,10 @@ Use it as a trend. A reading that climbs over a few months of training, or sags 
 Do not use it to compare yourself with a friend's different watch, since each brand uses its own method and none of those methods is audited in public. Do not use it to decide whether you need a medical test. If you want a real VO2 max, an exercise lab or sports-science clinic can measure it directly with a mask on a treadmill or bike.
 
 If your score is missing, work through the basics: outdoor GPS runs of at least 10 minutes, run at a reasonable effort, a few of them inside 30 days, and a recent Google Health app.
+
+```sketch
+{"kind": "steps", "alt": "Four checks when the Cardio Fitness Score is missing, from outdoor GPS runs to a recent app.", "steps": [{"title": "Run outdoors with GPS", "text": "Walks, rides and treadmill runs give no value."}, {"title": "At least 10 minutes", "text": "Long runs on flat ground help."}, {"title": "Reasonable effort", "text": "Harder runs give a better estimate."}, {"title": "A few runs in 30 days", "text": "Up to three may be needed."}], "caption": "From Google's Cardio Fitness Score help page."}
+```
 
 ## Sources
 

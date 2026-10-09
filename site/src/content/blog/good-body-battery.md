@@ -28,10 +28,18 @@ That is the whole of what Garmin states about levels. It doesn't publish a typic
 
 The gauge is meant to move. Garmin lists four inputs: heart rate variability, stress, sleep and activity. Sleep and rest charge it, and stress and exertion drain it. So the same number means different things depending on when you look.
 
+```sketch
+{"kind": "flow", "alt": "Garmin's four Body Battery inputs: heart rate variability, stress, sleep and activity, with sleep charging the gauge and stress and exertion draining it.", "inputs": ["Heart rate variability", {"label": "Sleep and rest", "note": "charges", "tone": "green"}, {"label": "Stress", "note": "drains", "tone": "red"}, {"label": "Activity", "note": "drains", "tone": "orange"}], "output": "Body Battery, 5 to 100", "caption": "Inputs from Garmin's owner's manual. Food and caffeine do not move it."}
+```
+
 - **On waking.** This is the reading that tells you most about the night. A high value says the night charged you. A medium value is common after a short or broken night, and a low one after several of them.
 - **Mid-morning to afternoon.** It should be falling, because you're spending it. A steady slide is the gauge working as designed.
 - **Evening.** Low is expected. If you finish the day at 20 after a hard session and a stressful week, that is the model saying you spent it all.
 - **Overnight.** You want to see it climb. A flat line through the night is the interesting pattern, and I'd check that you wore the watch.
+
+```sketch
+{"kind": "line", "alt": "A day of Body Battery: high on waking, sliding through the day, low in the evening, then climbing overnight.", "yLabel": "Body Battery", "series": [{"label": "Body Battery", "points": [85, 76, 66, 58, 46, 36, 26, 22, 38, 58, 76, 86], "tone": "blue"}], "xLabels": ["Wake", "Midday", "Evening", "Overnight", "Wake"], "notes": [{"at": 0, "text": "High on waking is the goal"}, {"at": 7, "text": "Low in the evening is normal"}], "min": 0, "max": 100, "caption": "Illustration, not real data."}
+```
 
 Compare like with like. Your own wake-up readings over a few weeks tell you more than anyone else's average.
 

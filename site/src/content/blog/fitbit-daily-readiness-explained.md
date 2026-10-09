@@ -30,6 +30,10 @@ Google's page says Readiness "combines insights from your heart rate variability
 
 Compared with what? With you. Scores are measured against your personal baseline, which is why two people with HRV of 30 ms and 90 ms can both get a High.
 
+```sketch
+{"kind": "flow", "alt": "Heart rate variability, resting heart rate and recent sleep, each compared with your personal baseline, combine into Daily Readiness.", "inputs": [{"label": "HRV", "tone": "teal"}, {"label": "Resting heart rate", "tone": "orange"}, {"label": "Recent sleep (past week)", "tone": "sleep"}], "output": "Daily Readiness", "tone": "green", "note": "each input vs your own baseline", "caption": "The three inputs Google names. The weights are not published."}
+```
+
 ## What changed in the update
 
 Older Fitbit material, and some forum replies, describe Readiness as activity, sleep and HRV. The current help page says an update removed activity and added resting heart rate. The score "reflects how your body responds to activity, not the activity itself". If you read an article that lists activity as an input, check its date. Many pages online still describe the older version.
@@ -61,6 +65,10 @@ The score itself needs no subscription as far as I can tell from the help page. 
 
 People often put the two side by side, because Google's app shows both. Readiness is how recovered you are this morning. Cardio Load is how much cardiovascular work you've done. One is a state, the other is a workload. There's a separate post comparing [Cardio Load with Strain](/blog/cardio-load-vs-strain/). Google's Target Load does use readiness as one input: low readiness lowers the weekly target.
 
+```sketch
+{"kind": "compare", "alt": "Readiness is a state of recovery this morning, while Cardio Load is the workload of the day.", "columns": [{"title": "Daily Readiness", "tone": "green", "items": ["How recovered you are", "A state, once a day", "From HRV, resting heart rate, sleep"]}, {"title": "Cardio Load", "tone": "orange", "items": ["How much cardio work you did", "A workload, resets at midnight", "From heart rate during activity"]}]}
+```
+
 ## How a Recovery score differs
 
 Google's API has no Readiness data type, so third-party apps can't read the score. They can read the inputs. Pulse, a free app you host yourself, uses them to compute its own Recovery, a 0 to 100% figure. The two scores are not interchangeable, and a few differences are structural:
@@ -75,6 +83,10 @@ Google's API has no Readiness data type, so third-party apps can't read the scor
 | Missing HRV | Not stated | No score that night |
 
 Pulse's pipeline measures each input in units of your own usual night-to-night swing, takes the weighted average, and passes it through an S-shaped curve. With everything at baseline it lands at about 58%, in the yellow band, and a clearly good night pushes into green. The full method is in [how Recovery works](/metrics/recovery/).
+
+```sketch
+{"kind": "flow", "alt": "Pulse Recovery is a weighted blend of HRV, resting heart rate, sleep, respiratory rate and skin temperature.", "inputs": [{"label": "HRV", "note": "55%", "tone": "teal"}, {"label": "Resting heart rate", "note": "20%", "tone": "orange"}, {"label": "Sleep Performance", "note": "15%", "tone": "sleep"}, {"label": "Respiratory rate", "note": "5%", "tone": "blue"}, {"label": "Skin temperature", "note": "5%", "tone": "red"}], "output": "Recovery 0-100%", "tone": "green", "caption": "Pulse's published weights."}
+```
 
 Don't expect the numbers to line up. A Readiness of 70 and a Recovery of 70% can happen on the same morning, or not. The weights differ, the baselines differ and Pulse adds two inputs. Pulse does not try to reproduce Google's score. Both are an estimate from a wrist sensor, and they read your body, not your plans or how you feel.
 

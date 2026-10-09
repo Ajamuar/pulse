@@ -40,6 +40,10 @@ I haven't run the Google mode myself, and the README doesn't say which metrics i
 
 Its scores include a 0-100% [Recovery](/metrics/recovery/), a 0-21 [Strain](/metrics/strain/), [Sleep Performance](/metrics/sleep-performance/) and a [Pulse Age](/metrics/pulse-age/), and the methods are documented rather than hidden. It is built and tested with a Fitbit Air only. Pixel Watch and other Fitbits send the same data types to Google Health, but I haven't tried them.
 
+```sketch
+{"kind": "compare", "alt": "Data path of fitbit-grafana compared with the data path of Pulse", "columns": [{"title": "fitbit-grafana", "tone": "blue", "items": ["Fitbit or Google Health API", "Stored in InfluxDB", "Drawn in Grafana panels", "You build the scores"]}, {"title": "Pulse", "tone": "teal", "items": ["Google Health API", "Stored in Postgres", "Pulse's own app screens", "Scores are built in"]}], "caption": "From each project's README and docs."}
+```
+
 ## Side by side
 
 | | fitbit-grafana | Pulse |
@@ -76,6 +80,10 @@ If you like tinkering, nothing stops you running both against the same account, 
 ## What building Recovery in Grafana would take
 
 It's worth being concrete, because this is the gap people underestimate. A recovery-style score needs a personal baseline for each input (a running average of your recent nights), a way to measure how far last night sits from it in units of your own normal swing, and a weighting between HRV, resting heart rate and sleep. None of that is hard to write down. All of it is awkward to express as InfluxQL or Flux queries, and you then have to keep it right as the data changes.
+
+```sketch
+{"kind": "flow", "alt": "The three pieces you would have to write to build a recovery-style score in Grafana", "inputs": ["A personal baseline per input", "Distance from it in your own swing", "A weighting of HRV, resting HR, sleep"], "output": "A recovery-style score", "caption": "What you would write as queries and thresholds."}
+```
 
 Pulse's version is written out on the [Recovery page](/metrics/recovery/), so you could copy the idea into Grafana if you wanted to. Going the other way, Grafana's strength is that you can ask a question nobody has built a screen for.
 

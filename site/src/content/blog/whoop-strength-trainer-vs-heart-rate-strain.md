@@ -17,6 +17,10 @@ A strength session looks different. A set of five heavy reps lasts perhaps 20 se
 
 The result is a gap between how a session feels and what a zone-based score records. The mismatch is largest for low-rep heavy work and smallest for circuits with short rests, where the heart really does stay high. A sprint session and a deadlift session can leave you equally tired, while only the first looks large on a heart rate chart.
 
+```sketch
+{"kind": "line", "alt": "Heart rate during a lifting session spikes on each set and drops back during the rests.", "series": [{"label": "Heart rate", "points": [95, 100, 150, 165, 130, 105, 98, 152, 168, 132, 106, 99, 154, 170, 134, 108], "tone": "red"}], "yLabel": "Heart rate", "notes": [{"at": 3, "text": "heavy set, about 20 seconds"}, {"at": 6, "text": "rest, two or three minutes"}], "caption": "Illustration, not real data."}
+```
+
 ## How WHOOP adds muscular load
 
 WHOOP's Day Strain is on a 0-21 logarithmic scale. WHOOP says it combines cardiovascular load, from time in your personal heart-rate zones, with muscular load. Its support material describes three levels of input for muscular load:
@@ -24,6 +28,10 @@ WHOOP's Day Strain is on a 0-21 logarithmic scale. WHOOP says it combines cardio
 1. **Automatic estimate.** For activities such as weightlifting, functional fitness or HIIT, WHOOP estimates muscular strain from the activity type and duration, using patterns from many logged Strength Trainer sessions. Because duration drives it, a longer easy session can show more muscular strain than a shorter hard one.
 2. **Tagging exercises afterwards.** You pick the movements you did, and WHOOP refines the estimate using factors such as which muscle groups were involved.
 3. **Logging sets, reps and weight live.** WHOOP says it uses the strap's accelerometer and gyroscope to measure each rep's speed and intensity, combined with your logged exercises. Over time it learns your baselines.
+
+```sketch
+{"kind": "flow", "alt": "WHOOP Day Strain combines cardiovascular load from heart-rate zones with muscular load.", "inputs": [{"label": "Time in heart-rate zones", "note": "cardiovascular", "tone": "red"}, {"label": "Muscular load", "note": "estimated, tagged or logged", "tone": "orange"}], "output": "Day Strain, 0-21", "note": "Weights and formula not published", "caption": "From WHOOP's support material."}
+```
 
 A WHOOP staff reply in its community forum says the calculation rests on total volume (sets x reps x weight), intensity and exercise type, and that splitting the same total into different set structures gives a similar result. That is a forum answer, not a specification. WHOOP does not publish the formula, the weights, or how cardiovascular and muscular parts are combined beyond saying it is non-linear.
 

@@ -40,6 +40,10 @@ Mismatch is 8 of 144 hours, so 94.4% of minutes match. SRI = −100 + 200 × 0.9
 
 Make the late nights four hours late instead of two and the mismatch doubles to 16 hours: 88.9% match, an SRI of **77.8**. A one-hour nap on a single day adds 2 hours of mismatch (it appears once on each side), which costs about 2.8 points.
 
+```sketch
+{"kind": "flow", "alt": "How two late weekend nights give a Sleep Regularity Index of 88.9", "inputs": ["Six day-to-day pairs, 144 hours", {"label": "Thursday to Friday", "note": "4 h mismatch"}, {"label": "Saturday to Sunday", "note": "4 h mismatch"}], "output": "SRI 88.9", "note": "94.4% of minutes match", "caption": "The worked example above."}
+```
+
 Real devices add wrinkles. Wrist trackers don't record brief wakes inside a night, so they tend to read somewhat higher than the research accelerometers, which can see fragmented sleep. Don't compare a Fitbit SRI to a published one too literally.
 
 ## What counts as a good score
@@ -47,6 +51,10 @@ Real devices add wrinkles. Wrist trackers don't record brief wakes inside a nigh
 There's no universally agreed target. The best reference point is Windred and colleagues' 2024 paper in *Sleep*, "Sleep regularity is a stronger predictor of mortality risk than sleep duration" ([doi:10.1093/sleep/zsad253](https://doi.org/10.1093/sleep/zsad253)). They calculated SRI from a week of wrist accelerometer data in 60,977 UK Biobank adults (mean age 62.8) and followed them for a mean of 6.3 years, during which 1,859 died.
 
 The median SRI was 81.0, and the middle half of people fell between 73.8 and 86.3. Compared with the least regular fifth, each of the top four fifths had 20% to 48% lower all-cause mortality risk after adjustment. In their models SRI predicted all-cause mortality better than sleep duration did, and adding duration didn't significantly improve the fit. For cardiometabolic deaths specifically, regularity lost significance once duration was included.
+
+```sketch
+{"kind": "bands", "alt": "Windred and colleagues' SRI spread: the middle half of people scored between 73.8 and 86.3", "min": 0, "max": 100, "bands": [{"to": 73.8, "label": "Lowest quarter", "tone": "orange"}, {"to": 86.3, "label": "Middle half", "tone": "green"}, {"to": 100, "label": "Top quarter", "tone": "teal"}], "markers": [{"at": 81, "label": "Median 81.0"}], "caption": "SRI in 60,977 UK Biobank adults, Windred et al. 2024."}
+```
 
 Read that with the authors' own caveats in mind: about one week of data per person, an older and mostly White sample, and an observational design. Irregular sleep may drive risk, or it may be a marker of something else, such as shift work or illness. The paper doesn't show that making your sleep more regular lowers your risk.
 

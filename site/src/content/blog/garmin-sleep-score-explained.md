@@ -17,6 +17,10 @@ The more useful number is where real users land. Garmin's published data from Fe
 
 So if your score is stuck in the 60s and 70s, you are looking at a label ("fair") that describes the largest group of Garmin owners. An average of 90 is rare by Garmin's own account. "Always low" often means "ordinary".
 
+```sketch
+{"kind": "bands", "alt": "Garmin's sleep score bands from 0 to 100, with the average Garmin user at 72 in the fair band.", "min": 0, "max": 100, "bands": [{"to": 60, "label": "Poor", "tone": "red"}, {"to": 79, "label": "Fair", "tone": "yellow"}, {"to": 89, "label": "Good", "tone": "green"}, {"to": 100, "label": "Excellent", "tone": "teal"}], "markers": [{"at": 72, "label": "Average user: 72"}], "caption": "Bands and average from Garmin's blog, February 2024 to January 2025."}
+```
+
 Garmin's blog also gives two examples that show the spread: 8.5 hours of good-quality sleep scoring 82, and 7 hours of poor-quality sleep scoring 49.
 
 ## What goes into it
@@ -60,6 +64,10 @@ It also helps to separate the two things the score is mixing. Duration is someth
 ## A published alternative
 
 If you would prefer a score where every weight is visible, Pulse, a free app you host yourself, computes Sleep Performance from Google Health sleep data: hours against your own sleep need (50%), efficiency (20%), restorative sleep as deep plus REM (20%) and consistency over the last 7 days (10%). It scores 85 to 100% as optimal, 70 to 84% as sufficient and anything below as poor ([how Sleep Performance works](/metrics/sleep-performance/)). Pulse scores the main sleep only, once Fitbit has processed it, and a night without deep and REM totals scores its restorative part as zero. That does not make it more accurate than Garmin's. The stage data still comes from a wrist sensor, and Pulse is tested with the Fitbit Air only, not with Garmin watches. The difference is that you can check the arithmetic.
+
+```sketch
+{"kind": "flow", "alt": "Pulse's Sleep Performance combines hours against need at 50%, efficiency at 20%, restorative sleep at 20% and consistency at 10%.", "inputs": [{"label": "Hours vs your sleep need", "note": "50%"}, {"label": "Efficiency", "note": "20%"}, {"label": "Deep plus REM", "note": "20%"}, {"label": "Consistency, last 7 days", "note": "10%"}], "output": "Sleep Performance", "tone": "sleep", "caption": "Pulse's published weights."}
+```
 
 ## What is not known
 

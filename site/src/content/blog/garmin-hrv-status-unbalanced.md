@@ -22,7 +22,15 @@ Garmin's manuals are specific about the mechanics. The watch measures the gaps b
 
 There is also "No status" when the watch lacks enough data for a seven-day average.
 
+```sketch
+{"kind": "flow", "alt": "Overnight heartbeat gaps become a seven-day average, which Garmin compares with a personal baseline range to give an HRV status.", "inputs": ["Gaps between heartbeats, overnight", "Seven-day average", {"label": "Your baseline range", "note": "about 3 weeks of data"}], "output": "HRV status: Balanced, Unbalanced, Low or Poor", "caption": "Mechanics from Garmin's owner's manual."}
+```
+
 Two points people miss. First, the comparison is between a week and a range, not between last night and last night's number. A single awful night barely dents a seven-day average. Second, Unbalanced is a two-sided label. The label alone doesn't say which side you're on, so open the chart in Garmin Connect to see where the average sits against the shaded band.
+
+```sketch
+{"kind": "line", "alt": "A seven-day HRV average that stays inside a shaded baseline band, then leaves it above, and later drops below it.", "yLabel": "Seven-day average", "series": [{"label": "Seven-day average", "points": [50, 52, 49, 51, 58, 66, 68, 60, 52, 46, 38, 33], "tone": "blue"}], "band": {"from": 44, "to": 58, "label": "Your baseline range"}, "notes": [{"at": 6, "text": "Above: Unbalanced"}, {"at": 11, "text": "Below: Unbalanced"}], "caption": "Illustration, not real data."}
+```
 
 ## Why above the range counts too
 

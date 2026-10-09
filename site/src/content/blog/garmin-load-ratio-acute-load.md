@@ -32,6 +32,10 @@ Two details in the manual are worth noting. The ratio only appears after 2 weeks
 
 The manuals don't state how many days count as "short-term" or "long-term", so don't assume Garmin uses the 7-day and 28-day windows that most research does.
 
+```sketch
+{"kind": "flow", "alt": "Garmin's Load Ratio divides short-term acute load by long-term chronic load.", "inputs": [{"label": "Acute load, short term", "tone": "orange"}, {"label": "Chronic load, long term", "tone": "blue"}], "output": "Load Ratio = acute / chronic", "note": "Days in each window are not published", "caption": "From Garmin's owner's manuals."}
+```
+
 ## Where the idea comes from
 
 Dividing recent load by longer-term load comes from sports science. In the research version, acute load is usually the last 7 days and chronic load a rolling average of the last 28 days. A ratio near 1 means this week looks like your usual. A ratio well above 1 means you've done much more than your body is used to.
@@ -65,6 +69,10 @@ Practical reading:
 ## A Fitbit and Pulse version
 
 Google's own Target Load uses a version of this ratio too, as I touch on in [Fitbit Target Load too high or low?](/blog/fitbit-target-load/). Pulse's Training balance divides your average Strain over the last 7 days with data by your average over the last 28, so 1.00 means this week matches your usual, and it labels below 0.80 as undertrained, 0.80 to 1.29 balanced, 1.30 to 1.49 overreaching (pushing) and 1.50 and over as high risk ([how Training balance works](/metrics/training-balance/)). Pulse's page says the bands are a rule of thumb from team-sport research and it compares you only with yourself. It is a free app you host yourself, tested on the Fitbit Air only, and it uses heart rate for load, not Garmin's EPOC.
+
+```sketch
+{"kind": "compare", "alt": "Garmin's Load Ratio bands set beside Pulse's Training balance bands, which differ at the upper cut-offs.", "columns": [{"title": "Garmin Load Ratio", "tone": "orange", "items": ["Low: below 0.8", "Optimal: 0.8 to 1.4", "High: 1.5 to 1.9", "Very high: 2.0 or more"]}, {"title": "Pulse Training balance", "tone": "teal", "items": ["Undertrained: below 0.80", "Balanced: 0.80 to 1.29", "Overreaching: 1.30 to 1.49", "High risk: 1.50 and over"]}], "caption": "Bands from Garmin's owner's manuals and Pulse's published thresholds."}
+```
 
 ## Sources
 

@@ -41,6 +41,10 @@ The important difference from Garmin: lifestyle counts, not only fitness. The co
 
 Pulse, a free app you host yourself, computes Pulse Age from Google Health data ([how Pulse Age works](/metrics/pulse-age/)). It uses nine inputs: VO2 max, resting heart rate, steps, sleep hours, sleep consistency, time in heart-rate zones 1-3 and 4-5, strength activity and lean body mass. Each is averaged over six months and compared with a fit person of your age and sex, mapped to a change in mortality risk from a published study, and converted to years on the rule that mortality risk doubles about every eight years. Pace of Aging repeats it for the last 30 days.
 
+```sketch
+{"kind": "steps", "alt": "How Pulse Age turns each input into years.", "steps": [{"title": "Average six months", "text": "Each of the nine inputs."}, {"title": "Compare", "text": "Against a fit person of your age and sex."}, {"title": "Map to risk", "text": "A change in mortality risk from a published study."}, {"title": "Convert to years", "text": "Risk doubles about every eight years."}], "caption": "From Pulse's documentation."}
+```
+
 The limits are written down. It needs at least 5 of the 9 inputs, is labelled provisional until 20 days have data, never moves more than 15 years from your real age, and updates weekly. Because the reference is a fit person, many people start out "older than their age", which says more about the reference than about you. It is an estimate from population studies, not a clinical test. And it is built and tested with the Fitbit Air only. Other Google Health devices send similar data but have not been tested.
 
 ## What each can and can't tell you
@@ -52,6 +56,10 @@ Where they differ is what they leave out.
 - **Garmin** leaves out sleep, steps and strength, so it is the narrowest and also the easiest to explain.
 - **WHOOP and Pulse** include sleep and activity, so a bad month shows up. They also stack nine uncertain estimates, and the combined number looks more exact than it is.
 - **Inputs measured at the wrist** (VO2 max, resting heart rate, lean mass from entered body fat) carry device error that no age formula can remove.
+
+```sketch
+{"kind": "compare", "alt": "What each age figure leaves out or depends on.", "columns": [{"title": "Garmin Fitness Age", "tone": "blue", "items": ["Fitness only", "Leaves out sleep, steps, strength", "Moves when VO2 max moves", "Wrist VO2 max is a model"]}, {"title": "WHOOP Age", "tone": "orange", "items": ["Sleep and activity included", "Stacks nine uncertain estimates", "Needs 21 Recoveries in 31 days", "Company research, not independent"]}, {"title": "Pulse Age", "tone": "green", "items": ["Sleep and activity included", "Stacks nine uncertain estimates", "Needs at least 5 of 9 inputs", "Never more than 15 years off"]}], "caption": "From the post's sources and Pulse's documentation."}
+```
 
 ## Which should you pay attention to
 

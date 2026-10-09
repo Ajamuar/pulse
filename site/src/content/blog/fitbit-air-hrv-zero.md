@@ -15,6 +15,10 @@ Heart rate variability is the variation in time between heartbeats. Google says 
 
 That distinction changes what you do next. A low value is a signal about your body. A gap is a signal about the data, and the fix is about the band, the night or the sync, not about your health.
 
+```sketch
+{"kind": "compare", "alt": "A missing HRV reading is a data problem, while a low HRV reading is a signal about your body.", "columns": [{"title": "HRV shows 0 or nothing", "tone": "grey", "items": ["No value was produced", "A signal about the data", "Check sleep length, stages, fit and sync"]}, {"title": "HRV shows a low number", "tone": "teal", "items": ["A real reading", "A signal about your body", "Compare with your own recent range"]}]}
+```
+
 ## What Google's help page says
 
 On the page covering health metrics and personal ranges, Google says:
@@ -36,6 +40,12 @@ Two things to hold on to. This is not on a Google help page, and none of the thr
 Some people also report a firmware update changing things, and some say the problem disappeared on its own. Those are anecdotes. They are worth a line here only so you don't spend a week suspecting your body when it may be a software wobble.
 
 ## Checks, in order of likelihood
+
+The six checks below, in order of likelihood:
+
+```sketch
+{"kind": "steps", "alt": "Six checks for a missing HRV reading, in order of likelihood.", "steps": [{"title": "3 hours or more?", "text": "Sleep on the band under 3 hours gives no HRV"}, {"title": "Stages complete?", "text": "A simplified sleep pattern points to a gap"}, {"title": "Snug fit", "text": "Sensor flat against skin, no rotating"}, {"title": "Synced?", "text": "Pull to sync, check later in the morning"}, {"title": "Recent update?", "text": "Update, restart, sync, wait a couple of nights"}, {"title": "Same night every time?", "text": "After a week, contact Google Health support"}]}
+```
 
 ### 1. Did you sleep with it on for 3 hours or more?
 

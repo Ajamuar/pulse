@@ -13,6 +13,10 @@ It depends on the model. The Apple Watch Series 12 and Ultra 4, announced in Sep
 
 Apple's September 2026 press release describes Readiness as one daily score from 0 to 10, with a plain recommendation attached: Recover, Pace Yourself, Ready or Go For It. It analyses recent activity, training load, vitals and sleep score, and it updates through the day, so a hard workout or a change in daytime vitals can move it. You can tap in to see which factors are driving it. Apple says the algorithm was developed with data from the Apple Heart and Movement Study, together with exercise scientists and physicians at Apple.
 
+```sketch
+{"kind": "flow", "alt": "Recent activity, training load, vitals and sleep score feed one Readiness score from 0 to 10.", "inputs": [{"label": "Recent activity", "tone": "orange"}, {"label": "Training load", "tone": "orange"}, {"label": "Vitals", "tone": "teal"}, {"label": "Sleep score", "tone": "sleep"}], "output": "Readiness, 0-10", "note": "Weighting not published", "caption": "Inputs as described in Apple's September 2026 press release."}
+```
+
 Apple's watchOS 27 page lists Readiness as Series 12 and Ultra 4 only. Reports around launch say it is not on the Series 11, Ultra 3 or SE 3, even with watchOS 27. Apple has not said whether that limit is about the new sensors or a product decision.
 
 The hardware change matters here. The Series 12 measures heart rate every five seconds all day, and Apple says HRV is measured up to 24 times more often than before. The Heart Rate app now shows two kinds of HRV: Recovery HRV, which Apple says tracks daily stress and recovery signals, and an overall HRV for broader health. Daytime resting heart rate and HRV appear in Vitals on these two models only.
@@ -30,6 +34,10 @@ If you wear an older model, you have three separate tools that cover the same gr
 **Sleep Score.** Added in watchOS 26 and, per reports, available on older models too. It runs 0 to 100 and, according to AppleInsider and others, is built from duration (up to 50 points), bedtime consistency (up to 30) and interruptions (up to 20). Apple has not published that split itself, so treat it as reported. In watchOS 26.2, reports say the labels moved so that 81 or higher now counts as High, and the calculation itself did not change.
 
 None of these three gives a verdict. Vitals tells you something is unusual, Training Load tells you what you did, and Sleep Score tells you about last night. Joining them is left to you. On those watches, the honest answer to the question in the title is: not natively.
+
+```sketch
+{"kind": "compare", "alt": "Vitals, Training Load and Sleep Score each answer a separate question, and none gives a single verdict.", "columns": [{"title": "Vitals", "tone": "teal", "items": ["Overnight heart rate", "Respiratory rate", "Wrist temperature", "Flags 2+ metrics out of range"]}, {"title": "Training Load", "tone": "orange", "items": ["Last 7 days of workouts", "Against the previous 28 days", "Well below to well above"]}, {"title": "Sleep Score", "tone": "sleep", "items": ["Duration, up to 50 points", "Bedtime consistency, up to 30", "Interruptions, up to 20"]}], "caption": "Apple's guides. Sleep Score split as reported, not published by Apple."}
+```
 
 ## What third-party apps add
 

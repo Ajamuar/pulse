@@ -61,9 +61,17 @@ Pulse is free software (source-available under PolyForm Noncommercial 1.0.0, not
 
 **Suits:** people comfortable running a small server who want their scores and their data on their own machine.
 
+```sketch
+{"kind": "compare", "alt": "Pulse compared with the screenless bands that use the maker's own app.", "columns": [{"title": "Maker's own app", "items": ["Fitbit Air, Helio, Polar, Garmin", "The maker's own scores", "Some sell an optional paid tier"]}, {"title": "Pulse (self-hosted)", "items": ["Free, runs in Docker", "Needs your own Google Cloud project", "Tested on the Fitbit Air only", "Scores and data on your machine"], "tone": "teal"}]}
+```
+
 ## How to choose
 
 Start with what you already own. An Apple Watch owner has the cheapest path. If you are buying hardware, the two $99.99 options cost half of the Polar Loop and Garmin, and the price gap over a year matters more than any spec. Then decide whether you want the manufacturer's own app (Fitbit Air, Helio, Polar, Garmin) or a self-hosted option.
+
+```sketch
+{"kind": "steps", "alt": "Four steps for choosing a WHOOP alternative, from what you already own to what the subscription buys.", "steps": [{"title": "What you own", "text": "An Apple Watch is the cheapest path."}, {"title": "Hardware price", "text": "The two $99.99 options cost half of Polar or Garmin."}, {"title": "Whose app", "text": "The maker's own app, or self-hosted."}, {"title": "What WHOOP adds", "text": "Coaching and Healthspan are what its fee buys."}]}
+```
 
 Last, remember that every one of these has a smaller ecosystem than WHOOP's membership, with its coaching and features like Healthspan. If those are what you want, the subscription is what you are paying for.
 

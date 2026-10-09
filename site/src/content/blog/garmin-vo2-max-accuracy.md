@@ -15,6 +15,10 @@ VO2 max is the most oxygen your body can use per minute for each kilogram of bod
 
 The watch does not measure oxygen. It estimates VO2 max from your heart rate against your pace (or power on a bike), with the estimate supplied by Firstbeat Analytics. For a running estimate Garmin's fenix 7 manual says to run outdoors for at least 10 minutes; for cycling, at least 20 minutes of steady, hard riding with a power meter. Garmin recommends completing your user profile and setting your maximum heart rate, because the calculation uses it. The company also says the estimate may seem inaccurate at first and that the device needs a few activities to learn how you perform.
 
+```sketch
+{"kind": "flow", "alt": "The watch estimates VO2 max from heart rate against pace or power, using the maximum heart rate in your profile.", "inputs": ["Heart rate", "Pace (or power on a bike)", "Max heart rate in profile"], "output": "VO2 max estimate", "tone": "blue", "note": "Estimate supplied by Firstbeat", "caption": "As Garmin's manuals describe it."}
+```
+
 The manuals add that the estimate and Training Status are corrected for heat above 22°C (72°F) and altitude above 800 m (2,625 ft), and that VO2 max may fall temporarily at high altitude. That wording is from Edge cycling-computer manuals.
 
 ## What studies found
@@ -45,6 +49,10 @@ Read that second result carefully. A near-zero average bias does not mean your w
 ## How to use the number
 
 Use it as a trend. Change over eight to twelve weeks, on similar routes and in similar weather, carries more information than any one reading. Do not use it to set training zones when you could use a lab test, a field test or your own heart rate zones. Prediction tools that start from VO2 max, such as race-time estimates, inherit whatever error the number carries. If you want a true figure, a laboratory test with a mask is the reference method.
+
+```sketch
+{"kind": "compare", "alt": "A watch estimates VO2 max from heart rate and pace, while a lab test measures oxygen directly with a mask.", "columns": [{"title": "Watch estimate", "tone": "orange", "items": ["Heart rate against pace", "Steady outdoor efforts", "Errors of roughly 3 to 10% in one study", "Good for trends"]}, {"title": "Lab test", "tone": "green", "items": ["Measures oxygen with a mask", "Treadmill ramp test", "The reference method", "Better when precision matters"]}], "caption": "From the 2025 Forerunner 245 study and Garmin's manuals."}
+```
 
 If your estimate has been dropping and Garmin has labelled your training Unproductive, [that post](/blog/garmin-training-status-unproductive/) covers what to check first. Fitbit's own VO2 estimate has the same limits: [Fitbit VO2 max and Cardio Fitness: how accurate?](/blog/fitbit-vo2-max-accuracy/)
 

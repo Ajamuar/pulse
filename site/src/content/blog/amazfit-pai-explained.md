@@ -23,6 +23,10 @@ These are observational studies. They show an association between a heart-rate-b
 
 Amazfit's support pages say PAI is calculated from your age, gender, resting heart rate and other physiological data, combined with how your heart rate has changed over the past 7 days. It uses heart rate from everything you do, so a brisk commute counts the same as a logged run if it raises your heart rate by the same amount. Steps are not an input.
 
+```sketch
+{"kind": "flow", "alt": "Heart rate over seven days, with age, sex, resting and maximum heart rate, feeds the PAI score, whose target is 100.", "inputs": ["Heart rate, last 7 days", "Age and sex", "Resting heart rate", "Maximum heart rate"], "output": "PAI (target 100)", "tone": "teal", "caption": "Inputs as Amazfit's support pages and NTNU describe them."}
+```
+
 Amazfit does not publish its exact formula, so the rest of this section comes from NTNU's own description of PAI, which may not match every detail of Zepp's version:
 
 - Heart rate is judged relative to you. NTNU says PAI considers age, gender, resting heart rate and maximum heart rate.
@@ -36,6 +40,10 @@ So the target is not "a lot of steps". It is a couple of properly hard sessions 
 ## Why your PAI can fall without you doing anything wrong
 
 PAI is a rolling window. Points you earned eight days ago no longer count, so the score drops every day you do less than you did a week earlier. That is by design: the research target is 100 over any seven-day stretch, not 100 once.
+
+```sketch
+{"kind": "line", "alt": "A rolling score jumps after one hard session, holds for seven days, then falls when the session leaves the window.", "series": [{"label": "PAI", "points": [0, 0, 70, 70, 70, 70, 70, 70, 70, 0, 0], "tone": "teal"}], "yLabel": "PAI", "notes": [{"at": 2, "text": "Hard session"}, {"at": 9, "text": "Leaves the 7-day window"}], "caption": "Illustration, not real data."}
+```
 
 Three practical causes of a score that looks too low:
 

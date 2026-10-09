@@ -26,6 +26,10 @@ Two caveats on Life. The MG's ECG and blood pressure features are described by W
 
 You do not buy the band and then subscribe. The hardware comes with the membership, and the common review line is that without a membership the band has no standalone value. That is why it makes sense to think of the price as a yearly cost, not as a gadget price plus a service charge.
 
+```sketch
+{"kind": "flow", "alt": "The WHOOP band and the membership features come together in one yearly price.", "inputs": ["WHOOP 5.0 or MG band", "Membership features"], "output": "One yearly price", "note": "$199, $239 or $359 in the US", "caption": "The band comes with the membership."}
+```
+
 ## Monthly billing
 
 Older pages quote monthly prices of $25 (One), $30 (Peak) and $40 (Life). Sources I found disagree on whether new members can choose this now: one says billing for new members is annual only, with monthly available to existing members on a 12-month commitment. I could not confirm which is current. If you see a monthly price, work out the annual total and compare.
@@ -66,6 +70,10 @@ The Fitbit Air launched at $99.99 and Google says the tracker works without Prem
 2. Look at which tier holds the feature you actually want. Healthspan, Pace of Aging, Health Monitor and Stress Monitor are Peak and above, so One is the plan with the fewest extras.
 3. Find the cancellation path and the return window before the trial starts, and put the 30-day date in your calendar.
 4. Ask what the renewal price will be. WHOOP's own pages were not readable for me, so I cannot say.
+
+```sketch
+{"kind": "steps", "alt": "Four checks to make before paying for a WHOOP membership.", "steps": [{"title": "Confirm the price", "text": "Check your country on WHOOP's own site."}, {"title": "Match the tier", "text": "Healthspan and Stress Monitor are Peak and above."}, {"title": "Find the exit", "text": "Note the cancellation path and the 30-day date."}, {"title": "Ask about renewal", "text": "The renewal price is not confirmed."}]}
+```
 
 ## Is it worth it?
 

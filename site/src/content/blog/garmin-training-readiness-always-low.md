@@ -13,6 +13,10 @@ Training Readiness is built from six things, and a single bad one can hold the w
 
 Garmin's owner's manuals describe Training Readiness as a score plus a short message, recalculated through the day. The six inputs above are the complete list in the manual. Garmin does not publish how they are weighted or combined, and the manual page says nothing about what to do when the score is low.
 
+```sketch
+{"kind": "flow", "alt": "Six inputs feed Garmin's Training Readiness score: last night's sleep score, recovery time, HRV status, acute load, three nights of sleep and three days of stress.", "inputs": ["Last night's sleep score", "Recovery time", "HRV status", "Acute load", "Sleep history, 3 nights", "Stress history, 3 days"], "output": "Training Readiness", "note": "Body Battery is not an input", "caption": "Inputs from Garmin's owner's manual. Garmin does not publish the weights."}
+```
+
 The tiers, as the manual gives them:
 
 | Score | Label | Garmin's wording |
@@ -30,6 +34,10 @@ One more thing the list tells you: Body Battery is not an input. If your Body Ba
 ## Check these, in order
 
 I'd go through the causes in this order because the first few are the most common and the cheapest to rule out. Garmin doesn't document which input dominates, so the ranking comes from how the inputs behave and from forum reports, not from a Garmin statement.
+
+```sketch
+{"kind": "steps", "alt": "Seven checks, in order, for a Training Readiness score that stays low.", "steps": [{"title": "New or reset watch?", "text": "HRV status needs about three weeks of data"}, {"title": "Recovery time", "text": "60 or 90 hours feeds the score"}, {"title": "Acute load", "text": "Hard days most days keep it up"}, {"title": "HRV status", "text": "Outside Balanced for weeks"}, {"title": "Three nights of sleep", "text": "One good night will not fix it"}, {"title": "Three days of stress", "text": "Travel, work or illness count"}, {"title": "Missing or extra workouts", "text": "Check your activity list"}], "caption": "Order is the author's judgement, not a Garmin ranking."}
+```
 
 ### 1. Is the watch new, or was it recently reset?
 

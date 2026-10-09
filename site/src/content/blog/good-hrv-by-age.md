@@ -48,6 +48,10 @@ Those differences matter in three ways:
 2. **Sensor.** PPG and ECG agree well on some HRV measures and less well on others in the studies reviewed by Shaffer and Ginsberg (2017), and movement or a loose strap adds noise.
 3. **Averaging.** A wearable may summarise a whole night, or a selection of it. Shaffer and Ginsberg are blunt that 24-hour, short-term and ultra-short recordings reflect different things, so they are not interchangeable, and that comparing across recording lengths is inappropriate.
 
+```sketch
+{"kind": "compare", "alt": "A lab ECG recording and a wearable's night-time estimate measure HRV in different ways.", "columns": [{"title": "Lab study table", "tone": "blue", "items": ["Five-minute resting ECG", "Lying down, in the daytime", "Healthy adults aged 25 to 74"]}, {"title": "Fitbit or Pixel Watch", "tone": "teal", "items": ["Wrist light sensor (PPG)", "Mostly while you sleep", "Needs 3+ hours of quality sleep", "Nightly method not published"]}], "caption": "Not interchangeable, so do not chase the table's numbers."}
+```
+
 I have not found a published conversion between wearable night-time RMSSD and lab values, and neither Google nor Fitbit publishes the exact way the nightly figure is picked. So treat the table as context for the shape (younger tends to be higher, with a big spread), not as a target your watch should hit.
 
 ## What to compare yourself against
@@ -66,6 +70,10 @@ Google says the same in plainer terms: higher HRV is linked with better health, 
 ### A simple way to read your own number
 
 Wait until you have around two to four weeks of data. Note your usual band, say 38 to 55 ms. A single night below it means very little. Three or four nights below it, with a higher resting heart rate and a bad week behind you, is worth a lighter few days. A slow upward drift over months of consistent training is the pattern people hope for.
+
+```sketch
+{"kind": "line", "alt": "Nightly HRV bouncing inside a personal band, then staying below it for several nights.", "series": [{"label": "Nightly HRV", "points": [46, 48, 44, 50, 47, 52, 45, 49, 41, 36, 34, 35, 37, 44], "tone": "teal"}], "band": {"from": 38, "to": 55, "label": "Your usual band"}, "yLabel": "RMSSD (ms)", "notes": [{"at": 8, "text": "One low night means little"}, {"at": 11, "text": "Several nights below the band"}], "min": 25, "max": 60, "caption": "Illustration, not real data."}
+```
 
 If you have just bought the device, give it the time. Google's own readiness page asks for 7 nights to set a baseline and about a month for it to settle.
 

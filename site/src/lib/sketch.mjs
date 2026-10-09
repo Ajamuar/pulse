@@ -26,20 +26,67 @@ const tone = (t, where) => {
 
 const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
 
-// Caveat is narrow: about 0.42 em per character on average.
-const charW = (size) => size * 0.42
+// Caveat 500 advance widths in hundredths of an em, measured in Chromium: printable ASCII from space to "~", then a
+// few others. Unknown characters count as half an em. Wrapping and collision checks use these, with 3% to spare.
+const ASCII = [24,21,24,56,45,60,56,12,33,33,36,45,20,33,20,33,45,45,45,45,45,45,46,45,45,45,20,20,45,45,45,37,64,51,52,47,58,53,46,49,57,40,31,50,43,72,61,50,47,50,54,49,46,48,49,72,52,50,52,33,33,33,45,45,35,44,44,36,40,33,29,36,47,19,21,37,17,56,45,36,38,38,36,34,33,37,33,52,34,34,32,33,33,33,45]
+const EXTRA = {"×": 45, "–": 45, "—": 57, "’": 12, "‘": 12, "“": 27, "”": 27, "°": 28, "₹": 55, "é": 33, "æ": 57, "ø": 35, "ü": 37, "€": 45, "£": 45, "…": 59, "·": 19, "≥": 55, "≤": 55, "→": 100}
+const em = (ch) => {
+  const code = ch.codePointAt(0)
+  return (code >= 32 && code < 127 ? ASCII[code - 32] : (EXTRA[ch] ?? 50)) / 100
+}
+const textW = (str, size) => [...String(str)].reduce((w, ch) => w + em(ch), 0) * size * 1.03
+
 function wrap(text, size, width) {
-  const max = Math.max(4, Math.floor(width / charW(size)))
   const lines = []
   let line = ""
   for (const word of String(text).split(/\s+/)) {
-    if (line && (line + " " + word).length > max) {
+    const next = line ? line + " " + word : word
+    if (line && textW(next, size) > width) {
       lines.push(line)
       line = word
-    } else line = line ? line + " " + word : word
+    } else line = next
   }
   if (line) lines.push(line)
   return lines
+}
+
+// Greedy rows for labels laid along one axis: items [{lo, hi}] sorted by lo; returns each item's row so that no two
+// labels in a row touch.
+function rows(items, gap = 12) {
+  const ends = []
+  return items.map(({ lo, hi }) => {
+    let r = ends.findIndex((e) => lo >= e + gap)
+    if (r === -1) {
+      r = ends.length
+      ends.push(hi)
+    } else ends[r] = hi
+    return r
+  })
+}
+
+// "5 AZM" but "5%" and "42 ms" as written: a unit that starts with a letter gets a space.
+const withUnit = (v, unit = "") => `${v}${/^[A-Za-z]/.test(unit) ? " " : ""}${unit}`
+
+// Lays labels on one row: each wants to sit centred on `at` with width `w`, inside [lo, hi]. Pushes neighbours apart
+// and returns the centres, or null when they cannot all fit on one row.
+function spread(items, lo, hi, gap = 14) {
+  const pos = items.map((it) => Math.min(Math.max(it.at, lo + it.w / 2), hi - it.w / 2))
+  for (let i = 1; i < pos.length; i++) pos[i] = Math.max(pos[i], pos[i - 1] + (items[i - 1].w + items[i].w) / 2 + gap)
+  for (let i = pos.length - 1; i >= 0; i--) {
+    pos[i] = Math.min(pos[i], hi - items[i].w / 2)
+    if (i < pos.length - 1) pos[i] = Math.min(pos[i], pos[i + 1] - (items[i].w + items[i + 1].w) / 2 - gap)
+  }
+  return pos.length && pos[0] - items[0].w / 2 < lo ? null : pos
+}
+
+// Tick or axis labels at given x positions: centred and pushed apart when they would touch.
+function axisLabels(c, xs, texts, y, size) {
+  const items = texts.map((t, i) => ({ at: xs[i], w: textW(t, size) }))
+  const pos = spread(items, 2, c.W - 2, 10)
+  texts.forEach((t, i) => {
+    if (pos) c.text(pos[i], y, t, { anchor: "middle", size, fill: MUTED })
+    else c.text(xs[i], y, t, { anchor: i === 0 ? "start" : i === texts.length - 1 ? "end" : "middle", size, fill: MUTED })
+  })
 }
 
 function hash(s) {
@@ -93,9 +140,9 @@ class Canvas {
   text(x, y, str, { size = this.F, fill = INK, anchor = "start", width } = {}) {
     const lines = width ? wrap(str, size, width) : [String(str)]
     const lh = size * 1.05
-    lines.forEach((l, i) => {
-      this.parts.push(`<text x="${x}" y="${y + i * lh}" font-size="${size}" fill="${fill}" text-anchor="${anchor}">${esc(l)}</text>`)
-    })
+    const spans = lines.map((l, i) => `<tspan x="${x}" dy="${i ? lh : 0}">${esc(l)}</tspan>`).join("")
+    // data-w records the width a wrapped label must fit, so a browser check can confirm it does.
+    this.parts.push(`<text x="${x}" y="${y}" font-size="${size}" fill="${fill}" text-anchor="${anchor}"${width ? ` data-w="${Math.round(width)}"` : ""}>${spans}</text>`)
     return lines.length * lh
   }
   svg(h, label, cls) {
@@ -108,24 +155,37 @@ const KINDS = {
   bands(s, c) {
     const L = 24, R = c.W - 24, span = s.max - s.min
     const x = (v) => L + ((v - s.min) / span) * (R - L)
-    const top = s.markers?.length ? 92 : 24
+    const place = (cx, w) => {
+      const at = Math.min(Math.max(cx, w / 2 + 4), c.W - w / 2 - 4)
+      return { cx: at, lo: at - w / 2, hi: at + w / 2 }
+    }
+    // Marker labels sit above the bar; band labels below it. Either set stacks into rows when neighbours would touch.
+    const marks = [...(s.markers ?? [])].sort((a, b) => a.at - b.at).map((m) => ({ ...m, ...place(x(m.at), textW(m.label, c.F)) }))
+    // Markers share one row when they fit, pushed apart with angled arrows; otherwise they stack.
+    const one = spread(marks.map((m) => ({ at: x(m.at), w: textW(m.label, c.F) })), 4, c.W - 4)
+    if (one) marks.forEach((m, i) => (m.cx = one[i]))
+    const mrow = one ? marks.map(() => 0) : rows(marks)
+    const mrows = marks.length ? Math.max(...mrow) + 1 : 0
+    const top = mrows ? 30 + mrows * 34 + 24 : 24
     let from = s.min
-    let labelH = 0
-    for (const b of s.bands) {
+    const labels = s.bands.map((b) => {
       const t = tone(b.tone, "bands")
       c.rect(x(from), top, x(b.to) - x(from), 46, { fill: t, fillStyle: "hachure", hachureGap: 7, fillWeight: 1.6, stroke: t })
-      labelH = Math.max(labelH, c.text((x(from) + x(b.to)) / 2, top + 80, b.label, { anchor: "middle", fill: t, width: Math.max(56, x(b.to) - x(from) - 4), size: c.S }))
+      const l = { label: b.label, t, ...place((x(from) + x(b.to)) / 2, textW(b.label, c.S)) }
       from = b.to
-    }
-    const tickY = top + 80 + labelH + 14
-    ;[s.min, ...s.bands.map((b) => b.to)].forEach((v, i, arr) =>
-      c.text(x(v), tickY, `${v}${s.unit ?? ""}`, { anchor: i === 0 ? "start" : i === arr.length - 1 ? "end" : "middle", size: c.S - 2, fill: MUTED }),
-    )
-    for (const m of s.markers ?? []) {
-      c.arrow(x(m.at), top - 46, x(m.at), top - 6, { strokeWidth: 2.4, stroke: STRONG })
-      const half = (String(m.label).length * charW(c.F)) / 2 + 6
-      c.text(Math.min(Math.max(x(m.at), half), c.W - half), top - 56, m.label, { anchor: "middle", fill: STRONG })
-    }
+      return l
+    })
+    const brow = rows(labels)
+    const lh = c.S * 1.35
+    labels.forEach((l, i) => c.text(l.cx, top + 76 + brow[i] * lh, l.label, { anchor: "middle", fill: l.t, size: c.S }))
+    const tickY = top + 76 + Math.max(...brow) * lh + 32
+    const ticks = [s.min, ...s.bands.map((b) => b.to)]
+    axisLabels(c, ticks.map(x), ticks.map((v) => withUnit(v, s.unit)), tickY, c.S - 2)
+    marks.forEach((m, i) => {
+      const ty = 30 + mrow[i] * 34
+      c.text(m.cx, ty, m.label, { anchor: "middle", fill: STRONG })
+      c.arrow(one ? m.cx : x(m.at), ty + 10, x(m.at), top - 6, { strokeWidth: 2.2, stroke: STRONG })
+    })
     return tickY + 16
   },
 
@@ -144,21 +204,23 @@ const KINDS = {
         const t = tone(tones[i], "bars")
         c.rect(lx, y, 20, 20, { fill: t, fillStyle: "solid", stroke: t, roughness: 0.6 })
         c.text(lx + 30, y + 18, name, { size: c.S })
-        lx += 56 + name.length * charW(c.S)
+        lx += 46 + textW(name, c.S)
       })
       y += 46
     }
     for (const b of s.bars) {
       const vals = b.values ?? [b.value]
-      if (c.narrow) y += c.text(L, y + c.S, b.label, { size: c.S, fill: STRONG, width: c.W - 48 }) + 2
-      const rowH = vals.length * 26 + (c.narrow ? 6 : 18)
-      if (!c.narrow) c.text(200, y + rowH / 2 + 6, b.label, { anchor: "end", size: c.S + 1, width: 190 })
+      if (c.narrow) y += c.text(L, y + c.S, b.label, { size: c.S, fill: STRONG, width: c.W - 48 }) + 8
+      const lines = c.narrow ? 0 : wrap(b.label, c.S + 1, 190).length
+      const lh = (c.S + 1) * 1.05
+      const rowH = Math.max(vals.length * 26 + (c.narrow ? 6 : 18), lines * lh + 8)
+      if (!c.narrow) c.text(200, y + rowH / 2 - ((lines - 1) * lh) / 2 + 7, b.label, { anchor: "end", size: c.S + 1, width: 190 })
       vals.forEach((v, i) => {
         const t = tone(b.tone ?? tones[i], "bars")
         const w = Math.max(3, (v / max) * (R - L))
-        const by = y + (c.narrow ? 2 : 6) + i * 26
+        const by = y + (c.narrow ? 0 : rowH / 2 - (vals.length * 26) / 2 + 3) + i * 26
         c.rect(L, by, w, 20, { fill: t, fillStyle: "hachure", hachureGap: 5, stroke: t, roughness: 0.9 })
-        c.text(L + w + 8, by + 17, `${v}${s.unit ?? ""}`, { size: c.S, fill: STRONG })
+        c.text(L + w + 8, by + 17, `${withUnit(v, s.unit)}`, { size: c.S, fill: STRONG })
       })
       y += rowH + (c.narrow ? 14 : 8)
     }
@@ -169,41 +231,48 @@ const KINDS = {
   flow(s, c) {
     const items = s.inputs.map((i) => (typeof i === "string" ? { label: i } : i))
     const ot = tone(s.tone ?? "teal", "flow")
-    const gap = 12, bh = 48
+    const gap = 12
     const top = 20
+    const bw = c.narrow ? c.W - 48 : 290
+    const L = c.narrow ? 24 : 30
+    // An input box holds its label and, when both fit, its note on the same line; otherwise the note goes under it.
+    let y = top
+    const boxes = items.map((it) => {
+      const lines = wrap(it.label, c.S + 1, bw - 32)
+      const inline = it.note && lines.length === 1 && textW(it.label, c.S + 1) + textW(it.note, c.S) + 44 <= bw
+      const h = 22 + lines.length * (c.S + 1) * 1.05 + (it.note && !inline ? c.S * 1.1 + 6 : 0) + 4
+      const box = { ...it, y, h, inline }
+      y += h + gap
+      return box
+    })
+    const inputsBottom = y - gap
+    for (const b of boxes) {
+      c.rect(L, b.y, bw, b.h, { stroke: tone(b.tone, "flow") })
+      const th = c.text(L + 16, b.y + 14 + c.S, b.label, { size: c.S + 1, width: bw - 32 })
+      if (b.note && b.inline) c.text(L + bw - 14, b.y + 14 + c.S, b.note, { anchor: "end", size: c.S, fill: MUTED })
+      if (b.note && !b.inline) c.text(L + 16, b.y + 20 + c.S + th, b.note, { size: c.S, fill: MUTED, width: bw - 32 })
+    }
     let end
     if (c.narrow) {
-      // Inputs stacked full width, one arrow down to the result.
-      const bw = c.W - 48
-      items.forEach((it, i) => {
-        const y = top + i * (bh + gap)
-        c.rect(24, y, bw, bh, { stroke: tone(it.tone, "flow") })
-        c.text(40, y + 32, it.label, { size: c.S + 1 })
-        if (it.note) c.text(24 + bw - 14, y + 32, it.note, { anchor: "end", size: c.S, fill: MUTED })
-      })
-      const oy = top + items.length * (bh + gap) + 50
+      const oy = inputsBottom + 54
       c.arrow(c.W / 2, oy - 46, c.W / 2, oy - 8, { strokeWidth: 1.8 })
       const lines = wrap(s.output, c.F + 3, bw - 30).length
       const oh = 40 + lines * (c.F + 3)
-      c.rect(24, oy, bw, oh, { stroke: ot, strokeWidth: 2.6, fill: ot, fillStyle: "hachure", hachureGap: 12, fillWeight: 0.8 })
+      c.rect(L, oy, bw, oh, { stroke: ot, strokeWidth: 2.6, fill: ot, fillStyle: "hachure", hachureGap: 12, fillWeight: 0.8 })
       c.text(c.W / 2, oy + 26 + c.F * 0.6, s.output, { anchor: "middle", size: c.F + 3, fill: STRONG, width: bw - 30 })
       end = oy + oh + 10
     } else {
-      const bw = 250
-      const h = Math.max(items.length * (bh + gap) - gap, 120)
-      const ox = c.W - 30 - 230, oy = top + h / 2 - 45
-      items.forEach((it, i) => {
-        const y = top + i * (bh + gap)
-        c.rect(30, y, bw, bh, { stroke: tone(it.tone, "flow") })
-        c.text(46, y + 32, it.label, { size: c.S + 1 })
-        if (it.note) c.text(30 + bw - 14, y + 32, it.note, { anchor: "end", size: c.S, fill: MUTED })
-        c.curve([[30 + bw + 6, y + bh / 2], [ox - 80, (y + bh / 2 + oy + 45) / 2], [ox - 8, oy + 45]], { strokeWidth: 1.6 })
-      })
-      c.arrow(ox - 30, oy + 45, ox - 6, oy + 45, { strokeWidth: 1.6 })
-      c.rect(ox, oy, 230, 90, { stroke: ot, strokeWidth: 2.6, fill: ot, fillStyle: "hachure", hachureGap: 12, fillWeight: 0.8 })
-      const lines = wrap(s.output, c.F + 4, 210).length
-      c.text(ox + 115, oy + 45 - ((lines - 1) * (c.F + 4)) / 2 + 10, s.output, { anchor: "middle", size: c.F + 4, fill: STRONG, width: 210 })
-      end = Math.max(top + h, oy + 90) + 10
+      const ow = 230
+      const ox = c.W - 30 - ow
+      const lines = wrap(s.output, c.F + 4, ow - 20).length
+      const oh = Math.max(90, 40 + lines * (c.F + 4) * 1.05)
+      const oy = Math.max(top, (top + inputsBottom) / 2 - oh / 2)
+      const mid = oy + oh / 2
+      for (const b of boxes) c.curve([[L + bw + 6, b.y + b.h / 2], [ox - 70, (b.y + b.h / 2 + mid) / 2], [ox - 8, mid]], { strokeWidth: 1.6 })
+      c.arrow(ox - 30, mid, ox - 6, mid, { strokeWidth: 1.6 })
+      c.rect(ox, oy, ow, oh, { stroke: ot, strokeWidth: 2.6, fill: ot, fillStyle: "hachure", hachureGap: 12, fillWeight: 0.8 })
+      c.text(ox + ow / 2, mid - ((lines - 1) * (c.F + 4) * 1.05) / 2 + 10, s.output, { anchor: "middle", size: c.F + 4, fill: STRONG, width: ow - 20 })
+      end = Math.max(inputsBottom, oy + oh) + 10
     }
     if (s.note) end += c.text(c.W / 2, end + 26, s.note, { anchor: "middle", size: c.S, fill: MUTED, width: c.W - 48 }) + 10
     return end + 10
@@ -243,8 +312,31 @@ const KINDS = {
   // A trend. {series: [{label?, points: [..], tone?}], band?: {from, to, label?}, yLabel?, xLabels?: [..], notes?: [{at, text, series?}], min?, max?}
   line(s, c) {
     const L = c.narrow ? 30 : 50, R = c.W - 20
-    // Labels and notes sit in a strip above the plot, so they never cross the line.
-    const T = 40 + (s.yLabel ? 34 : 0) + (s.notes?.length ? 44 : 0)
+    // Notes sit on one row above the plot, so they never cross the line, each other or another note's arrow. Too
+    // wide for one row, each wraps into an equal share of the width; only if that still fails do they stack in rows.
+    const ns = c.S + 1, nlh = ns * 1.05
+    const notes = [...(s.notes ?? [])].sort((a, b) => a.at - b.at)
+    const len0 = Math.max(...s.series.map((se) => se.points.length))
+    const nx = (i) => L + (i / Math.max(1, len0 - 1)) * (R - L)
+    const share = (R - L) / Math.max(1, notes.length) - 14
+    let placed = notes.map((n) => ({ ...n, wrapAt: undefined, lines: 1, w: textW(n.text, ns) }))
+    let one = spread(placed.map((n) => ({ at: nx(n.at), w: n.w })), L, R)
+    if (!one && notes.length > 1) {
+      placed = notes.map((n) => {
+        const lines = wrap(n.text, ns, share)
+        return { ...n, wrapAt: share, lines: lines.length, w: Math.max(...lines.map((l) => textW(l, ns))) }
+      })
+      one = spread(placed.map((n) => ({ at: nx(n.at), w: n.w })), L, R)
+    }
+    placed.forEach((n, i) => {
+      n.cx = one ? one[i] : Math.min(Math.max(nx(n.at), L + n.w / 2), R - n.w / 2)
+      n.lo = n.cx - n.w / 2
+      n.hi = n.cx + n.w / 2
+    })
+    const nrow = one ? placed.map(() => 0) : rows(placed)
+    const maxLines = Math.max(1, ...placed.map((n) => n.lines))
+    const stripTop = s.yLabel ? 72 : 40
+    const T = notes.length ? stripTop + Math.max(...nrow) * 30 + (maxLines - 1) * nlh + 30 : s.yLabel ? 74 : 40
     const B = T + (c.narrow ? 190 : 230)
     const all = s.series.flatMap((se) => se.points).concat(s.band ? [s.band.from, s.band.to] : [])
     const lo = s.min ?? Math.min(...all), hi = s.max ?? Math.max(...all)
@@ -262,23 +354,20 @@ const KINDS = {
     s.series.forEach((se, k) => {
       const t = tone(se.tone ?? ["blue", "orange", "teal"][k], "line")
       c.curve(se.points.map((v, i) => [x(i), y(v)]), { stroke: t, strokeWidth: 2.6, roughness: 0.8 })
-      if (se.label) {
+      // A lone series named like the axis needs no legend.
+      if (se.label && !(s.series.length === 1 && se.label === s.yLabel)) {
         c.text(legendX, s.yLabel ? 32 : 26, se.label, { anchor: "end", size: c.S, fill: t })
-        legendX -= String(se.label).length * charW(c.S) + 24
+        legendX -= textW(se.label, c.S) + 24
       }
     })
-    ;(s.xLabels ?? []).forEach((l, i, arr) => {
-      const xi = L + (i / Math.max(1, arr.length - 1)) * (R - L)
-      c.text(xi, B + 38, l, { anchor: i === 0 ? "start" : i === arr.length - 1 ? "end" : "middle", size: c.S, fill: MUTED })
-    })
-    for (const n of s.notes ?? []) {
+    const xl = s.xLabels ?? []
+    if (xl.length) axisLabels(c, xl.map((_, i) => L + (i / Math.max(1, xl.length - 1)) * (R - L)), xl, B + 38, c.S)
+    placed.forEach((n, i) => {
       const v = s.series[n.series ?? 0].points[n.at]
-      const px = x(n.at)
-      const ty = T - 26
-      const half = (String(n.text).length * charW(c.S + 1)) / 2 + 4
-      c.text(Math.min(Math.max(px, L + half), R - half), ty, n.text, { anchor: "middle", fill: STRONG, size: c.S + 1 })
-      c.arrow(px, ty + 10, px, y(v) - 10, { strokeWidth: 1.5, stroke: STRONG })
-    }
+      const ty = stripTop + nrow[i] * 30
+      const h = c.text(n.cx, ty, n.text, { anchor: "middle", fill: STRONG, size: ns, width: n.wrapAt })
+      c.arrow(one ? n.cx : x(n.at), ty + h - nlh + 9, x(n.at), y(v) - 10, { strokeWidth: 1.5, stroke: STRONG })
+    })
     return B + (s.xLabels ? 54 : 22)
   },
 

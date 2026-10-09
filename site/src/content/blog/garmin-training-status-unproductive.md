@@ -19,6 +19,10 @@ Garmin's blog says Training Status interprets changes in your fitness, measured 
 
 Garmin does not publish how these are combined or the thresholds that flip one label to another. Anything more precise than the list above, such as an exact load ratio for each status, is guesswork from outside.
 
+```sketch
+{"kind": "flow", "alt": "VO2 max, acute training load and HRV status feed Garmin's Training Status, in a combination Garmin does not publish.", "inputs": ["VO2 max", "Acute training load", "HRV status"], "output": "Training Status", "tone": "blue", "note": "How they combine is not published", "caption": "Inputs as named in Garmin's blog."}
+```
+
 The eight labels, as Garmin's blog describes them:
 
 | Status | Garmin's description |
@@ -57,6 +61,10 @@ A run of hot weeks that pulls the estimate down a point or two can be enough to 
 5. **Were you ill?** A cold or a fever lowers HRV and raises heart rate. Garmin's blog on illness notes a small rise in body temperature can push heart rate up by roughly 7 beats per minute, and heart rate is one of the inputs to the estimate.
 6. **Check the training mix.** Garmin suggests looking at your load focus when status stalls at Maintaining. The same idea fits here: a block with no hard sessions, or one with no easy ones, tends to flatten fitness.
 7. **Then consider rest.** If everything above is fine and you feel flat, two or three easy days is a cheap test. If your resting heart rate is still raised after several days, or you have symptoms such as chest pain, dizziness or unusual breathlessness, see a doctor rather than a watch.
+
+```sketch
+{"kind": "steps", "alt": "Seven checks to run in order when Garmin shows Unproductive, from the VO2 max trend to rest.", "steps": [{"title": "VO2 max trend", "text": "Falling for weeks, or one dip?"}, {"title": "Maximum heart rate", "text": "Correct it in your profile."}, {"title": "Heat or altitude", "text": "Wait for it to pass."}, {"title": "Last two weeks of sleep", "text": "Short or broken sleep counts."}, {"title": "Illness", "text": "A cold lowers HRV."}, {"title": "Training mix", "text": "All easy or all hard stalls fitness."}, {"title": "Rest", "text": "Two or three easy days."}], "caption": "Order from this post."}
+```
 
 Unproductive and Strained are close neighbours. Strained is Garmin's flag for likely insufficient recovery, so the first one points at fitness not responding and the second at recovery not keeping up. You can read both as "something outside the plan needs a look".
 

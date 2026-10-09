@@ -7,6 +7,12 @@ import { article, breadcrumbs } from "../../lib/schema"
 
 export async function getStaticPaths() {
   const posts = await getPosts()
+  // The content loader logs a bad sketch and carries on without it; fail the build instead.
+  for (const post of posts) {
+    const want = (post.body?.match(/^```sketch$/gm) ?? []).length
+    const got = (post.rendered?.html.match(/<figure class="sketch">/g) ?? []).length
+    if (want !== got) throw new Error(`${post.id}: ${want} sketch blocks but ${got} rendered. See the [glob-loader] error above.`)
+  }
   return posts.map((post) => ({ params: { slug: post.id }, props: { post, posts } }))
 }
 const { post, posts } = Astro.props

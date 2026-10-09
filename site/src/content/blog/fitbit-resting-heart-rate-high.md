@@ -19,6 +19,10 @@ Your watch reports two heart rates that people constantly confuse.
 
 So if your overnight graph dips to 52 and your resting heart rate says 58, nothing is broken. They are different measurements. Compare like with like over time: the daily resting figure against previous daily resting figures, and the sleeping curve against previous sleeping curves.
 
+```sketch
+{"kind": "compare", "alt": "Resting heart rate is one estimate per day; sleeping heart rate is a continuous overnight reading, often lower.", "columns": [{"title": "Resting heart rate", "tone": "orange", "items": ["Estimated each day", "Still and well-rested", "Method not explained by Google"]}, {"title": "Sleeping heart rate", "tone": "sleep", "items": ["Detected all night", "Often lower than resting", "Compare curve to curve"]}], "caption": "Definitions from Google's resting heart rate page."}
+```
+
 In the app: open the Health tab, scroll to Key metrics and tap Resting heart rate. Google offers weekly, monthly, three-month and yearly views.
 
 ## What counts as high
@@ -26,6 +30,10 @@ In the app: open the Health tab, scroll to Key metrics and tap Resting heart rat
 Google gives a broad range of 60 to 100 bpm that "varies depending on age and fitness level", and that is a population range, not your range. Someone who runs and sits at 48 and drifts to 56 has moved further, in relative terms, than someone going from 72 to 74. Your own trend is the useful comparison.
 
 A rise worth noticing is one that is larger than your usual day-to-day wobble and that holds for several days. I'm not going to give you a magic number, because there is no published threshold that applies to everyone. What I can say is that single-day spikes after a bad night are routine, and a flat week at a new higher level is more informative.
+
+```sketch
+{"kind": "line", "alt": "Resting heart rate with one spike that recovers next day, then a new higher level that holds.", "series": [{"label": "Daily resting heart rate", "points": [56, 57, 55, 56, 62, 56, 57, 56, 60, 61, 60, 61, 60, 61], "tone": "orange"}], "band": {"from": 54, "to": 58, "label": "Your usual range"}, "yLabel": "Resting HR (bpm)", "notes": [{"at": 4, "text": "One bad night, back next day"}, {"at": 11, "text": "A new level that holds"}], "min": 50, "max": 66, "caption": "Illustration, not real data."}
+```
 
 ## Causes, roughly in order of how often they are the answer
 

@@ -16,6 +16,10 @@ Garmin's owner's manuals describe Body Battery as an estimate of your available 
 
 The part that matters for this comparison is that it is a running gauge. Sleep and rest charge it. Stress and exertion drain it. Garmin's tips page says the opposite of what people often assume about food: eating and caffeine have no effect on it. The level refreshes when the watch syncs.
 
+```sketch
+{"kind": "line", "alt": "A Body Battery line that falls through the day with stress and exertion and climbs back overnight with sleep.", "yLabel": "Body Battery", "series": [{"label": "Body Battery", "points": [80, 72, 62, 55, 44, 36, 28, 22, 34, 52, 68, 82], "tone": "blue"}], "xLabels": ["Wake", "Midday", "Evening", "Overnight", "Wake"], "notes": [{"at": 4, "text": "Stress and exertion drain it"}, {"at": 9, "text": "Sleep recharges it"}], "min": 0, "max": 100, "caption": "Illustration, not real data."}
+```
+
 Garmin doesn't publish the formula. Third-party write-ups say it comes from Firstbeat Analytics, the heart-data company Garmin bought in 2020, and the same engine sits behind Garmin's all-day stress score. I found no peer-reviewed study that checks Body Battery against an outside measure, so treat it as a modelled estimate, not a measurement.
 
 ## What the Fitbit Air and Google Health give you
@@ -26,6 +30,10 @@ The Fitbit Air is a screenless band that launched in May 2026. Its data goes to 
 - It is calculated once a day, shortly after you get up from a sleep of at least 3 hours. You need 7 nights of wear before the first score, and about a month for a more accurate baseline.
 
 Google's bands are Low (29 or below), Moderate (30 to 64) and High (65 and above). The help page says the scale runs 0 to 100 in one place and 1 to 100 in another, which is a small thing but worth knowing if you ever see a 0.
+
+```sketch
+{"kind": "flow", "alt": "Three inputs, last week's sleep, heart rate variability and resting heart rate, feed one Readiness score calculated once a day.", "inputs": ["Sleep patterns, past week", "Heart rate variability", "Resting heart rate"], "output": "Daily Readiness, once after you wake", "note": "Activity is not a direct input", "caption": "Inputs as listed on Google Health Help. No weights are published."}
+```
 
 I could not find a Body Battery-style metric anywhere in Google's list of health metrics, so I'd say plainly that none exists as of October 2026. Google also doesn't send its Readiness score through the Google Health API that third-party apps use, which is why other tools can't simply display it.
 
@@ -54,6 +62,10 @@ One further limit: the Air has no screen, so even Readiness lives in the phone a
 ## A way to get the running gauge
 
 Pulse, a free app you host yourself, computes an Energy Bank figure from your Google Health data. It starts each morning at 60% of that day's Recovery plus 40% of last night's Sleep Performance, then subtracts minute by minute for being awake, for heart-rate load and for high-stress minutes, and adds back a little for calm, still minutes and naps ([how Energy Bank works](/metrics/energy-bank/)).
+
+```sketch
+{"kind": "flow", "alt": "Today's Recovery at 60 percent and last night's Sleep Performance at 40 percent set the morning start of Pulse's Energy Bank, which then changes minute by minute.", "inputs": [{"label": "Today's Recovery", "note": "60%", "tone": "green"}, {"label": "Last night's Sleep Performance", "note": "40%", "tone": "sleep"}], "output": "Energy Bank morning start", "note": "Then minus awake, heart-rate load, stress; plus calm and naps", "caption": "Pulse's published weights."}
+```
 
 That is Pulse's own model, not Garmin's, and the constants are tuned by hand rather than validated. Pulse needs Docker and your own Google Cloud project, and it has been tested on the Fitbit Air only. Other devices that sync to Google Health send the same data types but haven't been tried.
 

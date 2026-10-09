@@ -17,6 +17,10 @@ WHOOP's support pages describe WHOOP Age as an estimate of your physiological ag
 
 Two details people trip over. Pace of Aging is a speed, not an age: you can have a WHOOP Age four years above your real age and a Pace of Aging below 1x, because the last month was better than the previous five. And because the six-month figure moves slowly, one bad week barely shifts WHOOP Age, though it can shift Pace of Aging.
 
+```sketch
+{"kind": "compare", "alt": "WHOOP Age is a slow six-month estimate of body age, while Pace of Aging is a faster 30-day speed.", "columns": [{"title": "WHOOP Age", "tone": "blue", "items": ["An age: how old your body behaves", "Built from the last six months", "Moves slowly", "Updates weekly"]}, {"title": "Pace of Aging", "tone": "orange", "items": ["A speed, not an age", "Based on the last 30 days", "Runs from -1x to 3x", "Updates weekly"]}], "caption": "From WHOOP's support pages."}
+```
+
 Healthspan is part of the Peak and Life memberships. WHOOP's page also says it unlocks after 21 Recoveries in a 31-day period, and you need 21 in every 31 days for it to keep updating. That explains the common "Healthspan not updating" complaint: a strap worn on fewer nights than that stops feeding it.
 
 ## The nine inputs
@@ -32,6 +36,10 @@ WHOOP lists nine contributors:
 WHOOP says these were picked because research links them to longevity, and that the method corrects for overlap so one habit isn't counted twice. A third-party write-up of WHOOP's white paper explains the mechanism: each input is tied to a published all-cause mortality hazard ratio, and the hazard ratios are converted to years using Gompertz's law, the observation that human mortality risk roughly doubles every eight years or so. I could not read the white paper itself (whoop.com blocks automated fetching), so treat the specific conversions in that write-up as secondhand. WHOOP does not publish the full set of curves and weights in the pages I could check.
 
 The logic is still easy to follow. Say a study finds that people with a resting heart rate 10 bpm higher have about 9% higher mortality risk. Convert that to years, add it to a running total, do the same for the other eight inputs, shrink the total a little for overlap, and you have "years older or younger than your reference". Doing it this way means nothing is measured directly. It is population statistics applied to one person's habits.
+
+```sketch
+{"kind": "steps", "alt": "Four steps that turn nine habits into years older or younger than your reference.", "steps": [{"title": "Take a study result", "text": "For example, 10 bpm higher resting heart rate, about 9% higher risk."}, {"title": "Convert to years", "text": "Mortality risk roughly doubles every eight years or so."}, {"title": "Repeat for all nine inputs", "text": "Add each result to a running total."}, {"title": "Shrink for overlap", "text": "The total is reduced a little so no habit counts twice."}], "caption": "The logic as described in this post. WHOOP does not publish its full curves and weights."}
+```
 
 ## Reading your numbers
 

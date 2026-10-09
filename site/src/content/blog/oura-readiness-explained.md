@@ -13,6 +13,10 @@ Oura's Readiness score is a 0-100 number built from nine contributors: three abo
 
 Oura's support pages list nine contributors, each scored 0-100 on the same bands as the headline. Oura's marketing page says seven, so the support article is the one to trust for detail. The app needs up to two weeks to learn your averages before it can judge any of them.
 
+```sketch
+{"kind": "flow", "alt": "Nine Oura contributors, grouped as body signals, sleep and activity, feed one Readiness score from 0 to 100.", "inputs": [{"label": "Resting heart rate", "tone": "teal"}, {"label": "HRV Balance", "tone": "teal"}, {"label": "Body temperature", "tone": "teal"}, {"label": "Recovery Index", "tone": "teal"}, {"label": "Sleep", "tone": "sleep"}, {"label": "Sleep Balance", "tone": "sleep"}, {"label": "Sleep Regularity", "tone": "sleep"}, {"label": "Previous Day Activity", "tone": "orange"}, {"label": "Activity Balance", "tone": "orange"}], "output": "Readiness, 0-100", "note": "Weighting not published", "caption": "Contributors as listed on Oura's support pages."}
+```
+
 | Contributor | What it looks at | Time window |
 |---|---|---|
 | Resting heart rate | Your lowest heart rate last night against your long-term average | One night |
@@ -57,6 +61,10 @@ Tap the contributor that is red. The headline hides which of the nine is doing t
 Oura's Readiness is a broad "state of the day" score. It blends overnight biology (four contributors) with sleep history (three) and activity (two). Yesterday's activity and a two-week activity balance are inside the number.
 
 A recovery score in the narrower sense measures only how your body responded overnight, then leaves training decisions to a separate load figure. Pulse's [Recovery](/metrics/recovery/) is built that way: a 0-100% score from five overnight inputs, with HRV carrying the most weight, set against your own baseline. There is no activity-balance contributor inside it, because Pulse keeps that in a separate 0-21 [Strain](/metrics/strain/) scale. Pulse is free and self-hosted, needs Docker and a Google Cloud project, and has been tested only with the Fitbit Air. It does not read Oura data.
+
+```sketch
+{"kind": "compare", "alt": "Oura Readiness blends overnight body signals, sleep history and activity, while Pulse Recovery uses only overnight inputs.", "columns": [{"title": "Oura Readiness", "tone": "blue", "items": ["Four body-signal contributors", "Three sleep-history contributors", "Two activity contributors", "Yesterday's activity is inside"]}, {"title": "Pulse Recovery", "tone": "green", "items": ["Five overnight inputs", "HRV carries the most weight", "Set against your own baseline", "Activity kept in separate Strain"]}], "caption": "Oura's support pages and Pulse's Recovery page."}
+```
 
 Neither design is correct. If you want one number that says "take it easy" because you trained hard, a Readiness-style blend gets there. If you want to know whether you slept your way back from yesterday's training, the separation is easier to read. Fitbit's own version of the blend is covered in [Fitbit Daily Readiness explained](/blog/fitbit-daily-readiness-explained/), and the cross-brand comparison is in [WHOOP recovery vs Body Battery vs Oura Readiness](/blog/whoop-recovery-vs-body-battery-vs-oura-readiness/).
 

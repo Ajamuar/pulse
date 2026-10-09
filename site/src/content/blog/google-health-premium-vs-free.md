@@ -24,6 +24,10 @@ Droid Life's May 2026 comparison lists the free "Basic" plan as including steps,
 
 - **Sleep Score.** Google's Sleep Score page says you can see your daily score and the metrics behind it (duration, time to sound sleep, restlessness, interruptions) without Premium. You can also edit your sleep log and download your raw sleep data, "which comes without analysis".
 - **Daily Readiness.** The help page describes the score as built from heart rate variability, recent sleep and resting heart rate. It doesn't mention a Premium requirement for the score itself. It does say Premium users get a coach that advises training adjustments based on it. Articles from before September 2024 put Readiness behind the paywall; the current pages don't.
+
+```sketch
+{"kind": "flow", "alt": "Daily Readiness is built from heart rate variability, recent sleep and resting heart rate", "inputs": ["Heart rate variability", "Recent sleep", "Resting heart rate"], "output": "Daily Readiness", "note": "0-100, 65 and above is High", "caption": "From Google Health Help. Free, no Premium needed."}
+```
 - **Cardio Load.** The help page's only free-versus-Premium difference is the weekly target (below). It lists nothing else that changes for the number itself.
 
 Notice what "free" includes: the data. Google's Sleep Score page says you can download your raw sleep data without Premium, and the same watch readings are what the Google Health API serves to apps you authorise yourself.
@@ -39,6 +43,10 @@ Per Droid Life and 9to5Google, Premium adds:
 - proactive insights and an on-demand workout library
 
 Google's help pages add that Premium features may vary by device and country, may be English only, and list a compatible Android device among the requirements. If you are on iPhone, check that before paying.
+
+```sketch
+{"kind": "compare", "alt": "What stays in the free Google Health app and what Premium adds", "columns": [{"title": "Free", "tone": "green", "items": ["Steps, heart rate, sleep stages", "Sleep Score and its parts", "Daily Readiness, Cardio Load", "HRV, SpO2", "Raw sleep data download"]}, {"title": "Premium", "tone": "blue", "items": ["Google Health Coach (Gemini)", "Adaptive fitness plans", "Deeper sleep insights, sleep coach", "Coach-set weekly Target Load", "Proactive insights, workout library"]}], "caption": "From Google Health Help, Droid Life and 9to5Google."}
+```
 
 ## The one change you'd notice: Target Load
 

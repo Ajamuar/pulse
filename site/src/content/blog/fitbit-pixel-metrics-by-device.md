@@ -50,6 +50,10 @@ The vitals grid also lists the Alta HR, Blaze, Charge 2, Charge 3 and Inspire HR
 - **Region and software.** Some health features depend on country approval or on app and firmware versions. The grids do not say, so a tick is not a promise that the feature is switched on for you.
 - **Whether the data is any good.** A tick means the device reports the metric. It does not mean the sensor is equally accurate across models.
 
+```sketch
+{"kind": "compare", "alt": "What a tick in the device table means and what it does not promise.", "columns": [{"title": "A tick means", "tone": "green", "items": ["Google's page names the device", "The device supports the metric"]}, {"title": "A tick does not mean", "tone": "red", "items": ["A value was produced last night", "The feature is on in your region", "The sensor is equally accurate"]}], "caption": "From the notes under the table."}
+```
+
 ## Common questions
 
 **Does the Fitbit Charge 6 have Daily Readiness?** Yes. The Charge 6 is on Google's Readiness list. You need a first week of sleep wear (seven nights) and sleep of at least three hours for it to calculate.
@@ -57,6 +61,10 @@ The vitals grid also lists the Alta HR, Blaze, Charge 2, Charge 3 and Inspire HR
 **Does the Pixel Watch measure skin temperature?** On the vitals grid, the Pixel Watch 2, 3, 4 and 5 are ticked and the first Pixel Watch is not. Google describes skin temperature as a variation from your own baseline during sleep, so expect a deviation, not an absolute reading.
 
 **Why is HRV missing even though my device is ticked?** A tick means the device supports the metric, not that it produced a value last night. The page notes that most of these metrics need at least three hours of sleep, and on a Fitbit Air see [what to check when HRV shows 0](/blog/fitbit-air-hrv-zero/).
+
+```sketch
+{"kind": "steps", "alt": "Three checks when a metric is missing from your app: find your device, check sleep length, allow seven nights for Readiness.", "steps": [{"title": "Find your device", "text": "If it is not listed, Google says it does not support the metric."}, {"title": "Sleep at least 3 hours", "text": "Most of these metrics need it."}, {"title": "Readiness: wear for 7 nights", "text": "The first week of sleep wear comes first."}], "caption": "From Google's help pages."}
+```
 
 **Why is my Readiness score missing or stuck?** See [Fitbit readiness always low](/blog/fitbit-readiness-always-low/) for the usual causes.
 

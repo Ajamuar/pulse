@@ -24,6 +24,10 @@ From Google's help page:
 
 Notice what is not in that list. The page does not describe daily readiness as an input. It comes up only in troubleshooting advice, where Google tells you to look at readiness when judging whether a target is reasonable. So readiness sits next to the target, not inside it.
 
+```sketch
+{"kind": "flow", "alt": "Your fitness goal, last week against last month, and your plan together set the weekly Target Load.", "inputs": [{"label": "Fitness goal", "note": "maintain or improve", "tone": "green"}, {"label": "Last week vs last month", "note": "ACWR", "tone": "orange"}, {"label": "Your plan", "note": "free or Premium", "tone": "blue"}], "output": "Weekly Target Load", "tone": "teal", "caption": "The three things Google's help page names."}
+```
+
 ## Why it feels too low
 
 A target that looks easy usually has one of these causes.
@@ -71,6 +75,10 @@ Google doesn't expose Cardio Load or Target Load through its API, so Pulse canno
 | Red | Base × 0.5 to base × 0.75 |
 
 The base is your average Strain over the last 28 days, today excluded. If your training load (last 7 days against last 28) is above 1.3, the top of the range is capped at your base. Below 0.8, both ends rise by 10%. The range stays between 4 and 19 and at least 2 wide. A base of 12 on a green day gives 12.0 to 15.0. With fewer than 14 days of Strain in the last 28, Pulse uses a starting range marked as an estimate: green 14.0 to 18.0, yellow 10.0 to 14.0, red 6.0 to 10.0.
+
+```sketch
+{"kind": "compare", "alt": "Google's Target Load is a weekly range, while Pulse's Strain Target is a daily range set from Recovery.", "columns": [{"title": "Google Target Load", "tone": "blue", "items": ["A weekly range", "Free: your 4-week average", "Premium: coach sets a Training Focus", "Not available to third-party apps"]}, {"title": "Pulse Strain Target", "tone": "teal", "items": ["A range for today, 0 to 21", "Starts from your Recovery band", "Base: 28-day average Strain", "Training balance caps or lifts it"]}]}
+```
 
 That is the same idea Google uses, a recent ratio against a longer average, applied to a daily range. It does not know your training plan, races or injuries. The details are in [how Strain Target works](/metrics/strain-target/) and [training balance](/metrics/training-balance/).
 

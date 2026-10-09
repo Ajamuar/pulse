@@ -73,11 +73,19 @@ For a self-hoster this works out simply:
 - **Just you, or you and your family.** You are nowhere near 100. You stay in Testing or switch to production without verifying, and click through the "unverified app" warning for your own app.
 - **A public service for strangers.** You need verification: a privacy policy URL, a verified domain, a submission from the consent screen and, for this API, the third-party security review. That is a different project from a home server.
 
+```sketch
+{"kind": "compare", "alt": "What a personal install needs compared with a public service under the 100-user cap", "columns": [{"title": "Just you or family", "tone": "green", "items": ["Far below the 100-user cap", "Stay in Testing or go to production", "No verification needed", "Click through the unverified warning"]}, {"title": "Public service", "tone": "orange", "items": ["Verification is required", "Privacy policy URL", "Verified domain", "Consent screen submission", "Third-party security review"]}], "caption": "From Google's setup guide and Cloud help page."}
+```
+
 The cap belongs to the OAuth client, as I read Google's pages. Each self-hoster who creates their own client has their own 100, so nobody has to run a central service for everyone.
 
 ### The seven-day trap
 
 In Testing status, Google's setup page says refresh tokens expire after 7 days. An app that syncs fine for a week and then asks you to reconnect is almost certainly this. Moving the audience to "In production" avoids it, because refresh tokens then last until you revoke them or leave them unused for a long period. Pulse's own guide takes this route for a personal install: no verification, you just see the warning when you connect.
+
+```sketch
+{"kind": "compare", "alt": "Refresh tokens expire after 7 days in Testing but last until revoked in production", "columns": [{"title": "Audience: Testing", "tone": "red", "items": ["Refresh tokens expire after 7 days", "Sync works, then asks you to reconnect"]}, {"title": "Audience: In production", "tone": "green", "items": ["Tokens last until you revoke them", "Or leave them unused a long time", "No verification, just the warning"]}], "caption": "From Google's setup guide."}
+```
 
 ## Mistakes that cost an evening
 

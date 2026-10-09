@@ -20,6 +20,10 @@ WHOOP's help material describes sleep need as four moving parts:
 
 WHOOP also says it looks at your bed and wake times, duration and efficiency over roughly the past 28 days, and smooths out weekend and weekday differences and travel. A WHOOP community post written by a member summarises the model as baseline plus strain plus debt minus naps. The same member reported naps showing as zero in their calculation, which is one user's unconfirmed report and not a documented fault.
 
+```sketch
+{"kind": "flow", "alt": "Sleep need is a baseline plus strain and sleep debt, minus naps.", "inputs": [{"label": "Baseline", "note": "+", "tone": "sleep"}, {"label": "Strain", "note": "+", "tone": "orange"}, {"label": "Sleep debt", "note": "+", "tone": "red"}, {"label": "Naps", "note": "-", "tone": "green"}], "output": "Tonight's sleep need", "tone": "sleep", "note": "Exact amounts not published", "caption": "As WHOOP's help material describes it."}
+```
+
 The exact amounts are not published. How many minutes a hard day adds, and how quickly debt is repaid, is not stated in the sources I could check. whoop.com blocks automated fetching, so I relied on WHOOP's published pages as surfaced by search and could not open the support article itself.
 
 ## What Sleep Performance scores
@@ -62,6 +66,10 @@ If you sleep nine or more hours routinely and still feel exhausted, or you snore
 ## A published version of the same idea
 
 If you'd like to see the arithmetic laid out, Pulse, a free app you host yourself, computes Sleep Performance and a Sleep Planner from Google Health sleep data. Its [Sleep Performance](/metrics/sleep-performance/) score is 50% hours against need, 20% efficiency, 20% restorative sleep (deep plus REM) and 10% consistency. Its need is the upper quartile of your last 28 nights, between 8 and 9.5 hours.
+
+```sketch
+{"kind": "bars", "alt": "Pulse's Sleep Performance weights: 50% hours, 20% efficiency, 20% restorative sleep, 10% consistency.", "unit": "%", "max": 100, "tones": ["sleep"], "bars": [{"label": "Hours vs need", "value": 50}, {"label": "Efficiency", "value": 20}, {"label": "Restorative sleep", "value": 20}, {"label": "Consistency", "value": 10}], "caption": "Pulse's published weights."}
+```
 
 The [Sleep Planner](/metrics/sleep-planner/) then adds 3 minutes for each Strain point above your 28-day average, plus 20% of your sleep debt, minus today's naps, and counts back from your usual wake time to give bedtimes for 100%, 85% and 70% of that need. These are Pulse's own numbers and differ from WHOOP's: for example, Pulse scores restorative sleep where WHOOP uses sleep stress. Pulse is tested with the Fitbit Air only, and its planner needs 7 main sleeps before it gives bedtimes.
 

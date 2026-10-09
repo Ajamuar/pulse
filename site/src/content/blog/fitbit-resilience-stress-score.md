@@ -28,6 +28,10 @@ Google's stress help page describes the daily Resilience score as a measure of "
 | Exertion balance | Recent intense exercise compared with your movement over the past week |
 | Sleep patterns | Quality and quantity of last night's sleep, and sleep over the past week |
 
+```sketch
+{"kind": "flow", "alt": "Three groups of inputs feed one daily Resilience label of Optimal, Balanced or Low.", "inputs": [{"label": "Responsiveness", "note": "HR, HRV, EDA if available"}, {"label": "Exertion balance", "note": "Hard exercise vs your week"}, {"label": "Sleep patterns", "note": "Last night and past week"}], "output": "Resilience: Optimal, Balanced or Low", "tone": "teal", "note": "Weights and thresholds are not published", "caption": "Groups as Google's stress help page names them."}
+```
+
 The device needs to send heart rate data to the app. The page lists the Charge 4, 5 and 6, Inspire 2 and 3, Luxe, the Sense series, Versa 2, 3 and 4, Pixel Watch 2 and later, and Fitbit Air.
 
 EDA is electrodermal activity, tiny changes in skin sweat that the Charge 5, Charge 6 and Sense can measure when you do an EDA scan. Most other devices on that list have no such sensor, so for them the responsiveness part can only lean on heart rate and HRV. A third-party write-up (Kygo) reports that the Fitbit Air has no EDA sensor and so uses just those two. Google's page says only "if available", so I'd treat the Air detail as reported, not confirmed.
@@ -47,6 +51,10 @@ The 2020 launch announcement for the old Stress Management Score described a sim
 ## Resilience is not Readiness
 
 They sit close together in the app and both lean on HRV and sleep, which is why people mix them up. Google's readiness help page frames them differently: readiness is a snapshot of recovery from HRV, recent sleep and resting heart rate, while a high Resilience score "means you can better handle stress and take on new challenges". Readiness has a 1-100 number and bands (Low 1-29, Moderate 30-64, High 65-100). Resilience has three words. For how the first works, see [Fitbit Daily Readiness explained](/blog/fitbit-daily-readiness-explained/).
+
+```sketch
+{"kind": "compare", "alt": "Resilience gives a three-word label that includes weekly load; readiness gives a 1-100 number that does not.", "columns": [{"title": "Resilience", "tone": "teal", "items": ["Optimal, Balanced or Low", "No number", "Includes the past week's load", "Sleep, heart rate, HRV, exercise"]}, {"title": "Readiness", "tone": "blue", "items": ["1-100 number", "Low 1-29, Moderate 30-64, High 65-100", "HRV, recent sleep, resting heart rate"]}], "caption": "From Google's stress and readiness help pages."}
+```
 
 You can have a Low Resilience day and a Moderate readiness, because they weigh different things. Resilience includes the load you put on your body in the last week. Readiness, on Google's description, does not.
 

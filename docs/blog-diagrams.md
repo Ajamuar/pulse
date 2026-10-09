@@ -16,6 +16,7 @@ flowchart LR
 - **Two drawings per figure.** A wide one for laptop columns and a narrow one with stacked layouts and larger relative text for phones. A container query on the figure shows the one that fits (narrow below 560 px).
 - **Theme colours.** Strokes and text use the site's CSS variables, so a diagram matches the page.
 - **Font.** Labels use Caveat (`@fontsource/caveat`), loaded only on pages that draw a diagram.
+- **Labels fit.** Text wraps by Caveat's measured character widths, and labels that would touch (markers, notes, band names, ticks) are pushed apart or stacked.
 - **Stable output.** The roughness is seeded from the spec, so the same spec draws the same lines on every build.
 - **Errors fail the build.** Invalid JSON, an unknown `kind` or `tone`, or a missing `alt` stops the build with the file and line.
 

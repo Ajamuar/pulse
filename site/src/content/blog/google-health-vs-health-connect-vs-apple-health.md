@@ -22,6 +22,10 @@ Most "not syncing" problems come from mixing these up.
 
 Health Connect is built into Android 14 and later as part of the system. On Android 13 and below you install the Health Connect app from the Play Store, and nothing works below Android 9. Google's developer page also says that by default an app granted access can read data from up to 30 days before the permission was given, unless it asks for and is granted history access.
 
+```sketch
+{"kind": "flow", "alt": "Your watch, Health Connect apps on Android and Apple Health on iPhone all feed your Google Health account, which the Google Health API reads.", "inputs": ["Fitbit or Pixel Watch", "Health Connect (Android apps)", "Apple Health (iPhone)"], "output": "Google Health account", "tone": "blue", "note": "Scores are computed in the Google Health app; the API reads this account.", "caption": "How the four pieces connect."}
+```
+
 The Google Health API is, in Google's words, the next generation of the Fitbit Web API. If you want the developer side, the data types and what the old API's shutdown means, [how to export your Fitbit data](/blog/export-fitbit-data/) covers it.
 
 ## Google Health and Health Connect (Android)
@@ -42,6 +46,10 @@ Until this year the iPhone route was one-way. Since an August 2026 update (versi
 
 - Apple Health to Google Health: steps, VO2 max, floors, active calories, distance, exercise and routes, body temperature, sleep sessions and stages, heart rate, heart rate variability, skin temperature, oxygen saturation, respiratory rate, resting heart rate, blood glucose, weight, fat percentage, nutrition, water, mindfulness and cycle health.
 - Google Health to Apple Health: the same categories, except skin temperature and heart rate variability, which only come in.
+
+```sketch
+{"kind": "compare", "alt": "Apple Health data that flows into Google Health compared with what flows back out, where skin temperature and HRV only come in.", "columns": [{"title": "Apple Health to Google Health", "tone": "blue", "items": ["Steps, sleep, heart rate", "Heart rate variability", "Skin temperature", "Weight, nutrition, cycle health"]}, {"title": "Google Health to Apple Health", "tone": "green", "items": ["Steps, sleep, heart rate", "Weight, nutrition, cycle health", "Not skin temperature", "Not heart rate variability"]}], "caption": "From Google's Apple Health help page."}
+```
 
 So if a Fitbit's HRV is missing from Apple Health, that is by design, not a fault. The limits are written on the page: Google Health currently reads three months of Apple Health history, with more promised later in the year, and new data types must be reviewed and permitted before they appear. Reinstalling the app means connecting and granting permissions again.
 

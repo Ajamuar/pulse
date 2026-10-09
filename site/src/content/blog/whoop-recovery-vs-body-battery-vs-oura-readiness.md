@@ -48,11 +48,19 @@ The nearest thing Garmin has to a morning score is a different feature: Training
 
 Oura is the most open of the three about its parts. Its Readiness contributors are nine: Sleep, Sleep Balance, Sleep Regularity, Previous Day Activity, Activity Balance, Resting Heart Rate, HRV Balance, Body Temperature and Recovery Index. The balance contributors compare a recent window (Oura's support page gives a 14-day weighted average for activity) with a longer baseline of about two months. Oura doesn't publish how the nine combine.
 
+```sketch
+{"kind": "flow", "alt": "The nine Oura Readiness contributors feed one score, with no published weights", "inputs": ["Sleep", "Sleep Balance", "Sleep Regularity", "Previous Day Activity", "Activity Balance", "Resting Heart Rate", "HRV Balance", "Body Temperature", "Recovery Index"], "output": "Readiness", "note": "0 to 100, weights not published", "caption": "Contributors from Oura's support page."}
+```
+
 Oura's own pages disagree slightly on the lower bands: its blog gives "Pay attention" as below 70, while its support page splits that into Fair (60-69) and Pay Attention (0-59).
 
 ## What the differences mean in practice
 
 **Time of day.** Body Battery changes while you watch. WHOOP Recovery and Oura Readiness don't: they settle once and sit there. If a score of 80 at 7am and 35 at 6pm feels odd, that's Body Battery working as designed. A Body Battery at wake-up is the closest thing to a recovery reading, but it isn't the same thing. For more on that, see [does the Fitbit Air have Body Battery](/blog/fitbit-air-body-battery/).
+
+```sketch
+{"kind": "compare", "alt": "Recovery and Readiness settle once a day while Body Battery moves all day", "columns": [{"title": "WHOOP Recovery, Oura Readiness", "tone": "blue", "items": ["One score a day", "Settles once, when you wake", "Sits there until tomorrow"]}, {"title": "Garmin Body Battery", "tone": "green", "items": ["A gauge that moves all day", "Fills in rest and sleep", "Drains with stress and activity"]}], "caption": "From each vendor's pages and manuals."}
+```
 
 **What counts as "ready".** Oura includes yesterday's activity and your sleep regularity over two weeks. WHOOP's Recovery, per its pages, comes from what your body did overnight, plus sleep. Body Battery includes the stress and activity you have had since waking, because it runs continuously. Yesterday's workout is a named Oura input, but it isn't in the lists WHOOP publishes for Recovery.
 

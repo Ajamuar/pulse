@@ -22,6 +22,12 @@ They have different requirements, so work out which one you mean.
 
 Both are listed by Google for the Pixel Watch family. The readiness page names Pixel Watch 1, 2, 3, 4 and 5. Google also lists Fitbit devices on the same page, but this post is about the watch on your wrist.
 
+The checks below, in the order to try them:
+
+```sketch
+{"kind": "steps", "alt": "Six checks for a missing score, in order: first week, short sleep, no sleep stages, fit, edited log, sync.", "steps": [{"title": "First week?", "text": "Readiness needs 7 nights of wear"}, {"title": "Sleep too short?", "text": "Under 3 hours gives no readiness"}, {"title": "No sleep stages?", "text": "No stages means no sleep score"}, {"title": "Fit and battery", "text": "Snug band, charged overnight"}, {"title": "Edited sleep log?", "text": "Edited times can drop the score"}, {"title": "Sync the app", "text": "Open Google Health after waking"}], "caption": "Order of the checks below, from Google's help pages."}
+```
+
 ## 1. It is the first week
 
 Google's wording: "you must wear your device for 7 nights of sleep to establish a personalized baseline." It also says to wear the device consistently for about a month for a more accurate baseline.
@@ -61,6 +67,10 @@ If nothing arrives, update the app, check the phone's Bluetooth connection and m
 ## 7. The score is there but shows 1 or 0
 
 Google's readiness page contradicts itself. One sentence says the score "ranges from 0 (low) to 100 (high)", another says "from 1 to 100". The bands are Low 1 to 29, Moderate 30 to 64 and High 65 to 100. So a very low readiness number is not necessarily a missing one. Whether 0 is a real result or a placeholder is not explained, so if you see 0 or 1 after a normal night, check the fit and sleep length first, then look at the breakdown.
+
+```sketch
+{"kind": "bands", "alt": "Readiness bands: Low 1 to 29, Moderate 30 to 64, High 65 to 100.", "min": 1, "max": 100, "bands": [{"to": 29, "label": "Low", "tone": "red"}, {"to": 64, "label": "Moderate", "tone": "yellow"}, {"to": 100, "label": "High", "tone": "green"}], "caption": "Bands from Google's readiness help page."}
+```
 
 ## What is a free feature and what is not
 

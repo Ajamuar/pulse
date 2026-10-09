@@ -38,7 +38,17 @@ Pulse's version is documented in full, so it makes a clean worked example. Pulse
 
 The day's points then go on a log scale: Strain = 21 × ln(points + 1) ÷ ln(7,201), where 7,201 is a whole day at 5 points a minute, plus one. One hour at 70-79% with nothing else gives 180 points and a Strain of about 12.3. Doubling your points adds only about 1.6. That is the point of the log scale: the first hours are cheap, and the last few points are hard to earn.
 
-Pulse's bands are Light under 10, Moderate 10 to 13.9, Strenuous 14 to 17.9, All out 18 and above. [How Strain works](/metrics/strain/) has the rest, including the minimum data it needs.
+```sketch
+{"kind": "steps", "alt": "How Pulse turns a day of heart rate into a Strain score in four steps.", "steps": [{"title": "Find your reserve", "text": "Maximum minus resting heart rate"}, {"title": "Score each minute", "text": "0 to 5 points by share of reserve"}, {"title": "Add up the day", "text": "A running total until midnight"}, {"title": "Log-scale it", "text": "21 × ln(points + 1) ÷ ln(7,201)"}], "caption": "Pulse's published Strain method."}
+```
+
+Pulse's bands are Light under 10, Moderate 10 to 13.9, Strenuous 14 to 17.9, All out 18 and above.
+
+```sketch
+{"kind": "bands", "alt": "Pulse Strain bands on the 0 to 21 scale: Light, Moderate, Strenuous and All out.", "min": 0, "max": 21, "bands": [{"to": 10, "label": "Light", "tone": "teal"}, {"to": 14, "label": "Moderate", "tone": "yellow"}, {"to": 18, "label": "Strenuous", "tone": "orange"}, {"to": 21, "label": "All out", "tone": "red"}], "caption": "Pulse's Strain bands."}
+```
+
+[How Strain works](/metrics/strain/) has the rest, including the minimum data it needs.
 
 ## The differences that matter
 

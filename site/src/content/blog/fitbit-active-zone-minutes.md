@@ -15,6 +15,10 @@ That is the whole mechanism, and it is simpler than the other Google Health numb
 
 Google's help page gives the rule in two lines: one AZM per minute in the moderate zone, two per minute in the vigorous or peak zones. Its worked example is a 20-minute workout with five minutes of warm-up in the moderate zone, ten minutes of running in the vigorous or peak zones and five minutes of cool-down in the moderate zone. That adds up to 5 + 20 + 5 = 30 AZM.
 
+```sketch
+{"kind": "bars", "alt": "Active Zone Minutes earned in Google's 20-minute example: 5 for warm-up, 20 for running, 5 for cool-down.", "unit": "AZM", "tones": ["teal"], "bars": [{"label": "Warm-up, 5 min moderate", "value": 5}, {"label": "Run, 10 min vigorous/peak", "value": 20}, {"label": "Cool-down, 5 min moderate", "value": 5}], "caption": "Google's worked example: 30 AZM in total."}
+```
+
 Swimming is the exception. The watch does not track heart rate in a swim workout, so each minute in the water earns 1 AZM whatever the effort.
 
 The goal of 150 a week is, according to Google, in line with American Heart Association guidance of 150 minutes of moderate activity, 75 of vigorous, or a mix. Because vigorous minutes count double, 75 hard minutes and 150 easy ones both reach the target. You can change the goal in the Google Health app.
@@ -42,6 +46,10 @@ Two checks if a workout looks short on points: open the session's heart-rate gra
 Active Zone Minutes is the metric on devices that track heart rate throughout the day. Google's page lists the Fitbit Air, Charge 6, Inspire 3, Charge 5, Luxe, Inspire 2, Charge 4, the Sense and Versa series and the Pixel Watch series. Everything else tracks plain active minutes: at least 10 continuous minutes of moderate to intense activity, judged from movement (about 3 METs or above), with a default daily goal of 30 minutes.
 
 Cardio Load is a separate number. Google says it is based on the TRIMP (training impulse) model: heart rate during activity, together with age, resting heart rate and sex, with time in higher zones earning more load per minute. It resets to zero each midnight and has no practical daily maximum. AZM is capped in effect by minutes: a 60-minute workout cannot give you more than 120. Cardio Load can keep rising, which is why a long easy day and a short brutal one can score very differently on the two. Google's page on Cardio Load does not compare it with AZM.
+
+```sketch
+{"kind": "compare", "alt": "Active Zone Minutes compared with Cardio Load: minutes in zone with an effective cap versus a TRIMP-based load that resets at midnight.", "columns": [{"title": "Active Zone Minutes", "tone": "teal", "items": ["1 per moderate minute, 2 per vigorous or peak", "60-minute workout gives at most 120", "Target of 150 a week by default"]}, {"title": "Cardio Load", "tone": "orange", "items": ["Based on the TRIMP model", "Uses age, resting HR and sex", "Resets to zero each midnight", "No practical daily maximum"]}], "caption": "From Google's help pages."}
+```
 
 For a fuller look at the load side, see [Cardio Load vs Strain](/blog/cardio-load-vs-strain/).
 

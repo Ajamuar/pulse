@@ -13,9 +13,23 @@ A Daily Readiness score that stays low is almost always one of six things: short
 
 Google's help page says Daily Readiness "combines insights from your heart rate variability (HRV), recent sleep, and resting heart rate (RHR)". Older Fitbit material also listed activity. The current page says an update removed activity and added resting heart rate, so advice you find on older forum threads may describe a different version of the score.
 
+```sketch
+{"kind": "flow", "alt": "Heart rate variability, recent sleep and resting heart rate, each compared with your own baseline, feed Daily Readiness.", "inputs": [{"label": "HRV", "tone": "teal"}, {"label": "Recent sleep", "tone": "sleep"}, {"label": "Resting heart rate", "tone": "orange"}], "output": "Daily Readiness", "tone": "green", "note": "each input vs your own baseline", "caption": "The three inputs Google names. The weights are not published."}
+```
+
 The bands on the same page: High is 65 and above, Moderate is 30 to 64, Low is 29 or below. The page is not consistent about the bottom of the scale (it says 0 to 100 in one place and 1 to 100 in another), which matters if you are staring at a 1.
 
+```sketch
+{"kind": "bands", "alt": "Daily Readiness bands: Low 29 or below, Moderate 30 to 64, High 65 and above.", "min": 0, "max": 100, "bands": [{"to": 29, "label": "Low", "tone": "red"}, {"to": 64, "label": "Moderate", "tone": "yellow"}, {"to": 100, "label": "High", "tone": "green"}], "caption": "Bands from Google Health Help."}
+```
+
 Each input is compared with your own baseline, not with a population chart. That one fact explains most "always low" reports. If your HRV is naturally 25 ms, a 25 ms night is normal for you and should not drag the score down. If the baseline is wrong or incomplete, the comparison is wrong too.
+
+The six checks below run in this order:
+
+```sketch
+{"kind": "steps", "alt": "Six checks for a low Daily Readiness score, in order.", "steps": [{"title": "Calibrating?", "text": "7 nights for a first score, about a month for a baseline"}, {"title": "Sleep length", "text": "Last night and the past week"}, {"title": "Resting heart rate", "text": "A rise that holds for several days"}, {"title": "HRV vs your norm", "text": "Your own range, not a table"}, {"title": "Missing input?", "text": "Sleep stages shown, band snug"}, {"title": "Maybe it's right", "text": "Hard training, late nights, stress"}]}
+```
 
 ## 1. Is it still calibrating?
 

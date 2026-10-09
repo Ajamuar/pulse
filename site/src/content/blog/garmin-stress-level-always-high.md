@@ -24,6 +24,10 @@ The manual's description is short: the watch analyses your heart rate variabilit
 
 That is nearly everything Garmin says. It does not publish the formula, how your personal baseline is set, or how long it takes to adapt. So claims about exactly how the number is built should be read with suspicion.
 
+```sketch
+{"kind": "flow", "alt": "Heart rate variability measured while you are inactive becomes a 0 to 100 stress score, with the baseline and formula unpublished.", "inputs": ["Heartbeat timing (HRV)", "Only while inactive", "Best if worn in bed"], "output": "Stress score, 0 to 100", "tone": "orange", "note": "Formula and baseline not published", "caption": "From Garmin's manuals and blog."}
+```
+
 ## Why HRV works as a stress proxy
 
 HRV is the small variation in the gap between heartbeats. Garmin's explanation is the standard one: when the sympathetic ("fight or flight") side of the nervous system is more active, heart rate tends to rise and HRV to fall, and when the parasympathetic ("rest and digest") side takes over, heart rate falls and HRV rises. Garmin's blog on illness makes the same point, noting that stress and exercise may raise heart rate and drop HRV, and that a fever can start an immune response that stresses the body, with a small rise in body temperature pushing heart rate up by roughly 7 beats per minute.
@@ -53,6 +57,10 @@ If your score is at the top end for weeks, you feel run down, and your resting h
 ## A second view from a different method
 
 Pulse, a free app you host yourself, offers a Stress Monitor built from Google Health heart rate rather than HRV. It looks only at still minutes (no steps in that minute or the two either side, and not during sleep or workouts), measures how far heart rate sits above your own calm level, and maps that onto a 0 to 3 scale ([how Stress Monitor works](/metrics/stress-monitor/)). It needs four days to set a baseline, reads heart rate alone, and is tested with the Fitbit Air only. Like Garmin's, it cannot say how you feel, and caffeine, heat and illness raise it too. Two different methods that agree are slightly more convincing than one; two that disagree mostly tell you the measurement is rough.
+
+```sketch
+{"kind": "compare", "alt": "Garmin's stress score uses heart rate variability on a 0 to 100 scale, while Pulse's Stress Monitor uses heart rate on a 0 to 3 scale.", "columns": [{"title": "Garmin stress", "tone": "orange", "items": ["Based on HRV", "0 to 100 scale", "Read while you are inactive", "Best if worn in bed"]}, {"title": "Pulse Stress Monitor", "tone": "teal", "items": ["Based on heart rate alone", "0 to 3 scale", "Still minutes only, not sleep", "Needs four days for a baseline"]}], "caption": "Garmin's manuals and Pulse's published method."}
+```
 
 ## What is not known
 

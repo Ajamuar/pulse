@@ -22,6 +22,10 @@ These are Google's own labels, from its current sleep score help page:
 
 Google also says most users see an average between 72 and 83. That is a useful reality check. If your usual nights land at 75, you are not doing badly: you are in the middle of where people land. Reaching 90 regularly is uncommon, and a one-off 91 after a perfect night says little about the nights around it.
 
+```sketch
+{"kind": "bands", "alt": "The sleep score from 0 to 100 in four bands, with most users averaging 72 to 83.", "min": 0, "max": 100, "bands": [{"to": 60, "label": "Poor", "tone": "red"}, {"to": 80, "label": "Fair", "tone": "yellow"}, {"to": 90, "label": "Good", "tone": "green"}, {"to": 100, "label": "Excellent", "tone": "teal"}], "markers": [{"at": 72, "label": "72"}, {"at": 83, "label": "83"}], "caption": "Bands and the 72 to 83 average as Google's sleep score page gives them."}
+```
+
 ## The six parts
 
 The help page gives each part a plain-language definition. It does not publish weights or formulas, which matters later. Here is what it does say.
@@ -34,6 +38,10 @@ The help page gives each part a plain-language definition. It does not publish w
 | Restlessness | Very brief movements, stirring or wake-like transitions. Expected amounts vary by age, gender and total sleep | Fewer micro-movements |
 | Full awakenings | Waking periods long enough to disrupt sleep and likely be remembered. Only those over five minutes count. Zero is ideal and fewer than two is considered good for most people | Fewer long wake-ups |
 | Interruptions | Total time fully awake between falling asleep and final waking, counting only periods over five minutes, plus time awake between separate sleep sessions | Less time awake in the night |
+
+```sketch
+{"kind": "flow", "alt": "Six sleep measures feed one sleep score from 0 to 100.", "inputs": ["Sleep duration", "Time to sound sleep", "Sound sleep", "Restlessness", "Full awakenings", "Interruptions"], "output": "Sleep score, 0-100", "tone": "sleep", "note": "Google does not publish the weights", "caption": "The six parts on Google's sleep score help page."}
+```
 
 Three points in that table are easy to miss.
 

@@ -13,9 +13,17 @@ Both are daily energy gauges that start from how you slept and drain as you move
 
 **Garmin Body Battery** arrived in 2018. Garmin's own page says it is powered by the Firstbeat Analytics engine and shows the effect of activity, stress, relaxation and sleep in one place. It reads heart rate variability, heart rate and movement, and it is modelled, not measured: no sensor reads "energy". The5krunner, citing the Fenix 8 manual, describes a 5 to 100 scale with bands of 76-100 high, 51-75 medium, 26-50 low and 5-25 very low.
 
+```sketch
+{"kind": "bands", "alt": "Garmin Body Battery scale from 5 to 100, split into very low, low, medium and high.", "min": 5, "max": 100, "bands": [{"to": 25, "label": "Very low", "tone": "red"}, {"to": 50, "label": "Low", "tone": "orange"}, {"to": 75, "label": "Medium", "tone": "yellow"}, {"to": 100, "label": "High", "tone": "green"}], "caption": "Fenix 8 manual bands, as reported by the5krunner."}
+```
+
 **Amazfit BioCharge** launched around August 2025 on the Helio Strap. Amazfit describes it as an energy score built from sleep, heart rate, HRV, stress and daily activity. It updates through the day, where Amazfit's older Readiness score was a single morning figure. It then spread to the Balance 2 and, by the5krunner's April 2026 write-up, to nine models including the Active 3 Premium and T-Rex Ultra 2. That report says it replaced Readiness across the range from September 2025.
 
 Then the name changed again. The5krunner reports that a score called HybridCharge replaced both BioCharge and Readiness in the Zepp app in May 2026, with bands of 0-59 poor, 60-79 fair and 80-100 good. I could not find an Amazfit support page that confirms this, so treat it as reported. Some watch faces may keep the BioCharge label until a firmware update arrives, which would explain why you still see both names.
+
+```sketch
+{"kind": "bands", "alt": "Amazfit HybridCharge scale from 0 to 100, split into poor, fair and good.", "min": 0, "max": 100, "bands": [{"to": 59, "label": "Poor", "tone": "red"}, {"to": 79, "label": "Fair", "tone": "yellow"}, {"to": 100, "label": "Good", "tone": "green"}], "caption": "HybridCharge bands as reported by the5krunner, not confirmed by Amazfit."}
+```
 
 ## Side by side
 
@@ -34,6 +42,10 @@ Then the name changed again. The5krunner reports that a score called HybridCharg
 For Body Battery, the outline is public and consistent: HRV is the main driver, sleep is the main recharge, and stress and exercise drain. A full night can add something like 40 to 60 points (the5krunner's figure, not Garmin's). During a recorded activity the display freezes and the drain is applied when you save it. Firstbeat has published white papers on HRV-based recovery and stress analysis, and the5krunner points to a 2018 study by Pietilä and colleagues on alcohol's effect on heart rate and HRV in early sleep. What nobody has published is how those pieces are weighted into the single number.
 
 For BioCharge, Amazfit publishes the list of inputs and the launch dates. It does not publish weights, a method or a validation study that I could find. HybridCharge is murkier. The self-reported part is the genuinely different idea: you rate eight areas of daily life (sleep, mood, nutrition, work and so on) as low, medium or high impact, and the app applies an adjustment on top of the biometric base without overriding it. The same article notes that Amazfit does not say how subjective and objective inputs are weighted, and that logging the same positive entries every day could flatter the score.
+
+```sketch
+{"kind": "compare", "alt": "Garmin and Amazfit both publish the outline of their scores but neither publishes weights.", "columns": [{"title": "Garmin Body Battery", "tone": "blue", "items": ["Engine named: Firstbeat Analytics", "HRV main driver, sleep main recharge", "Stress and exercise drain", "Weights not published"]}, {"title": "Amazfit BioCharge", "tone": "teal", "items": ["Input list published", "Launch dates published", "No weights, method or validation found", "HybridCharge adds self-reported ratings"]}], "caption": "Garmin's page and the5krunner; Amazfit's launch coverage."}
+```
 
 Garmin's Lifestyle Logging is the nearest equivalent on the other side, but Garmin tags are used to find correlations over time. They don't change the Body Battery calculation.
 

@@ -10,9 +10,17 @@ keywords: ["whoop open source", "whoop alternative github", "open source whoop a
 
 There is no single open-source WHOOP replacement, but there are real projects in three groups: apps that talk to a WHOOP strap without WHOOP's cloud, dashboards for Fitbit or Google Health data, and general wearable tools such as Gadgetbridge. Licences differ a lot, and "open source" is used loosely. I checked each repository on 9 October 2026.
 
+```sketch
+{"kind": "compare", "alt": "The three groups of projects: WHOOP strap apps, Fitbit and Google Health dashboards, and general wearable tools.", "columns": [{"title": "WHOOP strap apps", "items": ["noop", "OpenStrap edge", "Goose (not verified)"]}, {"title": "Fitbit and Google Health", "items": ["fitbit-grafana", "Hælan"], "tone": "blue"}, {"title": "General wearable tools", "items": ["Gadgetbridge"], "tone": "teal"}]}
+```
+
 ## What "open source" means here
 
 Strictly, open source means an OSI-approved licence such as MIT or AGPL. Some projects below use a source-available licence (you can read and run the code, but commercial use is restricted). I say which is which. Stars and dates are from GitHub's repository data on the check date and will move.
+
+```sketch
+{"kind": "compare", "alt": "OSI-approved licences compared with the source-available PolyForm Noncommercial licence.", "columns": [{"title": "OSI-approved", "items": ["OpenStrap edge: MIT", "Hælan: AGPL-3.0-only", "Gadgetbridge: AGPLv3"], "tone": "green"}, {"title": "Source-available", "items": ["noop: PolyForm Noncommercial", "Pulse: PolyForm Noncommercial", "Read and run the code", "Commercial use restricted"], "tone": "orange"}], "caption": "Licences as stated in this post."}
+```
 
 ## Group 1: apps for a WHOOP strap
 
