@@ -1,6 +1,6 @@
 ---
 title: "Garmin sleep score explained, and a published alternative"
-description: "Garmin's 0-100 sleep score blends duration, quality and HRV-based stress, but the weights are not published. The bands, what a typical score is, and a published formula."
+description: "Garmin's 0-100 sleep score blends duration, quality and HRV-based stress, with unpublished weights. The bands, a typical score, and a published alternative."
 published: "2026-08-06"
 checked: "2026-10-09"
 tags: [garmin, sleep]
@@ -71,7 +71,7 @@ If you would prefer a score where every weight is visible, Pulse, a free app you
 
 ## What is not known
 
-Garmin does not publish the weights, the exact HRV measure, or how the thresholds change by age. The labels have a small overlap at 60. How the score handles naps is not stated in the pages I read. If a score looks wrong, the Garmin Connect app shows the night's stage chart and stress line, which is the nearest you can get to seeing what the algorithm saw.
+Garmin does not publish the weights, the exact HRV measure, or how the thresholds change by age. The labels have a small overlap at 60. How the score handles naps is not stated in the pages read. If a score looks wrong, the Garmin Connect app shows the night's stage chart and stress line, which is the nearest you can get to seeing what the algorithm saw.
 
 ## Sources
 

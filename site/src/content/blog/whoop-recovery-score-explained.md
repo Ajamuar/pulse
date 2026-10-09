@@ -11,7 +11,7 @@ A WHOOP Recovery score is a percentage, 0 to 100, worked out when you wake from 
 
 ## What goes in
 
-WHOOP's own writing names four inputs. Its podcast post on the recovery algorithm update says respiratory rate was added as the fourth, after heart rate variability (HRV), resting heart rate (RHR) and sleep performance. According to search excerpts of WHOOP's current help article, it now also mentions skin temperature, blood oxygen and, for some members, menstrual cycle phase. I could not open that article directly, so treat that longer list as reported rather than confirmed.
+WHOOP's own writing names four inputs. Its podcast post on the recovery algorithm update says respiratory rate was added as the fourth, after heart rate variability (HRV), resting heart rate (RHR) and sleep performance. According to search excerpts of WHOOP's current help article, it now also mentions skin temperature, blood oxygen and, for some members, menstrual cycle phase. That article could not be opened directly, so treat that longer list as reported rather than confirmed.
 
 - **HRV.** Measured overnight, mostly in slow-wave sleep, and compared with your own averages over recent weeks. WHOOP's explainers describe a 30-day baseline. Higher than your baseline pushes the score up.
 - **Resting heart rate.** Lower than your norm helps; higher counts against you.
@@ -30,7 +30,7 @@ WHOOP does not publish the weights. Its own material says HRV carries the most w
 
 ## The colours
 
-WHOOP shows Recovery as green, yellow or red. The ranges usually quoted are 67-100% green, 34-66% yellow and 1-33% red. I could not re-read WHOOP's page to confirm those exact cut-offs, so check the app's own legend if the exact line matters to you. What WHOOP says each colour is for is simpler: green, you are ready to perform; yellow, maintain; red, rest.
+WHOOP shows Recovery as green, yellow or red. The ranges usually quoted are 67-100% green, 34-66% yellow and 1-33% red. WHOOP's page could not be re-read to confirm those exact cut-offs, so check the app's own legend if the exact line matters to you. What WHOOP says each colour is for is simpler: green, you are ready to perform; yellow, maintain; red, rest.
 
 For a sense of scale, WHOOP's member-averages article puts the average Recovery at 58%, with average HRV of 64 ms and average resting heart rate of 56 bpm. These are averages across members, who skew towards people who already care about fitness, so they are not a target. HRV in particular varies a great deal between people ([what is a good HRV by age](/blog/good-hrv-by-age/) covers why).
 
@@ -46,7 +46,7 @@ Recovery is fixed once it is calculated in the morning. A great workout at noon 
 
 It is useful for patterns. Many people find a few things reliably drag HRV down and resting heart rate up: alcohol, a late meal, a hard evening session, a bad night, early illness. For some people a late dinner and two beers can cost 10 ms of HRV or more. A Recovery that stays low for several days after a change in routine is information you can act on.
 
-It is less useful as a verdict on a single morning. A wrist sensor reads HRV during one night, and one night is noisy. WHOOP has not published a validation of the Recovery score against an outside standard, as far as I could find, so the number is best read as a personal trend rather than as a diagnosis. If your resting heart rate has jumped by 10 beats or more for several days, or your respiratory rate has changed a lot and you feel unwell, speak to a doctor rather than to the app.
+It is less useful as a verdict on a single morning. A wrist sensor reads HRV during one night, and one night is noisy. WHOOP has not published a validation of the Recovery score against an outside standard, as far as could be found, so the number is best read as a personal trend rather than as a diagnosis. If your resting heart rate has jumped by 10 beats or more for several days, or your respiratory rate has changed a lot and you feel unwell, speak to a doctor rather than to the app.
 
 Two other limits are worth stating. The score is the same output for the athlete who needs a hard block and for the person with a stressful job and a toddler; it cannot tell why the vitals moved. And a low Recovery is not a command: WHOOP's own framing is guidance about how much load to take on, not a ban on training.
 

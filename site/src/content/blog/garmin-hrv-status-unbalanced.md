@@ -34,13 +34,13 @@ Two points people miss. First, the comparison is between a week and a range, not
 
 ## Why above the range counts too
 
-It feels odd to be told off for higher-than-usual HRV, since higher is usually the direction people want. Garmin's blog addresses it directly: if you ramp up training a lot, your status can land above your baseline range, and it says this "may seem like a good thing" but means your body is working to recover. I'm reporting that from the blog as quoted in search results, and the manual itself only says "above or below".
+It feels odd to be told off for higher-than-usual HRV, since higher is usually the direction people want. Garmin's blog addresses it directly: if you ramp up training a lot, your status can land above your baseline range, and it says this "may seem like a good thing" but means your body is working to recover. This comes from the blog as quoted in search results, and the manual itself only says "above or below".
 
 There is also a statistical reason that a one-sided rule would be a poor fit. A baseline range is built from your own history, so anything well outside it, in either direction, is simply unusual for you. Whether unusual is good or bad depends on context, which is why Garmin pairs the status with advice to look at sleep, Body Battery, Training Readiness and how you feel rather than acting on HRV alone.
 
 ## How the baseline is built
 
-Garmin says the watch needs about three weeks of consistent sleep data before it will show a status at all. After that the baseline is dynamic. Garmin's material notes your normal range may be lower after an extended period of training than in a period of little training or peak condition, and one Garmin forum post quoting Support says the baseline adapts slowly on purpose. I'd treat that last point as a user report.
+Garmin says the watch needs about three weeks of consistent sleep data before it will show a status at all. After that the baseline is dynamic. Garmin's material notes your normal range may be lower after an extended period of training than in a period of little training or peak condition, and one Garmin forum post quoting Support says the baseline adapts slowly on purpose. That last point is best treated as a user report.
 
 A reset or new watch starts the three-week clock again, so a new device that says Unbalanced in its first month is mostly telling you it is still learning you.
 
@@ -51,12 +51,12 @@ Garmin's blog lists training too hard, poor sleep, stress, a change in activity,
 1. **A recent jump in training.** A new block, a race or a week of unusual volume is the classic cause, in either direction.
 2. **Short or broken sleep.** HRV is measured overnight, so bad nights show up in it directly.
 3. **Alcohol or a late meal.** For some people a couple of drinks can lower the following morning's HRV by 10 ms or more. That is a personal response and Garmin gives no figure.
-4. **Illness coming on.** A lower HRV is often one of the early signs. I found no Garmin guidance that ties illness to the status specifically, so this comes from general physiology, not from the manual.
+4. **Illness coming on.** A lower HRV is often one of the early signs. No Garmin guidance was found that ties illness to the status specifically, so this comes from general physiology, not from the manual.
 5. **A wear problem.** If the watch was loose, on the wrong wrist position, or not worn for several nights, the average has fewer data points.
 
 ## How long should you worry?
 
-A day or two outside the range after a hard week is normal. The more useful signal is persistence: an Unbalanced status that lasts a couple of weeks, with training steady and sleep decent, deserves a closer look at your habits. HRV research on athletes tends to rely on averages over several days for the same reason. Plews and colleagues' work on elite endurance athletes ([Sports Medicine, 2013](https://doi.org/10.1007/s40279-013-0071-8)) is an example of this approach, with weekly averages of log-transformed rMSSD, though I couldn't read the full text to quote specifics.
+A day or two outside the range after a hard week is normal. The more useful signal is persistence: an Unbalanced status that lasts a couple of weeks, with training steady and sleep decent, deserves a closer look at your habits. HRV research on athletes tends to rely on averages over several days for the same reason. Plews and colleagues' work on elite endurance athletes ([Sports Medicine, 2013](https://doi.org/10.1007/s40279-013-0071-8)) is an example of this approach, with weekly averages of log-transformed rMSSD, though the full text could not be read to quote specifics.
 
 If your status is Low or Poor and you also feel unwell, have a resting heart rate well above normal, or notice symptoms such as chest discomfort or fainting, see a doctor. A watch can't tell you what is going on.
 

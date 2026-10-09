@@ -8,7 +8,7 @@ tags: [whoop, self-hosting, data-export]
 keywords: ["whoop open source", "whoop alternative github", "open source whoop alternative", "whoop no subscription github", "self hosted fitness tracker dashboard"]
 ---
 
-There is no single open-source WHOOP replacement, but there are real projects in three groups: apps that talk to a WHOOP strap without WHOOP's cloud, dashboards for Fitbit or Google Health data, and general wearable tools such as Gadgetbridge. Licences differ a lot, and "open source" is used loosely. I checked each repository on 9 October 2026.
+There is no single open-source WHOOP replacement, but there are real projects in three groups: apps that talk to a WHOOP strap without WHOOP's cloud, dashboards for Fitbit or Google Health data, and general wearable tools such as Gadgetbridge. Licences differ a lot, and "open source" is used loosely. Each repository was checked on 9 October 2026.
 
 ```sketch
 {"kind": "compare", "alt": "The three groups of projects: WHOOP strap apps, Fitbit and Google Health dashboards, and general wearable tools.", "columns": [{"title": "WHOOP strap apps", "items": ["noop", "OpenStrap edge", "Goose (not verified)"]}, {"title": "Fitbit and Google Health", "items": ["fitbit-grafana", "Hælan"], "tone": "blue"}, {"title": "General wearable tools", "items": ["Gadgetbridge"], "tone": "teal"}]}
@@ -16,7 +16,7 @@ There is no single open-source WHOOP replacement, but there are real projects in
 
 ## What "open source" means here
 
-Strictly, open source means an OSI-approved licence such as MIT or AGPL. Some projects below use a source-available licence (you can read and run the code, but commercial use is restricted). I say which is which. Stars and dates are from GitHub's repository data on the check date and will move.
+Strictly, open source means an OSI-approved licence such as MIT or AGPL. Some projects below use a source-available licence (you can read and run the code, but commercial use is restricted). Each project below is labelled. Stars and dates are from GitHub's repository data on the check date and will move.
 
 ```sketch
 {"kind": "compare", "alt": "OSI-approved licences compared with the source-available PolyForm Noncommercial licence.", "columns": [{"title": "OSI-approved", "items": ["OpenStrap edge: MIT", "Hælan: AGPL-3.0-only", "Gadgetbridge: AGPLv3"], "tone": "green"}, {"title": "Source-available", "items": ["noop: PolyForm Noncommercial", "Pulse: PolyForm Noncommercial", "Read and run the code", "Commercial use restricted"], "tone": "orange"}], "caption": "Licences as stated in this post."}
@@ -24,7 +24,7 @@ Strictly, open source means an OSI-approved licence such as MIT or AGPL. Some pr
 
 ## Group 1: apps for a WHOOP strap
 
-These projects exist because people own a WHOOP band and do not want, or can no longer pay for, the membership. The catch is legal and practical: a netzwelt report says WHOOP's terms of use forbid reverse engineering, and these apps work by decoding the strap's Bluetooth protocol. European law allows some interoperability reverse engineering, but I am not a lawyer, and you should read your own terms before you use any of them. Accuracy is also unproven; the projects say so themselves.
+These projects exist because people own a WHOOP band and do not want, or can no longer pay for, the membership. The catch is legal and practical: a netzwelt report says WHOOP's terms of use forbid reverse engineering, and these apps work by decoding the strap's Bluetooth protocol. European law allows some interoperability reverse engineering, but this is not legal advice, and you should read your own terms before you use any of them. Accuracy is also unproven; the projects say so themselves.
 
 ### noop (ryanbr/noop)
 
@@ -44,7 +44,7 @@ Described as an app that makes a WHOOP 4.0 useful without a membership, with pro
 
 ### Goose
 
-Android Authority reported in June 2026 on an open-source app called Goose that reads WHOOP data without a subscription, calling it more a proof of concept than a finished product. German coverage said it worked on iPhone with the WHOOP 5.0 and lacked WHOOP's algorithms. I could not find or verify its repository, so I have no licence or activity to report.
+Android Authority reported in June 2026 on an open-source app called Goose that reads WHOOP data without a subscription, calling it more a proof of concept than a finished product. German coverage said it worked on iPhone with the WHOOP 5.0 and lacked WHOOP's algorithms. Its repository could not be found or verified, so there is no licence or activity to report.
 
 ## Group 2: dashboards for Fitbit and Google Health data
 
@@ -75,8 +75,8 @@ A self-hosted dashboard and local mirror for a household's Google Health data: o
 A long-running Android app that replaces the vendor's cloud app for many wearables, keeping data on the phone.
 
 - **Licence:** AGPLv3, with some bundled files under other licences.
-- **Devices:** the repository tags include Amazfit, Garmin, Mi Band, Pebble, Huawei, Fossil, Casio and Bangle.js. Fitbit is not named on the page I read; the full device list is on its site.
-- **Activity:** the latest commit I saw was 9 October 2026.
+- **Devices:** the repository tags include Amazfit, Garmin, Mi Band, Pebble, Huawei, Fossil, Casio and Bangle.js. Fitbit is not named on the page that was read; the full device list is on its site.
+- **Activity:** the latest commit seen was 9 October 2026.
 
 It stores and shows data; it is not designed to compute a WHOOP-like Recovery score.
 

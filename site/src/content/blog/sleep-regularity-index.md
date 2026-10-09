@@ -1,9 +1,9 @@
 ---
-title: "Sleep Regularity Index: what it is and how to improve it"
-description: "How the Sleep Regularity Index is calculated, what a good score looks like in the research, and what actually moves it. Worked examples included."
+title: "How to improve your sleep regularity"
+description: "What moves your Sleep Regularity Index, with worked examples of late weekends and naps, and the research on why a regular schedule matters."
 published: "2026-07-25"
 tags: [sleep, recovery]
-keywords: ["sleep regularity index", "sleep regularity index formula", "sleep regularity index calculator", "sleep regularity vs duration", "how to improve sleep consistency"]
+keywords: ["how to improve sleep consistency", "how to improve sleep regularity", "sleep regularity vs duration", "irregular sleep schedule effects"]
 ---
 
 The Sleep Regularity Index (SRI) is the chance, from 0 to 100, that you are in the same state, asleep or awake, at a given clock time as you were at the same time 24 hours earlier. Score 100 and you sleep identical hours every day. Score near 0 and your schedule might as well be random. It rewards timing, not duration.

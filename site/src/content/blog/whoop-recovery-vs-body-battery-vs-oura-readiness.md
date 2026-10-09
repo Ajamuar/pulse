@@ -1,20 +1,22 @@
 ---
-title: "WHOOP Recovery vs Body Battery vs Oura Readiness"
-description: "What WHOOP Recovery, Garmin Body Battery and Oura Readiness each take as inputs, how their scales read, and why they answer different questions."
+title: "Why WHOOP, Garmin and Oura scores disagree"
+description: "WHOOP Recovery, Garmin Body Battery and Oura Readiness can tell you different things on the same morning. Why, and how to read them side by side."
 published: "2026-09-19"
 updated: "2026-10-09"
 checked: "2026-10-09"
 tags: [whoop, garmin, oura]
-keywords: ["whoop recovery vs body battery", "whoop recovery vs oura readiness", "body battery vs readiness", "garmin body battery vs whoop recovery", "recovery score comparison"]
+keywords: ["whoop recovery vs body battery", "whoop recovery vs oura readiness", "garmin body battery vs whoop recovery", "why do my recovery scores disagree"]
 ---
 
 They are three different questions. WHOOP Recovery and Oura Readiness each give one score a day, worked out when you wake. Garmin's Body Battery is a gauge that moves all day, filling in rest and draining with stress and activity. The inputs overlap (HRV, resting heart rate, sleep), but none of the three publishes a formula, so no one can say which is more accurate.
 
-That last point matters more than it sounds. The table below is a list of what each company says goes in, not a ranking. Where a company hasn't published something, I say so.
+For every brand's published inputs in one table, Google Health, Samsung and Apple included, see [how each brand builds its recovery score](/compare/recovery-scores/).
+
+That last point matters more than it sounds. The table below is a list of what each company says goes in, not a ranking. Where a company has not published something, this says so.
 
 ## The inputs, side by side
 
-Everything here is from each vendor's own pages or manuals, read on 9 October 2026. WHOOP's site refused automated fetching, so for WHOOP I'm quoting search excerpts of its pages and its support content, and I've marked where its wording varies.
+Everything here is from each vendor's own pages or manuals, read on 9 October 2026. WHOOP's site refused automated fetching, so for WHOOP the quotes are search excerpts of its pages and its support content, and the places where its wording varies are marked.
 
 | | WHOOP Recovery | Garmin Body Battery | Oura Readiness |
 |---|---|---|---|
@@ -34,7 +36,7 @@ Everything here is from each vendor's own pages or manuals, read on 9 October 20
 
 WHOOP's pages describe Recovery as based on heart rate variability, resting heart rate and sleep, with respiratory rate added in its Locker explainer. The wording varies between pages: one WHOOP community answer lists only HRV, resting heart rate and sleep performance. Skin temperature and blood oxygen are described as part of Health Monitor, and an older version of the same page counted them in Recovery, so treat the current page as the one to trust.
 
-A WHOOP podcast employee said the algorithm's biggest input is HRV, and that resting heart rate and sleep add little beyond it most of the time. That is one person on a podcast, not a published weighting. The measurements are taken during sleep, and the score is relative to you: it is a comparison against your own baseline, not against other people. WHOOP has said the first few days are a calibration period, but I couldn't confirm the baseline length from WHOOP's own page.
+A WHOOP podcast employee said the algorithm's biggest input is HRV, and that resting heart rate and sleep add little beyond it most of the time. That is one person on a podcast, not a published weighting. The measurements are taken during sleep, and the score is relative to you: it is a comparison against your own baseline, not against other people. WHOOP has said the first few days are a calibration period, but the baseline length could not be confirmed from WHOOP's own page.
 
 ### Garmin Body Battery
 

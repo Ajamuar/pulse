@@ -35,7 +35,7 @@ The gauge is meant to move. Garmin lists four inputs: heart rate variability, st
 - **On waking.** This is the reading that tells you most about the night. A high value says the night charged you. A medium value is common after a short or broken night, and a low one after several of them.
 - **Mid-morning to afternoon.** It should be falling, because you're spending it. A steady slide is the gauge working as designed.
 - **Evening.** Low is expected. If you finish the day at 20 after a hard session and a stressful week, that is the model saying you spent it all.
-- **Overnight.** You want to see it climb. A flat line through the night is the interesting pattern, and I'd check that you wore the watch.
+- **Overnight.** You want to see it climb. A flat line through the night is the interesting pattern, and check that you wore the watch.
 
 ```sketch
 {"kind": "line", "alt": "A day of Body Battery: high on waking, sliding through the day, low in the evening, then climbing overnight.", "yLabel": "Body Battery", "series": [{"label": "Body Battery", "points": [85, 76, 66, 58, 46, 36, 26, 22, 38, 58, 76, 86], "tone": "blue"}], "xLabels": ["Wake", "Midday", "Evening", "Overnight", "Wake"], "notes": [{"at": 0, "text": "High on waking is the goal"}, {"at": 7, "text": "Low in the evening is normal"}], "min": 0, "max": 100, "caption": "Illustration, not real data."}
@@ -57,7 +57,7 @@ If it never gets above medium, go through this list before assuming something is
 
 **Illness or alcohol.** Garmin's HRV blog lists "a cocktail or two" among the things that can pull HRV below baseline, and Body Battery leans on HRV. Garmin doesn't give figures for how much.
 
-**It is a model.** Third-party write-ups say Body Battery comes from Firstbeat Analytics, the same engine as Garmin's stress score. I found no peer-reviewed study that tests it against an outside measure of energy, and Garmin gives no accuracy figure. With no published accuracy, I'd read it as a trend over days more than as a single precise reading.
+**It is a model.** Third-party write-ups say Body Battery comes from Firstbeat Analytics, the same engine as Garmin's stress score. No peer-reviewed study was found that tests it against an outside measure of energy, and Garmin gives no accuracy figure. With no published accuracy, read it as a trend over days more than as a single precise reading.
 
 ## A worked morning
 
@@ -78,7 +78,7 @@ If it stays very low for weeks while you feel fine, that is more likely a wear o
 
 ## If you use a Fitbit instead
 
-Body Battery has no direct counterpart in Google Health, as I explain in [Does Fitbit Air have Body Battery?](/blog/fitbit-air-body-battery/). For how Garmin's number compares with WHOOP's and Oura's scores, see [WHOOP recovery vs Garmin Body Battery vs Oura Readiness](/blog/whoop-recovery-vs-body-battery-vs-oura-readiness/).
+Body Battery has no direct counterpart in Google Health, as explained in [Does Fitbit Air have Body Battery?](/blog/fitbit-air-body-battery/). For how Garmin's number compares with WHOOP's and Oura's scores, see [WHOOP recovery vs Garmin Body Battery vs Oura Readiness](/blog/whoop-recovery-vs-body-battery-vs-oura-readiness/).
 
 Pulse, a free app you host yourself, computes its own 0 to 100% Energy Bank from Google Health data, with bands of 67 to 100% plenty, 34 to 66% pace yourself and 0 to 33% running low ([how Energy Bank works](/metrics/energy-bank/)). Those bands are Pulse's, not Garmin's, so a Pulse 70% and a Garmin 70 are different claims. Pulse has been tested on the Fitbit Air only.
 

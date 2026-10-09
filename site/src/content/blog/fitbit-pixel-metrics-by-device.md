@@ -1,6 +1,6 @@
 ---
 title: "Which Fitbit and Pixel devices track which metrics"
-description: "A device-by-metric table for Fitbit and Pixel Watch models: Readiness, Cardio Load, Active Zone Minutes, HRV, SpO2 and skin temperature, from Google's help pages."
+description: "Which Fitbit and Pixel Watch models track Readiness, Cardio Load, Active Zone Minutes, HRV, SpO2 and skin temperature, from Google's own help pages."
 published: "2026-10-07"
 updated: "2026-10-09"
 checked: "2026-10-09"
@@ -8,9 +8,9 @@ tags: [fitbit, pixel-watch, google-health]
 keywords: [fitbit charge 6 readiness, pixel watch skin temperature, which fitbit tracks hrv, fitbit spo2 which devices, pixel watch active zone minutes]
 ---
 
-Most Fitbits from the Charge 4 and Inspire 2 onward, and every Pixel Watch, track heart rate variability, breathing rate, resting heart rate and Active Zone Minutes. Skin temperature and SpO2 are narrower. Daily Readiness and Cardio Load have their own, shorter device lists. The table below has every cell I could read from Google's pages.
+Most Fitbits from the Charge 4 and Inspire 2 onward, and every Pixel Watch, track heart rate variability, breathing rate, resting heart rate and Active Zone Minutes. Skin temperature and SpO2 are narrower. Daily Readiness and Cardio Load have their own, shorter device lists. The table below has every cell that could be read from Google's pages.
 
-How I got it: Google's help pages show their per-device grids as checkmark images, which most tools see as nothing. I read the page source, where a supported cell holds a checkmark and an unsupported cell is empty, and checked what that image is. Everything marked below came from Google's pages as they stood on 9 October 2026. Where a page gives no per-device list, the cell says "not confirmed" instead of guessing.
+How this was built: Google's help pages show their per-device grids as checkmark images, which most tools see as nothing. The page source was read instead, where a supported cell holds a checkmark and an unsupported cell is empty, and the image was checked. Everything marked below came from Google's pages as they stood on 9 October 2026. Where a page gives no per-device list, the cell says "not confirmed" instead of guessing.
 
 ## The table
 
@@ -33,9 +33,9 @@ How I got it: Google's help pages show their per-device grids as checkmark image
 
 Notes on the cells:
 
-- Sense and Versa are given in the vitals grid as "Sense series" and "Versa series", and the Active Zone Minutes page also says "Sense series" and "Versa series", so I have grouped those models. Readiness and Cardio Load name Sense, Sense 2, Versa 2, Versa 3 and Versa 4 individually. The kids' devices and other older models are not in this table.
+- Sense and Versa are given in the vitals grid as "Sense series" and "Versa series", and the Active Zone Minutes page also says "Sense series" and "Versa series", so those models are grouped. Readiness and Cardio Load name Sense, Sense 2, Versa 2, Versa 3 and Versa 4 individually. The kids' devices and other older models are not in this table.
 - Pixel Watch 2, 3, 4 and 5 are named on every list. Readiness and Cardio Load also name the first Pixel Watch.
-- Daily Readiness: the page has a second, unlabelled list with asterisks beside Sense 2, Versa 3 and Versa 2 and does not say what the asterisks mean, and that list leaves out the Fitbit Air and Inspire 2. I have used the page's main list.
+- Daily Readiness: the page has a second, unlabelled list with asterisks beside Sense 2, Versa 3 and Versa 2 and does not say what the asterisks mean, and that list leaves out the Fitbit Air and Inspire 2. The page's main list is used here.
 - Cardio Load: the page says it is calculated on the device itself on the Pixel Watch 3, 4 and 5. Apple Watch, Garmin and devices that write to Health Connect also count when synced to the Google Health app, and the app must be version 4.26 or newer.
 - SpO2: on several older models it also needs an SpO2 clock face or app. The page's own lists for that differ slightly between its tip and its troubleshooting section.
 
@@ -45,8 +45,8 @@ The vitals grid also lists the Alta HR, Blaze, Charge 2, Charge 3 and Inspire HR
 
 ## What the table does not cover
 
-- **Sleep Score.** Google's sleep page says wrist-based Fitbit devices and the Pixel Watch series detect sleep automatically, and names no model list. I cannot give a per-device answer, so it is not a column.
-- **ECG and irregular rhythm alerts.** Google's pages that I could read give no current device list. A 2023 report from 9to5Google said the Pixel Watch has an on-demand ECG app but not background irregular-rhythm notifications, which are a Fitbit tracker feature. That is a report, not Google's current list, so it is not in the table.
+- **Sleep Score.** Google's sleep page says wrist-based Fitbit devices and the Pixel Watch series detect sleep automatically, and names no model list. a per-device answer cannot be given, so it is not a column.
+- **ECG and irregular rhythm alerts.** The Google pages that could be read give no current device list. A 2023 report from 9to5Google said the Pixel Watch has an on-demand ECG app but not background irregular-rhythm notifications, which are a Fitbit tracker feature. That is a report, not Google's current list, so it is not in the table.
 - **Region and software.** Some health features depend on country approval or on app and firmware versions. The grids do not say, so a tick is not a promise that the feature is switched on for you.
 - **Whether the data is any good.** A tick means the device reports the metric. It does not mean the sensor is equally accurate across models.
 
@@ -70,7 +70,7 @@ The vitals grid also lists the Alta HR, Blaze, Charge 2, Charge 3 and Inspire HR
 
 ## Where Pulse fits
 
-Pulse, a free app you host yourself, reads what the Google Health API sends: HRV, resting heart rate, sleep, skin temperature, Active Zone Minutes and the rest. It does not receive Readiness or Cardio Load, because the API has no such data types. It calculates its own scores from the raw data. It was built and tested with the Fitbit Air only, so a device that appears in the table above sends the same data types but has not been tried with Pulse. Where the device ticks for HRV and resting heart rate, [Recovery](/metrics/recovery/) has its main inputs, but I cannot tell you how it behaves on a Pixel Watch or a Charge.
+Pulse, a free app you host yourself, reads what the Google Health API sends: HRV, resting heart rate, sleep, skin temperature, Active Zone Minutes and the rest. It does not receive Readiness or Cardio Load, because the API has no such data types. It calculates its own scores from the raw data. It was built and tested with the Fitbit Air only, so a device that appears in the table above sends the same data types but has not been tried with Pulse. Where the device ticks for HRV and resting heart rate, [Recovery](/metrics/recovery/) has its main inputs, but how it behaves on a Pixel Watch or a Charge is not known.
 
 ## Sources
 

@@ -16,6 +16,8 @@ export type Comparison = {
   sections: Section[]
   faq?: Faq[]
   sources: Source[]
+  /** The date the page first went live. */
+  published: string
   /** The date the third-party facts were last checked. */
   checked: string
 }
@@ -59,10 +61,11 @@ const NOW = "2026-10-09"
 export const COMPARISONS: Comparison[] = [
   {
     slug: "fitbit-air-recovery-and-strain",
+    published: "2026-10-03",
     nav: "Fitbit Air recovery and strain",
     title: "Does the Fitbit Air have strain and recovery scores?",
     h1: "Does the Fitbit Air have strain and recovery scores?",
-    keywords: ["fitbit air recovery score", "does fitbit air track strain", "fitbit air strain score", "fitbit air readiness vs recovery", "fitbit air vs whoop", "google health readiness vs whoop recovery", "cardio load vs whoop strain"],
+    keywords: ["fitbit air recovery score", "does fitbit air track strain", "fitbit air strain score", "fitbit air readiness vs recovery", "fitbit air vs whoop"],
     description: "The Google Health app gives Fitbit Air owners Readiness and Cardio Load, not a 0-100% Recovery or a 0-21 Strain. How to get both, free and self-hosted.",
     answer:
       "Not in that form. The Google Health app gives Fitbit Air owners a Daily Readiness score and Cardio Load, but no 0-100% morning Recovery and no 0-21 daily Strain. Pulse computes both, with Sleep Performance, Pulse Age, Stress and Energy Bank, from the band's own data on a server you run.",
@@ -127,10 +130,11 @@ export const COMPARISONS: Comparison[] = [
   },
   {
     slug: "pulse-vs-subscription-wearables",
+    published: "2026-10-03",
     nav: "Pulse vs subscription wearables",
     title: "Pulse vs subscription recovery wearables: cost and data",
     h1: "Pulse and subscription recovery wearables, compared",
-    keywords: ["recovery wearable without membership", "subscription recovery tracker alternative", "fitbit air vs recovery strap", "open source recovery app"],
+    keywords: ["recovery wearable without membership", "subscription recovery tracker alternative", "fitbit air vs recovery strap", "recovery wearable cost over three years"],
     description: "Pulse on a Fitbit Air next to a recovery wearable sold with a membership: which scores each has, how you pay, where the data lives, and who each suits.",
     answer:
       "A subscription recovery wearable is a band, an app and a membership in one product. Pulse is free, open-source software that computes similar scores (Recovery, Strain, Sleep Performance, a biological-age estimate) from a Fitbit Air you already own, on a server you run. A membership works out of the box and comes with support; Pulse is for people who want no subscription and their data on their own machine.",
@@ -183,6 +187,7 @@ export const COMPARISONS: Comparison[] = [
   },
   {
     slug: "recovery-tracking-without-subscription",
+    published: "2026-10-03",
     nav: "Without a subscription",
     title: "Recovery and strain tracking without a subscription",
     h1: "Recovery and strain tracking without a subscription",
@@ -229,6 +234,7 @@ export const COMPARISONS: Comparison[] = [
   },
   {
     slug: "google-health-premium",
+    published: "2026-10-03",
     nav: "Google Health Premium",
     title: "Google Health Premium vs free vs WHOOP vs Pulse",
     h1: "Google Health Premium, WHOOP and Pulse: what each adds",
@@ -279,11 +285,12 @@ export const COMPARISONS: Comparison[] = [
   },
   {
     slug: "fitbit-air-vs-garmin-cirqa",
+    published: "2026-10-09",
     nav: "Fitbit Air vs Garmin Cirqa",
     title: "Fitbit Air vs Garmin Cirqa: the scores compared",
     h1: "Fitbit Air vs Garmin Cirqa: the scores compared",
-    keywords: ["fitbit air vs garmin cirqa", "garmin cirqa vs fitbit air", "does fitbit air have body battery", "fitbit body battery equivalent", "garmin training readiness vs fitbit readiness"],
-    description: "Two screenless bands, two sets of scores. What Garmin's Body Battery and Training Readiness measure, what Fitbit Air's Readiness and Cardio Load measure, and where they differ.",
+    keywords: ["fitbit air vs garmin cirqa", "garmin cirqa vs fitbit air", "garmin training readiness vs fitbit readiness"],
+    description: "Two screenless bands: what Garmin's Body Battery and Training Readiness and Fitbit Air's Readiness and Cardio Load measure, and where they differ.",
     answer:
       "The Cirqa gives you Garmin's full score set, including Body Battery and Training Readiness, for about twice the Air's price. The Air gives you Google's Daily Readiness, Cardio Load and Sleep Score. They answer similar questions with different inputs, so a 70 on one is not a 70 on the other.",
     sections: [
@@ -351,11 +358,12 @@ export const COMPARISONS: Comparison[] = [
   },
   {
     slug: "fitbit-air-vs-amazfit-helio-strap",
+    published: "2026-10-09",
     nav: "Fitbit Air vs Amazfit Helio Strap",
     title: "Fitbit Air vs Amazfit Helio Strap: the scores compared",
     h1: "Fitbit Air vs Amazfit Helio Strap: the scores compared",
     keywords: ["fitbit air vs amazfit helio strap", "amazfit helio strap vs fitbit air", "amazfit biocharge vs readiness", "amazfit pai vs cardio load"],
-    description: "Fitbit Air and Amazfit Helio Strap are both screenless, subscription-optional bands. What Readiness, Cardio Load, BioCharge and PAI each measure, and where they differ.",
+    description: "Two screenless, subscription-optional bands: what Fitbit Air's Readiness and Cardio Load and Amazfit's BioCharge and PAI measure, and where they differ.",
     answer:
       "Both are screenless bands that work without a subscription. The Helio Strap reports Amazfit's BioCharge energy score and a weekly PAI total; the Air reports Google's Daily Readiness and Cardio Load. The two sets of scores are built from different inputs and are not interchangeable.",
     sections: [
@@ -424,10 +432,11 @@ export const COMPARISONS: Comparison[] = [
   },
   {
     slug: "fitbit-air-vs-oura-ring",
+    published: "2026-10-09",
     nav: "Fitbit Air vs Oura Ring",
     title: "Fitbit Air vs Oura Ring: sleep and readiness scores",
     h1: "Fitbit Air vs Oura Ring: sleep and readiness",
-    keywords: ["fitbit air vs oura ring", "oura readiness vs fitbit readiness", "oura ring vs fitbit air sleep", "oura readiness score explained"],
+    keywords: ["fitbit air vs oura ring", "oura readiness vs fitbit readiness", "oura ring vs fitbit air sleep"],
     description: "Oura's Readiness and Sleep scores against Fitbit Air's Daily Readiness and Sleep Score: what goes into each, how they are explained, and the cost of each.",
     answer:
       "Oura and Google both score readiness from overnight heart rate, HRV and sleep, and Oura adds skin temperature and a few long-term balance measures. The scores are not calibrated to each other. The cost differs more than the scoring: the Air is a one-off $99 band, Oura is a ring plus a membership.",
@@ -492,11 +501,12 @@ export const COMPARISONS: Comparison[] = [
   },
   {
     slug: "google-health-vs-garmin-connect",
+    published: "2026-10-09",
     nav: "Google Health vs Garmin Connect",
     title: "Google Health app vs Garmin Connect: what each shows",
     h1: "Google Health app vs Garmin Connect, as dashboards",
     keywords: ["google health app vs garmin connect", "garmin connect vs fitbit app", "garmin connect alternative", "google health app metrics list"],
-    description: "The Google Health app and Garmin Connect as dashboards: which scores each shows, what is free, what is paid, and where a separate app like Pulse can add to them.",
+    description: "The Google Health app and Garmin Connect as dashboards: which scores each shows, what is free, what is paid, and where a separate app like Pulse adds to them.",
     answer:
       "Both apps show a morning readiness number, a sleep score, HRV and a training-load figure for free. Garmin Connect adds Body Battery and Training Status; Google Health adds Cardio Load, Target Load and Resilience. Each ties a paid tier to coaching. Neither exports its own scores to other apps.",
     sections: [
@@ -556,11 +566,12 @@ export const COMPARISONS: Comparison[] = [
   },
   {
     slug: "pixel-watch-vs-whoop",
+    published: "2026-10-09",
     nav: "Pixel Watch vs WHOOP",
     title: "Pixel Watch vs WHOOP: scores, cost and data compared",
     h1: "Pixel Watch vs WHOOP: scores, cost and data",
     keywords: ["pixel watch vs whoop", "pixel watch recovery score", "pixel watch readiness vs whoop recovery", "pixel watch strain"],
-    description: "A smartwatch with Google Health scores against a recovery band on a membership: what Readiness and Cardio Load do, what Recovery and Strain do, and what each costs.",
+    description: "A smartwatch with Google Health scores against a recovery band on a membership: what Readiness and Cardio Load do, what Recovery and Strain do, and the cost.",
     answer:
       "A Pixel Watch gives you Google's Readiness, Cardio Load and Sleep Score in the Google Health app without a membership. WHOOP gives you Recovery, Strain and Sleep Performance, and requires one. Pulse has been tested on a Fitbit Air only; Pixel Watch data reaches it through the same API but is untested.",
     sections: [
@@ -619,11 +630,12 @@ export const COMPARISONS: Comparison[] = [
   },
   {
     slug: "recovery-scores",
+    published: "2026-10-09",
     nav: "How recovery scores are built",
     title: "How each brand builds a recovery or readiness score",
     h1: "How each brand builds its recovery or readiness score",
-    keywords: ["recovery score comparison", "readiness score vs recovery score", "how is whoop recovery calculated", "oura readiness vs whoop recovery", "body battery vs recovery"],
-    description: "Google Health, WHOOP, Garmin, Amazfit, Oura, Samsung, Apple and Pulse compared: the recovery or readiness score each builds, and the inputs each vendor says it uses.",
+    keywords: ["recovery score comparison", "readiness score vs recovery score", "oura readiness vs whoop recovery", "body battery vs recovery"],
+    description: "Google Health, WHOOP, Garmin, Amazfit, Oura, Samsung, Apple and Pulse: the recovery or readiness score each builds, and the inputs each vendor says it uses.",
     answer:
       "Almost every brand scores your recovery from the same few overnight signals: HRV, resting heart rate and sleep. They differ in what else they add, such as respiratory rate, skin temperature or recent training load. No vendor publishes its weights. Apple added a 0-10 Readiness score with Apple Watch Series 12.",
     sections: [

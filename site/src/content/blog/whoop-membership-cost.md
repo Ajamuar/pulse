@@ -1,6 +1,6 @@
 ---
 title: "WHOOP membership cost: One, Peak and Life in 2026"
-description: "WHOOP One, Peak and Life cost $199, $239 and $359 a year in the US, and from ₹21,990 in India. Prices as of October 2026, what is included, and what is unconfirmed."
+description: "WHOOP One, Peak and Life cost $199, $239 and $359 a year in the US, and from ₹21,990 in India, as of October 2026. What each includes and what is unconfirmed."
 published: "2026-09-29"
 updated: "2026-10-09"
 checked: "2026-10-09"
@@ -8,7 +8,7 @@ tags: [whoop]
 keywords: ["whoop membership cost", "whoop price", "whoop price in india", "whoop one vs peak vs life", "cancel whoop membership"]
 ---
 
-As of October 2026, WHOOP's US memberships are $199 a year for One, $239 for Peak and $359 for Life, with the band included. In India the official site lists One at ₹21,990 and Peak at ₹28,990, with taxes and a 12-month term, and Life is not sold there. I could not read whoop.com directly, so check it before you pay.
+As of October 2026, WHOOP's US memberships are $199 a year for One, $239 for Peak and $359 for Life, with the band included. In India the official site lists One at ₹21,990 and Peak at ₹28,990, with taxes and a 12-month term, and Life is not sold there. whoop.com could not be read directly, so check it before you pay.
 
 ## The three tiers in the US
 
@@ -18,9 +18,9 @@ As of October 2026, WHOOP's US memberships are $199 a year for One, $239 for Pea
 | Peak | $239 | WHOOP 5.0 | Healthspan, Pace of Aging, Health Monitor, Stress Monitor, PowerPack charger |
 | Life | $359 | WHOOP MG | Everything in Peak, plus an ECG heart screener and blood pressure insights |
 
-These figures agree across several 2026 price roundups (trackervs, Subger and others). They are third-party sources, because whoop.com returned errors when I tried to read it. The feature split comes from the same sources.
+These figures agree across several 2026 price roundups (trackervs, Subger and others). They are third-party sources, because whoop.com returned errors when read. The feature split comes from the same sources.
 
-Two caveats on Life. The MG's ECG and blood pressure features are described by WHOOP as health insights, and the roundups I read say the blood pressure feature is not FDA-cleared. If those features matter to you, read WHOOP's own wording for your country.
+Two caveats on Life. The MG's ECG and blood pressure features are described by WHOOP as health insights, and the roundups read say the blood pressure feature is not FDA-cleared. If those features matter to you, read WHOOP's own wording for your country.
 
 ## The band is not separate
 
@@ -32,7 +32,7 @@ You do not buy the band and then subscribe. The hardware comes with the membersh
 
 ## Monthly billing
 
-Older pages quote monthly prices of $25 (One), $30 (Peak) and $40 (Life). Sources I found disagree on whether new members can choose this now: one says billing for new members is annual only, with monthly available to existing members on a 12-month commitment. I could not confirm which is current. If you see a monthly price, work out the annual total and compare.
+Older pages quote monthly prices of $25 (One), $30 (Peak) and $40 (Life). Sources found disagree on whether new members can choose this now: one says billing for new members is annual only, with monthly available to existing members on a 12-month commitment. Which is current could not be confirmed. If you see a monthly price, work out the annual total and compare.
 
 ## What it costs in India
 
@@ -40,7 +40,7 @@ WHOOP's Indian site lists the One plan at ₹21,990 and Peak at ₹28,990, both 
 
 ## What happens after the first year
 
-I could not confirm a published renewal price from WHOOP's own pages. Reviews I read treat the annual fee as the ongoing cost, but whether an existing member pays the same amount as a new one is not something I can state. Check the Membership tab in the app before your renewal date.
+A published renewal price could not be confirmed from WHOOP's own pages. Reviews read treat the annual fee as the ongoing cost, but whether an existing member pays the same amount as a new one cannot be stated. Check the Membership tab in the app before your renewal date.
 
 ## Cancelling and refunds
 
@@ -69,7 +69,7 @@ The Fitbit Air launched at $99.99 and Google says the tracker works without Prem
 1. Confirm the price for your country on WHOOP's own site, including whether tax is shown. The US and Indian figures above are not interchangeable and do not convert directly.
 2. Look at which tier holds the feature you actually want. Healthspan, Pace of Aging, Health Monitor and Stress Monitor are Peak and above, so One is the plan with the fewest extras.
 3. Find the cancellation path and the return window before the trial starts, and put the 30-day date in your calendar.
-4. Ask what the renewal price will be. WHOOP's own pages were not readable for me, so I cannot say.
+4. Ask what the renewal price will be. WHOOP's own pages could not be read, so this cannot be said.
 
 ```sketch
 {"kind": "steps", "alt": "Four checks to make before paying for a WHOOP membership.", "steps": [{"title": "Confirm the price", "text": "Check your country on WHOOP's own site."}, {"title": "Match the tier", "text": "Healthspan and Stress Monitor are Peak and above."}, {"title": "Find the exit", "text": "Note the cancellation path and the 30-day date."}, {"title": "Ask about renewal", "text": "The renewal price is not confirmed."}]}

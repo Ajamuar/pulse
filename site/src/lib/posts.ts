@@ -8,3 +8,7 @@ export async function getPosts() {
 }
 
 export const postPath = (id: string) => `/blog/${id}/`
+
+type Dated = { data: { published: string; updated?: string; checked?: string } }
+// The latest of published, updated and checked: re-checking the facts is a modification readers can see on the page.
+export const postModified = (p: Dated) => [p.data.published, p.data.updated, p.data.checked].filter(Boolean).sort().at(-1)!

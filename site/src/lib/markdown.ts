@@ -51,6 +51,24 @@ export function overviewMarkdown(site: URL) {
   ].join("\n\n") + "\n"
 }
 
+type Post = { id: string; body?: string; data: { title: string; description: string; published: string; updated?: string; checked?: string } }
+
+// A blog post as Markdown: its own body, with each sketch block (a JSON spec drawn as SVG on the page) replaced by
+// the figure's description, so agents get the meaning without the drawing instructions.
+export function postMarkdown(p: Post, site: URL) {
+  const body = (p.body ?? "").replace(/^```sketch\n([\s\S]*?)\n```$/gm, (_, json) => {
+    const spec = JSON.parse(json)
+    return `*Figure: ${spec.alt}${spec.caption ? ` ${spec.caption}` : ""}*`
+  })
+  const dates = [`Published ${p.data.published}`, p.data.updated && `updated ${p.data.updated}`, p.data.checked && `facts about other products checked ${p.data.checked}`]
+  return [
+    `# ${p.data.title}`, `> ${p.data.description}`,
+    `${dates.filter(Boolean).join(", ")}.`,
+    `Canonical page: ${new URL(`/blog/${p.id}/`, site).href}`,
+    body.trim(),
+  ].join("\n\n") + "\n"
+}
+
 export function glossaryMarkdown(site: URL) {
   return ["# Pulse glossary", `Canonical page: ${new URL("/glossary/", site).href}`, ...[...GLOSSARY].sort((a, b) => a.term.localeCompare(b.term)).map(t => `## ${t.term}\n\n${t.definition}`)].join("\n\n") + "\n"
 }

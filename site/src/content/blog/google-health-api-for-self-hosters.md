@@ -1,5 +1,5 @@
 ---
-title: "Google Health API for self-hosters: scopes and the 100-user cap"
+title: "Google Health API for self-hosters: scopes and user cap"
 description: "What a self-hosted app needs from the Google Health API: the OAuth scopes Pulse asks for, the 100-user cap on unverified apps, and the Cloud project steps."
 published: "2026-10-03"
 updated: "2026-10-09"
@@ -18,11 +18,11 @@ Google calls the Google Health API "the next generation of the Fitbit Web API". 
 
 So a tool that used to ask for a Fitbit developer key now needs a Google Cloud OAuth client instead. The data is the same family (heart rate, sleep, HRV, activity), but the setup is new.
 
-One thing to check before you start. When I read Google's overview page, it said new projects were not currently being onboarded, and that Google was "actively working to open access to more developers". I could not find the conditions behind that. If your project can't enable the API, that is the first place to look, and Google's developer pages are where any change would be announced.
+One thing to check before you start. Google's overview page said new projects were not currently being onboarded, and that Google was "actively working to open access to more developers". The conditions behind that could not be found. If your project can't enable the API, that is the first place to look, and Google's developer pages are where any change would be announced.
 
 ## What it costs
 
-I found no price for the API on the pages I read, and no per-call charge. Google's setup guide links to a separate rate-limits page, which I did not read in full, so I can't give you quota numbers. Treat "free, with rate limits" as what I saw, not as a promise.
+The pages read show no price for the API and no per-call charge. Google's setup guide links to a separate rate-limits page, which was not read in full, so no quota numbers are given here. Treat "free, with rate limits" as what the pages showed, not as a promise.
 
 ## The setup, in outline
 
@@ -52,7 +52,7 @@ Google's [scopes page](https://developers.google.com/health/scopes) lists 17. Ea
 | `location` | read | GPS location recorded during an exercise |
 | `mindfulness`, `logged_symptoms`, `reproductive_health` | write | Mindfulness, logged symptoms, reproductive health |
 
-Google's page describes the permissions but does not say whether any scope is classed as sensitive or restricted under its OAuth policy, so I won't guess. What it does say is to request only what you need and to explain each scope in the app.
+Google's page describes the permissions but does not say whether any scope is classed as sensitive or restricted under its OAuth policy, so this post does not guess. What it does say is to request only what you need and to explain each scope in the app.
 
 ### What Pulse asks for
 
@@ -77,7 +77,7 @@ For a self-hoster this works out simply:
 {"kind": "compare", "alt": "What a personal install needs compared with a public service under the 100-user cap", "columns": [{"title": "Just you or family", "tone": "green", "items": ["Far below the 100-user cap", "Stay in Testing or go to production", "No verification needed", "Click through the unverified warning"]}, {"title": "Public service", "tone": "orange", "items": ["Verification is required", "Privacy policy URL", "Verified domain", "Consent screen submission", "Third-party security review"]}], "caption": "From Google's setup guide and Cloud help page."}
 ```
 
-The cap belongs to the OAuth client, as I read Google's pages. Each self-hoster who creates their own client has their own 100, so nobody has to run a central service for everyone.
+The cap belongs to the OAuth client, as Google's pages read. Each self-hoster who creates their own client has their own 100, so nobody has to run a central service for everyone.
 
 ### The seven-day trap
 
@@ -96,7 +96,7 @@ In Testing status, Google's setup page says refresh tokens expire after 7 days. 
 
 ## Where Pulse fits
 
-If you'd rather not build the plumbing, Pulse is a free app you host yourself that does the OAuth flow, stores the data in your own Postgres and computes Recovery, Strain and Sleep Performance from it. It is built and tested with a Fitbit Air only. Other devices that sync to Google Health send the same data types, but I haven't tested them. If you want the raw files instead, see [how to export your Fitbit data](/blog/export-fitbit-data/).
+If you'd rather not build the plumbing, Pulse is a free app you host yourself that does the OAuth flow, stores the data in your own Postgres and computes Recovery, Strain and Sleep Performance from it. It is built and tested with a Fitbit Air only. Other devices that sync to Google Health send the same data types, but they have not been tested. If you want the raw files instead, see [how to export your Fitbit data](/blog/export-fitbit-data/).
 
 ## Sources
 

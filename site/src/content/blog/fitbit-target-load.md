@@ -53,7 +53,7 @@ If you see no target, check three things.
 
 1. Have you worn the watch for 7 consecutive days and nights? That's the page's own condition.
 2. Is your app up to date? The feature needs a recent version of the Google Health app.
-3. Does your device support it? Cardio Load and Target Load are listed for Inspire 2 and 3, Luxe, Sense and Sense 2, Versa 2 to 4, Charge 5 and 6, Fitbit Air and Pixel Watch 1 to 5, per Google. I could not read the per-device grid for every model, so check the app.
+3. Does your device support it? Cardio Load and Target Load are listed for Inspire 2 and 3, Luxe, Sense and Sense 2, Versa 2 to 4, Charge 5 and 6, Fitbit Air and Pixel Watch 1 to 5, per Google. The per-device grid could not be read for every model, so check the app.
 
 Google's help page is also inconsistent about whether Cardio Load is a daily or weekly view, and some coverage says it moved to weekly. If your app looks different from a screenshot online, that may be why.
 
@@ -82,7 +82,7 @@ The base is your average Strain over the last 28 days, today excluded. If your t
 
 That is the same idea Google uses, a recent ratio against a longer average, applied to a daily range. It does not know your training plan, races or injuries. The details are in [how Strain Target works](/metrics/strain-target/) and [training balance](/metrics/training-balance/).
 
-Pulse is a free app you host yourself, built and tested on the Fitbit Air only. Other devices that sync to Google Health send the same data types, but I haven't tested them.
+Pulse is a free app you host yourself, built and tested on the Fitbit Air only. Other devices that sync to Google Health send the same data types, but they have not been tested.
 
 ## Sources
 

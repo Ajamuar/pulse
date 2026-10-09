@@ -49,11 +49,11 @@ Three points in that table are easy to miss.
 
 **Short wake-ups under five minutes do not count** as full awakenings or interruptions. A bathroom trip that takes three minutes will not show up there, though it may still add to restlessness.
 
-**Duration is only one of six.** You can sleep nine hours and score modestly if it was fragmented, and score well on 6.5 hours if it was unbroken. Google does not say how much each part is worth, so I will not guess at percentages.
+**Duration is only one of six.** You can sleep nine hours and score modestly if it was fragmented, and score well on 6.5 hours if it was unbroken. Google does not say how much each part is worth, so this post does not guess at percentages.
 
 ## The version you may have read elsewhere
 
-If you remember a sleep score built from "time asleep, deep and REM, and restoration", that was how older descriptions put it. The current Google page lists the six parts above. When the Fitbit app became the Google Health app on 19 May 2026, Google's redesign page said "the sleep score has been improved, but it keeps its name". I could not find any Google page that says what was changed, so I can't tell you which of the old and new descriptions applies to the number on your screen. The six-part page is the one Google currently publishes.
+If you remember a sleep score built from "time asleep, deep and REM, and restoration", that was how older descriptions put it. The current Google page lists the six parts above. When the Fitbit app became the Google Health app on 19 May 2026, Google's redesign page said "the sleep score has been improved, but it keeps its name". No Google page says what was changed, so it is not possible to say which of the old and new descriptions applies to the number on your screen. The six-part page is the one Google currently publishes.
 
 ## Why you might not get a score at all
 
@@ -83,6 +83,8 @@ Sleep stages from a wrist sensor are an estimate, and Google does not publish ho
 Pulse can't show your Google sleep score, because the Google Health API has no sleep score field. It does receive the underlying sleep and stage data, and computes its own Sleep Performance on a 0-100% scale from four published parts: hours asleep against your personal sleep need (50%), sleep efficiency (20%), restorative sleep, meaning deep plus REM (20%), and your sleep consistency over seven days (10%). 85% and above is its Optimal band. The weights are public, the parts are different from Google's six, and the two numbers are not interchangeable ([how Sleep Performance works](/metrics/sleep-performance/)). Pulse is built and tested with the Fitbit Air only.
 
 For the other score that leans on sleep, see [why Fitbit readiness is often low](/blog/fitbit-readiness-always-low/).
+
+Garmin's watches give a 0-100 sleep score too, built differently: [Garmin's sleep score explained](/blog/garmin-sleep-score-explained/).
 
 ## Sources
 

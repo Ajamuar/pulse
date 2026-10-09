@@ -4,6 +4,7 @@ import Faq from "../../components/Faq.astro"
 import GetStarted from "../../components/GetStarted.astro"
 import { COMPARISONS, type Comparison } from "../../data/compare"
 import { article, breadcrumbs, faqPage } from "../../lib/schema"
+import FurtherReading from "../../components/FurtherReading.astro"
 
 export function getStaticPaths() {
   return COMPARISONS.map((c) => ({ params: { slug: c.slug }, props: { c } }))
@@ -12,7 +13,7 @@ const { c } = Astro.props as { c: Comparison }
 const path = `/compare/${c.slug}/`
 const others = COMPARISONS.filter((o) => o.slug !== c.slug)
 const schema = [
-  article(Astro.site!, { type: "Article", path, headline: c.h1, description: c.description, modified: c.checked }),
+  article(Astro.site!, { type: "Article", path, headline: c.h1, description: c.description, published: c.published, modified: c.checked }),
   breadcrumbs(Astro.site!, [
     { name: "Pulse", path: "/" },
     { name: "Compare", path: "/compare/" },
@@ -90,6 +91,8 @@ const schema = [
         </div>
       )
     }
+
+    <FurtherReading path={path} />
 
     <nav class="wrap block more" aria-labelledby="more-h">
       <h2 id="more-h">More comparisons</h2>

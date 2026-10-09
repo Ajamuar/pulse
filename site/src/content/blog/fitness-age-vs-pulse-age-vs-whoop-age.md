@@ -25,7 +25,7 @@ Garmin's page covers Fitness Age only. The other two columns come from WHOOP's H
 
 Garmin describes Fitness Age as an interpretation of your VO2 max estimate, the maximum oxygen your body can take in and use per minute in hard effort. The watch compares your value with typical values for people of your sex at different ages and returns the age at which your VO2 max would be typical.
 
-How it is calculated depends on the watch. Garmin says newer devices also factor in activity intensity, resting heart rate, and body fat percentage or BMI. Body fat comes from a compatible smart scale. Garmin's weights are not published in the pages I could read.
+How it is calculated depends on the watch. Garmin says newer devices also factor in activity intensity, resting heart rate, and body fat percentage or BMI. Body fat comes from a compatible smart scale. Garmin's weights are not published in the pages that could be read.
 
 Its advice for lowering it mirrors the inputs: some vigorous-intensity minutes in a 30-minute workout (Garmin suggests at least five), plus whatever lowers resting heart rate: regular exercise, a healthy weight, no tobacco, less stress.
 

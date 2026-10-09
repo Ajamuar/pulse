@@ -74,7 +74,7 @@ Garmin's label depends partly on a fitness estimate that can wobble. A load-only
 
 ## What nobody outside Garmin knows
 
-How the labels are decided, how much HRV status weighs against load, and how long a watch needs before it will show a status are not in the sources I could check. The Garmin blog says only that a status can be absent or paused. If you have had an Unproductive label for more than a month and the checks above come back clean, Garmin support is the place to ask about your specific device.
+How the labels are decided, how much HRV status weighs against load, and how long a watch needs before it will show a status are not in the sources that could be checked. The Garmin blog says only that a status can be absent or paused. If you have had an Unproductive label for more than a month and the checks above come back clean, Garmin support is the place to ask about your specific device.
 
 ## Sources
 

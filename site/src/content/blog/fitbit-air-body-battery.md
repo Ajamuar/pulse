@@ -10,6 +10,8 @@ keywords: ["does fitbit air have body battery", "fitbit body battery equivalent"
 
 No. Body Battery is a Garmin feature, and the Fitbit Air does not have it or a copy of it. The nearest thing in the Google Health app is Daily Readiness, a single score you get once each morning. It answers a related question, but it doesn't rise and fall through the day the way Body Battery does.
 
+If you are choosing between the two bands rather than looking for the score, the [Fitbit Air vs Garmin Cirqa comparison](/compare/fitbit-air-vs-garmin-cirqa/) sets their scores side by side.
+
 ## What Body Battery actually is
 
 Garmin's owner's manuals describe Body Battery as an estimate of your available reserve energy, "like a gas gauge on a car". The manual lists four inputs: heart rate variability, stress, sleep and activity. It runs from 5 to 100, with Garmin's own bands being 5 to 25 very low, 26 to 50 low, 51 to 75 medium and 76 to 100 high.
@@ -20,7 +22,7 @@ The part that matters for this comparison is that it is a running gauge. Sleep a
 {"kind": "line", "alt": "A Body Battery line that falls through the day with stress and exertion and climbs back overnight with sleep.", "yLabel": "Body Battery", "series": [{"label": "Body Battery", "points": [80, 72, 62, 55, 44, 36, 28, 22, 34, 52, 68, 82], "tone": "blue"}], "xLabels": ["Wake", "Midday", "Evening", "Overnight", "Wake"], "notes": [{"at": 4, "text": "Stress and exertion drain it"}, {"at": 9, "text": "Sleep recharges it"}], "min": 0, "max": 100, "caption": "Illustration, not real data."}
 ```
 
-Garmin doesn't publish the formula. Third-party write-ups say it comes from Firstbeat Analytics, the heart-data company Garmin bought in 2020, and the same engine sits behind Garmin's all-day stress score. I found no peer-reviewed study that checks Body Battery against an outside measure, so treat it as a modelled estimate, not a measurement.
+Garmin doesn't publish the formula. Third-party write-ups say it comes from Firstbeat Analytics, the heart-data company Garmin bought in 2020, and the same engine sits behind Garmin's all-day stress score. No peer-reviewed study was found that checks Body Battery against an outside measure, so treat it as a modelled estimate, not a measurement.
 
 ## What the Fitbit Air and Google Health give you
 
@@ -35,7 +37,7 @@ Google's bands are Low (29 or below), Moderate (30 to 64) and High (65 and above
 {"kind": "flow", "alt": "Three inputs, last week's sleep, heart rate variability and resting heart rate, feed one Readiness score calculated once a day.", "inputs": ["Sleep patterns, past week", "Heart rate variability", "Resting heart rate"], "output": "Daily Readiness, once after you wake", "note": "Activity is not a direct input", "caption": "Inputs as listed on Google Health Help. No weights are published."}
 ```
 
-I could not find a Body Battery-style metric anywhere in Google's list of health metrics, so I'd say plainly that none exists as of October 2026. Google also doesn't send its Readiness score through the Google Health API that third-party apps use, which is why other tools can't simply display it.
+No Body Battery-style metric appears anywhere in Google's list of health metrics, so none exists as of October 2026. Google also doesn't send its Readiness score through the Google Health API that third-party apps use, which is why other tools can't simply display it.
 
 ## Side by side
 
@@ -71,7 +73,7 @@ That is Pulse's own model, not Garmin's, and the constants are tuned by hand rat
 
 ## Why Google may have left it out
 
-I can only guess here, and Google hasn't said. A running gauge needs a model of what each minute of the day costs you, and that model is hard to validate. Garmin's version has no published accuracy figure either. Google's choice to keep Readiness as a once-a-day score built from sleep, HRV and resting heart rate is at least easy to explain: those are three signals with a clear link to recovery.
+This is a guess, since Google hasn't said. A running gauge needs a model of what each minute of the day costs you, and that model is hard to validate. Garmin's version has no published accuracy figure either. Google's choice to keep Readiness as a once-a-day score built from sleep, HRV and resting heart rate is at least easy to explain: those are three signals with a clear link to recovery.
 
 ## What to do with this
 
@@ -80,7 +82,7 @@ I can only guess here, and Google hasn't said. A running gauge needs a model of 
 3. Look at the trend. Garmin's own manual points you to Garmin Connect for long-term trends, and the same logic applies to Readiness: three low mornings in a row says more than one.
 4. Wear the band to sleep every night. Both systems lean on overnight heart rate variability, and both depend on a night of clean data.
 
-If you are choosing hardware and Body Battery matters to you, Garmin's screenless Cirqa band is the Garmin route. I haven't checked its feature list in detail here, so look at Garmin's own page before buying.
+If you are choosing hardware and Body Battery matters to you, Garmin's screenless Cirqa band is the Garmin route. Its feature list was not checked in detail here, so look at Garmin's own page before buying.
 
 ## Sources
 

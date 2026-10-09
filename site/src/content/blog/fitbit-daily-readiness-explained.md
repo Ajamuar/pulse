@@ -14,7 +14,7 @@ If your score is low and you want to know why, there is a separate checklist: [F
 
 ## Where it appears and who gets it
 
-Google's help page lists Pixel Watch 1 to 5 and Fitbit Charge 5, Charge 6, Sense, Sense 2, Versa 2, 3 and 4, Inspire 2 and 3 and Luxe as supported. The Fitbit Air appears on the page too, though only under on-device support, and some Versa and Sense 2 models carry an asterisk in the app list that I can't resolve from the text. Check the in-app list for your own device.
+Google's help page lists Pixel Watch 1 to 5 and Fitbit Charge 5, Charge 6, Sense, Sense 2, Versa 2, 3 and 4, Inspire 2 and 3 and Luxe as supported. The Fitbit Air appears on the page too, though only under on-device support, and some Versa and Sense 2 models carry an asterisk in the app list that the text does not resolve. Check the in-app list for your own device.
 
 The score is calculated once a day, shortly after you wake from a sleep of at least 3 hours. You need 7 nights of sleep wearing the device before the first score. Google recommends about a month of consistent wear for a good baseline.
 
@@ -52,7 +52,7 @@ One wrinkle: the same page says "0 to 100" in one section and "1 to 100" in anot
 
 ## What Premium adds
 
-The score itself needs no subscription as far as I can tell from the help page. What Premium adds is the coach: "For Premium users, your coach proactively advises adjustments to your training based on your readiness score." The page also says standalone workout recommendations based only on the score are no longer provided, and the coach keeps weekly targets aligned with your recovery instead. Premium prices change, so I'm not quoting any here.
+The score itself needs no subscription as far as the help page shows. What Premium adds is the coach: "For Premium users, your coach proactively advises adjustments to your training based on your readiness score." The page also says standalone workout recommendations based only on the score are no longer provided, and the coach keeps weekly targets aligned with your recovery instead. Premium prices change, so none are quoted here.
 
 ## What Google doesn't say
 
@@ -90,7 +90,7 @@ Pulse's pipeline measures each input in units of your own usual night-to-night s
 
 Don't expect the numbers to line up. A Readiness of 70 and a Recovery of 70% can happen on the same morning, or not. The weights differ, the baselines differ and Pulse adds two inputs. Pulse does not try to reproduce Google's score. Both are an estimate from a wrist sensor, and they read your body, not your plans or how you feel.
 
-Pulse is built and tested on the Fitbit Air only. Other devices that sync to Google Health send the same data types, but I haven't tested them.
+Pulse is built and tested on the Fitbit Air only. Other devices that sync to Google Health send the same data types, but they have not been tested.
 
 ## How to use either score
 

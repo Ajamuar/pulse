@@ -2,7 +2,7 @@
 import { render } from "astro:content"
 import Base from "../../layouts/Base.astro"
 import GetStarted from "../../components/GetStarted.astro"
-import { getPosts, postPath } from "../../lib/posts"
+import { getPosts, postModified, postPath } from "../../lib/posts"
 import { article, breadcrumbs } from "../../lib/schema"
 
 export async function getStaticPaths() {
@@ -31,7 +31,7 @@ const more = posts
   .slice(0, 3)
 const fmt = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })
 const schema = [
-  article(Astro.site!, { type: "Article", path, headline: d.title, description: d.description, published: d.published, modified: d.updated ?? d.published }),
+  article(Astro.site!, { type: "Article", path, headline: d.title, description: d.description, published: d.published, modified: postModified(post) }),
   breadcrumbs(Astro.site!, [
     { name: "Pulse", path: "/" },
     { name: "Blog", path: "/blog/" },

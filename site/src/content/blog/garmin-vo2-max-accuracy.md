@@ -23,7 +23,7 @@ The manuals add that the estimate and Training Status are corrected for heat abo
 
 ## What studies found
 
-You will often see a claim that Garmin's estimate is accurate to within 5%. It traces back to a Firstbeat white paper that I could not reach, so I have left the figure out. Here are the independent papers I could check.
+You will often see a claim that Garmin's estimate is accurate to within 5%. It traces back to a Firstbeat white paper that could not be reached, so the figure is left out. Here are the independent papers that could be checked.
 
 **The Forerunner 245, in the lab.** Engel, Masur, Sperlich and Düking, *European Journal of Applied Physiology*, 2025 (DOI 10.1007/s00421-025-05923-x), compared the watch with a treadmill ramp test and gas analysis in 35 endurance athletes (24 men, 11 women), each doing two outdoor runs for the watch.
 
@@ -62,7 +62,7 @@ Pulse, a free app you host yourself, takes a VO2 max (a run value from the last 
 
 ## What is not known
 
-I could not find an independent validation of Garmin's current watches beyond the Forerunner 245, so newer models may do better or worse. Garmin's own validation data was not available to check.
+No independent validation could be found of Garmin's current watches beyond the Forerunner 245, so newer models may do better or worse. Garmin's own validation data was not available to check.
 
 ## Sources
 

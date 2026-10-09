@@ -24,7 +24,7 @@ WHOOP also says it looks at your bed and wake times, duration and efficiency ove
 {"kind": "flow", "alt": "Sleep need is a baseline plus strain and sleep debt, minus naps.", "inputs": [{"label": "Baseline", "note": "+", "tone": "sleep"}, {"label": "Strain", "note": "+", "tone": "orange"}, {"label": "Sleep debt", "note": "+", "tone": "red"}, {"label": "Naps", "note": "-", "tone": "green"}], "output": "Tonight's sleep need", "tone": "sleep", "note": "Exact amounts not published", "caption": "As WHOOP's help material describes it."}
 ```
 
-The exact amounts are not published. How many minutes a hard day adds, and how quickly debt is repaid, is not stated in the sources I could check. whoop.com blocks automated fetching, so I relied on WHOOP's published pages as surfaced by search and could not open the support article itself.
+The exact amounts are not published. How many minutes a hard day adds, and how quickly debt is repaid, is not stated in the sources that could be checked. whoop.com blocks automated fetching, so this relies on WHOOP's published pages as surfaced by search, and the support article itself could not be opened.
 
 ## What Sleep Performance scores
 

@@ -1,6 +1,6 @@
 ---
 title: "Cardio Load vs Strain: what the numbers mean"
-description: "Fitbit's Cardio Load is an open-ended daily total with no published scale. Strain is a capped 0-21 score. What each measures and why you can't convert one to the other."
+description: "Fitbit's Cardio Load is an open-ended daily total with no published scale; Strain is a capped 0-21 score. What each measures and why they don't convert."
 published: "2026-06-06"
 checked: "2026-10-09"
 tags: [fitbit, training-load, strain]
@@ -17,7 +17,7 @@ Three details from that page are worth knowing:
 
 - Daily accrual resets to zero at midnight, though each day still counts toward your weekly target.
 - There is "no practical maximum" on a day.
-- The page does not state a unit. I could not find one in Google's help material, and the numbers you see in the app are not described as minutes, points or percentages.
+- The page does not state a unit. Google's help material does not give one, and the numbers you see in the app are not described as minutes, points or percentages.
 
 A Google research paper on adaptive targets (Phillips, Roggen, Speed and Harle, arXiv 2508.11613) describes it as "a measure of cardiovascular work (also known as training load) resulting from all the user's activities across the day". It says the metric is based on heart rate reserve and captures both intensity and duration, and that it builds up during workouts and during incidental daily movement. The same paper contrasts it with Active Zone Minutes: AZM for health guidelines, Cardio Load for performance measurement.
 
@@ -73,7 +73,7 @@ The same goes for the comparison with WHOOP. WHOOP's Strain also depends on how 
 
 There is no universal good number. Google's own approach is relative: Target Load is a suggested weekly range, and the free version follows your average over the previous 4 weeks. If you do not have Google Health Premium, that is how the target is set. With Premium and the coach on, the coach sets a weekly target from a Training Focus of Recovery, Maintain or Build.
 
-So the useful question is not "is 150 good" but "is today in line with my week". That is also the idea behind Pulse's [training balance](/metrics/training-balance/): your last 7 days of Strain divided by your last 28, where 1.00 means this week matches your usual, 0.80 to 1.29 is balanced and 1.30 and above is rising faster than you are used to. The 0.8 to 1.3 sweet spot is usually traced to team-sport injury research by Gabbett (2016). It is a rule of thumb, not a law, and I could not confirm those exact thresholds in the 2016 paper itself.
+So the useful question is not "is 150 good" but "is today in line with my week". That is also the idea behind Pulse's [training balance](/metrics/training-balance/): your last 7 days of Strain divided by your last 28, where 1.00 means this week matches your usual, 0.80 to 1.29 is balanced and 1.30 and above is rising faster than you are used to. The 0.8 to 1.3 sweet spot is usually traced to team-sport injury research by Gabbett (2016). It is a rule of thumb, not a law, and those exact thresholds could not be confirmed in the 2016 paper itself.
 
 ## Cardio Load and Active Zone Minutes
 

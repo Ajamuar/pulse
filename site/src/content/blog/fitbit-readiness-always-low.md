@@ -57,7 +57,7 @@ HRV is noisy. Two beers and a late dinner can pull the next morning's reading we
 
 ## 5. Is an input missing?
 
-A score can be built on less than the full set. If sleep stages were not detected on a given night, the HRV reading can be missing as well. Replies on the Fitbit Community forum describe HRV and breathing rate as not being returned when the sleep algorithm cannot work out sleep stages. That comes from forum posts about other models, not from a Google help page, and I could not confirm it for the Fitbit Air, so treat it as a likely explanation and not a fact.
+A score can be built on less than the full set. If sleep stages were not detected on a given night, the HRV reading can be missing as well. Replies on the Fitbit Community forum describe HRV and breathing rate as not being returned when the sleep algorithm cannot work out sleep stages. That comes from forum posts about other models, not from a Google help page, and it could not be confirmed for the Fitbit Air, so treat it as a likely explanation and not a fact.
 
 Check the Sleep tile. If the app shows a simplified sleep pattern instead of stages (awake, light, deep, REM), HRV is probably missing for that night. A snug fit matters here: Google's help page says to wear the device for a full day including overnight, with the back snug against your skin. A loose band moves, and movement spoils the reading.
 
@@ -73,13 +73,13 @@ A few things are not published, and no amount of tinkering will reveal them.
 
 - The weights. Google does not say how much HRV counts compared with sleep or resting heart rate.
 - How the baseline is built and how quickly it moves.
-- Why some people report a score sticking at one value, such as 15, for days. This turns up in search suggestions and forum threads. I found no Google explanation for it.
+- Why some people report a score sticking at one value, such as 15, for days. This turns up in search suggestions and forum threads. Google gives no explanation for it.
 
 If a score looks plainly broken, with no value for weeks despite nightly wear, contact Google Health support with your device model and what the app shows.
 
 ## A cross-check
 
-Google's Readiness is only available inside the Google Health app. Google's API doesn't expose it, so third-party tools cannot read it. They can read the raw inputs, though: nightly HRV, resting heart rate and sleep. If you'd like a second opinion built from those same inputs, Pulse, a free app you host yourself, computes its own 0-100% Recovery from your Google Health data, using your own running baseline and giving no score until it has 7 nights of HRV ([how Recovery works](/metrics/recovery/)). It is a different score with different weights, not a copy of Google's. Pulse is built and tested on the Fitbit Air only; other devices that sync to Google Health send the same data types, but I haven't tested them.
+Google's Readiness is only available inside the Google Health app. Google's API doesn't expose it, so third-party tools cannot read it. They can read the raw inputs, though: nightly HRV, resting heart rate and sleep. If you'd like a second opinion built from those same inputs, Pulse, a free app you host yourself, computes its own 0-100% Recovery from your Google Health data, using your own running baseline and giving no score until it has 7 nights of HRV ([how Recovery works](/metrics/recovery/)). It is a different score with different weights, not a copy of Google's. Pulse is built and tested on the Fitbit Air only; other devices that sync to Google Health send the same data types, but they have not been tested.
 
 ## A short checklist
 

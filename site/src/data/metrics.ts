@@ -104,7 +104,7 @@ const META: Record<string, Meta> = {
   recovery: {
     title: "Recovery score from Google Health data: how it works",
     description: "Pulse turns Google Health HRV, resting heart rate, sleep, breathing and skin temperature into a 0-100% Recovery score. The inputs, weights and limits.",
-    keywords: ["fitbit air recovery score", "pixel watch recovery score", "recovery score explained", "how is recovery score calculated", "hrv recovery score"],
+    keywords: ["recovery score explained", "how is recovery score calculated", "hrv recovery score"],
     scale: recoveryScale,
     shot: "phone-recovery",
     sources: [S.noop, S.plews2013, S.buchheit2014, S.altini2021],
@@ -164,7 +164,7 @@ const META: Record<string, Meta> = {
     slug: "sleep-performance",
     title: "Sleep Performance score: hours, efficiency and consistency",
     description: "How Pulse scores last night's sleep from 0-100% against your personal sleep need, using your wearable's sleep stages, efficiency and sleep regularity.",
-    keywords: ["sleep performance score", "fitbit sleep score", "how much sleep do i need"],
+    keywords: ["sleep performance score", "how much sleep do i need"],
     scale: {
       min: 0,
       max: 100,
@@ -226,7 +226,7 @@ const META: Record<string, Meta> = {
     slug: "stress-monitor",
     title: "Stress Monitor: a 0-3 stress score from heart rate",
     description: "Pulse scores each still, awake minute from 0 to 3 by how far your heart rate sits above your calm daytime level. Inputs, curve and limits.",
-    keywords: ["stress score from heart rate", "stress monitor without a subscription", "fitbit stress score"],
+    keywords: ["stress score from heart rate", "stress monitor without a subscription"],
     scale: {
       min: 0,
       max: 3,
@@ -265,7 +265,7 @@ const META: Record<string, Meta> = {
     slug: "fitness-level",
     title: "Fitness level: your VO2 max percentile by age and sex",
     description: "Pulse places your Fitbit VO2 max among lab-measured adults of your age and sex (FRIEND registry) and gives a percentile and a category.",
-    keywords: ["vo2 max percentile", "is my vo2 max good", "fitbit cardio fitness score"],
+    keywords: ["vo2 max percentile", "is my vo2 max good"],
     scale: {
       min: 0,
       max: 100,
@@ -371,7 +371,7 @@ const EXTRA_DOCS: (ScoreDoc & Meta)[] = [
     href: "/health/monitor",
     title: "HRV from your wearable: what it is and how Pulse uses it",
     description: "Where Pulse gets your HRV from Google Health, why it compares HRV only with your own baseline, and how it drives Recovery and the Health Monitor.",
-    keywords: ["fitbit air hrv", "pixel watch hrv", "what is a good hrv", "hrv baseline", "rmssd"],
+    keywords: ["fitbit air hrv", "pixel watch hrv", "hrv baseline", "rmssd"],
     shot: "phone-health-monitor",
     sources: [S.googleHealthApi, S.plews2013, S.buchheit2014, S.altini2021],
     related: ["recovery", "resting-heart-rate", "health-monitor", "journal-impact"],

@@ -31,7 +31,7 @@ This is Google's general tool for downloading whatever a Google Account holds. G
 
 On file type, you choose between zip and tgz. Zip opens on almost any computer; tgz may need extra software on Windows. Archives larger than your chosen size are split into several files, so a 50 GB limit makes splitting less likely. A scheduled export runs every two months for a year, with the first archive created straight away.
 
-What you cannot choose is the data format for each product. Google says it picked the types it considers most useful and portable. I could not find a Google page that lists the file layout inside the Google Health folder, and third-party guides disagree on details such as how often heart rate is sampled, so open your own archive and look before you build anything on it. Google's help page says the export covers data like activity, exercise, sleep and heart rate, and that data isn't available for deleted accounts.
+What you cannot choose is the data format for each product. Google says it picked the types it considers most useful and portable. No Google page could be found that lists the file layout inside the Google Health folder, and third-party guides disagree on details such as how often heart rate is sampled, so open your own archive and look before you build anything on it. Google's help page says the export covers data like activity, exercise, sleep and heart rate, and that data isn't available for deleted accounts.
 
 ## Fitbit's own Data Export page
 
@@ -41,7 +41,7 @@ If your account has not been migrated to a Google Account, Google's help page st
 
 **Export a selection of your Fitbit data** is quicker for a slice. You choose the time period, the data types and the file format, then download.
 
-Nothing here tells you which formats are on offer, and I have not seen a current Google page that does. Treat that menu as the source of truth.
+Nothing here tells you which formats are on offer, and no current Google page that does has been seen. Treat that menu as the source of truth.
 
 ## One workout from the app
 
@@ -58,13 +58,13 @@ Two limits are worth knowing before you plan around it.
 ```sketch
 {"kind": "compare", "alt": "What the Google Health API returns as raw data compared with the app scores it does not return.", "columns": [{"title": "Returned", "tone": "green", "items": ["Heart rate", "Sleep", "Daily resting heart rate and HRV", "Active Zone Minutes", "Exercise and steps"]}, {"title": "Not in the data-type list", "tone": "red", "items": ["Daily Readiness", "Cardio Load", "Sleep Score", "Resilience"]}], "caption": "From Google's Google Health API data-type list."}
 ```
-- Access is controlled by Google. When I checked on 9 October 2026, the developer page said Google was not accepting new projects and was working to open access to more developers. If you want to use it, check the current status first.
+- Access is controlled by Google. Checked on 9 October 2026, the developer page said Google was not accepting new projects and was working to open access to more developers. If you want to use it, check the current status first.
 
 ### The old Fitbit Web API is going away
 
 If a spreadsheet tool, dashboard or script you rely on talks to the older Fitbit Web API, note the dates on Google's developer pages. Support for the legacy API ends on 30 September 2026. After that it keeps running without bug fixes or support. On 30 October 2026 it is turned off and stops working or syncing data to and from Fitbit users.
 
-Some articles written earlier this year give 30 September as the shutdown. Google's own page now separates the two dates, so I have used Google's. Google's migration guide adds that existing Fitbit authorisations do not carry over: each user has to approve a new app against the Google Health API. If a tool you use has not announced its move, ask its maker now.
+Some articles written earlier this year give 30 September as the shutdown. Google's own page now separates the two dates, so Google's are used here. Google's migration guide adds that existing Fitbit authorisations do not carry over: each user has to approve a new app against the Google Health API. If a tool you use has not announced its move, ask its maker now.
 
 ```sketch
 {"kind": "steps", "alt": "The three steps of the legacy Fitbit Web API shutdown: support ends, the API is turned off, and users approve a new app.", "steps": [{"title": "30 September 2026", "text": "Support ends; the API runs without fixes."}, {"title": "30 October 2026", "text": "Turned off; syncing to and from Fitbit users stops."}, {"title": "Each user approves again", "text": "Old authorisations do not carry over."}], "caption": "Dates from Google's developer pages."}
@@ -72,7 +72,7 @@ Some articles written earlier this year give 30 September as the shutdown. Googl
 
 ## What you do not get
 
-None of these routes gives you the app's computed scores as data, and none of them gives you your account's history from before you wore a device. Several guides mention that Health Connect, Android's shared health store, exposes less sleep-stage detail than Fitbit's own data, but I could not confirm that from a primary page, so check before you rely on it as a backup.
+None of these routes gives you the app's computed scores as data, and none of them gives you your account's history from before you wore a device. Several guides mention that Health Connect, Android's shared health store, exposes less sleep-stage detail than Fitbit's own data, but that could not be confirmed from a primary page, so check before you rely on it as a backup.
 
 An archive you never open is not a backup. When it arrives, unzip it, find your sleep and heart rate files and check they go back as far as you expect. If you are about to close a Google or Fitbit account, export first: Google's help page notes data is not available for deleted accounts.
 

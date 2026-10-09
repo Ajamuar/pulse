@@ -64,7 +64,9 @@ Pulse, a free app you host yourself, offers a Stress Monitor built from Google H
 
 ## What is not known
 
-Garmin does not publish the stress algorithm, so how HRV is converted to 0 to 100, how the baseline adapts, and how much each input counts are all unknown outside the company. The manual wording I used is from older vivoactive and Venu manuals; newer devices may describe it differently, so check the manual for your model.
+Garmin does not publish the stress algorithm, so how HRV is converted to 0 to 100, how the baseline adapts, and how much each input counts are all unknown outside the company. The manual wording used here is from older vivoactive and Venu manuals; newer devices may describe it differently, so check the manual for your model.
+
+Fitbit took a different route on stress: it replaced its numeric score with labels, covered in [Fitbit Resilience replaced the stress score](/blog/fitbit-resilience-stress-score/).
 
 ## Sources
 

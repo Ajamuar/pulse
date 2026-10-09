@@ -21,7 +21,7 @@ Apple's watchOS 27 page lists Readiness as Series 12 and Ultra 4 only. Reports a
 
 The hardware change matters here. The Series 12 measures heart rate every five seconds all day, and Apple says HRV is measured up to 24 times more often than before. The Heart Rate app now shows two kinds of HRV: Recovery HRV, which Apple says tracks daily stress and recovery signals, and an overall HRV for broader health. Daytime resting heart rate and HRV appear in Vitals on these two models only.
 
-What Apple has not published, as far as I could find, is the weighting. We know the four inputs. We do not know whether sleep outweighs training load, or how long a baseline takes to form. Ranges and cut-offs for the four labels are not documented either.
+What Apple has not published, as far as could be found, is the weighting. We know the four inputs. We do not know whether sleep outweighs training load, or how long a baseline takes to form. Ranges and cut-offs for the four labels are not documented either.
 
 ## What every other Apple Watch has
 
@@ -43,8 +43,8 @@ None of these three gives a verdict. Vitals tells you something is unusual, Trai
 
 Because Apple Health stores HRV, resting heart rate and sleep, apps can build a recovery percentage on top.
 
-- **Athlytic** says it uses HRV and resting heart rate, compared with your own history, to give a daily recovery figure and an exertion target. A third-party review mentions a 60-day baseline. The weighting is not published. Its App Store listing shows the app as free with in-app purchases, and I could not confirm a current Pro price.
-- **Bevel** includes recovery, sleep, strain and stress scores, with a free tier and a paid Pro tier. I found no published explanation of how its recovery score is calculated.
+- **Athlytic** says it uses HRV and resting heart rate, compared with your own history, to give a daily recovery figure and an exertion target. A third-party review mentions a 60-day baseline. The weighting is not published. Its App Store listing shows the app as free with in-app purchases, and a current Pro price could not be confirmed.
+- **Bevel** includes recovery, sleep, strain and stress scores, with a free tier and a paid Pro tier. No published explanation of how its recovery score is calculated turned up.
 
 These scores are the app developer's own model, not Apple's. Two apps given the same night of data can disagree, and so can an app and the new Readiness score. That isn't a defect: each is weighting a short list of overnight signals in its own way. If you want one you can reason about, pick an app that publishes its method, and compare it only against your own trend.
 

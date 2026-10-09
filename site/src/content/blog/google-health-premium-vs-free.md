@@ -1,11 +1,11 @@
 ---
-title: "Google Health Premium vs free: what you actually lose"
+title: "Is Google Health Premium worth it?"
 description: "What stays free in the Google Health app and what moves behind Premium: scores, Target Load, sleep insights and the coach, with prices as of October 2026."
 published: "2026-08-29"
 updated: "2026-10-09"
 checked: "2026-10-09"
 tags: [google-health, fitbit]
-keywords: ["google health premium worth it", "fitbit without premium", "google health premium vs free", "fitbit readiness score without premium", "fitbit air subscription"]
+keywords: ["google health premium worth it", "fitbit without premium", "fitbit readiness score without premium", "what do you lose without google health premium"]
 ---
 
 Day to day, not much. Your scores, charts and history stay in the free app: steps, heart rate, sleep stages, Sleep Score, Daily Readiness, Cardio Load, HRV and SpO2. What you lose is the Gemini coach, adaptive plans, deeper sleep insights and a coach-set Target Load. If you never used those, day 91 of a Fitbit Air looks like day 89.
@@ -20,7 +20,7 @@ As of October 2026, Premium costs $9.99 a month or $99.99 a year in the US (Goog
 
 ## What stays free
 
-Droid Life's May 2026 comparison lists the free "Basic" plan as including steps, Cardio Load, Readiness, sleep score, sleep schedules and stages, heart rate, HRV, SpO2, weight logging and nutrition and water logging. Google's own help pages back up the pieces I checked:
+Droid Life's May 2026 comparison lists the free "Basic" plan as including steps, Cardio Load, Readiness, sleep score, sleep schedules and stages, heart rate, HRV, SpO2, weight logging and nutrition and water logging. Google's own help pages back up the pieces that were checked:
 
 - **Sleep Score.** Google's Sleep Score page says you can see your daily score and the metrics behind it (duration, time to sound sleep, restlessness, interruptions) without Premium. You can also edit your sleep log and download your raw sleep data, "which comes without analysis".
 - **Daily Readiness.** The help page describes the score as built from heart rate variability, recent sleep and resting heart rate. It doesn't mention a Premium requirement for the score itself. It does say Premium users get a coach that advises training adjustments based on it. Articles from before September 2024 put Readiness behind the paywall; the current pages don't.

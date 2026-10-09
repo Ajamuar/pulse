@@ -2,7 +2,7 @@ import type { APIRoute } from "astro"
 import { CONTENT_UPDATED } from "../config"
 import { COMPARISONS } from "../data/compare"
 import { METRICS, metricPath } from "../data/metrics"
-import { getPosts, postPath } from "../lib/posts"
+import { getPosts, postModified, postPath } from "../lib/posts"
 
 // Every page, generated from the same data as the routes, so a new metric or comparison is listed automatically.
 export const GET: APIRoute = async ({ site }) => {
@@ -13,8 +13,8 @@ export const GET: APIRoute = async ({ site }) => {
     ...METRICS.map((m): [string, string] => [metricPath(m), CONTENT_UPDATED]),
     ["/compare/", CONTENT_UPDATED],
     ...COMPARISONS.map((c): [string, string] => [`/compare/${c.slug}/`, c.checked]),
-    ["/blog/", posts[0]?.data.published ?? CONTENT_UPDATED],
-    ...posts.map((p): [string, string] => [postPath(p.id), p.data.updated ?? p.data.published]),
+    ["/blog/", posts.map(postModified).sort().at(-1) ?? CONTENT_UPDATED],
+    ...posts.map((p): [string, string] => [postPath(p.id), postModified(p)]),
     ["/glossary/", CONTENT_UPDATED],
     ["/privacy/", "2026-10-04"],
     ["/terms/", "2026-10-03"],

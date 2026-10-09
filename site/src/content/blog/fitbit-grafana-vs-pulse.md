@@ -10,7 +10,7 @@ keywords: ["fitbit grafana", "fitbit dashboard self hosted", "fitbit grafana goo
 
 Pick fitbit-grafana if you want to query your raw heart rate, sleep and steps and draw whatever charts you like. Pick Pulse if you want ready-made daily scores (Recovery, Strain, Sleep Performance) and don't want to build panels. Both run on your own hardware, both are free, and they are not rivals so much as two answers to different questions.
 
-I wrote Pulse, so weigh my view accordingly. I've tried to describe fitbit-grafana only from its README and repository, read on 9 October 2026.
+Pulse is made by the people who write this blog, so weigh this comparison accordingly. fitbit-grafana is described only from its README and repository, read on 9 October 2026.
 
 ## What fitbit-grafana is
 
@@ -32,13 +32,13 @@ This is the question most people have now. Google's migration page says the lega
 
 fitbit-grafana has. Its README says the project "now supports a Google provider mode and OAuth token flow for migration", and tells new installs to follow its Google migration guide and use Google credentials rather than creating a legacy Fitbit app. The switch is mostly an environment variable (`HEALTH_API_PROVIDER=google`) plus a Google Cloud client ID and secret. GitHub shows the repository as not archived, with 13 open issues, a last push on 30 July 2026 and a metadata update on 8 October 2026.
 
-I haven't run the Google mode myself, and the README doesn't say which metrics it supports under Google or whether intraday data survives the move. Its migration guide is where that lives. Read it before you commit an evening.
+The Google mode has not been run here, and the README doesn't say which metrics it supports under Google or whether intraday data survives the move. Its migration guide is where that lives. Read it before you commit an evening.
 
 ## What Pulse is
 
 [Pulse](/) is a free, open-source web app (PolyForm Noncommercial licence) that you host yourself, also in Docker, with a Postgres database. It reads your data through the Google Health API and computes its own scores. It doesn't draw your raw data in a query-it-yourself way; it shows finished screens.
 
-Its scores include a 0-100% [Recovery](/metrics/recovery/), a 0-21 [Strain](/metrics/strain/), [Sleep Performance](/metrics/sleep-performance/) and a [Pulse Age](/metrics/pulse-age/), and the methods are documented rather than hidden. It is built and tested with a Fitbit Air only. Pixel Watch and other Fitbits send the same data types to Google Health, but I haven't tried them.
+Its scores include a 0-100% [Recovery](/metrics/recovery/), a 0-21 [Strain](/metrics/strain/), [Sleep Performance](/metrics/sleep-performance/) and a [Pulse Age](/metrics/pulse-age/), and the methods are documented rather than hidden. It is built and tested with a Fitbit Air only. Pixel Watch and other Fitbits send the same data types to Google Health, but they have not been tried.
 
 ```sketch
 {"kind": "compare", "alt": "Data path of fitbit-grafana compared with the data path of Pulse", "columns": [{"title": "fitbit-grafana", "tone": "blue", "items": ["Fitbit or Google Health API", "Stored in InfluxDB", "Drawn in Grafana panels", "You build the scores"]}, {"title": "Pulse", "tone": "teal", "items": ["Google Health API", "Stored in Postgres", "Pulse's own app screens", "Scores are built in"]}], "caption": "From each project's README and docs."}
@@ -53,7 +53,7 @@ Its scores include a 0-100% [Recovery](/metrics/recovery/), a 0-21 [Strain](/met
 | Display | Grafana (customisable, any panel you want) | Pulse's own app screens |
 | Data source | Fitbit API, or Google Health API in Google mode | Google Health API |
 | Needs | Docker, InfluxDB, Grafana, API credentials | Docker, a Google Cloud project and OAuth client |
-| Tested on | I saw no device list in the README | Fitbit Air only |
+| Tested on | No device list in the README | Fitbit Air only |
 | Licence | BSD-4-Clause | PolyForm Noncommercial 1.0.0 |
 | Scores like Recovery | You build them | Built in |
 

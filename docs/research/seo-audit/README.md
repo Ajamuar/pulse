@@ -62,3 +62,16 @@ Info only: FAQPage markup stays on 12 pages by the earlier decision (no Google r
 
 - Re-run the three audits against a fresh build: zero High findings, no shared keyword strings between pages, every post with at least two inbound links.
 - After deploy, in Search Console: all 77 URLs indexed, no "Duplicate without user-selected canonical" for `.md` files, and impressions for the queries each owner page targets.
+
+## Resolution (2026-10-09)
+
+Owner decisions: keep all 43 posts live with their past dates (D1); stay anonymous, so first-person author voice was rewritten to neutral in 39 posts (D2); retarget overlapping pages rather than merge (D3).
+
+| Item | Done |
+|---|---|
+| D2 | First-person author sentences rewritten in 39 posts; reader questions ("why is my HRV low?") left as they are |
+| D3 | Retitled and re-keyworded `/blog/sleep-regularity-index/` ("How to improve your sleep regularity"), `/blog/google-health-premium-vs-free/` ("Is Google Health Premium worth it?") and `/blog/whoop-recovery-vs-body-battery-vs-oura-readiness/` ("Why WHOOP, Garmin and Oura scores disagree"); each links to the owner page. Brand keywords moved off metric pages, the home page and comparison pages to the page that owns each query (table rows 4 to 15) |
+| C1, C2 | `FurtherReading.astro` lists the posts that cite a page, on 22 of 27 metric and comparison pages; three posts gained a link from a sibling post. Every post now has at least two inbound links besides `/blog/` |
+| C4 | One modified date per post (`postModified`: the latest of published, updated, checked) used by the page, its schema and the sitemap; metric and comparison pages have `datePublished` |
+| M1 to M8 | `about` dropped from articles; blog `.md` alternates; `_headers` index rules removed and canonical `Link` headers added for every `.md`; Organization `logo` (`public/logo.png`); all descriptions at or under 160 characters and titles at or under 60; `llms.txt` reformatted with hub links and `.md` targets; `llms-full.txt` added; no canonical on the 404 page |
+| C3 | Not done: thin metric pages need new writing in the app's explainer (`content.ts`) |

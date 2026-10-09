@@ -29,7 +29,7 @@ The doubling mirrors those 2:1 guidelines. The difference is that the minutes ar
 
 This is the part people want and Google does not spell out. The AZM help page says zones are personalised "based on your fitness level and age" and does not list beats-per-minute thresholds.
 
-The developer documentation gives more. The Google Health API stores a set of heart-rate zones for each day, with a lower and upper bound in beats per minute for each of four zones (light, moderate, vigorous, peak), and describes them as based on the Karvonen algorithm. Karvonen zones are percentages of heart-rate reserve, the gap between your resting and maximum heart rate. The documentation does not give the percentages or say how your maximum is estimated, so I cannot tell you the exact cut-offs, and I would not trust a table of numbers from a third-party site that claims to.
+The developer documentation gives more. The Google Health API stores a set of heart-rate zones for each day, with a lower and upper bound in beats per minute for each of four zones (light, moderate, vigorous, peak), and describes them as based on the Karvonen algorithm. Karvonen zones are percentages of heart-rate reserve, the gap between your resting and maximum heart rate. The documentation does not give the percentages or say how your maximum is estimated, so the exact cut-offs cannot be given here, and a table of numbers from a third-party site that claims to should not be trusted.
 
 What follows from using reserve is practical: your zone bounds can move when your resting heart rate moves, so the same bpm may not land in the same zone it did a few months ago. The bounds the app shows for today are the ones that count.
 
@@ -39,7 +39,7 @@ Heart rate lags effort. When you start a run, your heart rate takes a minute or 
 
 Heat, caffeine, poor sleep and stress raise heart rate for the same effort. On those days you earn more AZM for the same walk, and on a day after hard training you may earn fewer. AZM measures your heart rate's response, not the work done.
 
-Two checks if a workout looks short on points: open the session's heart-rate graph and see which zone you were actually in, then compare the zone bounds with what you expected. I found no accuracy figure for AZM from Google.
+Two checks if a workout looks short on points: open the session's heart-rate graph and see which zone you were actually in, then compare the zone bounds with what you expected. Google gives no accuracy figure for AZM.
 
 ## AZM, active minutes and Cardio Load are different things
 

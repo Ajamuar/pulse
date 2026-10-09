@@ -1,13 +1,13 @@
 ---
 title: "Fitbit VO2 max and Cardio Fitness: how accurate?"
-description: "What Fitbit's Cardio Fitness Score is built from, what the one lab validation I could find showed, and how to read the number you get."
+description: "What Fitbit's Cardio Fitness Score is built from, what the one lab validation found showed, and how to read the number you get."
 published: "2026-08-19"
 checked: "2026-10-09"
 tags: [fitbit, google-health]
 keywords: [fitbit vo2 max accurate, fitbit cardio fitness score, what is a good vo2 max, fitbit vo2 max overestimate, fitbit cardio fitness score no value]
 ---
 
-Good enough to follow your trend, not good enough to treat as a lab result. The one lab comparison I could find, on an older Fitbit, had the watch reading about 2.6 ml/kg/min higher than a treadmill test on average. Google itself says lab testing is the most accurate measure and gives no error figure for its own.
+Good enough to follow your trend, not good enough to treat as a lab result. The one lab comparison found, on an older Fitbit, had the watch reading about 2.6 ml/kg/min higher than a treadmill test on average. Google itself says lab testing is the most accurate measure and gives no error figure for its own.
 
 That is a thin evidence base, so here is what is known and what is not.
 
@@ -29,7 +29,7 @@ Google's reference documentation for the data it hands to developers adds a deta
 
 ## What validation exists
 
-I searched for studies and found few. The clearest is Freeberg and colleagues (mHealth, 2019, DOI 10.21037/mhealth.2019.09.07), which tested the Fitbit Charge 2. Thirty healthy adults aged 18 to 35 wore the watch for a week, ran as instructed to get a score, then did a treadmill test to measure VO2 max directly.
+A search for studies found few. The clearest is Freeberg and colleagues (mHealth, 2019, DOI 10.21037/mhealth.2019.09.07), which tested the Fitbit Charge 2. Thirty healthy adults aged 18 to 35 wore the watch for a week, ran as instructed to get a score, then did a treadmill test to measure VO2 max directly.
 
 | | Mean (ml/kg/min) |
 |---|---|
@@ -38,11 +38,11 @@ I searched for studies and found few. The clearest is Freeberg and colleagues (m
 
 The watch read higher on average, and the difference was statistically significant (P = 0.03). The mean absolute percentage error was 10.2%, and the agreement between the two (an intraclass correlation) was 0.87, which is decent. The authors described the Charge 2 as giving consistent, unbiased measurement of the score while overestimating VO2 max in healthy men and women. They also found that a simple non-exercise prediction equation, with no run or watch needed, was slightly more accurate (7.8% mean absolute percentage error).
 
-Caveats the authors listed matter. The sample was young and healthy. The runs were unsupervised. Heart rate during the runs was not measured with a chest strap. A person in their fifties with a different build, on a Fitbit Air or Pixel Watch, may land elsewhere, and I found no published validation of those devices, or of any newer Fitbit. Treat every accuracy claim you see online, including "within 10%", with that in mind. One blog I came across states a figure of under 10% without naming the study behind it, so I have not used it.
+Caveats the authors listed matter. The sample was young and healthy. The runs were unsupervised. Heart rate during the runs was not measured with a chest strap. A person in their fifties with a different build, on a Fitbit Air or Pixel Watch, may land elsewhere, and no published validation was found of those devices, or of any newer Fitbit. Treat every accuracy claim you see online, including "within 10%", with that in mind. One blog states a figure of under 10% without naming the study behind it, so it is not used here.
 
 ## Reasons your number may be off
 
-Some of these are my reasoning from how the method works, not findings from a study.
+Some of these are reasoning from how the method works, not findings from a study.
 
 - Runs on hills or in heat. Heart rate drifts up in heat, which makes a given pace look harder and can pull the estimate down.
 - Wrist heart-rate error. A loose strap or a sensor that loses contact during fast arm swing biases the pace-to-heart-rate comparison.

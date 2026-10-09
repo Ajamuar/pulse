@@ -18,11 +18,11 @@ The two you will meet are:
 - **RMSSD**, the root mean square of successive differences between heartbeats. It reflects beat-to-beat changes and is mostly a read on the parasympathetic (rest and digest) side of the nervous system. It is what Google says Fitbit and Pixel Watch use: "We use the RMSSD formula to determine heart rate variability from heart rate data."
 - **SDNN**, the standard deviation of all the beat intervals in a recording. It captures slower swings as well, so it grows the longer you record. A 24-hour SDNN is a very different number from a five-minute one.
 
-Apple Health, for one, stores HRV as SDNN, which is one reason a number copied from a forum post about another watch can mislead you. In the rest of this post, HRV means RMSSD in milliseconds unless I say otherwise, because that is what your Fitbit or Pixel Watch reports.
+Apple Health, for one, stores HRV as SDNN, which is one reason a number copied from a forum post about another watch can mislead you. In the rest of this post, HRV means RMSSD in milliseconds unless stated otherwise, because that is what your Fitbit or Pixel Watch reports.
 
 ## HRV by age: a table from a real study
 
-Most "HRV by age" charts I can find carry no source. This one comes from Voss and colleagues (2015), who analysed five-minute resting ECG recordings from 1,906 healthy people aged 25 to 74 in the German KORA S4 population study. The subjects lay down and rested for 5 to 10 minutes before the recording. Values are mean plus or minus standard deviation, in milliseconds.
+Most "HRV by age" charts found online carry no source. This one comes from Voss and colleagues (2015), who analysed five-minute resting ECG recordings from 1,906 healthy people aged 25 to 74 in the German KORA S4 population study. The subjects lay down and rested for 5 to 10 minutes before the recording. Values are mean plus or minus standard deviation, in milliseconds.
 
 | Age | Women, RMSSD | Men, RMSSD | Women, SDNN | Men, SDNN |
 |---|---|---|---|---|
@@ -52,7 +52,7 @@ Those differences matter in three ways:
 {"kind": "compare", "alt": "A lab ECG recording and a wearable's night-time estimate measure HRV in different ways.", "columns": [{"title": "Lab study table", "tone": "blue", "items": ["Five-minute resting ECG", "Lying down, in the daytime", "Healthy adults aged 25 to 74"]}, {"title": "Fitbit or Pixel Watch", "tone": "teal", "items": ["Wrist light sensor (PPG)", "Mostly while you sleep", "Needs 3+ hours of quality sleep", "Nightly method not published"]}], "caption": "Not interchangeable, so do not chase the table's numbers."}
 ```
 
-I have not found a published conversion between wearable night-time RMSSD and lab values, and neither Google nor Fitbit publishes the exact way the nightly figure is picked. So treat the table as context for the shape (younger tends to be higher, with a big spread), not as a target your watch should hit.
+No published conversion has been found between wearable night-time RMSSD and lab values, and neither Google nor Fitbit publishes the exact way the nightly figure is picked. So treat the table as context for the shape (younger tends to be higher, with a big spread), not as a target your watch should hit.
 
 ## What to compare yourself against
 

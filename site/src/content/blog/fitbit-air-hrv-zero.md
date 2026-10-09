@@ -1,6 +1,6 @@
 ---
 title: "HRV 0 or \"not tracked\" on Fitbit Air? What to check"
-description: "When HRV shows 0 or nothing on a Fitbit Air, the night usually had too little sleep, unstaged sleep or a loose fit. What Google says, what forums report, and what to do."
+description: "HRV showing 0 or blank on a Fitbit Air usually means too little sleep, unstaged sleep or a loose fit. What Google says, what forums report, what to do."
 published: "2026-06-16"
 checked: "2026-10-09"
 tags: [fitbit, hrv, sleep]
@@ -24,7 +24,7 @@ That distinction changes what you do next. A low value is a signal about your bo
 On the page covering health metrics and personal ranges, Google says:
 
 - "Most metrics require at least 3 hours of quality sleep." If you move a lot, or the sleep session is too short, you may not get a reading.
-- If data does not appear for a metric, "your device does not support it". The table of supported devices on that page is an image, and it did not come through as text when I fetched it, so I can't tell you from the page whether it lists the Fitbit Air for HRV. Kygo, an independent site, says Google's vitals table does include the Air for HRV; I'd count that as likely but not confirmed from Google's own page.
+- If data does not appear for a metric, "your device does not support it". The table of supported devices on that page is an image, and it did not come through as text when the page was fetched, so the page cannot confirm whether it lists the Fitbit Air for HRV. Kygo, an independent site, says Google's vitals table does include the Air for HRV; that is likely but not confirmed from Google's own page.
 - Check the device has synced recently.
 - Wear it for a full day, including overnight, with the back of the device snug against your skin.
 - Get enough quality sleep with limited movement.
@@ -35,7 +35,7 @@ Your personal HRV range, the same page says, is based on up to 30 days of data, 
 
 Replies on the Fitbit Community forum, mostly about the Inspire 3 and other models, describe HRV and breathing rate as not being returned when the sleep algorithm cannot determine your sleep stages. Fitbit support in those threads has said stages are estimated from movement and heart-rate patterns, and that when there is not enough information, the app falls back to a simpler sleep pattern that does not need heart rate.
 
-Two things to hold on to. This is not on a Google help page, and none of the threads I found was about the Fitbit Air. I'd treat it as a good working explanation, not a confirmed rule. Its use is that it gives you something to check in the app: open last night's sleep and see whether you got the full stage view (awake, light, deep, REM) or a simplified one. If it is simplified, a missing HRV is no surprise.
+Two things to hold on to. This is not on a Google help page, and none of the threads found was about the Fitbit Air. Treat it as a good working explanation, not a confirmed rule. Its use is that it gives you something to check in the app: open last night's sleep and see whether you got the full stage view (awake, light, deep, REM) or a simplified one. If it is simplified, a missing HRV is no surprise.
 
 Some people also report a firmware update changing things, and some say the problem disappeared on its own. Those are anecdotes. They are worth a line here only so you don't spend a week suspecting your body when it may be a software wobble.
 
@@ -69,13 +69,13 @@ Update the app, restart the band, and sync again. If a problem starts the day af
 
 ### 6. Is it the same night every time?
 
-An occasional gap is not worth chasing. If it is every night for a week with full, snug wear and staged sleep, contact Google Health support. Give them the model, the app version and what the sleep screen shows in place of stages. I found no Google article describing a fix for this on the Air.
+An occasional gap is not worth chasing. If it is every night for a week with full, snug wear and staged sleep, contact Google Health support. Give them the model, the app version and what the sleep screen shows in place of stages. No Google article describing a fix for this on the Air turned up.
 
 ## What it does to scores that use HRV
 
-Anything built on nightly HRV has to decide what to do with a gap. Google does not say how Daily Readiness treats one, so I can't tell you. Pulse's Recovery is documented: a night Fitbit could not stage has no HRV, so that night gets no Recovery score at all rather than a guess, and after more than 14 nights without HRV the first night back is not scored. The first score needs 7 nights of HRV, and the score is marked Provisional until 14. Missing nights don't get filled in with an average. [How HRV is used](/metrics/hrv/) and [how Recovery works](/metrics/recovery/) explain what it does with the nightly value.
+Anything built on nightly HRV has to decide what to do with a gap. Google does not say how Daily Readiness treats one. Pulse's Recovery is documented: a night Fitbit could not stage has no HRV, so that night gets no Recovery score at all rather than a guess, and after more than 14 nights without HRV the first night back is not scored. The first score needs 7 nights of HRV, and the score is marked Provisional until 14. Missing nights don't get filled in with an average. [How HRV is used](/metrics/hrv/) and [how Recovery works](/metrics/recovery/) explain what it does with the nightly value.
 
-Pulse is a free app you host yourself, built and tested on the Fitbit Air only. Other devices that sync to Google Health send the same data types, but I haven't tested them.
+Pulse is a free app you host yourself, built and tested on the Fitbit Air only. Other devices that sync to Google Health send the same data types, but they have not been tested.
 
 ## When a real low reading is the issue
 
@@ -83,7 +83,7 @@ If you see a number, just a low one, that is a different problem. A single low n
 
 ## Pixel Watch
 
-Searches for "pixel watch hrv 0" exist, and the same logic applies: a zero is a gap. I haven't checked a Pixel Watch account, and I found no Google page that treats Pixel Watch HRV gaps separately, so I am not claiming anything specific for it.
+Searches for "pixel watch hrv 0" exist, and the same logic applies: a zero is a gap. No Pixel Watch account has been checked, and no Google page treats Pixel Watch HRV gaps separately, so nothing specific is claimed for it.
 
 ## Sources
 

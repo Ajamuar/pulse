@@ -7,7 +7,9 @@ tags: [oura, recovery, hrv]
 keywords: ["oura readiness score explained", "oura readiness score meaning", "oura readiness score always low", "oura readiness contributors", "oura hrv balance"]
 ---
 
-Oura's Readiness score is a 0-100 number built from nine contributors: three about sleep, two about activity and four about body signals. Overnight resting heart rate, HRV and temperature are compared with your own recent averages. 85 or above is Optimal, 70-84 Good, 60-69 Fair, and below 60 means Pay Attention. I found no published weighting.
+Oura's Readiness score is a 0-100 number built from nine contributors: three about sleep, two about activity and four about body signals. Overnight resting heart rate, HRV and temperature are compared with your own recent averages. 85 or above is Optimal, 70-84 Good, 60-69 Fair, and below 60 means Pay Attention. No published weighting was found.
+
+If you are weighing an Oura Ring against a Fitbit Air, the [Fitbit Air vs Oura Ring comparison](/compare/fitbit-air-vs-oura-ring/) puts both sets of scores and costs side by side.
 
 ## The nine contributors
 
@@ -37,7 +39,7 @@ The three "balance" contributors use 14-day weighted averages, with the last two
 
 **Recovery Index.** This is about timing, not depth. Oura says at least six hours of sleep after your heart rate reaches its lowest point is optimal. If the low keeps landing in the second half of the night, the usual suspects are a late dinner, alcohol or evening training. A person who sleeps 7 hours and has their lowest heart rate at hour four will score worse here than someone who sleeps 7 hours and bottoms out at hour one.
 
-**HRV Balance.** It is not a nightly HRV reading. It compares your 14-day weighted average with your longer-term average. Oura's pages disagree on the long window (two months in one article, three months in the glossary and the contributors page), so I would not lean on either figure.
+**HRV Balance.** It is not a nightly HRV reading. It compares your 14-day weighted average with your longer-term average. Oura's pages disagree on the long window (two months in one article, three months in the glossary and the contributors page), so neither figure should be leaned on.
 
 **Body temperature.** Judged as a change from your own baseline, not an absolute value. Oura lists illness, the luteal phase of the menstrual cycle and pregnancy among the reasons it can shift. It also offers Rest Mode if your temperature is elevated.
 

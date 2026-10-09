@@ -29,7 +29,7 @@ In the app: open the Health tab, scroll to Key metrics and tap Resting heart rat
 
 Google gives a broad range of 60 to 100 bpm that "varies depending on age and fitness level", and that is a population range, not your range. Someone who runs and sits at 48 and drifts to 56 has moved further, in relative terms, than someone going from 72 to 74. Your own trend is the useful comparison.
 
-A rise worth noticing is one that is larger than your usual day-to-day wobble and that holds for several days. I'm not going to give you a magic number, because there is no published threshold that applies to everyone. What I can say is that single-day spikes after a bad night are routine, and a flat week at a new higher level is more informative.
+A rise worth noticing is one that is larger than your usual day-to-day wobble and that holds for several days. There is no magic number, because there is no published threshold that applies to everyone. What can be said is that single-day spikes after a bad night are routine, and a flat week at a new higher level is more informative.
 
 ```sketch
 {"kind": "line", "alt": "Resting heart rate with one spike that recovers next day, then a new higher level that holds.", "series": [{"label": "Daily resting heart rate", "points": [56, 57, 55, 56, 62, 56, 57, 56, 60, 61, 60, 61, 60, 61], "tone": "orange"}], "band": {"from": 54, "to": 58, "label": "Your usual range"}, "yLabel": "Resting HR (bpm)", "notes": [{"at": 4, "text": "One bad night, back next day"}, {"at": 11, "text": "A new level that holds"}], "min": 50, "max": 66, "caption": "Illustration, not real data."}

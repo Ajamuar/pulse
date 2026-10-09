@@ -33,7 +33,7 @@ One more thing the list tells you: Body Battery is not an input. If your Body Ba
 
 ## Check these, in order
 
-I'd go through the causes in this order because the first few are the most common and the cheapest to rule out. Garmin doesn't document which input dominates, so the ranking comes from how the inputs behave and from forum reports, not from a Garmin statement.
+Go through the causes in this order because the first few are the most common and the cheapest to rule out. Garmin doesn't document which input dominates, so the ranking comes from how the inputs behave and from forum reports, not from a Garmin statement.
 
 ```sketch
 {"kind": "steps", "alt": "Seven checks, in order, for a Training Readiness score that stays low.", "steps": [{"title": "New or reset watch?", "text": "HRV status needs about three weeks of data"}, {"title": "Recovery time", "text": "60 or 90 hours feeds the score"}, {"title": "Acute load", "text": "Hard days most days keep it up"}, {"title": "HRV status", "text": "Outside Balanced for weeks"}, {"title": "Three nights of sleep", "text": "One good night will not fix it"}, {"title": "Three days of stress", "text": "Travel, work or illness count"}, {"title": "Missing or extra workouts", "text": "Check your activity list"}], "caption": "Order is the author's judgement, not a Garmin ranking."}
@@ -49,7 +49,7 @@ Open the recovery time on the watch or in Garmin Connect. If it says 60 or 90 ho
 
 ### 3. Check acute load
 
-Acute load, per Garmin, is a weighted sum of your excess post-exercise oxygen consumption (EPOC) over the last several days. The gauge reads low, optimal, high or very high, and Garmin says the optimal range is based on your fitness level and training history. If you train hard most days, the load never drains and the score stays down. A blog claims a ten-day tail, but I couldn't find that number in Garmin's manuals.
+Acute load, per Garmin, is a weighted sum of your excess post-exercise oxygen consumption (EPOC) over the last several days. The gauge reads low, optimal, high or very high, and Garmin says the optimal range is based on your fitness level and training history. If you train hard most days, the load never drains and the score stays down. A blog claims a ten-day tail, but that number does not appear in Garmin's manuals.
 
 ### 4. Look at HRV status
 
@@ -75,7 +75,7 @@ If your resting heart rate has stayed well above your usual for several days, or
 
 ## Using it sensibly
 
-Treat the score as a prompt, not a rule. Several training blogs say a low readiness means "don't train hard", not "don't train", and that fits Garmin's own wording ("time to slow down"). I haven't found a validation study for Training Readiness, and Garmin doesn't say how accurate it is.
+Treat the score as a prompt, not a rule. Several training blogs say a low readiness means "don't train hard", not "don't train", and that fits Garmin's own wording ("time to slow down"). No validation study has been found for Training Readiness, and Garmin doesn't say how accurate it is.
 
 If you'd like a morning figure without training load in it, Pulse, a free app you host yourself, computes a Recovery score from your Google Health data using HRV, resting heart rate, sleep performance, respiratory rate and skin temperature, each against your own baseline ([how Recovery works](/metrics/recovery/)). It has no equivalent of recovery time or acute load in it, and it has been tested on the Fitbit Air only, so it isn't a stand-in for a Garmin.
 

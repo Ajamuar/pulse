@@ -66,7 +66,7 @@ To connect, open the Connections menu in Google Health, choose Apps and services
 
 Three reasons account for most differences.
 
-1. **Different data is written.** The tables above show categories only. Individual metrics, such as Daily Readiness or Cardio Load, are not in either list. They are computed inside the Google Health app and I found nothing in Google's pages saying they pass to Health Connect or Apple Health. The Google Health API's data-type list has no entry for them either.
+1. **Different data is written.** The tables above show categories only. Individual metrics, such as Daily Readiness or Cardio Load, are not in either list. They are computed inside the Google Health app and Google's pages say nothing about them passing to Health Connect or Apple Health. The Google Health API's data-type list has no entry for them either.
 2. **History windows.** Thirty days of third-party data from Health Connect, three months from Apple Health, versus whatever your account holds.
 3. **Different calculations.** Droid Life reports Google and Apple calculate HRV with different formulas, which is why it does not transfer.
 

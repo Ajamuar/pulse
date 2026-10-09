@@ -34,19 +34,19 @@ Google's stress help page describes the daily Resilience score as a measure of "
 
 The device needs to send heart rate data to the app. The page lists the Charge 4, 5 and 6, Inspire 2 and 3, Luxe, the Sense series, Versa 2, 3 and 4, Pixel Watch 2 and later, and Fitbit Air.
 
-EDA is electrodermal activity, tiny changes in skin sweat that the Charge 5, Charge 6 and Sense can measure when you do an EDA scan. Most other devices on that list have no such sensor, so for them the responsiveness part can only lean on heart rate and HRV. A third-party write-up (Kygo) reports that the Fitbit Air has no EDA sensor and so uses just those two. Google's page says only "if available", so I'd treat the Air detail as reported, not confirmed.
+EDA is electrodermal activity, tiny changes in skin sweat that the Charge 5, Charge 6 and Sense can measure when you do an EDA scan. Most other devices on that list have no such sensor, so for them the responsiveness part can only lean on heart rate and HRV. A third-party write-up (Kygo) reports that the Fitbit Air has no EDA sensor and so uses just those two. Google's page says only "if available", so treat the Air detail as reported, not confirmed.
 
 ## What Google does not document
 
-This is the part people end up searching forums for, so it is worth being direct. As of 9 October 2026, I could not find any Google page that says:
+This is the part people end up searching forums for, so it is worth being direct. As of 9 October 2026, no Google page could be found that says:
 
 - **The thresholds.** What separates Optimal from Balanced from Low is not published.
 - **The weights.** Whether responsiveness counts for more than sleep, or by how much, is not stated.
 - **The "more than 10 factors".** Google names three groups, not the individual inputs.
-- **Whether it is free.** The Resilience section does not list premium requirements, and the readiness page that mentions it does not either. Nothing I found says it needs a subscription, but nothing says it doesn't.
+- **Whether it is free.** The Resilience section does not list premium requirements, and the readiness page that mentions it does not either. Nothing found says it needs a subscription, but nothing says it doesn't.
 - **Programmatic access.** The Google Health API lists 44 data types, including daily HRV, resting heart rate and sleep. Resilience is not one of them, so third-party apps cannot read it.
 
-The 2020 launch announcement for the old Stress Management Score described a similar three-part design. The help page treats Resilience as a related but separate measure. I would not assume the maths carried over unchanged.
+The 2020 launch announcement for the old Stress Management Score described a similar three-part design. The help page treats Resilience as a related but separate measure. Do not assume the maths carried over unchanged.
 
 ## Resilience is not Readiness
 

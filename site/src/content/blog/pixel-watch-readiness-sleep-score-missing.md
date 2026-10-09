@@ -80,7 +80,7 @@ The readiness score itself is available without Premium. Premium adds a coach th
 
 Pulse is a free app you host yourself that reads data from the Google Health API and computes its own scores. That API has no readiness or sleep score field, so Pulse cannot show your Google numbers. It computes a separate Recovery and Sleep Performance from nightly HRV, resting heart rate and sleep data ([how Recovery works](/metrics/recovery/), [how Sleep Performance works](/metrics/sleep-performance/)).
 
-One limit matters here. Pulse is built and tested with the Fitbit Air only. Pixel Watch data uses the same Google Health data types, but nobody has checked Pulse against a real Pixel Watch account, so I cannot promise it works.
+One limit matters here. Pulse is built and tested with the Fitbit Air only. Pixel Watch data uses the same Google Health data types, but nobody has checked Pulse against a real Pixel Watch account, so there is no promise it works.
 
 ## When none of this fixes it
 
