@@ -110,7 +110,8 @@ export function HypnogramChart({ night }: { night: HypnogramNight }) {
           <ReferenceLine key={lane} y={lane} stroke="color-mix(in srgb, var(--foreground) 7%, transparent)" strokeWidth={14} />
         ))}
         <Line dataKey="lane" type="stepAfter" stroke="color-mix(in srgb, var(--foreground) 22%, transparent)" strokeWidth={1} dot={false} activeDot={false} {...anim} />
-        {STAGES.map((st) => (
+        {/* A stage with no stretches is left out: Recharts draws a Line with empty data over the chart's data (the connector). */}
+        {STAGES.filter((st) => stages[st].length).map((st) => (
           <Line
             key={st}
             data={stages[st]}
@@ -135,7 +136,7 @@ export function HypnogramChart({ night }: { night: HypnogramNight }) {
 export function Hypnogram({ data }: HypnogramProps) {
   const empty = (
     <div className="grid place-items-center">
-      <EmptyState body="No stage data for this night. Fitbit only stages sleeps longer than about 3 hours." />
+      <EmptyState body="No stage data for this sleep. Fitbit only stages sleeps longer than about 3 hours." />
     </div>
   )
   return (
