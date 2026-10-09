@@ -1,5 +1,5 @@
 // Journal's Log section (spec §11 LG1): which sheets to offer, whether each can write to Google, and the recent log.
-import { isCycleKind, KIND_TYPES, LOG_KINDS, type LogKind } from "@/lib/log";
+import { isCycleKind, KIND_TYPES, LOG_DAYS, LOG_KINDS, type LogKind } from "@/lib/log";
 import { logAccess, recentEntries, waterOn, type LogAccess, type LoggedEntry } from "../log";
 import { addDays, localMidnight } from "../time";
 import { type QueryCtx, todayOf } from "./common";
@@ -26,7 +26,7 @@ export async function getLog(ctx: QueryCtx): Promise<LogVM> {
   const [byType, waterToday, recent] = await Promise.all([
     logAccess(ctx.db, ctx.userId, ctx.mode),
     waterOn(ctx.db, ctx.userId, today),
-    recentEntries(ctx.db, ctx.userId, localMidnight(addDays(today, -13), ctx.timeZone)),
+    recentEntries(ctx.db, ctx.userId, localMidnight(addDays(today, 1 - LOG_DAYS), ctx.timeZone)),
   ]);
   const kinds = LOG_KINDS.filter((k) => ctx.profile.sex === "female" || !isCycleKind(k));
   const access = Object.fromEntries(

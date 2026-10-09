@@ -25,6 +25,9 @@ export const scopeUrl = (type: LogType) => `https://www.googleapis.com/auth/goog
 /** Types Google lets Pulse read back: the sync brings them home, so totals come from the sync, not this log. */
 export const READABLE: ReadonlySet<LogType> = new Set(["hydration-log", "nutrition-log", "weight", "body-fat"])
 
+/** Journal › Log lists this many local days, and the sync re-reads the readable types over the same stretch. */
+export const LOG_DAYS = 14
+
 /** Cycle tracking: never offered, shown or accepted on a male profile. */
 export const CYCLE: ReadonlySet<LogType> = new Set(["menstrual-period", "ovulation-test"])
 
