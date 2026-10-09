@@ -50,6 +50,13 @@
       "when": 1791470352596,
       "tag": "0006_mixed_talisman",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791528957124,
+      "tag": "0007_colossal_thor",
+      "breakpoints": true
     }
   ]
 }

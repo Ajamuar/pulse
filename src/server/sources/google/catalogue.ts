@@ -61,8 +61,9 @@ export const DATA_TYPES = {
   "active-minutes": rollup,
   "active-energy-burned": rollup,
   "sedentary-period": rollup,
-  "hydration-log": rollup,
-  "nutrition-log": rollup,
+  // dailyRollUp for the day's totals (every app); list for each entry, for Journal › Log (src/server/log.ts importEntries).
+  "hydration-log": { ...rollup, member: "interval.start_time" },
+  "nutrition-log": { ...rollup, member: "interval.start_time" },
   "blood-glucose": rollup,
   "core-body-temperature": rollup,
   "swim-lengths-data": rollup,

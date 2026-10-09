@@ -17,6 +17,7 @@ const keys = <T extends readonly (readonly [string, ...unknown[]])[]>(list: T) =
 /** Local wall time `YYYY-MM-DDTHH:mm`; omitted means now. */
 const At = z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, "Choose a time").optional();
 const grams = z.number().min(0).max(1000).nullable();
+const tenth = (g: number | null) => (g === null ? null : Math.round(g * 10) / 10);
 
 const Input = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("water"), ml: z.number().int().min(10, "At least 10 ml").max(5000, "At most 5,000 ml"), at: At }),
@@ -51,6 +52,7 @@ export type LogInput = z.input<typeof Input>;
 const MESSAGE: Record<Exclude<LogResult, { ok: true }>["reason"], string> = {
   reconnect: RECONNECT,
   failed: "Google Health didn’t take it. Try again in a minute.",
+  foreign: "This was logged in another app. Delete it there.",
 };
 
 /** One Google client per action: it holds the rate limiter. Null in demo mode, where nothing leaves Pulse. */
@@ -90,7 +92,8 @@ export async function logEntry(input: LogInput): Promise<ActionResult<{ demo: bo
       entries = [{ type: "hydration-log", ts, data: { ml: v.ml } }];
       break;
     case "food":
-      entries = [{ type: "nutrition-log", ts, data: { name: v.name, meal: v.meal, kcal: v.kcal, protein: v.protein, carbs: v.carbs, fat: v.fat } }];
+      // Grams to a tenth, as Google's copy comes back (map.ts), so the sync never rewrites what was logged.
+      entries = [{ type: "nutrition-log", ts, data: { name: v.name, meal: v.meal, kcal: v.kcal, protein: tenth(v.protein), carbs: tenth(v.carbs), fat: tenth(v.fat) } }];
       break;
     case "weight":
       entries = [

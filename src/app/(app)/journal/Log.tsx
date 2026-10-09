@@ -308,6 +308,7 @@ export function Log({ vm }: LogProps) {
                     <span className={cn(CAPTION, "tabular-nums")}>
                       {e.type === "menstrual-period" ? e.day : when(e.ts, vm.today, vm.timeZone)}
                       {!e.atGoogle && !demo && ", in Pulse only"}
+                      {e.fromApp && ", from another app"}
                     </span>
                   </span>
                   <Button variant="ghost" size="icon-touch" aria-label={`Delete ${e.title.toLowerCase()}, ${e.detail}`} onClick={() => setRemove(e)} className="-mr-2 text-muted-foreground hover:text-foreground">
@@ -492,7 +493,7 @@ export function Log({ vm }: LogProps) {
             <DialogTitle>Delete this entry?</DialogTitle>
             <DialogDescription>
               {remove && `${remove.title}, ${remove.detail}. `}
-              {remove?.atGoogle ? "It is deleted from Google Health too." : "It is deleted from Pulse."}
+              {remove?.fromApp ? "Pulse asks Google Health to delete it. If the app that logged it says no, delete it there." : remove?.atGoogle ? "It is deleted from Google Health too." : "It is deleted from Pulse."}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
