@@ -1,33 +1,36 @@
 ---
 import Base from "../../layouts/Base.astro"
 import GetStarted from "../../components/GetStarted.astro"
-import { COMPARISONS } from "../../data/compare"
+import { getPosts, postPath } from "../../lib/posts"
 import { breadcrumbs, collectionPage } from "../../lib/schema"
 
-const title = "Compare wearables, recovery scores and Google Health"
-const description = "Dated comparisons of recovery and readiness scores across Fitbit Air, Google Health, WHOOP, Garmin, Amazfit and Oura, with what Pulse adds and what it does not."
-const keywords = [...new Set(COMPARISONS.flatMap((c) => c.keywords.slice(0, 2)))]
+const posts = await getPosts()
+const title = "Blog: wearable metrics explained"
+const description = "Plain answers about readiness, HRV, strain, sleep scores and training load on Fitbit, Pixel Watch, Garmin, Amazfit and other wearables, with sources."
+const keywords = [...new Set(posts.flatMap((p) => p.data.keywords.slice(0, 1)))]
+const fmt = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })
 const schema = [
-  collectionPage(Astro.site!, "/compare/", title, description, COMPARISONS.map(c => ({ name: c.h1, path: `/compare/${c.slug}/` }))),
+  collectionPage(Astro.site!, "/blog/", title, description, posts.map((p) => ({ name: p.data.title, path: postPath(p.id) }))),
   breadcrumbs(Astro.site!, [
     { name: "Pulse", path: "/" },
-    { name: "Compare", path: "/compare/" },
+    { name: "Blog", path: "/blog/" },
   ]),
 ]
 ---
 
 <Base title={title} description={description} schema={schema} keywords={keywords}>
   <header class="wrap head">
-    <h1>Compare</h1>
-    <p class="lede">Straight answers for people comparing wearables, Google Health and their recovery scores. Every fact about another product is dated and links to its source.</p>
+    <h1>Blog</h1>
+    <p class="lede">What your wearable's numbers mean, why they move, and what to do when they look wrong. Every claim links to its source.</p>
   </header>
   <ul class="wrap list">
     {
-      COMPARISONS.map((c) => (
+      posts.map((p) => (
         <li>
-          <a href={`/compare/${c.slug}/`}>
-            <span class="h">{c.h1}</span>
-            <span class="d">{c.description}</span>
+          <a href={postPath(p.id)}>
+            <time datetime={p.data.published}>{fmt(p.data.published)}</time>
+            <span class="h">{p.data.title}</span>
+            <span class="d">{p.data.description}</span>
           </a>
         </li>
       ))
@@ -72,6 +75,10 @@ const schema = [
   }
   .list a:hover {
     translate: 0 -2px;
+  }
+  time {
+    color: var(--muted-foreground);
+    font-size: 0.8125rem;
   }
   .h {
     font-weight: 600;

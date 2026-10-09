@@ -46,13 +46,14 @@ export function softwareApp(site: URL, description: string) {
   }
 }
 
-export function article(site: URL, o: { type: "TechArticle" | "Article"; path: string; headline: string; description: string; modified: string }) {
+export function article(site: URL, o: { type: "TechArticle" | "Article"; path: string; headline: string; description: string; modified: string; published?: string }) {
   return {
     "@type": o.type,
     headline: o.headline,
     description: o.description,
     url: abs(o.path, site),
     mainEntityOfPage: abs(o.path, site),
+    ...(o.published ? { datePublished: o.published } : {}),
     dateModified: o.modified,
     inLanguage: "en",
     author: { "@type": "Organization", name: "Pulse contributors", url: REPO },

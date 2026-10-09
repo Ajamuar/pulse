@@ -1,0 +1,199 @@
+---
+import { render } from "astro:content"
+import Base from "../../layouts/Base.astro"
+import GetStarted from "../../components/GetStarted.astro"
+import { getPosts, postPath } from "../../lib/posts"
+import { article, breadcrumbs } from "../../lib/schema"
+
+export async function getStaticPaths() {
+  const posts = await getPosts()
+  return posts.map((post) => ({ params: { slug: post.id }, props: { post, posts } }))
+}
+const { post, posts } = Astro.props
+const { Content } = await render(post)
+const d = post.data
+const path = postPath(post.id)
+// Three other posts, preferring ones that share a tag.
+const shared = (p: typeof post) => p.data.tags.filter((t: string) => d.tags.includes(t)).length
+const more = posts
+  .filter((p) => p.id !== post.id)
+  .sort((a, b) => shared(b) - shared(a))
+  .slice(0, 3)
+const fmt = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })
+const schema = [
+  article(Astro.site!, { type: "Article", path, headline: d.title, description: d.description, published: d.published, modified: d.updated ?? d.published }),
+  breadcrumbs(Astro.site!, [
+    { name: "Pulse", path: "/" },
+    { name: "Blog", path: "/blog/" },
+    { name: d.title, path },
+  ]),
+]
+---
+
+<Base title={d.title} description={d.description} schema={schema} keywords={d.keywords} ogType="article">
+  <article>
+    <header class="wrap head">
+      <nav aria-label="Breadcrumb" class="crumbs"><a href="/blog/">Blog</a></nav>
+      <h1>{d.title}</h1>
+      <p class="meta">
+        <time datetime={d.published}>{fmt(d.published)}</time>
+        {d.updated && <span> · Updated <time datetime={d.updated}>{fmt(d.updated)}</time></span>}
+        {d.checked && <span> · Facts about other products checked {fmt(d.checked)}</span>}
+      </p>
+    </header>
+
+    <div class="wrap post"><Content /></div>
+
+    {
+      more.length > 0 && (
+        <nav class="wrap block more" aria-labelledby="more-h">
+          <h2 id="more-h">Keep reading</h2>
+          <ul>
+            {more.map((p) => (
+              <li>
+                <a href={postPath(p.id)}>{p.data.title}</a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )
+    }
+
+    <div class="wrap block"><GetStarted /></div>
+  </article>
+</Base>
+
+<style>
+  .head {
+    padding-top: clamp(40px, 7vw, 88px);
+    max-width: calc(min(100% - 2 * var(--gutter), var(--page)));
+  }
+  .crumbs a {
+    color: var(--muted-foreground);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    text-decoration: none;
+  }
+  .crumbs a:hover {
+    color: var(--foreground);
+  }
+  h1 {
+    margin-top: 12px;
+    max-width: 22ch;
+    font-size: clamp(2.125rem, 5vw, 3.5rem);
+    letter-spacing: -0.035em;
+    line-height: 1.06;
+  }
+  .meta {
+    margin-top: 20px;
+    color: var(--muted-foreground);
+    font-size: 0.875rem;
+  }
+  .post {
+    margin-top: 56px;
+    color: var(--foreground-secondary);
+    font-size: 1.0625rem;
+    line-height: 1.7;
+  }
+  .post :global(> *) {
+    max-width: 68ch;
+  }
+  .post :global(> * + *) {
+    margin-top: 1.1em;
+  }
+  .post :global(h2) {
+    margin-top: 2.4em;
+    color: var(--foreground);
+    font-size: clamp(1.375rem, 2.4vw, 1.75rem);
+    line-height: 1.25;
+  }
+  .post :global(h3) {
+    margin-top: 1.8em;
+    color: var(--foreground);
+    font-size: 1.1875rem;
+  }
+  .post :global(> p:first-child) {
+    color: var(--foreground);
+    font-size: clamp(1.1875rem, 2vw, 1.3125rem);
+    line-height: 1.55;
+  }
+  .post :global(strong) {
+    color: var(--foreground);
+  }
+  .post :global(ul),
+  .post :global(ol) {
+    padding-left: 1.3em;
+  }
+  .post :global(li + li) {
+    margin-top: 0.4em;
+  }
+  .post :global(li::marker) {
+    color: var(--optimal);
+  }
+  .post :global(blockquote) {
+    margin-inline: 0;
+    padding-left: 18px;
+    box-shadow: inset 2px 0 0 rgb(255 255 255 / 0.2);
+  }
+  .post :global(code) {
+    padding: 0.1em 0.35em;
+    border-radius: 4px;
+    background: rgb(255 255 255 / 0.07);
+    font-size: 0.9em;
+  }
+  .post :global(pre) {
+    overflow-x: auto;
+    padding: 16px;
+    border-radius: 10px;
+    background: rgb(255 255 255 / 0.05) !important;
+    font-size: 0.875rem;
+  }
+  .post :global(pre code) {
+    padding: 0;
+    background: none;
+  }
+  .post :global(table) {
+    display: block;
+    overflow-x: auto;
+    max-width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9375rem;
+    line-height: 1.45;
+  }
+  .post :global(th),
+  .post :global(td) {
+    padding: 12px 16px 12px 0;
+    text-align: left;
+    vertical-align: top;
+  }
+  .post :global(thead th) {
+    color: var(--foreground);
+    font-weight: 600;
+    box-shadow: inset 0 -1px 0 rgb(255 255 255 / 0.16);
+  }
+  .post :global(tbody tr + tr) {
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
+  }
+  .block {
+    margin-top: 96px;
+  }
+  .more h2 {
+    font-size: clamp(1.625rem, 3vw, 2.125rem);
+    margin-bottom: 16px;
+  }
+  .more ul {
+    display: grid;
+    gap: 6px;
+    padding: 0;
+    list-style: none;
+  }
+  .more a {
+    display: inline-block;
+    padding: 6px 0;
+    color: var(--foreground-secondary);
+    font-size: 1.0625rem;
+  }
+  .more a:hover {
+    color: var(--foreground);
+  }
+</style>

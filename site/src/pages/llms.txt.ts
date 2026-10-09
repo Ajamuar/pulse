@@ -3,8 +3,10 @@ import { METRICS, metricPath } from "../data/metrics"
 import { COMPARISONS } from "../data/compare"
 import { markdownPath } from "../lib/markdown"
 import { REPO, SETUP_GUIDE } from "../config"
+import { getPosts, postPath } from "../lib/posts"
 
-export const GET: APIRoute = ({ site }) => {
+export const GET: APIRoute = async ({ site }) => {
+  const posts = await getPosts()
   const link = (name: string, path: string, summary: string) => `- [${name}](${new URL(path, site).href}): ${summary}`
   const body = [
     "# Pulse",
@@ -18,6 +20,8 @@ export const GET: APIRoute = ({ site }) => {
     ...METRICS.map(m => link(m.name, markdownPath(metricPath(m)), m.summary)),
     "## Comparisons",
     ...COMPARISONS.map(c => link(c.h1, markdownPath(`/compare/${c.slug}/`), `Facts checked ${c.checked}.`)),
+    "## Blog",
+    ...posts.map(p => link(p.data.title, postPath(p.id), p.data.description)),
     "## Optional",
     link("Source code", REPO, "Implementation, tests and license."),
     link("Privacy policy", "/privacy/", "Public website and self-hosted app data handling."),
