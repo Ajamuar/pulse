@@ -403,12 +403,19 @@ export async function getTrendView(key: TrendViewKey, end: string, range: TrendV
 
   const fmt = (v: number) => `${formatValue(m.format, v)}${m.unit === "%" ? "%" : ""}`;
   const weeklyBars = m.agg === "weekly" && range !== "w";
+  // A bed-to-wake bar carries two clock labels, which only fit a few dozen bars: M draws one per whole week, 6M one per whole month.
+  const rangeBars = m.chart === "range" && range !== "w";
   const bars: TrendViewBar[] = weeklyBars
     ? weeklyTotals(cur).map((w, i, all) => {
         const days = cur.filter((p) => p.day >= w.from && p.day <= w.to);
         const parts = m.series && days.some((p) => p.parts) ? Object.fromEntries(m.series.map((s) => [s.key, days.reduce((a, p) => a + (p.parts?.[s.key] ?? 0), 0)])) : undefined;
         return { from: w.from, to: w.to, value: w.value, ...(i === all.length - 1 && days.some((p) => p.provisional) && { provisional: true }), ...(parts && { parts }) };
       })
+    : rangeBars
+      ? (range === "m" ? weeklyTotals(cur).filter((w) => addDays(w.from, 6) === w.to) : wholeMonths(monthSegments(cur))).map(({ from, to }) => {
+          const days = cur.flatMap((p) => (p.day >= from && p.day <= to && "parts" in p && p.parts ? [{ value: p.value, bed: p.parts.bed, wake: p.parts.wake }] : []));
+          return { from, to, value: mean(days.map((d) => d.value)), parts: days.length ? { bed: mean(days.map((d) => d.bed))!, wake: mean(days.map((d) => d.wake))! } : null };
+        })
     : cur.map((p) => ({ from: p.day, to: p.day, value: p.value, ...(p.provisional && { provisional: true }), ...("parts" in p && { parts: p.parts }) }));
 
   const b = m.bands;
@@ -467,7 +474,7 @@ export async function getTrendView(key: TrendViewKey, end: string, range: TrendV
     tone,
     verdict: verdict({ label: m.short, range, agg: m.agg, now: value, prior: priorValue, fmt, typical }),
     bars,
-    segments: range === "6m" ? wholeMonths(monthSegments(settled(cur), m.agg)) : null,
+    segments: range === "6m" && !rangeBars ? wholeMonths(monthSegments(settled(cur), m.agg)) : null,
     typical,
     breakdown,
     footnote: [m.footnote, todayNote].filter(Boolean).join(" ") || null,
