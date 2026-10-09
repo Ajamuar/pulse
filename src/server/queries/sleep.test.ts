@@ -2,7 +2,9 @@ import { beforeAll, describe, expect, it } from "vitest";
 import type { Db } from "../db";
 import { mergeSamples } from "../samples";
 import { copyDb, ctxFor, dayAt, seeded, USER } from "../testing";
-import { getSleep } from "./sleep";
+import { eq } from "drizzle-orm";
+import { sleepSessions } from "../db/schema";
+import { getNap, getSleep } from "./sleep";
 
 let db: Db;
 beforeAll(async () => {
@@ -130,5 +132,19 @@ describe("getSleep", () => {
   it("the short-sleep streak builds sleep debt", async () => {
     const debt = async (i: number) => (await getSleep(dayAt(i), ctxFor(db))).details.find((s) => s.key === "debt")!.metric.value!;
     expect(await debt(172)).toBeGreaterThan((await debt(167)) + 60);
+  });
+});
+
+describe("getNap", () => {
+  it("opens a nap on its own and refuses a main sleep or an unknown id", async () => {
+    const [n] = await db.select().from(sleepSessions).where(eq(sleepSessions.isMain, false)).limit(1);
+    const [m] = await db.select().from(sleepSessions).where(eq(sleepSessions.isMain, true)).limit(1);
+    const vm = (await getNap(n.id, ctxFor(db)))!;
+    expect(vm.day).toBe(n.day);
+    expect(vm.hours.value!.asleepMin).toBe(n.asleepMin);
+    expect(vm.stages).toBeNull(); // seed naps are unstaged, like most real ones
+    expect(vm.start).toBeLessThan(vm.end);
+    expect(await getNap(m.id, ctxFor(db))).toBeNull();
+    expect(await getNap("nope", ctxFor(db))).toBeNull();
   });
 });

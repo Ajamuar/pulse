@@ -35,7 +35,7 @@ export type SleepStagesProps = {
 
 // the reference app's order, top to bottom [latest-sleep-stages-1].
 const ORDER: Stage[] = ["awake", "light", "deep", "rem"]
-const EMPTY = "No stage data for this night. Fitbit only stages sleeps longer than about 3 hours."
+const EMPTY = "No stage data for this sleep. Fitbit only stages sleeps longer than about 3 hours."
 const HERO = "font-numeric text-[32px] leading-9 font-bold tracking-[-0.01em]"
 
 /** the reference app's "Hours of sleep" [latest-sleep-stages-1]: time asleep, the arrow against the prior 30 nights and their mean under it. */

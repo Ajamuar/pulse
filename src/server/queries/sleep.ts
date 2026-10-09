@@ -1,7 +1,7 @@
 import { FEATURES } from "@/lib/features";
 import { metricHref, trendHref } from "@/lib/url";
 import { and, eq } from "drizzle-orm";
-import { sleepSegments } from "../db/schema";
+import { sleepSegments, sleepSessions } from "../db/schema";
 import { readHr } from "../samples";
 import { addDays, localMinutes } from "../time";
 import {
@@ -132,26 +132,46 @@ export async function getSleep(day: string, ctx: QueryCtx): Promise<SleepVM> {
   };
 }
 
+type StagedSession = { id: string; start: number; end: number; staged: boolean; awakeMin: number; remMin: number | null; lightMin: number | null; deepMin: number | null };
+
 async function stagesOf(ctx: QueryCtx, row: DayRow | undefined, noNight: SleepVM["performance"]["reason"]): Promise<SleepVM["stages"]> {
   const main = row?.sleep?.main;
-  if (!main) return none(noNight ?? "no_data");
-  if (!main.staged) return null;
+  return main ? sessionStages(ctx, main) : none(noNight ?? "no_data");
+}
+
+/** One session's hypnogram and stage rows; null when Fitbit did not stage it. */
+async function sessionStages(ctx: QueryCtx, x: StagedSession): Promise<SleepVM["stages"]> {
+  if (!x.staged) return null;
   const g = sleepSegments;
   const segments = (
     await ctx.db
       .select({ stage: g.stage, startTs: g.startTs, endTs: g.endTs })
       .from(g)
-      .where(and(eq(g.userId, ctx.userId), eq(g.sessionId, main.id)))
+      .where(and(eq(g.userId, ctx.userId), eq(g.sessionId, x.id)))
       .orderBy(g.startTs)
   ).map((g) => ({ stage: g.stage, start: ms(g.startTs), end: ms(g.endTs) }));
-  const minutes: Record<Stage, number> = { awake: main.awakeMin, rem: main.remMin ?? 0, light: main.lightMin ?? 0, deep: main.deepMin ?? 0 };
+  if (!segments.length) return null;
+  const minutes: Record<Stage, number> = { awake: x.awakeMin, rem: x.remMin ?? 0, light: x.lightMin ?? 0, deep: x.deepMin ?? 0 };
   const total = minutes.awake + minutes.rem + minutes.light + minutes.deep;
   return ok({
-    bed: ms(main.start),
-    wake: ms(main.end),
+    bed: ms(x.start),
+    wake: ms(x.end),
     segments,
     rows: STAGE_ROWS.map((r) => ({ ...r, minutes: minutes[r.stage], pct: total > 0 ? (minutes[r.stage] / total) * 100 : 0 })),
   });
+}
+
+export type NapVM = { id: string; day: string; start: number; end: number; hours: SleepVM["hours"]; stages: SleepVM["stages"]; hr: SleepVM["nightHr"] };
+
+/** A nap's own detail: time asleep, stages when Fitbit staged it, and heart rate across it. Null for an unknown id or a main sleep. */
+export async function getNap(id: string, ctx: QueryCtx): Promise<NapVM | null> {
+  const x = sleepSessions;
+  const [n] = await ctx.db.select().from(x).where(and(eq(x.userId, ctx.userId), eq(x.id, id)));
+  if (!n || n.isMain) return null;
+  const session = { id: n.id, start: n.startTs, end: n.endTs, staged: n.stagesStatus === "SUCCEEDED", awakeMin: n.awakeMin ?? 0, remMin: n.remMin, lightMin: n.lightMin, deepMin: n.deepMin };
+  const [stages, hr] = await Promise.all([sessionStages(ctx, session), nightHrOf(ctx, n.startTs, n.endTs)]);
+  const asleepMin = n.asleepMin ?? Math.round((n.endTs - n.startTs) / 60);
+  return { id: n.id, day: n.day, start: ms(n.startTs), end: ms(n.endTs), hours: ok({ asleepMin, average: null }), stages, hr };
 }
 
 const HR_PAD_S = 15 * 60;

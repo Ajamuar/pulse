@@ -9,7 +9,7 @@ export type SleepCardProps = {
   /** Epoch ms. */
   start: number
   end: number
-  /** `/sleep?d=` for sleeps and naps alike (build with dayHref). */
+  /** `/sleep?d=` for the main sleep (dayHref), `/sleep/nap/[id]` for a nap (napHref). */
   href: string
   timeZone?: string
 }

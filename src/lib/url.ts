@@ -92,6 +92,8 @@ export function trendHref(key: string, o: { d?: string; today?: string; r?: stri
 
 /** `/activity/[id]`. Google's ids are resource names with slashes (`users/…/dataPoints/…`), so the id is encoded. */
 export const activityHref = (id: string) => `/activity/${encodeURIComponent(id)}`;
+/** `/sleep/nap/[id]`, encoded like activityHref. */
+export const napHref = (id: string) => `/sleep/nap/${encodeURIComponent(id)}`;
 
 // --- Navigation structure (spec §4.2, §4.5) ---
 
