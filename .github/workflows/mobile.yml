@@ -50,6 +50,9 @@ jobs:
           cache: gradle
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec cap sync android
+      - name: unit tests
+        working-directory: mobile/android
+        run: ./gradlew testDebugUnitTest --no-daemon
       - name: keystore
         if: env.SIGNED == 'true'
         run: echo "${{ secrets.PULSE_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/pulse.jks"

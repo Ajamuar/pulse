@@ -1,4 +1,5 @@
 import UIKit
+import WebKit
 import Capacitor
 
 enum ServerStore {
@@ -8,7 +9,7 @@ enum ServerStore {
     static let authHosts = ["*.cloudflareaccess.com"]
     static let changeServerShortcut = "io.github.adityaongit.pulse.change-server"
 
-    static var url: String? { UserDefaults.standard.string(forKey: urlKey) }
+    static var url: String? { origin(UserDefaults.standard.string(forKey: urlKey)) }
 
     static func save(_ origin: String) {
         UserDefaults.standard.set(origin, forKey: urlKey)
@@ -25,10 +26,12 @@ enum ServerStore {
         return pick
     }
 
+    // scheme://host[:port]/ — the trailing slash matters: Capacitor treats any URL starting with the server URL as the app.
     static func origin(_ raw: String?) -> String? {
         guard let raw, let components = URLComponents(string: raw.trimmingCharacters(in: .whitespaces)),
               components.scheme?.lowercased() == "https", let host = components.host, !host.isEmpty else { return nil }
-        return "https://\(host.lowercased())" + (components.port.map { ":\($0)" } ?? "")
+        let port = components.port.flatMap { $0 == 443 ? nil : ":\($0)" } ?? ""
+        return "https://\(host.lowercased())\(port)/"
     }
 }
 
@@ -44,10 +47,31 @@ class MainViewController: CAPBridgeViewController {
 
     override open func capacitorDidLoad() {
         bridge?.registerPluginInstance(PulseServerPlugin())
+        // Capacitor answers plugin calls from any page in this WebView, the server and its sign-in proxy included.
+        // Only the bundled pages (picker, error page) need native access, so calls from anywhere else are dropped.
+        guard let bridge = bridge as? CapacitorBridge, let controller = bridge.webView?.configuration.userContentController else { return }
+        controller.removeScriptMessageHandler(forName: "bridge")
+        controller.add(BundledPagesOnly(bridge.webViewDelegationHandler, local: bridge.config.localURL), name: "bridge")
     }
 
     static func reload(in window: UIWindow?) {
         window?.rootViewController = MainViewController()
+    }
+}
+
+final class BundledPagesOnly: NSObject, WKScriptMessageHandler {
+    private weak var handler: WebViewDelegationHandler?
+    private let local: URL
+
+    init(_ handler: WebViewDelegationHandler, local: URL) {
+        self.handler = handler
+        self.local = local
+    }
+
+    func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
+        let origin = message.frameInfo.securityOrigin
+        guard message.frameInfo.isMainFrame, origin.protocol == local.scheme, origin.host == local.host else { return }
+        handler?.userContentController(controller, didReceive: message)
     }
 }
 

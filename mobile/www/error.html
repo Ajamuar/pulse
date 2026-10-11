@@ -4,7 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Can’t reach Pulse</title>
-<!-- Self-contained: on Android this page is served at the server's origin, so a relative asset would go to the network. -->
 <style>
   :root { color-scheme: dark light; --bg: #101518; --fg: #f6f8f9; --muted: #9aa7ad; --line: #2c373c; }
   @media (prefers-color-scheme: light) { :root { --bg: #f6f8f9; --fg: #101518; --muted: #5d6a70; --line: #d5dcdf; } }
@@ -31,14 +30,17 @@
 <script>
   const server = Capacitor.Plugins.PulseServer;
   let current = null;
+  const webview = new URLSearchParams(location.search).get("reason") === "webview";
   server.get().then(({ url }) => {
     current = url ?? null;
-    if (current) document.getElementById("detail").textContent = `${new URL(current).host} didn’t answer. Check your connection, or whether the server is up.`;
+    const detail = document.getElementById("detail");
+    if (webview) detail.textContent = "This phone’s Android System WebView is too old to open your server safely. Update it from the Play Store, then try again.";
+    else if (current) detail.textContent = `${new URL(current).host} didn’t answer. Check your connection, or whether the server is up.`;
   });
   const retry = () => (current ? server.set({ url: current }) : server.pick());
   document.getElementById("retry").addEventListener("click", retry);
   document.getElementById("change").addEventListener("click", () => server.pick());
-  addEventListener("online", retry);
+  if (!webview) addEventListener("online", retry);
 </script>
 </body>
 </html>

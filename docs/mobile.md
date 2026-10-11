@@ -27,16 +27,21 @@ flowchart TD
 | Config | `mobile/capacitor.config.json` | App id, name, background, `errorPath`. No `server.url`: the server is chosen at runtime. |
 | Picker | `mobile/www/index.html` | Bundled. Normalises the address to an `https://` origin and checks that it answers (any HTTP status counts, so a sign-in redirect from an access proxy passes). |
 | Error page | `mobile/www/error.html` | Bundled and self-contained. Shown when the server can't be reached or answers 5xx; Pulse's own 404s stay visible. |
-| Android runtime | `mobile/android/app/src/main/java/.../MainActivity.java`, `ServerStore.java`, `PulseServerPlugin.java`, `ShellWebViewClient.java` | Builds the Capacitor config at launch from the bundled one plus the saved server; system Back walks the page's history. |
-| iOS runtime | `mobile/ios/App/App/PulseShell.swift`, `SceneDelegate.swift` | Same, through `instanceDescriptor()`. |
-| `PulseServer` plugin | both | `get()`, `set({ url })`, `pick()`. `set` and `pick` restart the WebView. |
+| Android runtime | `mobile/android/app/src/main/java/.../MainActivity.java`, `ServerStore.java`, `PulseServerPlugin.java`, `ShellWebViewClient.java` | The app's origin stays the bundled `https://localhost`; the saved server is loaded as a plain page that `ShellWebViewClient` lets into the WebView. System Back walks the server's history. |
+| iOS runtime | `mobile/ios/App/App/PulseShell.swift`, `SceneDelegate.swift` | Sets the saved server through `instanceDescriptor()`, and answers plugin calls only from the bundled `capacitor://localhost` pages. |
+| `PulseServer` plugin | both | `get()`, `set({ url })`, `pick()`. `set` and `pick` restart the WebView. Callable from the bundled pages only. |
 | Change server | Android `res/xml/shortcuts.xml`, iOS `UIApplicationShortcutItems` | Long-press the app icon. |
 | Icons and launch screens | `mobile/scripts/gen-assets.py` → `mobile/assets/` → `pnpm assets` | Same mark and colours as the PWA icons. |
 | CI | `.github/workflows/mobile.yml` | Builds the APK; signs and publishes it when the secrets are set. |
 
-Navigation stays on the server's host and on `*.cloudflareaccess.com` (Cloudflare Access sign-in). Any other host opens
-in the system browser. Behind a different sign-in proxy (Authelia, Authentik, …), add its host to `AUTH_HOSTS` in
-`ServerStore.java` and `PulseShell.swift`.
+Navigation stays on the server (same scheme, host and port) and on `*.cloudflareaccess.com` (Cloudflare Access
+sign-in). Any other host opens in the system browser. Behind a different sign-in proxy (Authelia, Authentik, …), add
+its host to `AUTH_HOST_SUFFIX` in `ServerStore.java` and `authHosts` in `PulseShell.swift`.
+
+Neither the server nor its sign-in proxy can reach native code: Capacitor's plugins (including `CapacitorHttp`, which
+skips CORS) answer only the bundled picker and error page. On Android the bridge is injected only into the app's own
+`https://localhost` origin, and the app refuses to open a server on a WebView too old for origin-scoped messaging; on
+iOS a message handler drops calls from any other origin.
 
 ## Build for Android
 
@@ -122,8 +127,12 @@ taken for your team), then run on a device, or Product › Archive for TestFligh
 - **A shell, not a Trusted Web Activity.** A TWA (PWABuilder, [pwa.md](pwa.md#android-apk-with-pwabuilder)) is
   verified against one site's `assetlinks.json`, so each self-hoster has to build and sign their own APK. The shell
   loads any server, and its own pages (picker, error page) work before any server is set.
-- **The server is chosen at runtime, not baked in.** Capacitor reads `server.url` once at launch, so each platform
-  builds its config at launch from the bundled one plus the saved origin, and restarts the WebView to switch.
+- **The server is chosen at runtime, not baked in,** and restarting the WebView switches it. Android does not use
+  `server.url` at all: that would make the server the app's origin and hand it the native bridge. iOS sets it in
+  `instanceDescriptor()`, with a trailing slash because Capacitor matches app URLs by prefix
+  (`https://pulse.example.com` would also match `https://pulse.example.com.evil.test`), and filters the bridge's
+  messages by origin.
+- **The server is untrusted.** A mistyped or hostile address must not get native plugins, so only bundled pages do.
 - **No prefilled server.** The app is for any Pulse, so the picker starts empty.
 - **HTTPS only.** Android blocks cleartext by default, and a session cookie over plain HTTP would be readable on the
   network. For a LAN dev server use a tunnel ([pwa.md](pwa.md#test-it)).
