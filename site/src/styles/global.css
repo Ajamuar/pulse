@@ -2,6 +2,7 @@
 @import "@fontsource/barlow/latin-500.css";
 @import "@fontsource/barlow/latin-600.css";
 @import "@fontsource/barlow/latin-700.css";
+@import "@fontsource/caveat/latin-500.css";
 
 /* The site's own rules sit in the `site` layer, below `kit` (the app screens, src/kit/kit.css), so the app's
    utilities win inside a screen while the site's element rules (headings, links, images) stay outside it. */

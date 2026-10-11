@@ -11,7 +11,7 @@ export type ScoreDoc = {
   summary: string
   /** The in-app screen where the score lives, e.g. "/recovery", "/health/healthspan"; null if none. */
   href: string | null
-  /** In this order: "What goes in", "How it is weighted", "What the bands mean", "Limits". Omit a section only if it truly does not apply (say so in Limits instead). */
+  /** In this order: "What goes in", "How it is weighted", "What the bands mean", optionally "A worked example" (real numbers run through the code), "Limits". Omit a section only if it truly does not apply (say so in Limits instead). */
   sections: HowSection[]
 }
 export const SCORE_DOCS: ScoreDoc[] = [
@@ -149,6 +149,15 @@ export const SCORE_DOCS: ScoreDoc[] = [
         ],
       },
       {
+        title: "A worked example",
+        paragraphs: [
+          "Take 27 days of past Strain, oldest first: 10, 12, 0, 13, 11, 9, 14, then 11, 12, 0, 12, 10, 13, 12, then 10, 13, 0, 11, 12, 14, 9, then 12, 15, 13, 0, 16, 14. Today's own Strain is left out. The zeros are rest days with the band on, so they count.",
+          "Their average is 10.30, so the base is 10.3. Training load, the last 7 days against the last 28, comes to 1.10. That sits between 0.8 and 1.3, so it neither caps nor lifts the range.",
+          "Today's Recovery is 72%, which is green (67 and above). Green is base × 1.0 to base × 1.25, so the target is 10.3 to 12.9. With the same history and a Recovery of 50%, yellow applies (base × 0.8 to base × 1.0) and the target drops to 8.2 to 10.3.",
+          "Both ranges sit inside the 4 to 19 limits and are more than 2 wide, so nothing is clamped. Aiming for 11 to 12 on the green day builds fitness without outrunning Recovery.",
+        ],
+      },
+      {
         title: "Limits",
         paragraphs: [
           "With fewer than 14\u00a0days of Strain in the last 28, Pulse uses a starting range for your band, marked as an estimate: green 14.0 - 18.0, yellow 10.0 - 14.0, red 6.0 - 10.0. The target does not know your training plan, races or injuries. It is a guide, not a prescription.",
@@ -195,6 +204,14 @@ export const SCORE_DOCS: ScoreDoc[] = [
         ],
       },
       {
+        title: "A worked example",
+        paragraphs: [
+          "Take someone whose last 28 nights run from 6.8 to 8.8 hours. The upper quartile of those nights is 8.2 hours, above the 8-hour floor, so their sleep need is 8.2 hours. Last night they slept 6 hours 45 minutes, spent 88% of their time in bed asleep, got 55 minutes of deep and 85 minutes of REM sleep, and their Sleep Regularity over the last 7 days is 88.9%.",
+          "Hours come first: 6.75 against 8.2 is 82.3% of need, worth 50% of the score, so 41.2 points. Efficiency is scored as the percentage itself, 88, and counts 20%, so 17.6 points. Restorative sleep is deep plus REM, 140 minutes out of 405, or 34.6% of the night. Against the 50% target that is 69.1, and since deep sleep is 13.6% of the night, above the 13% mark, nothing is scaled down. At 20% weight, that is 13.8 points. Consistency counts 10%, so 88.9 gives 8.9 points.",
+          "Add them up: 41.2 + 17.6 + 13.8 + 8.9 comes to 81.5, shown as 81%. That sits in the Sufficient band (70-84%), just short of Optimal. The weakest part is hours: another 30 minutes in bed would have added about 3 points. The figures come from running Pulse's own scoring code on these inputs.",
+        ],
+      },
+      {
         title: "Limits",
         paragraphs: [
           "Sleep Performance scores the main sleep only, once Fitbit has processed it. A night without deep and REM totals scores its restorative part as zero, so it reads lower. Without a consistency reading, that part counts as 50%. Sleep stages come from a wrist sensor and are an estimate.",
@@ -232,6 +249,14 @@ export const SCORE_DOCS: ScoreDoc[] = [
           { term: "Peak", detail: "100% of tonight’s need." },
           { term: "Perform", detail: "85% of tonight’s need." },
           { term: "Get by", detail: "70% of tonight’s need." },
+        ],
+      },
+      {
+        title: "A worked example",
+        paragraphs: [
+          "Take someone with a sleep need of 8 hours, which is 480 minutes. Today's Strain is 12.6 against a 28-day average of 9.45, so they are 3.15 points above their norm. Their sleep debt this morning is 60 minutes, they took a 20-minute nap, and tomorrow is a weekday. Over their last 14 main sleeps they have typically woken at 07:00 with 90% efficiency.",
+          "Tonight's need starts from the 480 minutes. Strain adds 3 minutes for each point above average: 3.15 points gives 9.45 minutes. Debt adds 20%, so 60 minutes of debt gives 12. The nap takes off 20. That makes 480 + 9.45 + 12 - 20 = 481.45 minutes, about 8 hours 1 minute.",
+          "Bedtimes then count back from 07:00. Because efficiency is 90%, time in bed is the sleep divided by 0.9. For Peak, 481.45 minutes of sleep needs 534.9 minutes in bed, so lights out at 22:05. Perform (85%) needs 454.7 minutes in bed, giving 23:25, and Get by (70%) needs 374.5 minutes, giving 00:45. These come from running Pulse's own sleep planner on those inputs. A harder day, more debt or a lower efficiency would all move the bedtimes earlier.",
         ],
       },
       {
@@ -440,6 +465,15 @@ export const SCORE_DOCS: ScoreDoc[] = [
         ],
       },
       {
+        title: "A worked example",
+        paragraphs: [
+          "Take a woman of 52 whose Fitbit reports a VO2 max of 30 ml/kg/min from a recent run. Pulse picks the FRIEND treadmill row for women aged 50 to 59. That row reads 27.6 at the 75th percentile and 32.0 at the 90th.",
+          "Her 30 sits between those two columns. Pulse reads linearly between them: it is 2.4 above the 75th-percentile value, out of a 4.4 gap, and the gap spans 15 percentile points. So the percentile is 75 plus 15 times 2.4 divided by 4.4, which is 83.2. Pulse shows it as the 83rd percentile.",
+          "The bands are cut at the 20th, 40th, 60th and 80th percentiles, so 83.2 lands in Superior. Running Pulse's fitness level function on 30, age 52 and female returns exactly that.",
+          "For comparison, a man of 35 with a VO2 max of 45 sits between the 50th and 75th columns of his row (42.4 and 49.2). That gives 59.6, just under the 60 cut-off, so he is Good rather than Excellent. The same VO2 max is a different percentile at a different age or sex, which is the point of the table. A value below the 5th-percentile column is shown as 5 and one above the 95th as 95, because the table does not resolve the tails.",
+        ],
+      },
+      {
         title: "Limits",
         paragraphs: [
           "Fitbit’s VO2 max is an estimate, while the table is lab-measured, so treat the percentile as approximate. The 2015 table runs 1.5-4.6\u00a0ml/kg/min higher than its 2022 update, so you may place a little low. The same table’s 75th percentile is the VO2 max reference in Pulse Age.",
@@ -475,6 +509,15 @@ export const SCORE_DOCS: ScoreDoc[] = [
         ],
       },
       {
+        title: "A worked example",
+        paragraphs: [
+          "Take 28 days of Strain on the 0-21 scale, oldest first: 10, 12, 0, 13, 11, 9, 14, then 11, 12, 0, 12, 10, 13, 12, then 10, 13, 0, 11, 12, 14, 9, and finally 12, 15, 13, 0, 16, 14, 15. The zeros are rest days with the band on, so they count.",
+          "The last 7 days average 12.14 Strain. That is the acute load. All 28 days average 10.46, the chronic load. Training load, the acute to chronic workload ratio (ACWR), is 12.14 / 10.46 = 1.16.",
+          "Pulse reads that against its bands: below 0.80 is Undertrained, 0.80 to 1.29 is Balanced, 1.30 to 1.49 is Pushing and 1.50 and up is High risk. At 1.16 this person is Balanced: the last week is a little heavier than usual, which is normal progression.",
+          "The same week with a ratio of 1.45 would read Pushing, even though the daily numbers might not feel different. That is the point of the ratio: it compares you with yourself, not with anyone else's load.",
+        ],
+      },
+      {
         title: "Limits",
         paragraphs: [
           "Training load needs 14\u00a0days of Strain; until there are 28, your usual is the average of the days you have. It compares you with yourself, so it says nothing about whether your usual load suits your goals. The 0.8-1.3 sweet spot comes from team-sport injury research (Gabbett 2016) and is a rule of thumb.",
@@ -507,6 +550,15 @@ export const SCORE_DOCS: ScoreDoc[] = [
           { term: "Positive or negative", detail: "That whole 90% range sits above or below zero: a clear effect." },
           { term: "No clear effect", detail: "The range crosses zero." },
           { term: "Needs more data", detail: "Fewer than 5 yes days or 5 no days." },
+        ],
+      },
+      {
+        title: "A worked example",
+        paragraphs: [
+          "Say someone logs alcohol for a month. Over 29 days they answer yes on 8 and no on 21. Pulse pairs each answer with the next morning's Recovery, because the question is what the day after looks like.",
+          "On the 21 no days, next-morning Recovery averages higher than after the 8 yes days. The difference of the two averages, yes minus no, comes out at minus 11.6 points: on the day after alcohol, Recovery was about 12 points lower.",
+          "That difference alone could be luck, so Pulse resamples. It redraws 8 yes days and 21 no days with replacement, takes the difference again, repeats 1,000 times, and keeps the middle 90% of the results. For this data the range runs from minus 14.7 to minus 8.4.",
+          "The whole range sits below zero, so the label is Negative, a clear effect. Had the range run from, say, minus 4 to plus 6, the label would be No clear effect. Had there been only 4 yes days, Pulse would say Needs more data, because it needs at least 5 yes and 5 no days. These figures come from running Pulse's behaviour insights function on 29 check-ins and 30 daily Recovery scores. It shows an association, not proof of cause.",
         ],
       },
       {
@@ -546,6 +598,14 @@ export const SCORE_DOCS: ScoreDoc[] = [
         ],
       },
       {
+        title: "A worked example",
+        paragraphs: [
+          "Take a week where someone sleeps 23:00 to 07:00 every night, except Friday and Saturday, when they go to bed at 01:00 and sleep until 09:00. Pulse splits the seven noon-to-noon days into 1,440 minutes each and marks every minute asleep or awake. It then compares each minute with the same minute 24 hours later, across six day-to-day pairs, 8,640 minutes in all.",
+          "A normal night followed by a late one mismatches for four hours: the person was asleep 23:00 to 01:00 on the first day but awake, and asleep 07:00 to 09:00 on the second but awake the day before. The late Saturday-to-Sunday step costs another four hours. Friday to Saturday matches perfectly, since both nights are late. That is 8 hours, or 480 minutes, of mismatch, so 8,160 of 8,640 minutes match, or 94.4%.",
+          "The index is -100 + 200 × 0.944, which is 88.9. Pulse shows that as 89%, which is Optimal (80-100%). Running Pulse's own regularity function on these sleep times gives the same figure. Two nights two hours late cost 11 points even with identical total sleep, which shows that the score rewards timing, not duration. A single one-hour nap would cost about 3 points more.",
+        ],
+      },
+      {
         title: "Limits",
         paragraphs: [
           "It needs 2 worn days in a row within the window; otherwise there is no value. Days without the band are skipped rather than counted as awake. Fitbit’s sleep sessions leave out brief wakes, so this reads somewhat higher than a lab measure. On the night the clocks change, times are compared 1\u00a0hour apart.",
@@ -582,6 +642,15 @@ export const SCORE_DOCS: ScoreDoc[] = [
         ],
       },
       {
+        title: "A worked example",
+        paragraphs: [
+          "Take someone with 14 days of band data. Their daily Strain, converted to Pulse's internal 0-100 effort scale, runs 30, 45, 0, 50, 40, 35, 55, then 45, 60, 0, 50, 55, 40, 65. The zeros are rest days with the band worn, so they count. A day without the band would have restarted the run.",
+          "Fitness and Fatigue both start from the mean of the first 7 days, which is 36.4. After that, each day moves the average by a fixed share of the gap between that day's load and the current average. For Fitness (42-day time constant) the share is 1 - e^(-1/42), about 2.4%. For Fatigue (7-day) it is 1 - e^(-1/7), about 13.3%, so it reacts far faster.",
+          "Walking through the second week, Fitness drifts up from 36.4 to 37.8, while Fatigue swings between 35.2 and 43.0 and ends at 43.0 after the 65 on day 14. Form is Fitness minus Fatigue: 37.8 - 43.0 = -5.2.",
+          "A negative Form means recent load is heavier than the longer-term average, so this person is carrying fatigue from a hard second week. The averages only settle after about 42 days, so read the first few weeks as a rough guide.",
+        ],
+      },
+      {
         title: "Limits",
         paragraphs: [
           "It needs 14\u00a0days in a row with Strain data, and a day without the band starts the run again. It settles after about 42\u00a0days. Heart rate is its only input, so load that barely raises heart rate is missed.",
@@ -614,6 +683,15 @@ export const SCORE_DOCS: ScoreDoc[] = [
           { term: "20\u00a0bpm or more", detail: "Good" },
           { term: "12-19 bpm", detail: "Typical" },
           { term: "Below 12\u00a0bpm", detail: "Low" },
+        ],
+      },
+      {
+        title: "A worked example",
+        paragraphs: [
+          "Take a 36-year-old finishing a steady run of about 17 minutes. Pulse's default max heart rate for that age is about 183 bpm, so the 70% line is 128 bpm. For the last 5 minutes of the run the watch records between 160 and 174 bpm, well above the line for far longer than the 2 minutes required, so the workout is eligible.",
+          "Next Pulse takes the highest reading in the final 30 seconds. Here that is 174 bpm. It then collects every reading from 45 to 75 seconds after the workout ended. Six readings fall in that window: 146, 146, 148, 149, 149 and 150 bpm. The median of an even count is the average of the middle two, 148.5, rounded half up to 149.",
+          "Heart rate recovery is 174 minus 149, so 25 bpm. That is 20 or more, which Pulse calls Good. These numbers come from running Pulse's own heart rate recovery function on that set of readings.",
+          "Change one thing and the answer moves. If the same runner had kept walking for the first minute and the median had been 160, the drop would be 14 bpm, which is Typical. If the watch had logged only two readings in the window, Pulse would show Not enough heart-rate data instead of guessing.",
         ],
       },
       {

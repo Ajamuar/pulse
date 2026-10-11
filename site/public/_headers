@@ -9,6 +9,8 @@
   Cache-Control: public, max-age=86400
 /favicon.svg
   Cache-Control: public, max-age=86400
+/logo.png
+  Cache-Control: public, max-age=86400
 
 /*
   X-Content-Type-Options: nosniff
@@ -16,22 +18,30 @@
   X-Frame-Options: DENY
   Permissions-Policy: camera=(), microphone=(), geolocation=()
 
-# Markdown alternatives stay crawlable for agents without duplicating the HTML pages in search results.
-/
-  X-Robots-Tag: index, follow, max-image-preview:large
-/metrics/*
-  X-Robots-Tag: index, follow, max-image-preview:large
-/compare/*
-  X-Robots-Tag: index, follow, max-image-preview:large
-/glossary/
-  X-Robots-Tag: index, follow, max-image-preview:large
+# HTML pages carry their own robots meta tag. No path-wide "index" header here: /metrics/* would also match
+# /metrics/<slug>/index.md and contradict the noindex below.
 /404.html
   X-Robots-Tag: noindex
 
+# Markdown alternatives stay crawlable for agents without duplicating the HTML pages in search results. Each points
+# at its HTML page as canonical (Cloudflare joins the two Link values). The host is the production SITE_URL.
 /*.md
   Content-Type: text/markdown; charset=utf-8
   X-Robots-Tag: noindex, follow
   Link: </llms.txt>; rel="describedby"
+/index.md
+  Link: <https://pulse.portlabs.in/>; rel="canonical"
+/glossary/index.md
+  Link: <https://pulse.portlabs.in/glossary/>; rel="canonical"
+/metrics/:slug/index.md
+  Link: <https://pulse.portlabs.in/metrics/:slug/>; rel="canonical"
+/compare/:slug/index.md
+  Link: <https://pulse.portlabs.in/compare/:slug/>; rel="canonical"
+/blog/:slug/index.md
+  Link: <https://pulse.portlabs.in/blog/:slug/>; rel="canonical"
 /llms.txt
+  Content-Type: text/plain; charset=utf-8
+  X-Robots-Tag: noindex, follow
+/llms-full.txt
   Content-Type: text/plain; charset=utf-8
   X-Robots-Tag: noindex, follow

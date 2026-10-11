@@ -59,4 +59,15 @@ describe("getTrendView", () => {
     expect(last.parts!.bed).toBeLessThan(last.parts!.wake);
     expect(isTrendViewKey("sleep_stress")).toBe(false);
   });
+
+  it("time in bed draws one bar per whole week in M and per whole month in 6M", async () => {
+    const m = await getTrendView("time_in_bed", dayAt(150), "m", 0, ctxFor(db));
+    expect(m.bars).toHaveLength(4);
+    for (const b of m.bars) expect((Date.parse(b.to) - Date.parse(b.from)) / 864e5).toBe(6);
+    const six = await getTrendView("time_in_bed", dayAt(150), "6m", 0, ctxFor(db));
+    expect(six.segments).toBeNull();
+    for (const b of six.bars) expect([b.from.slice(8), b.from.slice(0, 7)]).toEqual(["01", b.to.slice(0, 7)]);
+    const last = six.bars.at(-1)!;
+    expect(last.parts!.bed).toBeLessThan(last.parts!.wake);
+  });
 });

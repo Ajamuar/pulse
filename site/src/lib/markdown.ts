@@ -41,13 +41,31 @@ export function comparisonMarkdown(c: Comparison, site: URL) {
 
 export function overviewMarkdown(site: URL) {
   return [
-    "# Pulse", "> Open source, self-hosted health scores for Fitbit Air data from the Google Health API.",
+    "# Pulse", "> Open source, self-hosted health scores from Google Health API data, built and tested on Fitbit Air.",
     "Pulse shows Recovery, Strain, Sleep Performance, Pulse Age, Stress, Energy Bank, training insights, journal insights and a configurable AI coach. Its scores are wellness estimates, not medical diagnoses. Missing data is shown honestly; baselines use earlier days only.",
     `Canonical page: ${new URL("/", site).href}`,
     "## Run Pulse", `- ${link("Setup guide", SETUP_GUIDE, site)}\n- ${link("Source code", REPO, site)}\n- ${link("PolyForm Noncommercial 1.0.0 license", LICENSE_URL, site)}`,
     "Your health data is stored in your own Postgres database. Google access requires your own OAuth client. The optional coach sends the context needed to answer to the AI provider you configure.",
     "## Scores", METRICS.map(m => `- ${link(m.name, markdownPath(metricPath(m)), site)}: ${m.summary}`).join("\n"),
     "## Compare", COMPARISONS.map(c => `- ${link(c.h1, markdownPath(`/compare/${c.slug}/`), site)}: ${c.description}`).join("\n"),
+  ].join("\n\n") + "\n"
+}
+
+type Post = { id: string; body?: string; data: { title: string; description: string; published: string; updated?: string; checked?: string } }
+
+// A blog post as Markdown: its own body, with each sketch block (a JSON spec drawn as SVG on the page) replaced by
+// the figure's description, so agents get the meaning without the drawing instructions.
+export function postMarkdown(p: Post, site: URL) {
+  const body = (p.body ?? "").replace(/^```sketch\n([\s\S]*?)\n```$/gm, (_, json) => {
+    const spec = JSON.parse(json)
+    return `*Figure: ${spec.alt}${spec.caption ? ` ${spec.caption}` : ""}*`
+  })
+  const dates = [`Published ${p.data.published}`, p.data.updated && `updated ${p.data.updated}`, p.data.checked && `facts about other products checked ${p.data.checked}`]
+  return [
+    `# ${p.data.title}`, `> ${p.data.description}`,
+    `${dates.filter(Boolean).join(", ")}.`,
+    `Canonical page: ${new URL(`/blog/${p.id}/`, site).href}`,
+    body.trim(),
   ].join("\n\n") + "\n"
 }
 

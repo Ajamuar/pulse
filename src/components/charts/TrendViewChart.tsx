@@ -188,7 +188,7 @@ export function TrendViewChart(p: TrendViewChartProps) {
     Math.max(780, ...rows.flatMap((r) => (r.span ? [Math.ceil((r.span[1] - 60) / 240) * 240 + 60] : []))),
   ]
   const domain: [number, number] =
-    p.chart === "range" ? rangeDomain : p.domain ?? (p.chart === "line" || p.chart === "pair" || (six && !weekly && p.chart !== "stack") ? lineDomain() : [0, Math.max(1, ...values, ...segVals) * 1.15])
+    p.chart === "range" ? rangeDomain : p.domain ?? (p.chart === "line" || p.chart === "pair" || (six && !weekly) ? lineDomain() : [0, Math.max(1, ...values, ...segVals) * 1.15])
   const yTicks = p.domain && p.domain[1] === 100 ? [0, 25, 50, 75, 100] : p.domain && p.domain[1] === 21 ? [0, 5, 10, 15, 21] : niceTicks(domain, p.format === "duration")
   const ticks = p.chart === "range" ? Array.from({ length: Math.round((domain[1] - domain[0]) / 240) + 1 }, (_, i) => domain[0] + i * 240) : undefined
 
@@ -234,7 +234,7 @@ export function TrendViewChart(p: TrendViewChartProps) {
         />
         {/* A line-only chart lays its points edge to edge; an invisible bar gives it the same columns as the bar
             charts, so points sit over their day labels and the highlight lines up. */}
-        {(p.chart === "line" || p.chart === "pair" || (faint && !weekly && p.chart !== "stack")) && <Bar dataKey="value" shape={() => <g />} isAnimationActive={false} />}
+        {(p.chart === "line" || p.chart === "pair" || (faint && !weekly)) && <Bar dataKey="value" shape={() => <g />} isAnimationActive={false} />}
         {showAvg && <ReferenceLine y={p.average!} stroke="var(--foreground)" strokeOpacity={0.7} strokeDasharray="4 3" />}
         {pair ? (
           pair.map((s, i) => {
@@ -270,7 +270,7 @@ export function TrendViewChart(p: TrendViewChartProps) {
           })
         ) : p.chart === "range" ? (
           <Bar dataKey="span" shape={(b: object) => <RangeBar {...b} color={single} />} {...anim} />
-        ) : p.chart === "line" || (faint && !weekly && p.chart !== "stack") ? (
+        ) : p.chart === "line" || (faint && !weekly) ? (
           [
             !faint && <Area key="area" dataKey="value" type="linear" stroke="none" fill={`url(#area-${uid})`} connectNulls={false} activeDot={false} {...anim} />,
             <Line
