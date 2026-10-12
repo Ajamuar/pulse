@@ -84,7 +84,7 @@
 
   <div class="card" id="cache" hidden>
     <b style="font-size:14px">Heart Rate service not found after connecting</b>
-    <p style="margin-top:6px">The band advertises the service, but your phone is using an old copy of the band's service list from before Share heart rate was on. Android keeps that copy for paired devices.</p>
+    <p style="margin-top:6px">The band advertises the service, but the connection doesn't list it. The likeliest cause: your phone kept an old copy of the band's service list from before Share heart rate was on (Android keeps one for paired devices).</p>
     <ol style="margin:8px 0 0;padding-left:20px;color:var(--muted);font-size:13px;display:grid;gap:6px">
       <li>Turn the phone's Bluetooth off, wait 5 s, turn it on.</li>
       <li>In the Google Health app, turn Share heart rate off and on.</li>
@@ -235,7 +235,7 @@ async function keepAwake() {
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && wantConnected) keepAwake(); });
 
 const STEP_TIMEOUT_MS = 15000;
-const NO_DATA_MS = 8000;
+const NO_DATA_MS = 30000;
 const OPTIONAL = ["battery_service", "device_information"];
 let firstDataTimer = null, notifications = 0;
 
@@ -301,8 +301,13 @@ async function subscribe() {
   } catch {}
   characteristic.removeEventListener("characteristicvaluechanged", onNotification);
   characteristic.addEventListener("characteristicvaluechanged", onNotification);
-  await step("Starting notifications", () => characteristic.startNotifications());
-  status(`Subscribed to ${device.name || "band"}; waiting for the first reading…`, "warn");
+  try {
+    await step("Starting notifications", () => characteristic.startNotifications());
+  } catch (e) {
+    if (!/timed out/.test(e.message)) throw e;
+    log("still listening: the subscribe request may finish late (Android can be waiting on a pairing prompt)");
+  }
+  status(`Waiting for the first reading from ${device.name || "band"}… If Android shows a pairing request, accept it.`, "warn");
   clearTimeout(firstDataTimer);
   firstDataTimer = setTimeout(noData, NO_DATA_MS);
 }
