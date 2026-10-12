@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#101518">
+<meta name="robots" content="noindex">
+<title>Live HR test</title>
+<style>
+  :root { --bg:#101518; --card:#1a2126; --line:#2a333a; --text:#e8eef2; --muted:#8a99a5; --accent:#2fd2a0; --warn:#f5b041; --bad:#ef5a5a; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; padding:16px; padding-bottom:calc(16px + env(safe-area-inset-bottom)); }
+  main { max-width:480px; margin:0 auto; display:grid; gap:12px; }
+  h1 { font-size:18px; margin:4px 0 0; }
+  p { margin:0; color:var(--muted); font-size:13px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; }
+  .bpm { font-size:72px; font-weight:700; line-height:1; font-variant-numeric:tabular-nums; }
+  .unit { font-size:16px; color:var(--muted); margin-left:6px; }
+  .row { display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .stat b { display:block; font-size:22px; font-variant-numeric:tabular-nums; }
+  .stat span { color:var(--muted); font-size:12px; }
+  .zone { height:8px; border-radius:4px; background:var(--line); overflow:hidden; margin-top:10px; }
+  .zone i { display:block; height:100%; width:0; background:var(--accent); transition:width .3s, background .3s; }
+  button { font:inherit; font-weight:600; border:0; border-radius:12px; padding:14px; background:var(--accent); color:#06231a; width:100%; }
+  button.secondary { background:var(--line); color:var(--text); }
+  button:disabled { opacity:.4; }
+  .buttons { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  label { display:grid; gap:4px; font-size:12px; color:var(--muted); }
+  input, select { font:inherit; color:var(--text); background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:10px; width:100%; }
+  #status { font-size:13px; }
+  .ok { color:var(--accent); } .warn { color:var(--warn); } .bad { color:var(--bad); }
+  canvas { width:100%; height:120px; display:block; }
+  #log { font:12px/1.5 ui-monospace,Menlo,monospace; color:var(--muted); max-height:120px; overflow:auto; white-space:pre-wrap; }
+</style>
+</head>
+<body>
+<main>
+  <div>
+    <h1>Live heart-rate test</h1>
+    <p>Reads the standard Bluetooth Heart Rate service. Turn on <b>Share heart rate</b> for the band in the Google Health app first, then open this page in Chrome on Android.</p>
+  </div>
+
+  <div class="card">
+    <div class="row"><div><span class="bpm" id="bpm">--</span><span class="unit">bpm</span></div><div id="zoneLabel" class="unit">–</div></div>
+    <div class="zone"><i id="zoneBar"></i></div>
+    <p id="status" style="margin-top:10px">Not connected</p>
+  </div>
+
+  <div class="buttons">
+    <button id="connect">Connect band</button>
+    <button id="disconnect" class="secondary" disabled>Disconnect</button>
+  </div>
+
+  <div class="card grid">
+    <div class="stat"><b id="elapsed">0:00</b><span>Session time</span></div>
+    <div class="stat"><b id="kcal">0</b><span>kcal (Keytel estimate)</span></div>
+    <div class="stat"><b id="avg">–</b><span>Average bpm</span></div>
+    <div class="stat"><b id="max">–</b><span>Max bpm</span></div>
+    <div class="stat"><b id="samples">0</b><span>Samples · <span id="rate">–</span>/min</span></div>
+    <div class="stat"><b id="gap">–</b><span>Longest gap (s)</span></div>
+    <div class="stat"><b id="rr">–</b><span>Last RR (ms)</span></div>
+    <div class="stat"><b id="contact">–</b><span>Skin contact</span></div>
+  </div>
+
+  <div class="card"><canvas id="chart" width="900" height="240"></canvas></div>
+
+  <div class="card grid">
+    <label>Age<input id="age" type="number" inputmode="numeric" value="30"></label>
+    <label>Weight (kg)<input id="weight" type="number" inputmode="decimal" value="75"></label>
+    <label>Sex<select id="sex"><option value="male">Male</option><option value="female">Female</option></select></label>
+    <label>Max HR<input id="maxhr" type="number" inputmode="numeric" placeholder="220 − age"></label>
+  </div>
+
+  <div class="buttons">
+    <button id="csv" class="secondary" disabled>Download CSV</button>
+    <button id="reset" class="secondary">Reset session</button>
+  </div>
+
+  <div class="card"><div id="log"></div></div>
+  <p>Calories use Keytel et al. (2005). Heart-rate formulas are least accurate for weight training; treat the number as an estimate. Samples stay on this phone until you download them.</p>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const ZONES = [
+  { name: "Below zone 1", min: 0, color: "#5b6b77" },
+  { name: "Zone 1", min: 0.5, color: "#5fa8ff" },
+  { name: "Zone 2", min: 0.6, color: "#2fd2a0" },
+  { name: "Zone 3", min: 0.7, color: "#f5d041" },
+  { name: "Zone 4", min: 0.8, color: "#f59541" },
+  { name: "Zone 5", min: 0.9, color: "#ef5a5a" },
+];
+const MAX_STEP_S = 5;
+
+let device = null, characteristic = null, wakeLock = null, wantConnected = false;
+let samples = [], startedAt = null, kcal = 0, longestGap = 0, timer = null;
+
+const savedProfile = (() => { try { return JSON.parse(localStorage.getItem("hrtest:profile") || "{}"); } catch { return {}; } })();
+for (const k of ["age", "weight", "sex", "maxhr"]) if (savedProfile[k] != null) $(k).value = savedProfile[k];
+for (const k of ["age", "weight", "sex", "maxhr"]) $(k).addEventListener("change", () => {
+  try { localStorage.setItem("hrtest:profile", JSON.stringify(Object.fromEntries(["age", "weight", "sex", "maxhr"].map((x) => [x, $(x).value])))); } catch {}
+});
+
+function log(msg) {
+  const t = new Date().toLocaleTimeString();
+  $("log").textContent = `${t}  ${msg}\n` + $("log").textContent;
+}
+function status(msg, cls = "") { $("status").textContent = msg; $("status").className = cls; }
+
+function parseHeartRate(view) {
+  const flags = view.getUint8(0);
+  let i = 1;
+  const bpm = flags & 0x01 ? view.getUint16(i, true) : view.getUint8(i);
+  i += flags & 0x01 ? 2 : 1;
+  const contactSupported = (flags & 0x04) !== 0;
+  const contact = contactSupported ? (flags & 0x02) !== 0 : null;
+  let energy = null;
+  if (flags & 0x08) { energy = view.getUint16(i, true); i += 2; }
+  const rr = [];
+  if (flags & 0x10) for (; i + 1 < view.byteLength; i += 2) rr.push(Math.round((view.getUint16(i, true) / 1024) * 1000));
+  return { bpm, contact, energy, rr };
+}
+
+function keytelKcalPerMin(bpm, { age, weight, sex }) {
+  const kj = sex === "female"
+    ? -20.4022 + 0.4472 * bpm - 0.1263 * weight + 0.074 * age
+    : -55.0969 + 0.6309 * bpm + 0.1988 * weight + 0.2017 * age;
+  return Math.max(0, kj / 4.184);
+}
+
+function profile() {
+  const age = Number($("age").value) || 30;
+  return { age, weight: Number($("weight").value) || 75, sex: $("sex").value, maxHr: Number($("maxhr").value) || 220 - age };
+}
+
+function zoneOf(bpm, maxHr) {
+  const f = bpm / maxHr;
+  let z = ZONES[0];
+  for (const zone of ZONES) if (f >= zone.min) z = zone;
+  return { ...z, pct: Math.min(100, Math.round(f * 100)) };
+}
+
+function onMeasurement(event) {
+  const now = Date.now();
+  const m = parseHeartRate(event.target.value);
+  if (!startedAt) startedAt = now;
+  const prev = samples[samples.length - 1];
+  if (prev) {
+    const gap = (now - prev.t) / 1000;
+    longestGap = Math.max(longestGap, gap);
+    kcal += keytelKcalPerMin(prev.bpm, profile()) * (Math.min(gap, MAX_STEP_S) / 60);
+  }
+  samples.push({ t: now, bpm: m.bpm, rr: m.rr, contact: m.contact });
+  render(m);
+}
+
+function render(m) {
+  const p = profile();
+  const z = zoneOf(m.bpm, p.maxHr);
+  $("bpm").textContent = m.bpm;
+  $("zoneLabel").textContent = `${z.name} · ${z.pct}%`;
+  $("zoneBar").style.width = `${z.pct}%`;
+  $("zoneBar").style.background = z.color;
+  $("kcal").textContent = Math.round(kcal);
+  const bpms = samples.map((s) => s.bpm);
+  $("avg").textContent = Math.round(bpms.reduce((a, b) => a + b, 0) / bpms.length);
+  $("max").textContent = Math.max(...bpms);
+  $("samples").textContent = samples.length;
+  const mins = (samples[samples.length - 1].t - samples[0].t) / 60000;
+  $("rate").textContent = mins > 0.1 ? Math.round(samples.length / mins) : "–";
+  $("gap").textContent = longestGap ? longestGap.toFixed(1) : "–";
+  $("rr").textContent = m.rr.length ? m.rr.join(", ") : "none";
+  $("contact").textContent = m.contact === null ? "not reported" : m.contact ? "yes" : "no";
+  $("csv").disabled = false;
+  drawChart();
+}
+
+function drawChart() {
+  const c = $("chart"), g = c.getContext("2d");
+  const w = c.width, h = c.height;
+  g.clearRect(0, 0, w, h);
+  const recent = samples.slice(-300);
+  if (recent.length < 2) return;
+  const lo = Math.min(...recent.map((s) => s.bpm)) - 5, hi = Math.max(...recent.map((s) => s.bpm)) + 5;
+  const t0 = recent[0].t, t1 = recent[recent.length - 1].t || t0 + 1;
+  g.strokeStyle = "#2fd2a0"; g.lineWidth = 3; g.beginPath();
+  recent.forEach((s, i) => {
+    const x = ((s.t - t0) / (t1 - t0 || 1)) * w, y = h - ((s.bpm - lo) / (hi - lo || 1)) * h;
+    i ? g.lineTo(x, y) : g.moveTo(x, y);
+  });
+  g.stroke();
+  g.fillStyle = "#8a99a5"; g.font = "22px system-ui";
+  g.fillText(`${Math.round(hi)}`, 6, 24); g.fillText(`${Math.round(lo)}`, 6, h - 8);
+}
+
+function tick() {
+  if (!startedAt) return;
+  const s = Math.floor((Date.now() - startedAt) / 1000);
+  $("elapsed").textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  const last = samples[samples.length - 1];
+  if (last && Date.now() - last.t > 10000) status(`No reading for ${Math.round((Date.now() - last.t) / 1000)} s`, "warn");
+}
+
+async function keepAwake() {
+  try { if ("wakeLock" in navigator && !wakeLock) { wakeLock = await navigator.wakeLock.request("screen"); wakeLock.addEventListener("release", () => (wakeLock = null)); } } catch {}
+}
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && wantConnected) keepAwake(); });
+
+async function subscribe() {
+  const server = await device.gatt.connect();
+  const service = await server.getPrimaryService("heart_rate");
+  characteristic = await service.getCharacteristic("heart_rate_measurement");
+  characteristic.addEventListener("characteristicvaluechanged", onMeasurement);
+  await characteristic.startNotifications();
+  status(`Connected to ${device.name || "band"}`, "ok");
+  log(`subscribed to ${device.name || device.id}`);
+}
+
+async function reconnect() {
+  for (let attempt = 1; wantConnected && attempt <= 5; attempt++) {
+    status(`Reconnecting (${attempt}/5)…`, "warn");
+    try { await subscribe(); return; } catch (e) { log(`reconnect ${attempt} failed: ${e.message}`); }
+    await new Promise((r) => setTimeout(r, 2000 * attempt));
+  }
+  if (wantConnected) status("Lost the band. Toggle Share heart rate off and on, then Connect.", "bad");
+}
+
+$("connect").onclick = async () => {
+  if (!navigator.bluetooth) {
+    status("This browser has no Web Bluetooth. Use Chrome on Android (not the Pulse app's WebView, not iOS Safari).", "bad");
+    return;
+  }
+  try {
+    device = await navigator.bluetooth.requestDevice({ filters: [{ services: ["heart_rate"] }] });
+    device.addEventListener("gattserverdisconnected", () => { log("disconnected"); if (wantConnected) reconnect(); else status("Disconnected"); });
+    wantConnected = true;
+    await subscribe();
+    await keepAwake();
+    $("connect").disabled = true; $("disconnect").disabled = false;
+    timer ??= setInterval(tick, 1000);
+  } catch (e) {
+    status(e.name === "NotFoundError" ? "No band chosen. Is Share heart rate on and the band nearby?" : `Failed: ${e.message}`, "bad");
+    log(`${e.name}: ${e.message}`);
+  }
+};
+
+$("disconnect").onclick = async () => {
+  wantConnected = false;
+  try { await characteristic?.stopNotifications(); } catch {}
+  device?.gatt?.disconnect();
+  try { await wakeLock?.release(); } catch {}
+  $("connect").disabled = false; $("disconnect").disabled = true;
+  status("Disconnected");
+};
+
+$("reset").onclick = () => {
+  samples = []; startedAt = null; kcal = 0; longestGap = 0;
+  for (const id of ["avg", "max", "gap", "rr", "contact", "rate"]) $(id).textContent = "–";
+  $("samples").textContent = "0"; $("kcal").textContent = "0"; $("elapsed").textContent = "0:00"; $("bpm").textContent = "--";
+  $("csv").disabled = true; drawChart();
+};
+
+$("csv").onclick = () => {
+  const rows = ["iso_time,unix_ms,bpm,rr_ms,contact", ...samples.map((s) => `${new Date(s.t).toISOString()},${s.t},${s.bpm},${s.rr.join(" ")},${s.contact ?? ""}`)];
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([rows.join("\n")], { type: "text/csv" }));
+  a.download = `live-hr-${new Date(samples[0].t).toISOString().slice(0, 16).replace(":", "")}.csv`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+};
+</script>
+</body>
+</html>
