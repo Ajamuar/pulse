@@ -31,7 +31,7 @@
   #status { font-size:13px; }
   .ok { color:var(--accent); } .warn { color:var(--warn); } .bad { color:var(--bad); }
   canvas { width:100%; height:120px; display:block; }
-  #log { font:12px/1.5 ui-monospace,Menlo,monospace; color:var(--muted); max-height:120px; overflow:auto; white-space:pre-wrap; }
+  #log { font:12px/1.5 ui-monospace,Menlo,monospace; color:var(--muted); max-height:240px; overflow:auto; white-space:pre-wrap; }
 </style>
 </head>
 <body>
@@ -77,7 +77,34 @@
     <button id="reset" class="secondary">Reset session</button>
   </div>
 
-  <div class="card"><div id="log"></div></div>
+  <div class="card">
+    <div class="row" style="margin-bottom:8px"><b style="font-size:13px">Connection log</b><button id="copylog" class="secondary" style="width:auto;padding:6px 12px;font-size:13px">Copy log</button></div>
+    <div id="log"></div>
+  </div>
+
+  <div class="card" id="cache" hidden>
+    <b style="font-size:14px">Heart Rate service not found after connecting</b>
+    <p style="margin-top:6px">The band advertises the service, but your phone is using an old copy of the band's service list from before Share heart rate was on. Android keeps that copy for paired devices.</p>
+    <ol style="margin:8px 0 0;padding-left:20px;color:var(--muted);font-size:13px;display:grid;gap:6px">
+      <li>Turn the phone's Bluetooth off, wait 5 s, turn it on.</li>
+      <li>In the Google Health app, turn Share heart rate off and on.</li>
+      <li>Connect again here.</li>
+      <li>If it still fails: install <b>nRF Connect</b>, connect to the band there, open its menu and tap <b>Refresh device cache</b>, disconnect, then connect here.</li>
+      <li>Do <b>not</b> unpair or forget the band in Android's Bluetooth settings; that unlinks it from Google Health.</li>
+    </ol>
+  </div>
+
+  <div class="card" id="help" hidden>
+    <b style="font-size:14px">If no readings arrive</b>
+    <ol style="margin:8px 0 0;padding-left:20px;color:var(--muted);font-size:13px;display:grid;gap:6px">
+      <li>In the Google Health app, turn <b>Share heart rate</b> off and on again. The band stops sharing after any app disconnects.</li>
+      <li>Make sure nothing else is using the shared heart rate (another app, a gym machine, a second phone). Sharing is one connection at a time.</li>
+      <li>Wear the band snugly: some bands send nothing without skin contact.</li>
+      <li>Start a workout on the band (or in Google Health), then tap Connect again.</li>
+      <li>Close Chrome completely, reopen this page, and connect once more.</li>
+      <li>Still nothing: tap <b>Copy log</b> and send it over.</li>
+    </ol>
+  </div>
   <p>Calories use Keytel et al. (2005). Heart-rate formulas are least accurate for weight training; treat the number as an estimate. Samples stay on this phone until you download them.</p>
 </main>
 
@@ -207,23 +234,100 @@ async function keepAwake() {
 }
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && wantConnected) keepAwake(); });
 
-async function subscribe() {
-  const server = await device.gatt.connect();
-  const service = await server.getPrimaryService("heart_rate");
-  characteristic = await service.getCharacteristic("heart_rate_measurement");
-  characteristic.addEventListener("characteristicvaluechanged", onMeasurement);
-  await characteristic.startNotifications();
-  status(`Connected to ${device.name || "band"}`, "ok");
-  log(`subscribed to ${device.name || device.id}`);
+const STEP_TIMEOUT_MS = 15000;
+const NO_DATA_MS = 8000;
+const OPTIONAL = ["battery_service", "device_information"];
+let firstDataTimer = null, notifications = 0;
+
+function withTimeout(promise, label) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(`${label} timed out after ${STEP_TIMEOUT_MS / 1000} s`)), STEP_TIMEOUT_MS)),
+  ]);
 }
 
-async function reconnect() {
-  for (let attempt = 1; wantConnected && attempt <= 5; attempt++) {
-    status(`Reconnecting (${attempt}/5)…`, "warn");
-    try { await subscribe(); return; } catch (e) { log(`reconnect ${attempt} failed: ${e.message}`); }
-    await new Promise((r) => setTimeout(r, 2000 * attempt));
+async function step(label, fn) {
+  status(`${label}…`, "warn");
+  log(`→ ${label}`);
+  const t = performance.now();
+  try {
+    const out = await withTimeout(fn(), label);
+    log(`✓ ${label} (${Math.round(performance.now() - t)} ms)`);
+    return out;
+  } catch (e) {
+    log(`✗ ${label}: ${e.name} ${e.message}`);
+    throw e;
   }
-  if (wantConnected) status("Lost the band. Toggle Share heart rate off and on, then Connect.", "bad");
+}
+
+const props = (c) => Object.entries(c.properties).filter(([, v]) => v === true).map(([k]) => k).join(",");
+
+async function describe(server) {
+  try {
+    const services = await server.getPrimaryServices();
+    for (const svc of services) {
+      const chars = await svc.getCharacteristics().catch(() => []);
+      log(`  service ${svc.uuid}: ${chars.map((c) => `${c.uuid.slice(4, 8)}[${props(c)}]`).join(" ") || "no characteristics"}`);
+    }
+  } catch (e) {
+    log(`  could not list services: ${e.message}`);
+  }
+}
+
+async function subscribe() {
+  if (device.gatt.connected) { log("already connected; disconnecting first"); device.gatt.disconnect(); }
+  let server, service;
+  for (let attempt = 1; ; attempt++) {
+    server = await step(`Connecting to GATT (try ${attempt})`, () => device.gatt.connect());
+    await describe(server);
+    try {
+      service = await step("Getting Heart Rate service", () => server.getPrimaryService("heart_rate"));
+      break;
+    } catch (e) {
+      if (e.name !== "NotFoundError" || attempt >= 3) {
+        if (e.name === "NotFoundError") $("cache").hidden = false;
+        throw e;
+      }
+      log("the band advertises Heart Rate but the connection doesn't list it; reconnecting to rediscover");
+      device.gatt.disconnect();
+      await new Promise((r) => setTimeout(r, 1500 * attempt));
+    }
+  }
+  characteristic = await step("Getting measurement characteristic", () => service.getCharacteristic("heart_rate_measurement"));
+  log(`  measurement properties: ${props(characteristic)}`);
+  try {
+    const loc = await (await service.getCharacteristic("body_sensor_location")).readValue();
+    log(`  body sensor location: ${loc.getUint8(0)}`);
+  } catch {}
+  characteristic.removeEventListener("characteristicvaluechanged", onNotification);
+  characteristic.addEventListener("characteristicvaluechanged", onNotification);
+  await step("Starting notifications", () => characteristic.startNotifications());
+  status(`Subscribed to ${device.name || "band"}; waiting for the first reading…`, "warn");
+  clearTimeout(firstDataTimer);
+  firstDataTimer = setTimeout(noData, NO_DATA_MS);
+}
+
+function onNotification(event) {
+  notifications++;
+  if (notifications === 1) {
+    clearTimeout(firstDataTimer);
+    const bytes = [...new Uint8Array(event.target.value.buffer)].map((b) => b.toString(16).padStart(2, "0")).join(" ");
+    log(`first reading after subscribe: ${bytes}`);
+    status(`Live from ${device.name || "band"}`, "ok");
+  }
+  onMeasurement(event);
+}
+
+async function noData() {
+  log(`no reading ${NO_DATA_MS / 1000} s after subscribing (connected: ${device.gatt.connected})`);
+  if (characteristic?.properties.read) {
+    try {
+      const v = await characteristic.readValue();
+      log(`one-off read worked: ${parseHeartRate(v).bpm} bpm`);
+    } catch (e) { log(`one-off read failed: ${e.message}`); }
+  }
+  status("Connected, but the band isn't sending readings. See the steps below the log.", "bad");
+  $("help").hidden = false;
 }
 
 $("connect").onclick = async () => {
@@ -231,22 +335,47 @@ $("connect").onclick = async () => {
     status("This browser has no Web Bluetooth. Use Chrome on Android (not the Pulse app's WebView, not iOS Safari).", "bad");
     return;
   }
+  $("help").hidden = true;
+  $("cache").hidden = true;
+  notifications = 0;
+  device = null;
   try {
-    device = await navigator.bluetooth.requestDevice({ filters: [{ services: ["heart_rate"] }] });
-    device.addEventListener("gattserverdisconnected", () => { log("disconnected"); if (wantConnected) reconnect(); else status("Disconnected"); });
+    device = await navigator.bluetooth.requestDevice({ filters: [{ services: ["heart_rate"] }], optionalServices: OPTIONAL });
+    log(`chosen: ${device.name || "(no name)"} id ${device.id}`);
+    device.ongattserverdisconnected = () => { log("disconnected"); if (wantConnected) reconnect(); else status("Disconnected"); };
     wantConnected = true;
+    $("connect").disabled = true; $("disconnect").disabled = false;
     await subscribe();
     await keepAwake();
-    $("connect").disabled = true; $("disconnect").disabled = false;
     timer ??= setInterval(tick, 1000);
   } catch (e) {
-    status(e.name === "NotFoundError" ? "No band chosen. Is Share heart rate on and the band nearby?" : `Failed: ${e.message}`, "bad");
+    wantConnected = false;
+    $("connect").disabled = false; $("disconnect").disabled = true;
+    const notChosen = e.name === "NotFoundError" && !device;
+    const noService = !$("cache").hidden;
+    status(notChosen ? "No band chosen. Is Share heart rate on and the band nearby?" : noService ? "Connected, but the band's Heart Rate service isn't visible. See the steps below." : `Failed: ${e.name} ${e.message}`, "bad");
     log(`${e.name}: ${e.message}`);
+    $("help").hidden = notChosen || noService;
   }
 };
 
+$("copylog").onclick = async () => {
+  const text = `${navigator.userAgent}\n${$("log").textContent}`;
+  try { await navigator.clipboard.writeText(text); log("log copied"); } catch { log("copy failed; long-press the log to select it"); }
+};
+
+async function reconnect() {
+  for (let attempt = 1; wantConnected && attempt <= 5; attempt++) {
+    log(`reconnect attempt ${attempt}/5`);
+    try { await subscribe(); return; } catch (e) { log(`reconnect ${attempt} failed: ${e.message}`); }
+    await new Promise((r) => setTimeout(r, 2000 * attempt));
+  }
+  if (wantConnected) status("Lost the band. Toggle Share heart rate off and on, then Connect.", "bad");
+}
+
 $("disconnect").onclick = async () => {
   wantConnected = false;
+  clearTimeout(firstDataTimer);
   try { await characteristic?.stopNotifications(); } catch {}
   device?.gatt?.disconnect();
   try { await wakeLock?.release(); } catch {}
