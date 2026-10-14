@@ -1,31 +1,69 @@
+<div align="center">
+
+<img src="public/icons/icon-192.png" alt="" width="96" height="96">
+
 # Pulse
 
-A personal recovery, strain and sleep app for the Fitbit Air: one Next.js app (frontend, sync worker and scoring) on Postgres. The server's admins invite people (or open sign-up); each person connects their own Google account and sees only their own data.
+**Recovery, strain and sleep from your Google Health data.**
 
-> No server? [Pulse Mobile](https://github.com/adityaongit/pulse-mobile) is the Android app that does it all on your phone, from Health Connect. See [below](#no-server-pulse-mobile).
-See `docs/plans/` for the plan.
+Daily scores from what your Fitbit or Pixel Watch syncs to Google Health, on a server you own. Built on Fitbit Air. Free for personal use.
 
-## Screenshots
+[![CI](https://github.com/adityaongit/pulse/actions/workflows/ci.yml/badge.svg)](https://github.com/adityaongit/pulse/actions/workflows/ci.yml)
+[![License: PolyForm Noncommercial](https://img.shields.io/badge/license-PolyForm%20Noncommercial-blue)](LICENSE)
+[![Website](https://img.shields.io/badge/site-pulse.portlabs.in-00f19f)](https://pulse.portlabs.in)
 
-<p>
-  <img src="docs/screenshots/phone-home.png" alt="Pulse on a phone: sleep, recovery and strain dials" width="32%">
-  <img src="docs/screenshots/phone-health-monitor.png" alt="Pulse on a phone: the Health Monitor with heart rhythm and measurements" width="32%">
-  <img src="docs/screenshots/phone-journal.png" alt="Pulse on a phone: the Journal with the Log" width="32%">
-</p>
+[**Website**](https://pulse.portlabs.in) · [**Setup guide**](docs/setup.md) · [**Android app**](https://github.com/adityaongit/pulse-mobile) · [**Metrics**](https://pulse.portlabs.in/metrics/) · [**Screenshots**](docs/screenshots.md)
 
-Every screen, on a phone and a laptop: [docs/screenshots.md](docs/screenshots.md) (demo mode, seeded data).
+<img src="docs/screenshots/phone-home.png" alt="Pulse on a phone: sleep, recovery and strain dials" width="30%">
+<img src="docs/screenshots/phone-health-monitor.png" alt="Pulse on a phone: the Health Monitor with heart rhythm and measurements" width="30%">
+<img src="docs/screenshots/phone-journal.png" alt="Pulse on a phone: the Journal with the Log" width="30%">
 
-## Run in demo mode
+</div>
 
-Demo mode generates deterministic data for a shared demo user, so no Google account is needed. Start Postgres first: `docker compose -f compose.dev.yaml up -d`.
+## Two ways to run it
+
+| | **Pulse** (this repo) | **[Pulse Mobile](https://github.com/adityaongit/pulse-mobile)** |
+|---|---|---|
+| Runs | On your server, in the browser, as an installed app or in the [app shell](docs/mobile.md) | On your Android phone |
+| Data | On your server, in Postgres | Only on the phone |
+| Source | The Google Health API | Fitbit through Health Connect |
+| Accounts | One server, many people, invite-only | None: one install is one person |
+| Get it | [Setup guide](docs/setup.md) | [Download the APK](https://github.com/adityaongit/pulse-mobile/releases/latest) |
+
+Pulse Mobile imports what Health Connect holds, up to the last 180 days. It does not share a Pulse server's history.
+
+## What you get
+
+- **Sleep, Recovery and Strain** each morning, with a Strain Target set by how recovered you are.
+- **Pulse Age** and its pace: how old your body is behaving, and whether that is speeding up.
+- **Stress Monitor** and **Energy Bank** through the day.
+- **Health Monitor**: last night's vitals against your normal range, ECG readings and irregular rhythm notifications.
+- **Journal**: log water, food, weight and mood, answer the questions you pick, and see what moves tomorrow's Recovery.
+- **Trends** and weekly and monthly **Reports**, **My Dashboard**, and an optional **AI coach** with your own key.
+
+Every score has a page with its inputs, weights, bands and limits: [the metrics](https://pulse.portlabs.in/metrics/) and [docs/algorithms](docs/algorithms).
+
+## Quick start (demo, no Google account)
+
+Demo mode generates 180 days of deterministic data for a shared demo user.
 
 ```sh
+git clone https://github.com/adityaongit/pulse.git && cd pulse
 pnpm install
-cp .env.example .env   # DATA_SOURCE=demo is already set
-pnpm dev               # http://localhost:3000, health check at /healthz
+cp .env.example .env                        # DATA_SOURCE=demo is already set
+docker compose -f compose.dev.yaml up -d    # Postgres
+pnpm dev                                    # http://localhost:3000, health check at /healthz
 ```
 
 The database is created and migrated on boot, and the sync worker starts once (`[worker] started (source: seed)`).
+
+## Run it with your own data
+
+Pulse runs as one Docker container with its database in a volume, behind a tunnel or HTTPS reverse proxy.
+
+1. Follow the [setup guide](docs/setup.md): Google Cloud OAuth client, Docker, HTTPS over Tailscale, troubleshooting.
+2. Prefer Cloudflare Tunnel or your own reverse proxy? See [other setups](docs/other-setups.md).
+3. Invite people, turn on the coach, update and back up: the [admin guide](docs/admin.md).
 
 ## Environment
 
@@ -36,30 +74,24 @@ Every variable is listed and explained in [`.env.example`](.env.example). It is 
 
 ## Install as an app
 
-Pulse is a PWA: install it from Chrome on Android, Add to Home Screen on iPhone, or wrap it into an Android APK with
-PWABuilder. Notifications, the offline page, launch screens and how to rebrand the icons for a fork are in
-[docs/pwa.md](docs/pwa.md).
+- **PWA:** install it from Chrome on Android or Add to Home Screen on iPhone. Notifications, offline, launch screens and rebranding: [docs/pwa.md](docs/pwa.md).
+- **App shell for Android and iOS** (`mobile/`, Capacitor): connects to any Pulse server you enter on first launch: [docs/mobile.md](docs/mobile.md).
+- **No server at all?** [Pulse Mobile](https://github.com/adityaongit/pulse-mobile) scores everything on your Android phone.
 
-There is also a native Android and iOS app (`mobile/`, Capacitor) that connects to any Pulse server you enter on first
-launch: [docs/mobile.md](docs/mobile.md).
+## Documentation
 
-### No server? Pulse Mobile
-
-[Pulse Mobile](https://github.com/adityaongit/pulse-mobile) is a separate Android app with no server and no account. It
-reads your Fitbit data from Health Connect and scores and stores it on the phone. It imports what Health Connect holds,
-up to the last 180 days, and does not share a Pulse server's history.
-[Download the APK](https://github.com/adityaongit/pulse-mobile/releases/latest).
-
-| | Pulse (this repo) | Pulse Mobile |
-|---|---|---|
-| Runs | On your server, in the browser or the app shell above | On your Android phone |
-| Data | On your server | Only on the phone |
-| Source | The Google Health API | Fitbit through Health Connect |
-| Accounts | One server, many users | None: one install is one person |
-
-## Deploy
-
-Pulse runs as one Docker container with its database in a volume, behind a tunnel or HTTPS reverse proxy. The [setup guide](docs/setup.md) covers Google Cloud, Docker, HTTPS over Tailscale and troubleshooting; [other setups](docs/other-setups.md) covers Cloudflare Tunnel and reverse proxies; the [admin guide](docs/admin.md) covers invites, the coach, updates and backups.
+| Guide | What it covers |
+|---|---|
+| [Setup guide](docs/setup.md) | From the demo to your own data on a server |
+| [Other setups](docs/other-setups.md) | Cloudflare Tunnel and reverse proxies |
+| [Admin guide](docs/admin.md) | Invites, the coach, updates and backups |
+| [Installed app (PWA)](docs/pwa.md) | Install, notifications, offline, rebranding |
+| [App shell (Capacitor)](docs/mobile.md) | The Android and iOS shell: building, signing, releases |
+| [Algorithms](docs/algorithms) | How each score is computed |
+| [Technical details](docs/technical-details.md) | How a Pulse server works under the hood |
+| [System design](docs/architecture/system-design.md) | The architecture as it is today |
+| [Screenshots](docs/screenshots.md) | Every screen on a phone and a laptop |
+| [AGENTS.md](AGENTS.md) | Commands, layout and rules for contributors and coding agents |
 
 ## Commands
 
@@ -76,9 +108,6 @@ Pulse runs as one Docker container with its database in a volume, behind a tunne
 
 ## Contributing and security
 
-- [Setup guide](docs/setup.md): from the demo to your own data on a server.
-- [Installed app (PWA)](docs/pwa.md): install, notifications, offline, rebranding, Android APK.
-- [Native app (Capacitor)](docs/mobile.md): the Android and iOS shell, building, signing, releases.
 - [Contributing](CONTRIBUTING.md): how changes land (`main` is protected; every change is a pull request).
 - [Security policy](SECURITY.md): report vulnerabilities privately.
 - [Code of Conduct](CODE_OF_CONDUCT.md).
