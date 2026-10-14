@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="public/icons/icon-192.png" alt="" width="88" height="88">
+<img src="docs/brand/logo-round.svg" alt="" width="88" height="88">
 
 # Pulse
 
