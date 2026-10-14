@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="212" height="56" viewBox="0 0 212 56" role="img" aria-label="Self-host on your server">
+  <rect x="0.5" y="0.5" width="211" height="55" rx="9" fill="#0b0d0e" stroke="#5f6368"/>
+  <svg x="18" y="12" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#00f19f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect width="20" height="8" x="2" y="2" rx="2" ry="2"/><rect width="20" height="8" x="2" y="14" rx="2" ry="2"/><line x1="6" x2="6.01" y1="6" y2="6"/><line x1="6" x2="6.01" y1="18" y2="18"/>
+  </svg>
+  <text x="64" y="24" fill="#e8eaed" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12">Self-host on</text>
+  <text x="63" y="44" fill="#00f19f" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="21" font-weight="700">your server</text>
+</svg>
