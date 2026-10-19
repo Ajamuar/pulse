@@ -37,7 +37,7 @@ export async function generateMetadata({ params }: PageProps<"/metric/[key]">) {
 export default async function MetricPage({ params, searchParams }: PageProps<"/metric/[key]">) {
   const { key } = await params
   if (!isDetailKey(key)) notFound()
-  const { d, timeZone, ctx } = await pageDay(searchParams as SearchParams, `/metric/${key}`)
+  const { d, timeZone, timeFormat, ctx } = await pageDay(searchParams as SearchParams, `/metric/${key}`)
   const vm = await getMetricDetail(key, d, ctx)
   const empty = vm.value.value === null && vm.history.value === null
   // The day's hourly view sits beside the hero on laptop; every other section follows the history.
@@ -56,7 +56,7 @@ export default async function MetricPage({ params, searchParams }: PageProps<"/m
       title={vm.label}
       dateSwitcher={{ mode: "day" }}
       hero={<Hero vm={vm} />}
-      summary={lead && <MetricSection s={lead} vm={vm} timeZone={timeZone} />}
+      summary={lead && <MetricSection s={lead} vm={vm} timeZone={timeZone} timeFormat={timeFormat} />}
       primary={
         empty ? (
           <SectionShell variant="card" level={2} title="History">
@@ -94,7 +94,7 @@ export default async function MetricPage({ params, searchParams }: PageProps<"/m
           </div>
         )
       }
-      secondary={empty ? [] : more.map((s) => <MetricSection key={s.kind} s={s} vm={vm} timeZone={timeZone} className={more.length === 1 ? "xl:col-span-2" : undefined} />)}
+      secondary={empty ? [] : more.map((s) => <MetricSection key={s.kind} s={s} vm={vm} timeZone={timeZone} timeFormat={timeFormat} className={more.length === 1 ? "xl:col-span-2" : undefined} />)}
       footer={
         <SectionShell variant="card" level={2} title={`About ${vm.label.toLowerCase()}`}>
           <div className="max-w-[65ch] space-y-2 text-[15px] leading-[22px] text-pretty text-foreground-secondary">

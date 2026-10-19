@@ -13,7 +13,7 @@ import type { QueryCtx } from "./queries/common";
 import { seedPull } from "./sources/seed/generate";
 
 export const TZ = "Asia/Kolkata";
-export const PROFILE = { birthDate: "1990-01-01", sex: "male" as const, maxHr: 183, maxHrSource: "set" as const, heightCm: 178, timeZone: TZ };
+export const PROFILE = { birthDate: "1990-01-01", sex: "male" as const, maxHr: 183, maxHrSource: "set" as const, heightCm: 178, timeZone: TZ, timeFormat: "24" as const };
 /** The user every helper creates and scopes to. */
 export const USER = 1;
 export const OPTS: PipelineOptions = { userId: USER, timeZone: TZ, profile: PROFILE };

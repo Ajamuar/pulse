@@ -6,13 +6,12 @@ import { Area, AreaChart, CartesianGrid, ReferenceArea, ReferenceLine, XAxis, YA
 import { DATA_COLORS, ZONE_COLOR } from "@/lib/bands"
 import { bandColor } from "@/lib/charts"
 import { clockTicks, hourTicks, paddedDomain } from "@/lib/charts"
-import { clock } from "@/lib/format"
+import { useClock, useOptionalShellCalendar } from "@/components/shells/ShellStatus"
 import type { Metric } from "@/lib/reasons"
 import { ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { Skeleton } from "@/components/ui/skeleton"
 import { EmptyState } from "@/components/shells/EmptyState"
 import { MetricState } from "@/components/shells/MetricState"
-import { useOptionalShellCalendar } from "@/components/shells/ShellStatus"
 import { ReasonPlaceholder } from "@/components/metrics/ReasonPlaceholder"
 import { AXIS, BandGradient, bandPaint, ChartFigure, FadeGradient, GlowDot, GRID, LINE_CURSOR, TOOLTIP_CLASS, TooltipLine, useSeriesAnimation, type Band } from "./ChartFrame"
 
@@ -127,6 +126,7 @@ export function zoneStrips(zones: HrZone[] | undefined, domain: [number, number]
 
 function Chart({ hr, variant }: { hr: HrSeries; variant: "day" | "activity" }) {
   const tz = useOptionalShellCalendar()?.timeZone
+  const at = useClock()
   const anim = useSeriesAnimation()
   const id = React.useId().replace(/:/g, "")
   const first = hr.points[0]?.t ?? 0
@@ -134,7 +134,7 @@ function Chart({ hr, variant }: { hr: HrSeries; variant: "day" | "activity" }) {
   const domain = paddedDomain(hr.points.map((p) => p.bpm))
   const bpms = hr.points.map((p) => p.bpm).filter((b): b is number => b !== null)
   const zoneOf = (bpm: number) => hr.zones?.find((z) => bpm >= z.min && bpm <= z.max)?.label
-  const summary = `Heart rate from ${clock(first, tz)} to ${clock(last, tz)}: low ${Math.min(...bpms)}, high ${Math.max(...bpms)} beats per minute.`
+  const summary = `Heart rate from ${at(first, tz)} to ${at(last, tz)}: low ${Math.min(...bpms)}, high ${Math.max(...bpms)} beats per minute.`
   // The day chart draws heart rate grey and colours it by zone only inside workouts (WHOOP's day view); an activity is all workout.
   const workouts = (hr.spans ?? []).filter((s) => s.kind === "workout")
   const inWorkout = (t: number) => variant === "activity" || workouts.some((s) => t >= s.start && t <= s.end)
@@ -181,7 +181,7 @@ function Chart({ hr, variant }: { hr: HrSeries; variant: "day" | "activity" }) {
             scale="time"
             domain={[first, last]}
             ticks={workout ? [workout.start, workout.end] : variant === "day" ? hourTicks(first, last, 6, tz) : clockTicks(first, last, last - first <= 3_600_000 ? 15 : last - first <= 3 * 3_600_000 ? 30 : 60, tz)}
-            tickFormatter={(v: number) => clock(v, tz)}
+            tickFormatter={(v: number) => at(v, tz)}
             interval={workout ? 0 : "preserveStartEnd"}
             minTickGap={24}
             {...AXIS}
@@ -196,7 +196,7 @@ function Chart({ hr, variant }: { hr: HrSeries; variant: "day" | "activity" }) {
               <ChartTooltipContent
                 className={TOOLTIP_CLASS}
                 hideIndicator
-                labelFormatter={(_, payload) => clock(Number(payload?.[0]?.payload?.t), tz)}
+                labelFormatter={(_, payload) => at(Number(payload?.[0]?.payload?.t), tz)}
                 formatter={(v, name) => {
                   if (name !== "bpm") return null
                   const bpm = Number(v)

@@ -4,13 +4,13 @@ import * as React from "react"
 import { Area, CartesianGrid, ComposedChart, Line, ReferenceDot, ReferenceLine, XAxis, YAxis } from "recharts"
 import { DATA_COLORS, STRESS_COLOR, STRESS_WORD, stressLevel } from "@/lib/bands"
 import { bandColor, hourTicks } from "@/lib/charts"
-import { clock, formatValue } from "@/lib/format"
+import { formatValue } from "@/lib/format"
 import type { Metric } from "@/lib/reasons"
 import { ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { Skeleton } from "@/components/ui/skeleton"
 import { EmptyState } from "@/components/shells/EmptyState"
 import { MetricState } from "@/components/shells/MetricState"
-import { useOptionalShellCalendar } from "@/components/shells/ShellStatus"
+import { useClock, useOptionalShellCalendar } from "@/components/shells/ShellStatus"
 import { ReasonPlaceholder } from "@/components/metrics/ReasonPlaceholder"
 import { AXIS, BandGradient, bandPaint, ChartFigure, FadeGradient, GlowDot, GRID, LINE_CURSOR, TOOLTIP_CLASS, TooltipLine, useSeriesAnimation, type Band } from "./ChartFrame"
 import { spanAreas, type ChartSpan } from "./IntradayHrChart"
@@ -34,6 +34,7 @@ const BANDS: Band[] = (["low", "medium", "high"] as const).map((l, i) => ({ from
 
 function Chart({ s, variant }: { s: StressSeries; variant: "full" | "spark" }) {
   const tz = useOptionalShellCalendar()?.timeZone
+  const at = useClock()
   const anim = useSeriesAnimation()
   const id = React.useId().replace(/:/g, "")
   const data = s.points.map((p) => ({ x: p.t, all: p.value }))
@@ -45,7 +46,7 @@ function Chart({ s, variant }: { s: StressSeries; variant: "full" | "spark" }) {
   const latest = [...s.points].reverse().find((p) => p.value !== null)
   const full = variant === "full"
   const summary = latest?.value != null
-    ? `Stress through the day, latest ${formatValue("decimal1", latest.value)}, ${STRESS_WORD[stressLevel(latest.value)].toLowerCase()}, at ${clock(latest.t, tz)}.`
+    ? `Stress through the day, latest ${formatValue("decimal1", latest.value)}, ${STRESS_WORD[stressLevel(latest.value)].toLowerCase()}, at ${at(latest.t, tz)}.`
     : "Stress through the day."
 
   return (
@@ -65,7 +66,7 @@ function Chart({ s, variant }: { s: StressSeries; variant: "full" | "spark" }) {
           hide={!full}
           // The hours, then the time now in bold at the end of the line (dashboard-tiles-new-metrics), clear of the last hour.
           ticks={full ? (s.now ? [...hourTicks(first, last, 6, tz).filter((t) => last - t >= 5 * 3_600_000), s.now] : hourTicks(first, last, 4, tz)) : undefined}
-          tickFormatter={(v: number) => clock(v, tz)}
+          tickFormatter={(v: number) => at(v, tz)}
           tick={full && s.now ? (p: { x?: number | string; y?: number | string; payload?: { value: number } }) => <NowTick {...p} first={first} now={s.now!} tz={tz} /> : undefined}
           interval={s.now ? 0 : "equidistantPreserveStart"}
           minTickGap={24}
@@ -80,7 +81,7 @@ function Chart({ s, variant }: { s: StressSeries; variant: "full" | "spark" }) {
               <ChartTooltipContent
                 className={TOOLTIP_CLASS}
                 hideIndicator
-                labelFormatter={(_, payload) => clock(Number(payload?.[0]?.payload?.x), tz)}
+                labelFormatter={(_, payload) => at(Number(payload?.[0]?.payload?.x), tz)}
                 formatter={(v, name) => {
                   if (name !== "all") return null
                   const n = Number(v)
@@ -115,13 +116,14 @@ function Chart({ s, variant }: { s: StressSeries; variant: "full" | "spark" }) {
 
 /** An hour tick, or the time now in bold. */
 function NowTick({ x, y, payload, first, now, tz }: { x?: number | string; y?: number | string; payload?: { value: number }; first: number; now: number; tz?: string }) {
+  const at = useClock()
   if (!payload) return null
   const isNow = payload.value === now
   // The first tick sits on the axis's left edge: anchored at its start so it isn't cut off.
   const anchor = isNow ? "end" : payload.value <= first ? "start" : "middle"
   return (
     <text x={x} y={y} dy="0.9em" textAnchor={anchor} fontSize={12} fontWeight={isNow ? 700 : 400} fill={isNow ? "var(--foreground)" : "var(--muted-foreground)"} className="font-numeric tabular-nums">
-      {clock(payload.value, tz)}
+      {at(payload.value, tz)}
     </text>
   )
 }

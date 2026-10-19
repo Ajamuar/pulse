@@ -1,7 +1,10 @@
+"use client"
+
 import Link from "next/link"
 import { Bike, Dumbbell, Footprints, PersonStanding, Timer, type LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { clock, formatValue, spoken } from "@/lib/format"
+import { formatValue, spoken } from "@/lib/format"
+import { useClock } from "@/components/shells/ShellStatus"
 import type { Metric } from "@/lib/reasons"
 import { Skeleton, SkeletonText } from "@/components/ui/skeleton"
 import { CAP_TRIM } from "./primitives"
@@ -89,8 +92,9 @@ export function TimelineRow({
 
 export function ActivityCard({ name, kind, strain, start, end, href, timeZone, distanceKm, paceS }: ActivityCardProps) {
   const Icon = ACTIVITY_ICON[kind]
-  const s = clock(start, timeZone)
-  const e = clock(end, timeZone)
+  const at = useClock()
+  const s = at(start, timeZone)
+  const e = at(end, timeZone)
   const value = formatValue("decimal1", strain.value)
   const distance = distanceText(distanceKm, paceS)
   const noStrain = strain.value === null

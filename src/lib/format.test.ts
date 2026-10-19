@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { agoShort, DAY, dayLabel, pillLabel, dialAriaLabel, durationWords, formatDay, formatValue, rangeLabel } from "./format";
+import { agoShort, clock, DAY, dayLabel, pillLabel, dialAriaLabel, durationWords, formatDay, formatValue, rangeLabel } from "./format";
 
 describe("format", () => {
   it("shortens sync ages for the header", () => {
@@ -24,6 +24,14 @@ describe("format", () => {
     expect(formatValue("int", null)).toBe("--");
     expect(formatValue("int", Number.NaN)).toBe("--");
     expect(durationWords(72)).toBe("1\u00a0hour 12\u00a0minutes");
+  });
+  it("prints 24-hour times unless the profile asks for 12-hour", () => {
+    const at = Date.parse("2026-10-02T17:00:00Z"); // 22:30 in Asia/Kolkata
+    expect(clock(at, "Asia/Kolkata")).toBe("22:30");
+    expect(clock(at, "Asia/Kolkata", "24")).toBe("22:30");
+    expect(clock(Date.parse("2026-10-02T03:35:00Z"), "Asia/Kolkata", "24")).toBe("09:05");
+    expect(clock(at, "Asia/Kolkata", "12").replace(/\s/g, " ")).toBe("10:30 PM");
+    expect(clock(Date.parse("2026-10-02T18:30:00Z"), "Asia/Kolkata", "12").replace(/\s/g, " ")).toBe("12:00 AM");
   });
   it("labels days and ranges", () => {
     expect(dayLabel("2026-10-02", "2026-10-02")).toBe("Today");

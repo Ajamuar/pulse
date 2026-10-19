@@ -306,7 +306,7 @@ describe("google sync", () => {
   });
 
   describe("records deleted in Fitbit", () => {
-    const OPTS = { userId: USER, timeZone: TZ, profile: { birthDate: "1990-01-01", sex: "male" as const, maxHr: 183, maxHrSource: "set" as const, heightCm: null, timeZone: TZ } };
+    const OPTS = { userId: USER, timeZone: TZ, profile: { birthDate: "1990-01-01", sex: "male" as const, maxHr: 183, maxHrSource: "set" as const, heightCm: null, timeZone: TZ, timeFormat: "24" as const } };
     const ids = async (t: typeof sleepSessions | typeof exercises) => (await db.select({ id: t.id }).from(t)).map((r) => r.id.split("/").pop()).sort();
     const scores = async (day: string) => {
       const [r] = await db.select({ activities: dailyScores.activities, sleep: dailyScores.sleep }).from(dailyScores).where(eq(dailyScores.day, day));

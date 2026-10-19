@@ -238,6 +238,7 @@ export function Profile({ profile }: { profile: SettingsVM["profile"] }) {
     ["Height", profile.heightCm ? `${profile.heightCm}\u00a0cm` : "Not set"],
     ["Max heart rate", `${profile.maxHr}\u00a0bpm, ${profile.maxHrSource}`],
     ["Time zone", profile.timeZone],
+    ["Time format", profile.timeFormat === "12" ? "12-hour" : "24-hour"],
   ]
   return (
     <SectionShell
@@ -246,7 +247,7 @@ export function Profile({ profile }: { profile: SettingsVM["profile"] }) {
       title="Profile"
       action={
         <EditProfileButton
-          defaults={{ birthDate: profile.birthDate, sex: profile.sex, maxHr: profile.maxHrSource === "set" ? profile.maxHr : null, heightCm: profile.heightCm, timeZone: profile.timeZone }}
+          defaults={{ birthDate: profile.birthDate, sex: profile.sex, maxHr: profile.maxHrSource === "set" ? profile.maxHr : null, heightCm: profile.heightCm, timeZone: profile.timeZone, timeFormat: profile.timeFormat }}
         />
       }
     >
@@ -258,7 +259,7 @@ export function Profile({ profile }: { profile: SettingsVM["profile"] }) {
           </div>
         ))}
       </dl>
-      <p className={cn(CAPTION, "mt-2")}>Your days start at midnight in your time zone. Edit changes it and recomputes your scores.</p>
+      <p className={cn(CAPTION, "mt-2")}>Your days start at midnight in your time zone. Changing your body or time zone recomputes your scores. Time format only changes how times are shown.</p>
     </SectionShell>
   )
 }

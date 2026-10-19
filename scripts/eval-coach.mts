@@ -28,7 +28,7 @@ const pg = new PGlite();
 const db = drizzle(pg, { schema }) as unknown as Db;
 await migrate(db as never, { migrationsFolder: "drizzle" });
 await db.insert(schema.user).values([{ id: 1, name: "Generated fixture", email: "fixture@pulse.local" }, { id: 2, name: "Empty fixture", email: "empty@pulse.local" }]);
-const profile = { ...DEMO_PROFILE, maxHr: 183, maxHrSource: "set" as const, heightCm: 178 };
+const profile = { ...DEMO_PROFILE, maxHr: 183, maxHrSource: "set" as const, heightCm: 178, timeFormat: "24" as const };
 const now = Date.parse("2026-10-02T14:00:00+05:30") / 1000;
 await seedPull(db, { userId: 1, now, timeZone: profile.timeZone, maxHr: profile.maxHr });
 await recompute(db, { userId: 1, profile, timeZone: profile.timeZone });

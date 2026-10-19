@@ -15,12 +15,12 @@ export default async function NapPage({ params }: PageProps<"/sleep/nap/[id]">) 
   const ctx = await userCtx()
   const vm = await getNap(decodeURIComponent(id), ctx)
   if (!vm) notFound()
-  const { timeZone } = ctx
+  const { timeZone, profile } = ctx
 
   return (
     <DetailShell
       title="Nap"
-      subtitle={`${dayLabel(vm.day, todayOf(ctx))} ${clock(vm.start, timeZone)} to ${clock(vm.end, timeZone)}`}
+      subtitle={`${dayLabel(vm.day, todayOf(ctx))} ${clock(vm.start, timeZone, profile.timeFormat)} to ${clock(vm.end, timeZone, profile.timeFormat)}`}
       align="start"
       backHref={dayHref("/sleep", vm.day, todayOf(ctx))}
       primary={

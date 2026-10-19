@@ -4,7 +4,8 @@ import * as React from "react"
 import { useRouter } from "next/navigation"
 import { ChevronRight, Plus, type LucideIcon } from "lucide-react"
 import { toast } from "sonner"
-import { clock, dayLabel } from "@/lib/format"
+import { dayLabel } from "@/lib/format"
+import { useClock } from "@/components/shells/ShellStatus"
 import { LOG_DAYS, MEALS, RECONNECT, type LogData, type LogKind } from "@/lib/log"
 import { cn } from "@/lib/utils"
 import { deleteLogEntry } from "@/server/actions/log"
@@ -69,7 +70,8 @@ export function DayLog({ vm }: { vm: LogVM }) {
   const [shown, setShown] = React.useState<Open | null>(null)
   const [confirming, setConfirming] = React.useState(false)
   const [removing, setRemoving] = React.useState(false)
-  const time = (ts: number) => clock(ts * 1000, vm.timeZone)
+  const formatClock = useClock()
+  const time = (ts: number) => formatClock(ts * 1000, vm.timeZone)
   const day = dayLabel(vm.day, vm.today)
   const show = (o: Open) => {
     setConfirming(false)

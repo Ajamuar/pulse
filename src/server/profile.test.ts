@@ -16,7 +16,7 @@ describe("profile", () => {
     const db = await freshDb();
     await saveProfile(db, USER, input);
     // Age 36 on 2026-10-02: 208 - 0.7 * 36 = 182.8
-    expect(await getProfile(db, USER, "2026-10-02")).toEqual({ birthDate: "1990-06-15", sex: "female", maxHr: 183, maxHrSource: "estimated", heightCm: 165, timeZone: "Asia/Kolkata" });
+    expect(await getProfile(db, USER, "2026-10-02")).toEqual({ birthDate: "1990-06-15", sex: "female", maxHr: 183, maxHrSource: "estimated", heightCm: 165, timeZone: "Asia/Kolkata", timeFormat: "24" });
     // Birthday not reached yet, age 35: 183.5
     expect((await getProfile(db, USER, "2026-06-14"))!.maxHr).toBe(184);
     await saveProfile(db, USER, { ...input, maxHr: 190 });
@@ -52,6 +52,10 @@ describe("profile", () => {
     expect(await dirty()).toBe(0);
     expect(await saveProfile(db, USER, { ...input, timeZone: "UTC" })).toBe(true);
     expect(await dirty()).toBe(days);
+    await db.execute(sql`delete from intraday_dirty`);
+    expect(await saveProfile(db, USER, { ...input, timeZone: "UTC", timeFormat: "12" })).toBe(false);
+    expect(await dirty()).toBe(0);
+    expect(await getProfile(db, USER, "2026-10-02")).toMatchObject({ timeZone: "UTC", timeFormat: "12" });
   });
 
   it("validates input, coercing form strings", () => {
@@ -69,6 +73,7 @@ describe("profile", () => {
       { ...input, maxHr: 300 },
       { ...input, heightCm: 20 },
       { ...input, timeZone: "Mars/Olympus" },
+      { ...input, timeFormat: "13" },
     ])
       expect(ProfileInput.safeParse(bad).success).toBe(false);
   });
