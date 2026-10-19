@@ -1,22 +1,15 @@
 "use client"
 
 import Link from "next/link"
-import { Bike, Dumbbell, Footprints, PersonStanding, Timer, type LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { formatValue, spoken } from "@/lib/format"
 import { useClock } from "@/components/shells/ShellStatus"
 import type { Metric } from "@/lib/reasons"
 import { Skeleton, SkeletonText } from "@/components/ui/skeleton"
+import { ACTIVITY_ICON, type ActivityKind } from "./activityIcon"
 import { CAP_TRIM } from "./primitives"
 
-export type ActivityKind = "run" | "ride" | "walk" | "strength" | "workout"
-export const ACTIVITY_ICON: Record<ActivityKind, LucideIcon> = {
-  run: PersonStanding,
-  ride: Bike,
-  walk: Footprints,
-  strength: Dumbbell,
-  workout: Timer,
-}
+export type { ActivityKind }
 
 export type ActivityCardProps = {
   /** "Running", "Strength training", "Cycling", "Walking", "Workout". */
