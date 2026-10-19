@@ -40,6 +40,7 @@ import { getSleep } from "./sleep";
 import { getStrain } from "./strain";
 import { getTrends } from "./trends";
 import { getTrendView } from "./trendView";
+import { getWidget } from "./widget";
 
 const TODAY = dayAt(179);
 const PAST = dayAt(170);
@@ -86,6 +87,7 @@ async function screens(ctx: QueryCtx, activityId: string | null, period: string 
     shellGoogle: await getShellStatus(g),
     streak: await getWearStreak(ctx),
     dashboard: await dashboardKeys(ctx.db, ctx.userId),
+    widget: await getWidget(ctx),
   });
   return out;
 }

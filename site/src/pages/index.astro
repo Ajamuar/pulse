@@ -50,7 +50,7 @@ const tiles: Tile[] = [
   { area: "rep", name: "Reports", line: "A weekly and monthly read of how it went.", shot: "phone-reports", crop: [132, 560], tone: "123 161 187" },
 ]
 
-// The rest, in one line each. Every item is a shipped feature (src/core/algorithms, src/app).
+// The rest, in one line each. Every item is a shipped feature.
 const extras: { icon: string; label: string }[] = [
   { icon: "battery-medium", label: "Energy Bank" },
   { icon: "bed-double", label: "Sleep planner" },
@@ -61,6 +61,7 @@ const extras: { icon: string; label: string }[] = [
   { icon: "bell", label: "Push notifications" },
   { icon: "wifi-off", label: "Works offline" },
   { icon: "download", label: "Export everything" },
+  { icon: "smartphone", label: "Home screen widget" },
   { icon: "utensils", label: "Food and water log" },
 ]
 
@@ -129,6 +130,10 @@ const faq = [
   {
     q: "The old Fitbit Web API is shutting down. Does that affect Pulse?",
     a: "No. Pulse uses the newer Google Health API from the start, with your own Google OAuth client.",
+  },
+  {
+    q: "Can I see today's scores without opening Pulse?",
+    a: "On Android, the Today widget puts Sleep, Recovery and Strain on the home screen, and on Android 16 on the lock-screen page. Refresh asks for the latest. It follows Appearance in Settings, including the phone's light or dark setting when Appearance is System. A missing score stays an empty ring, and a signed-out session says Sign in required. The iOS app does not have a widget yet.",
   },
   {
     q: "Are the scores medical advice?",
