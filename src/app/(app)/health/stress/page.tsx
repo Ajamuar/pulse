@@ -97,7 +97,7 @@ function typicalLine(l: NonNullable<StressVM["levels"]["value"]>) {
 }
 
 export default async function StressPage({ searchParams }: PageProps<"/health/stress">) {
-  const { d, today, timeZone, ctx } = await pageDay(searchParams as SearchParams, "/health/stress")
+  const { d, today, timeZone, timeFormat, ctx } = await pageDay(searchParams as SearchParams, "/health/stress")
   const vm = await getStress(d, ctx)
   const g = vm.gauge
 
@@ -114,7 +114,7 @@ export default async function StressPage({ searchParams }: PageProps<"/health/st
           value={g.value?.value ?? null}
           reason={g.reason}
           provisional={g.provisional}
-          caption={g.value ? (g.value.dayAverage || !vm.isToday ? "Day average" : g.value.at ? `Last updated ${clock(g.value.at, timeZone)}` : undefined) : undefined}
+          caption={g.value ? (g.value.dayAverage || !vm.isToday ? "Day average" : g.value.at ? `Last updated ${clock(g.value.at, timeZone, timeFormat)}` : undefined) : undefined}
         />
         {g.reason === "no_data" && <p className="max-w-[36ch] text-center text-xs leading-4 font-medium text-muted-foreground">{EMPTY}</p>}
         </div>

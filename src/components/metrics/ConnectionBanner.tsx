@@ -4,14 +4,14 @@ import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { CloudDownload, Plug, TriangleAlert, Unplug, UserX, Watch, WifiOff } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { ago, clock } from "@/lib/format"
+import { ago } from "@/lib/format"
 import { useNow } from "@/hooks/use-now"
 import { useOnline } from "@/hooks/use-online"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { CARD_MATERIAL } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
-import { useShellStatus } from "@/components/shells/ShellStatus"
+import { useClock, useShellStatus } from "@/components/shells/ShellStatus"
 
 /**
  * The one place the app talks about its data connection (spec §5.13). Reads ShellStatus; hidden when
@@ -20,6 +20,7 @@ import { useShellStatus } from "@/components/shells/ShellStatus"
  */
 export function ConnectionBanner({ className }: { className?: string }) {
   const s = useShellStatus()
+  const formatClock = useClock()
   const router = useRouter()
   const now = useNow()
   const pathname = usePathname()
@@ -87,7 +88,7 @@ export function ConnectionBanner({ className }: { className?: string }) {
         ? "Sync is behind. Data may be out of date."
         : now
           ? `Last successful sync ${ago(s.sync.lastSuccessAt, now)}. Data may be out of date.`
-          : `Last successful sync at ${clock(s.sync.lastSuccessAt, s.timeZone)}. Data may be out of date.`,
+          : `Last successful sync at ${formatClock(s.sync.lastSuccessAt, s.timeZone)}. Data may be out of date.`,
       action: (
         <Button size="touch" variant="secondary" onClick={() => router.refresh()}>
           Retry
@@ -98,7 +99,7 @@ export function ConnectionBanner({ className }: { className?: string }) {
     offline: {
       icon: <WifiOff className="text-foreground-secondary" />,
       title: "You’re offline",
-      body: `${s.sync.lastSuccessAt ? `Last synced ${now ? ago(s.sync.lastSuccessAt, now) : `at ${clock(s.sync.lastSuccessAt, s.timeZone)}`}. ` : ""}This is what the device last loaded. Check-in answers are kept and sent when you’re back.`,
+      body: `${s.sync.lastSuccessAt ? `Last synced ${now ? ago(s.sync.lastSuccessAt, now) : `at ${formatClock(s.sync.lastSuccessAt, s.timeZone)}`}. ` : ""}This is what the device last loaded. Check-in answers are kept and sent when you’re back.`,
       action: null,
       role: "status",
     },

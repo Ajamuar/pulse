@@ -4,13 +4,13 @@ import * as React from "react"
 import { Area, CartesianGrid, ComposedChart, Line, ReferenceDot, XAxis, YAxis } from "recharts"
 import { DATA_COLORS, recoveryColor } from "@/lib/bands"
 import { bandColor, hourTicks } from "@/lib/charts"
-import { clock, formatValue } from "@/lib/format"
+import { formatValue } from "@/lib/format"
 import type { Metric } from "@/lib/reasons"
 import { ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { Skeleton } from "@/components/ui/skeleton"
 import { EmptyState } from "@/components/shells/EmptyState"
 import { MetricState } from "@/components/shells/MetricState"
-import { useOptionalShellCalendar } from "@/components/shells/ShellStatus"
+import { useClock, useOptionalShellCalendar } from "@/components/shells/ShellStatus"
 import { ReasonPlaceholder } from "@/components/metrics/ReasonPlaceholder"
 import { AXIS, BandGradient, bandPaint, ChartFigure, FadeGradient, GlowDot, GRID, LINE_CURSOR, Pill, TOOLTIP_CLASS, TooltipLine, useSeriesAnimation, type Band } from "./ChartFrame"
 import { spanAreas } from "./IntradayHrChart"
@@ -30,6 +30,7 @@ const BANDS: Band[] = [0, 34, 67].map((from) => ({ from, color: DATA_COLORS[reco
 
 function Chart({ e }: { e: EnergySeries }) {
   const tz = useOptionalShellCalendar()?.timeZone
+  const at = useClock()
   const anim = useSeriesAnimation()
   const id = React.useId().replace(/:/g, "")
   const data = e.points.map((p) => ({ x: p.t, all: p.value }))
@@ -42,7 +43,7 @@ function Chart({ e }: { e: EnergySeries }) {
   const valueAt = (t: number) => e.points.reduce((best, p) => (Math.abs(p.t - t) < Math.abs(best.t - t) ? p : best), e.points[0]).value
   const drains = [...(e.drains ?? [])].sort((a, b) => b.amount - a.amount).slice(0, 3)
   const startV = e.points.find((p) => p.value !== null)?.value
-  const summary = `Energy from ${clock(first, tz)}: started at ${formatValue("int", startV)} percent, now ${formatValue("int", latest?.value)} percent.`
+  const summary = `Energy from ${at(first, tz)}: started at ${formatValue("int", startV)} percent, now ${formatValue("int", latest?.value)} percent.`
 
   return (
     <ChartFigure summary={summary} config={{ all: { label: "Energy", color: "var(--recovery-green)" } }} className="h-[140px]">
@@ -53,7 +54,7 @@ function Chart({ e }: { e: EnergySeries }) {
           <FadeGradient id={`energy-fill-${id}`} color={bandColor(latest?.value ?? top, BANDS)} from={0.24} />
         </defs>
         {spanAreas(e.naps?.map((n) => ({ kind: "sleep" as const, start: n.start, end: n.end, label: "Nap" })))}
-        <XAxis dataKey="x" type="number" scale="time" domain={[first, last]} ticks={hourTicks(first, last, 6, tz)} tickFormatter={(v: number) => clock(v, tz)} interval="preserveStartEnd" minTickGap={24} {...AXIS} />
+        <XAxis dataKey="x" type="number" scale="time" domain={[first, last]} ticks={hourTicks(first, last, 6, tz)} tickFormatter={(v: number) => at(v, tz)} interval="preserveStartEnd" minTickGap={24} {...AXIS} />
         <YAxis domain={[0, 100]} ticks={[33, 67, 100]} width={28} {...AXIS} tickMargin={4} />
         <ChartTooltip
           isAnimationActive={false}
@@ -62,7 +63,7 @@ function Chart({ e }: { e: EnergySeries }) {
             <ChartTooltipContent
               className={TOOLTIP_CLASS}
               hideIndicator
-              labelFormatter={(_, payload) => clock(Number(payload?.[0]?.payload?.x), tz)}
+              labelFormatter={(_, payload) => at(Number(payload?.[0]?.payload?.x), tz)}
               formatter={(v, name) =>
                 name === "all" ? <TooltipLine color={DATA_COLORS[recoveryColor(Number(v))].css}>{formatValue("int", Number(v))}%</TooltipLine> : null
               }

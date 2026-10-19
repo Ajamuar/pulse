@@ -5,7 +5,7 @@ import type { BehaviorChip } from "@/core/algorithms/behaviorChips";
 // Conventions: instants are epoch **milliseconds** (as the kit's charts and cards take them), days are
 // local `YYYY-MM-DD`, Strain is on the reference app's 0–21 scale, and no number is ever NaN or ±Infinity.
 import type { DashboardKey } from "@/lib/dashboard";
-import type { FormatKey } from "@/lib/format";
+import type { FormatKey, TimeFormat } from "@/lib/format";
 
 import type { ChipTone, GoodDirection, RecoveryBand as Band, StressLevel } from "@/lib/bands";
 import type { Metric, MetricTag, ReasonCode } from "@/lib/reasons";
@@ -501,6 +501,8 @@ export type ShellStatusVM = {
   today: string;
   firstDay?: string;
   timeZone?: string;
+  /** 24-hour or 12-hour. Display only. */
+  timeFormat: TimeFormat;
   /** Consecutive worn days ending `asOf` (today, or yesterday early in the day); null at 0. */
   streak: { days: number; asOf: string } | null;
 };
@@ -515,7 +517,7 @@ export type SettingsVM = {
   };
   import: { done: number; total: number } | null;
   sync: { key: string; label: string; lastSuccessAt: number | null; status: "ok" | "stale" | "error" | "never"; error: string | null }[];
-  profile: { birthDate: string; age: number; sex: "male" | "female"; maxHr: number; maxHrSource: "set" | "estimated"; timeZone: string; heightCm: number | null };
+  profile: { birthDate: string; age: number; sex: "male" | "female"; maxHr: number; maxHrSource: "set" | "estimated"; timeZone: string; timeFormat: TimeFormat; heightCm: number | null };
   version: string;
   scoringVersion: number;
 };

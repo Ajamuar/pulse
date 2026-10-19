@@ -1,5 +1,8 @@
+"use client"
+
 import { Moon } from "lucide-react"
-import { clock, durationWords, hmm } from "@/lib/format"
+import { durationWords, hmm } from "@/lib/format"
+import { useClock } from "@/components/shells/ShellStatus"
 import { TimelineRow, TimelineSkeleton } from "./ActivityCard"
 
 export type SleepCardProps = {
@@ -17,8 +20,9 @@ export type SleepCardProps = {
 /** Sleep or nap row on the day's timeline (spec §5.12). */
 export function SleepCard({ kind, minutes, start, end, href, timeZone }: SleepCardProps) {
   const name = kind === "nap" ? "Nap" : "Sleep"
-  const s = clock(start, timeZone)
-  const e = clock(end, timeZone)
+  const at = useClock()
+  const s = at(start, timeZone)
+  const e = at(end, timeZone)
   return (
     <TimelineRow
       href={href}

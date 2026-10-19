@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils"
-import { clock, hmm } from "@/lib/format"
+import { clock, hmm, type TimeFormat } from "@/lib/format"
 import { FEATURES } from "@/lib/features"
 import { trendHref } from "@/lib/url"
 import { InsightCard } from "@/components/metrics/InsightCard"
@@ -32,7 +32,7 @@ const STATUS_LEGEND = [
 const WEEKLY: readonly TrendViewKey[] = ["sleep", "hours", "hours_need", "restorative", "consistency", "time_in_bed", "efficiency"]
 
 export default async function SleepPage({ searchParams }: PageProps<"/sleep">) {
-  const { d, today, timeZone, ctx } = await pageDay(searchParams as SearchParams, "/sleep")
+  const { d, today, timeZone, timeFormat, ctx } = await pageDay(searchParams as SearchParams, "/sleep")
   const [vm, weekly] = await Promise.all([getSleep(d, ctx), getWeeklyTrends(WEEKLY, d, ctx)])
   const p = vm.performance
 
@@ -93,7 +93,7 @@ export default async function SleepPage({ searchParams }: PageProps<"/sleep">) {
           </SectionShell>
         ),
         <SectionShell key="planner" variant="card" title="Tonight’s sleep" id="planner" info={TONIGHT_INFO} level={2}>
-          <Planner vm={vm} timeZone={timeZone} />
+          <Planner vm={vm} timeZone={timeZone} timeFormat={timeFormat} />
           <HashScroll />
         </SectionShell>,
       ].filter(Boolean)}
@@ -102,7 +102,7 @@ export default async function SleepPage({ searchParams }: PageProps<"/sleep">) {
   )
 }
 
-function Planner({ vm, timeZone }: { vm: SleepVM; timeZone: string }) {
+function Planner({ vm, timeZone, timeFormat }: { vm: SleepVM; timeZone: string; timeFormat: TimeFormat }) {
   const m = vm.planner
   if (m.value === null)
     return (
@@ -126,8 +126,8 @@ function Planner({ vm, timeZone }: { vm: SleepVM; timeZone: string }) {
   return (
     <div className="space-y-2">
       <div className="divide-y divide-border">
-        {plan.plans.map((p) => row(p.label, `${Math.round(p.share * 100)}% of need`, clock(p.bedtimeAt, timeZone)))}
-        {row("Typical wake", plan.weekdayWake ? "Weekday wake time" : "Weekend wake time", clock(plan.wakeAt, timeZone))}
+        {plan.plans.map((p) => row(p.label, `${Math.round(p.share * 100)}% of need`, clock(p.bedtimeAt, timeZone, timeFormat)))}
+        {row("Typical wake", plan.weekdayWake ? "Weekday wake time" : "Weekend wake time", clock(plan.wakeAt, timeZone, timeFormat))}
       </div>
       <p className={CAPTION}>
         Need tonight: <span className="font-numeric tabular-nums">{hmm(plan.needMin)}</span>
