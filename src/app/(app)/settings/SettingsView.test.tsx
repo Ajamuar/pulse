@@ -19,7 +19,7 @@ const base: SettingsVM = {
     { key: "sleep", label: "Sleep", lastSuccessAt: NOW - 3 * 3600_000, status: "stale", error: null },
     { key: "steps", label: "Steps", lastSuccessAt: null, status: "error", error: "HTTP 429" },
   ],
-  profile: { birthDate: "1990-01-01", age: 36, sex: "male", maxHr: 186, maxHrSource: "estimated", timeZone: "Asia/Kolkata", heightCm: null },
+  profile: { birthDate: "1990-01-01", age: 36, sex: "male", maxHr: 186, maxHrSource: "estimated", timeZone: "Asia/Kolkata", timeFormat: "24", heightCm: null },
   version: "0.1.0",
   scoringVersion: 2,
 }
@@ -86,6 +86,12 @@ describe("Settings view", () => {
     const profile = screen.getByRole("region", { name: "Profile" })
     expect(within(profile).getByRole("button", { name: "Edit profile" })).toBeInTheDocument()
     expect(within(profile).getByText("Not set")).toBeInTheDocument()
+    expect(within(profile).getByText("24-hour")).toBeInTheDocument()
+  })
+
+  it("shows a 12-hour clock when that is the profile preference", () => {
+    render(<SettingsView initial="account" vm={{ ...base, profile: { ...base.profile, timeFormat: "12" } }} now={NOW} account={account} />)
+    expect(within(screen.getByRole("region", { name: "Profile" })).getByText("12-hour")).toBeInTheDocument()
   })
 
   it("opens the section ?s= names (More's Account & settings rows), an older name too, the first with none", () => {

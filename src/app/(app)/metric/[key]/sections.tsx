@@ -1,4 +1,4 @@
-import { clock, DAY, durationWords, formatDay, formatValue, hmm } from "@/lib/format"
+import { clock, DAY, durationWords, formatDay, formatValue, hmm, type TimeFormat } from "@/lib/format"
 import { activityHref } from "@/lib/url"
 import type { Metric } from "@/lib/reasons"
 import { ColumnChart } from "@/components/charts/ColumnChart"
@@ -11,7 +11,9 @@ import { CAPTION, LABEL, LEGEND, statProps } from "../../_lib/view"
 
 export const METRIC_GRID = "grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] xl:items-start xl:gap-4"
 
-type Ctx = { vm: MetricDetailVM; timeZone: string; className?: string }
+type Ctx = { vm: MetricDetailVM; timeZone: string; timeFormat: TimeFormat; className?: string }
+
+const at = (ms: number, c: Ctx) => clock(ms, c.timeZone, c.timeFormat)
 
 const ok = (v: number): Metric<number> => ({ value: v, reason: null, provisional: false })
 const rows = (children: React.ReactNode) => <div className="divide-y divide-border">{children}</div>
@@ -68,7 +70,7 @@ export function MetricSection({ s, ...c }: Ctx & { s: Section }) {
                     key={w.id}
                     variant="row"
                     label={w.name}
-                    caption={`${clock(w.start, c.timeZone)} - ${clock(w.end, c.timeZone)}`}
+                    caption={`${at(w.start, c)} - ${at(w.end, c)}`}
                     metric={w.calories === null ? { value: null, reason: "no_data", provisional: false } : ok(w.calories)}
                     unit="kcal"
                     format="grouped"
@@ -100,7 +102,7 @@ export function MetricSection({ s, ...c }: Ctx & { s: Section }) {
                     <span className={`${LABEL} block truncate`}>{e.title}</span>
                     <span className={`${CAPTION} mt-0.5 block truncate`}>{e.detail}</span>
                   </span>
-                  <span className="shrink-0 font-numeric text-[13px] leading-4 font-medium text-muted-foreground tabular-nums">{clock(e.ts * 1000, c.timeZone)}</span>
+                  <span className="shrink-0 font-numeric text-[13px] leading-4 font-medium text-muted-foreground tabular-nums">{at(e.ts * 1000, c)}</span>
                 </li>
               ))}
             </ul>
@@ -165,7 +167,7 @@ export function MetricSection({ s, ...c }: Ctx & { s: Section }) {
   }
 }
 
-function Hourly({ s, vm, timeZone, className }: Ctx & { s: Extract<Section, { kind: "hourly" }> }) {
+function Hourly({ s, vm, timeZone, timeFormat, className }: Ctx & { s: Extract<Section, { kind: "hourly" }> }) {
   const sedentary = vm.key === "sedentary_minutes"
   return (
     <SectionShell variant="card" level={2} title={sedentary ? "Movement by hour" : "Steps by hour"} className={className}>
@@ -181,14 +183,14 @@ function Hourly({ s, vm, timeZone, className }: Ctx & { s: Extract<Section, { ki
             <>
               <ColumnChart
                 summary={`Steps by hour${peak?.value ? `, most at ${peak.label} with ${formatValue("grouped", peak.value)}` : ""}.`}
-                data={hours.map((h, i) => ({ label: h.label, title: `${h.label} - ${hours[i + 1]?.label ?? "24:00"}`, value: h.value }))}
+                data={hours.map((h, i) => ({ label: h.label, title: `${h.label} - ${hours[i + 1]?.label ?? clock(h.t + 3_600_000, timeZone, timeFormat)}`, value: h.value }))}
                 format="grouped"
                 unit="steps"
                 tickEvery={6}
               />
               {sedentary && s.still && (
                 <p className={LEGEND}>
-                  Longest daytime stretch without steps: {durationWords(s.still.minutes)}, {clock(s.still.from, timeZone)} - {clock(s.still.to, timeZone)}
+                  Longest daytime stretch without steps: {durationWords(s.still.minutes)}, {clock(s.still.from, timeZone, timeFormat)} - {clock(s.still.to, timeZone, timeFormat)}
                 </p>
               )}
             </>

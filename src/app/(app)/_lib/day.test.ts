@@ -9,7 +9,7 @@ const h = vi.hoisted(() => ({
 vi.mock("next/navigation", () => ({ redirect: h.redirect }))
 vi.mock("@/server/queries/common", async (orig) => ({
   ...(await orig<object>()),
-  userCtx: async () => ({ timeZone: "Asia/Kolkata", now: Math.floor(Date.now() / 1000) }),
+  userCtx: async () => ({ timeZone: "Asia/Kolkata", profile: { timeFormat: "24" as const }, now: Math.floor(Date.now() / 1000) }),
 }))
 
 const sp = (q: Record<string, string>) => Promise.resolve(q)

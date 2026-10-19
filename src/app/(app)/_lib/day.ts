@@ -17,5 +17,5 @@ export async function pageDay(searchParams: SearchParams, path: string) {
     for (const [k, v] of Object.entries(sp)) if (k !== "d" && typeof v === "string") q.set(k, v)
     redirect(q.size ? `${path}?${q}` : path)
   }
-  return { d, today, timeZone: ctx.timeZone, ctx }
+  return { d, today, timeZone: ctx.timeZone, timeFormat: ctx.profile.timeFormat, ctx }
 }

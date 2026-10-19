@@ -7,14 +7,14 @@ import { BandIcon } from "@/components/brand/BandIcon"
 import { useSyncing } from "@/lib/sync-activity"
 import { cn } from "@/lib/utils"
 import { COLUMN_WIDTH } from "./column"
-import { ago, agoShort, clock } from "@/lib/format"
+import { ago, agoShort } from "@/lib/format"
 import { Badge } from "@/components/ui/badge"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { useNow } from "@/hooks/use-now"
 import { DateSwitcher, type DateSwitcherProps } from "./DateSwitcher"
 import { SyncNowButton } from "./SyncNowButton"
-import { useShellStatus, type ShellStatus } from "./ShellStatus"
+import { useClock, useShellStatus, type ShellStatus } from "./ShellStatus"
 
 // The pieces every header shares (spec §4.3, §4.4): the ground fill, the 24 px fade, sync status.
 
@@ -28,10 +28,10 @@ export const HEADER_TITLE = "text-xs leading-5 font-bold tracking-[0.1em] upperc
 
 type SyncView = { dot: string; label: string; line: string }
 
-function syncView(s: ShellStatus, nowMs: number | null): SyncView {
+function syncView(s: ShellStatus, nowMs: number | null, formatClock: (ms: number, timeZone?: string) => string): SyncView {
   const last = s.sync.lastSuccessAt
   const rel = last && nowMs ? ago(last, nowMs) : null
-  const at = last ? clock(last, s.timeZone) : null
+  const at = last ? formatClock(last, s.timeZone) : null
   if (s.connection === "auth_revoked" || s.sync.state === "error")
     return { dot: "bg-recovery-red", label: "Sync failed", line: at ? `Sync failed. Last success ${at}` : "Sync failed" }
   if (s.sync.state === "syncing") return { dot: "bg-coach animate-pulse motion-reduce:animate-none", label: "Syncing…", line: "Syncing now…" }
@@ -71,9 +71,10 @@ const SYNC_TRIGGER =
  */
 export function SyncStatus() {
   const s = useShellStatus()
+  const formatClock = useClock()
   const nowMs = useNow()
   const syncing = useSyncing() || s.sync.state === "syncing"
-  const v = syncView(syncing ? { ...s, sync: { ...s.sync, state: "syncing" } } : s, nowMs)
+  const v = syncView(syncing ? { ...s, sync: { ...s.sync, state: "syncing" } } : s, nowMs, formatClock)
   const short = s.mode === "demo" ? "Demo" : s.sync.lastSuccessAt && nowMs ? agoShort(s.sync.lastSuccessAt, nowMs) : ""
   return (
     <Popover>

@@ -141,6 +141,7 @@ export async function getSettings(ctx: QueryCtx): Promise<SettingsVM> {
       maxHr: p.maxHr,
       maxHrSource: p.maxHrSource,
       timeZone: ctx.timeZone,
+      timeFormat: p.timeFormat,
       heightCm: p.heightCm,
     },
     version: APP_VERSION,
@@ -265,6 +266,7 @@ export async function getShellStatus(ctx: QueryCtx): Promise<ShellStatusVM> {
     today: todayOf(ctx),
     ...(first && { firstDay: first }),
     timeZone: ctx.timeZone,
+    timeFormat: ctx.profile.timeFormat,
     streak,
   };
 }
