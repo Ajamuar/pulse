@@ -26,7 +26,13 @@ final class ServerStore {
     }
 
     static void save(Context context, String origin) {
+        String previous = url(context);
         prefs(context).edit().putString(KEY_URL, origin).remove(KEY_PICK).apply();
+        // Scores on the strip belong to one server. A different address must not keep the last one's numbers.
+        if (!origin.equals(previous)) {
+            WidgetSnapshot.clear(context);
+            WidgetTheme.clear(context);
+        }
     }
 
     static void requestPicker(Context context) {

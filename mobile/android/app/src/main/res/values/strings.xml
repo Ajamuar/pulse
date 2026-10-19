@@ -5,4 +5,11 @@
     <string name="package_name">io.github.adityaongit.pulse</string>
     <string name="custom_url_scheme">io.github.adityaongit.pulse</string>
     <string name="shortcut_change_server">Change server</string>
+    <string name="widget_name">Today</string>
+    <string name="widget_description">Sleep, Recovery and Strain</string>
+    <string name="widget_sleep">Sleep</string>
+    <string name="widget_recovery">Recovery</string>
+    <string name="widget_strain">Strain</string>
+    <string name="widget_refresh">Refresh</string>
+    <string name="widget_sign_in">Sign in required</string>
 </resources>

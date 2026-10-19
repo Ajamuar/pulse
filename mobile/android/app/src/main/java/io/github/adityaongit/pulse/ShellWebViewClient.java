@@ -38,6 +38,8 @@ class ShellWebViewClient extends BridgeWebViewClient {
     public void onPageFinished(WebView view, String url) {
         super.onPageFinished(view, url);
         if (isLocal(url)) return;
+        // Home's three dials, once the server page itself has loaded. A sign-in proxy is a different host.
+        if (server != null && server.equals(ServerStore.origin(url))) HomeDials.capture(view);
         WebBackForwardList history = view.copyBackForwardList();
         if (history.getSize() > 1 && isLocal(history.getItemAtIndex(0).getUrl())) view.clearHistory();
     }

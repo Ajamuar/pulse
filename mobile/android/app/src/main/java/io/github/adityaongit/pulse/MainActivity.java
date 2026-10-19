@@ -2,7 +2,9 @@ package io.github.adityaongit.pulse;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.webkit.CookieManager;
 import android.webkit.WebView;
+import androidx.annotation.Nullable;
 import androidx.activity.OnBackPressedCallback;
 import androidx.webkit.WebViewFeature;
 import com.getcapacitor.BridgeActivity;
@@ -39,6 +41,39 @@ public class MainActivity extends BridgeActivity {
                 else moveTaskToBack(true);
             }
         });
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        // Appearance is local to the page. Read it before the refresh paints, so a Light choice is not drawn dark.
+        captureAppearance(() -> PulseWidget.refresh(this));
+    }
+
+    @Override
+    public void onPause() {
+        captureAppearance(null);
+        try {
+            CookieManager.getInstance().flush();
+        } catch (RuntimeException ignored) {
+            // No WebView cookie store yet. The strip stays on its last snapshot.
+        }
+        super.onPause();
+    }
+
+    /** The page's Appearance choice, when the WebView is on the saved server. `then` runs either way. */
+    private void captureAppearance(@Nullable Runnable then) {
+        if (bridge == null || bridge.getWebView() == null) {
+            if (then != null) then.run();
+            return;
+        }
+        WebView web = bridge.getWebView();
+        String server = ServerStore.url(this);
+        if (server == null || !server.equals(ServerStore.origin(web.getUrl()))) {
+            if (then != null) then.run();
+            return;
+        }
+        WidgetTheme.read(web, then);
     }
 
     @Override

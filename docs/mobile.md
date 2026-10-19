@@ -111,6 +111,12 @@ taken for your team), then run on a device, or Product › Archive for TestFligh
    `PulseShell.swift`.
 2. **Icons and launch screens.** Change the mark in `mobile/scripts/gen-assets.py` and run `pnpm assets`.
 
+## Home screen widget
+
+Android has a Today widget: Sleep, Recovery and Strain in one strip, the same three rings as Home. Add it from the widget picker. On Android 16 it can also sit on the lock-screen page. A missing score is an empty ring. The strip follows Settings › Appearance: Light, Dark, or System (the phone's setting). That choice lives on the phone, and the strip picks it up when Pulse is open.
+
+The refresh control, and Android's half-hour update, ask the saved server for `GET /api/widget` with the WebView's session cookie. When that route is missing, the same request reads the three dials out of Home's HTML. If they are not in the response yet, Pulse loads Home in a WebView that stays off screen and copies the dials once they are drawn. A sign-in wall (Pulse's own sign-in, or Cloudflare Access) replaces the rings with "Sign in required". A failed refresh keeps the last scores. Signing out, or pointing the app at a different server, clears them. Opening Pulse still copies the dials off the page it just showed. The page cannot call native code.
+
 ## What the app does differently from the PWA
 
 | | Android app | iOS app | PWA |
@@ -120,6 +126,7 @@ taken for your team), then run on a device, or Product › Archive for TestFligh
 | Connect Google | Opens in the browser, which must be signed in to Pulse | Same | In place |
 | Offline copy of the last pages | Yes (Pulse's service worker runs in the WebView) | No (WKWebView runs service workers only for app-bound domains) | Yes |
 | Long-press shortcuts | Change server | Change server | Check in, Recovery, Sleep |
+| Home and lock screen | Today strip: Sleep, Recovery, Strain | No | No |
 | Back | System back walks the page's history; on the first page the app goes to the background | Edge swipe is off; the header's Back works | As the browser |
 
 ## Decisions and dead ends
