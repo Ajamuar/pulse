@@ -2,11 +2,13 @@
 // are each a compact digest of an existing screen query; a metric without a value carries its reason code instead, so
 // the model can say "calibrating" rather than guess. No chart series, ids or raw payloads. The log tools (logTools.ts)
 // write only after the user approves each call.
+import { and, eq, gte, inArray, lte } from "drizzle-orm";
 import { tool, type InferToolOutput } from "ai";
 import { z } from "zod";
 import { trainingGuidance } from "@/core/algorithms/coaching";
 
 import type { Metric } from "@/lib/reasons";
+import { CYCLE_SYMPTOMS, type LogData } from "@/lib/log";
 import { getActivities } from "../queries/activities";
 import { getActivity } from "../queries/activity";
 import { energyBankVM } from "../queries/home";
@@ -20,7 +22,8 @@ import { getSleep } from "../queries/sleep";
 import { getStrain } from "../queries/strain";
 import { getStress } from "../queries/health";
 import { TREND_METRICS, type TrendMetricKey } from "../queries/trends";
-import { addDays, daysBetween } from "../time";
+import { loggedEntries } from "../db/schema";
+import { addDays, daysBetween, wall } from "../time";
 import { logTools } from "./logTools";
 import { defaultTexts, type Texts } from "./texts";
 
@@ -118,6 +121,49 @@ export async function dayDigest(ctx: QueryCtx, day: string) {
   };
 }
 
+const LOG_WINDOW = 14;
+
+type FoodLine = { at: string; name: string | null; meal: LogData["nutrition-log"]["meal"]; kcal: number; protein: number | null; carbs: number | null; fat: number | null };
+type MoodLine = { at: string; moods: LogData["moods"]["moods"]; valence: LogData["moods"]["valence"] };
+type SymptomLine = { at: string; symptoms: string[] };
+type LogDay = { day: string; food: FoodLine[]; moods: MoodLine[]; symptoms: SymptomLine[] };
+
+/**
+ * Meals, moods and symptoms over the last `days` local days, oldest first. A day with none of them is left out.
+ * Cycle symptoms stay off a male profile, the same rule as the log sheets.
+ */
+export async function logDigest(ctx: QueryCtx, days: number) {
+  const end = todayOf(ctx);
+  const span = Math.min(LOG_WINDOW, Math.max(1, days));
+  const start = addDays(end, -(span - 1));
+  const female = ctx.profile.sex === "female";
+  const rows = await ctx.db
+    .select({ day: loggedEntries.day, type: loggedEntries.type, ts: loggedEntries.ts, data: loggedEntries.data })
+    .from(loggedEntries)
+    .where(and(eq(loggedEntries.userId, ctx.userId), gte(loggedEntries.day, start), lte(loggedEntries.day, end), inArray(loggedEntries.type, ["nutrition-log", "moods", "symptoms"])))
+    .orderBy(loggedEntries.ts, loggedEntries.day);
+  const at = (ts: number) => wall(ts, ctx.timeZone).time.slice(0, 5);
+  const byDay = new Map<string, LogDay>();
+  const bucket = (day: string) => {
+    let row = byDay.get(day);
+    if (!row) byDay.set(day, (row = { day, food: [], moods: [], symptoms: [] }));
+    return row;
+  };
+  for (const r of rows) {
+    if (r.type === "nutrition-log") {
+      const f = r.data as LogData["nutrition-log"];
+      bucket(r.day).food.push({ at: at(r.ts), name: f.name || null, meal: f.meal, kcal: f.kcal, protein: f.protein, carbs: f.carbs, fat: f.fat });
+    } else if (r.type === "moods") {
+      const m = r.data as LogData["moods"];
+      bucket(r.day).moods.push({ at: at(r.ts), moods: m.moods, valence: m.valence });
+    } else {
+      const symptoms = (r.data as LogData["symptoms"]).symptoms.filter((s) => female || !CYCLE_SYMPTOMS.has(s));
+      if (symptoms.length) bucket(r.day).symptoms.push({ at: at(r.ts), symptoms });
+    }
+  }
+  return { start, end, days: [...byDay.values()] };
+}
+
 /**
  * The tool set for one signed-in user. `t` gives each description: the admin dashboard's current wording, else the
  * default in texts.ts. Parameter types and what each tool reads are fixed here.
@@ -172,6 +218,11 @@ export function coachTools(ctx: QueryCtx, t: Texts = defaultTexts) {
           needsMoreData: j.needsMore.map((n) => ({ behaviour: n.label, yesDays: n.yes, noDays: n.no })),
         };
       },
+    }),
+    get_log: tool({
+      description: t("tool.get_log"),
+      inputSchema: z.object({ days: z.number().int().min(1).max(LOG_WINDOW).default(7).describe(t("tool.get_log.days")) }),
+      execute: async ({ days }) => logDigest(ctx, days),
     }),
     get_health: tool({
       description: t("tool.get_health"),

@@ -4,8 +4,8 @@ import { exercises } from "../db/schema";
 import { readSamples } from "../samples";
 import { addDays } from "../time";
 import {
-  ACTIVITY_NAME,
   activityKind,
+  activityName,
   distanceOf,
   exercisesBetween,
   type ExerciseRow,
@@ -87,7 +87,7 @@ export async function getActivity(id: string, ctx: QueryCtx): Promise<ActivityVM
   return {
     id,
     day: e.day,
-    name: ACTIVITY_NAME[kind],
+    name: activityName(e),
     kind,
     start: ms(e.startTs),
     end: ms(e.endTs),

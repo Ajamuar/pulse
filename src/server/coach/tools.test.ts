@@ -2,7 +2,7 @@ import { beforeAll, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { addUser, ctxFor, freshDb, seeded, USER } from "../testing";
 import type { Db } from "../db";
-import { dailyMetrics, dailyScores } from "../db/schema";
+import { dailyMetrics, dailyScores, loggedEntries } from "../db/schema";
 import { coachTools, sleepDigest, trendDigest } from "./tools";
 import { coachSuggestions } from "./suggestions";
 
@@ -67,6 +67,28 @@ it("suggestion baselines exclude today's HRV", async () => {
     { userId: USER, day: "2026-10-02", hrvMs: 50, source: "demo" },
   ]);
   expect((await coachSuggestions(ctxFor(empty))).map((s) => s.key)).toContain("hrv");
+});
+
+it("get_log reads this user's meals, moods and symptoms, and no one else's", async () => {
+  const logDb = await freshDb();
+  const other = await addUser(logDb);
+  const at = (iso: string) => Date.parse(iso) / 1000;
+  await logDb.insert(loggedEntries).values([
+    { userId: USER, id: "food", type: "nutrition-log", ts: at("2026-10-02T08:10:00+05:30"), day: "2026-10-02", data: { name: "Poha", meal: "BREAKFAST", kcal: 320, protein: 8, carbs: 58, fat: 7 }, createdAt: 0 },
+    { userId: USER, id: "mood", type: "moods", ts: at("2026-10-01T21:00:00+05:30"), day: "2026-10-01", data: { moods: ["CALM"], valence: "PLEASANT" }, createdAt: 0 },
+    { userId: USER, id: "cycle", type: "symptoms", ts: at("2026-10-02T09:00:00+05:30"), day: "2026-10-02", data: { symptoms: ["CRAMPS"] }, createdAt: 0 },
+    { userId: USER, id: "ache", type: "symptoms", ts: at("2026-10-02T09:05:00+05:30"), day: "2026-10-02", data: { symptoms: ["HEADACHE"] }, createdAt: 0 },
+    { userId: other, id: "theirs", type: "nutrition-log", ts: at("2026-10-02T08:10:00+05:30"), day: "2026-10-02", data: { name: "Secret", meal: "LUNCH", kcal: 1, protein: null, carbs: null, fat: null }, createdAt: 0 },
+  ]);
+  const out = await coachTools(ctxFor(logDb)).get_log.execute!({ days: 7 }, opts) as {
+    days: { day: string; food: { name: string | null; meal: string; kcal: number; at: string }[]; moods: { moods: string[]; valence: string; at: string }[]; symptoms: { symptoms: string[] }[] }[];
+  };
+  expect(out.days.map((d) => d.day)).toEqual(["2026-10-01", "2026-10-02"]);
+  expect(JSON.stringify(out)).not.toContain("Secret");
+  expect(JSON.stringify(out)).not.toContain("CRAMPS");
+  expect(out.days[1].food[0]).toMatchObject({ name: "Poha", meal: "BREAKFAST", kcal: 320, at: "08:10" });
+  expect(out.days[0].moods[0]).toMatchObject({ moods: ["CALM"], valence: "PLEASANT", at: "21:00" });
+  expect(out.days[1].symptoms).toEqual([{ at: "09:05", symptoms: ["HEADACHE"] }]);
 });
 
 it("habit results retain sample sizes, uncertainty and insufficient-data counts", async () => {

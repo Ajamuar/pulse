@@ -46,7 +46,9 @@ describe("activity distance", () => {
     expect(distanceOf(ex("BIKING", 15000))).toEqual({ distanceKm: 15, paceS: null });
     expect(distanceOf(ex("STRENGTH_TRAINING", null))).toEqual({ distanceKm: null, paceS: null });
     expect(distanceOf(ex("RUNNING", 0))).toEqual({ distanceKm: null, paceS: null });
-    expect(activityItem(ex("RUNNING", 6000), undefined)).toMatchObject({ distanceKm: 6, paceS: 300 });
+    expect(activityItem(ex("RUNNING", 6000), undefined)).toMatchObject({ distanceKm: 6, paceS: 300, name: "Running" });
+    expect(activityItem({ ...ex("STRENGTH_TRAINING", null), name: "Push day" }, undefined).name).toBe("Push day");
+    expect(activityItem({ ...ex("STRENGTH_TRAINING", null), name: "  " }, undefined).name).toBe("Strength training");
   });
 
   it("the activity screen adds Distance and Pace for a run, Distance for a ride, neither for strength", async () => {
@@ -73,5 +75,6 @@ describe("activity distance", () => {
     for (const z of run.zones.value!) expect(z.typical!.low).toBeLessThanOrEqual(z.typical!.high);
     const lift = (await getActivity(await first("STRENGTH_TRAINING"), ctx))!;
     expect(lift.steps).toBeNull();
+    expect(lift.name).toBe("Strength");
   });
 });

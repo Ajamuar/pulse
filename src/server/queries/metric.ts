@@ -6,8 +6,7 @@ import { entriesOn, type LoggedEntry } from "../log";
 import { readSamples } from "../samples";
 import { addDays } from "../time";
 import {
-  ACTIVITY_NAME,
-  activityKind,
+  activityName,
   dayStartOf,
   type DayRow,
   type ExerciseRow,
@@ -368,7 +367,7 @@ const BUILD: Record<Exclude<SectionKind, "outliers">, (s: SectionCtx, key: Detai
   workouts: (s) => {
     const items = s.exs
       .filter((e) => e.day === s.day)
-      .map((e) => ({ id: e.id, name: e.name ?? ACTIVITY_NAME[activityKind(e.type)], start: ms(e.startTs), end: ms(e.endTs), calories: e.calories }));
+      .map((e) => ({ id: e.id, name: activityName(e), start: ms(e.startTs), end: ms(e.endTs), calories: e.calories }));
     const a = s.rows.get(s.day)?.extra.active_calories;
     return { kind: "workouts", active: finite(a) ? a : null, items };
   },

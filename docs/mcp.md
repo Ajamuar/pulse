@@ -35,7 +35,8 @@ dashboard's wording is not applied: MCP uses the defaults in `texts.ts`).
 | `get_day` | One day: Recovery and its contributors, sleep, Strain and target, stress, Energy Bank |
 | `get_sleep` | One night: need, stages, efficiency, consistency, debt, bedtime planner |
 | `get_trend` | One metric over up to 90 days, against the previous window |
-| `get_activities`, `get_activity` | Recent workouts; one workout's heart rate, zones and recovery |
+| `get_activities`, `get_activity` | Recent workouts, titled as Google stored them; one workout's heart rate, zones and recovery. The saved routine's moves and sets are not included |
+| `get_log` | Meals, moods and symptoms over the recent days |
 | `get_journal_impacts` | How journal behaviours relate to recovery, HRV or sleep |
 | `get_health` | Vitals against your ranges, Pulse Age, VO2 max, training load |
 | `get_report` | The latest weekly or monthly report |

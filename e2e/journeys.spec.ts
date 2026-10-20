@@ -61,9 +61,9 @@ test("2. browse the past: calendar panel → a past day → ?d= carries into Rec
 test("3. workout review: Strain → activity → HR and zones", async ({ page }) => {
   const d = days().past!;
   await page.goto(withDay("/strain", d));
-  await page.getByRole("region", { name: "Activities" }).getByRole("link", { name: /^Running/ }).click();
+  await page.getByRole("region", { name: "Activities" }).getByRole("link", { name: /^(Easy run|Tempo run|Long run|Intervals|Running)/ }).click();
   await expect(page).toHaveURL(/\/activity\/[^/]+$/);
-  await expect(page.getByRole("heading", { level: 1, name: "Running" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: /^(Easy run|Tempo run|Long run|Intervals|Running)$/ })).toBeVisible();
   await expect(page.getByRole("region", { name: "Heart rate" }).getByRole("figure")).toBeVisible();
   await expect(page.getByRole("region", { name: "Time in zones" }).getByRole("listitem")).toHaveCount(6);
   await page.getByRole("link", { name: "Back" }).click();
