@@ -13,7 +13,7 @@ Today is {{today}} and the time is {{time}} in the user's time zone ({{timeZone}
 
 Grounding:
 - Fetch relevant tools before discussing the user's measurements. Never invent readings, baselines, workout details or calculated targets. Saved conversation summaries are historical context, not fresh measurements.
-- Every tool you call shows the user a card, so call only the tools the answer needs. For a readiness or training question, read get_day alone first and add get_sleep, get_activities or get_health only when get_day leaves a gap the answer depends on. A daily brief reads get_day and get_sleep. For a change over time, read get_trend with a date range. For a habit question, read get_journal_impacts. Fetch get_activity when a particular workout needs intensity or heart-rate detail.
+- Every tool you call shows the user a card, so call only the tools the answer needs. For a readiness or training question, read get_day alone first and add get_sleep, get_activities or get_health only when get_day leaves a gap the answer depends on. A daily brief reads get_day and get_sleep. For a change over time, read get_trend with a date range. For a habit question, read get_journal_impacts. For what they ate or how they felt, read get_log. Fetch get_activity when a particular workout needs intensity or heart-rate detail.
 - Distinguish observations, plausible explanations and recommendations. Recovery contributors describe the score's inputs, not proof of a physiological cause. Habit associations are not causal; include sample sizes and uncertainty when interpreting them.
 - A null value is missing, never zero. Explain its reason: calibrating means Pulse is learning the baseline (nightsLeft when supplied); awaiting_sleep_sync means the night has not synced; band_not_worn means the band was not worn; no_hrv_last_night means no usable nightly HRV; insufficient_hr_data and no_data mean not enough measurements. Provisional values may change.
 - Respect the returned day, date range, coverage, units and provisional flags. Averages describe available observations, not every calendar day. Partial-day strain is not comparable to a completed day's total. No measured future data exists.
@@ -57,7 +57,9 @@ const START: Param = { type: "date (YYYY-MM-DD), optional", description: "Inclus
 const AT: Param = { type: "local date and time (YYYY-MM-DDTHH:mm), optional", description: "When it happened, in the user's local time. Omit for now. Never a future time or more than a year back." };
 const END: Param = { type: "date (YYYY-MM-DD), optional", description: "Inclusive last local day; omit for today. Use with start for a historical comparison." };
 
-const LOG = "Waits for the user to confirm in the app before saving; returns logged: true, or logged: false with an error to explain.";
+/** The log tools' approval clause: in the chat the user taps Log first. The MCP server has no such step and words it as it is. */
+export const LOG_WAITS = "Waits for the user to confirm in the app before saving";
+const LOG = `${LOG_WAITS}; returns logged: true, or logged: false with an error to explain.`;
 
 export const TOOL_DOCS: Record<string, ToolDoc> = {
   get_day: {
@@ -73,7 +75,7 @@ export const TOOL_DOCS: Record<string, ToolDoc> = {
     params: { metric: { type: `one of: ${TREND_METRICS.map((m) => m.key).join(", ")}`, description: "Metric to compare: recovery, hrv/rhr for readiness changes; hours/consistency/sleep for sleep; strain for recent load. Use the returned unit." }, start: START, end: END },
   },
   get_activities: {
-    description: "List recent workouts before advising training: workout ids, local days, names, minutes, strain and recorded distance. Newest first, capped at 30 workouts with a truncation flag. Fetch get_activity with an id for HR, zones and intensity. No workouts does not mean no daily activity.",
+    description: "List recent workouts before advising training: workout ids, local days, the session title when one was stored (otherwise the kind), minutes, strain and recorded distance. Newest first, capped at 30 workouts with a truncation flag. Fetch get_activity with an id for HR, zones and intensity. No workouts does not mean no daily activity. A saved routine's moves and sets are not in this list.",
     params: { days: { type: "whole number, 1 to 90, default 14", description: "Calendar days ending today; use 7-14 for recent hard-session spacing, up to 90 for longer history." } },
   },
   get_activity: {
@@ -83,6 +85,10 @@ export const TOOL_DOCS: Record<string, ToolDoc> = {
   get_journal_impacts: {
     description: "Check personal habit associations with next-day recovery, HRV or sleep. Returns with/without averages, observed difference, sample sizes, confidence intervals and effect classification. Includes behaviours needing more data. Associations do not prove cause; weak or sparse evidence cannot support a confident explanation. Does not report which habits happened yesterday.",
     params: { outcome: { type: "one of: recovery, hrv, sleep; default recovery", description: "Outcome to compare. HRV is baseline standard deviations (SD), recovery and sleep are percentage points." } },
+  },
+  get_log: {
+    description: "Read meals, moods and symptoms the user logged, over the recent local days. Use when they ask what they ate or how they felt. Returns only days that have one of those entries. This is not the saved exercise routine and not the habit-association report (get_journal_impacts).",
+    params: { days: { type: "whole number, 1 to 14, default 7", description: "How many local days ending today to read." } },
   },
   get_health: {
     description: "Read dated personal-range vitals and illness signal, Pulse Age, VO2 max and training-load status. Use alongside get_day and recent workouts for training advice or conflicting signals. Historical requests must use only measurements on or before that day. No diagnosis; unavailable or provisional signals cannot justify confident advice.",

@@ -12,7 +12,7 @@ import { CAP_TRIM } from "./primitives"
 export type { ActivityKind }
 
 export type ActivityCardProps = {
-  /** "Running", "Strength training", "Cycling", "Walking", "Workout". */
+  /** The session title, or the kind when none was stored: "Running", "Strength training". */
   name: string
   kind: ActivityKind
   /** Activity strain; null with `insufficient_hr_data` shows "--". */

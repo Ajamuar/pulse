@@ -63,6 +63,7 @@ Pulse runs as one Docker container with its database in a volume, behind a tunne
 - [Setup guide](docs/setup.md): from the demo to your own data on a server.
 - [Installed app (PWA)](docs/pwa.md): install, notifications, offline, rebranding, Android APK.
 - [Native app (Capacitor)](docs/mobile.md): the Android and iOS shell, building, signing, releases.
+- [MCP](docs/mcp.md): let your own AI agent read your Pulse data and log journal entries.
 - [Contributing](CONTRIBUTING.md): how changes land (`main` is protected; every change is a pull request).
 - [Security policy](SECURITY.md): report vulnerabilities privately.
 - [Code of Conduct](CODE_OF_CONDUCT.md).

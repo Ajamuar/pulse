@@ -72,6 +72,18 @@ export function Evidence({ name, output }: { name: string; output: unknown }) {
       <ZoneBars variant="rows" data={a.zones} note={a.zoneNote} />
     </Card><BasedOn href={`/activity/${encodeURIComponent(a.id)}`}>{a.name} · {a.day}</BasedOn></div>
   }
+  if (name === "get_log") {
+    const d = output as CoachOutputs["get_log"]
+    const lines = d.days.flatMap((day) => [
+      ...day.food.map((f) => `${day.day} ${f.at} · ${f.name ?? f.meal} · ${f.kcal} kcal`),
+      ...day.moods.map((m) => `${day.day} ${m.at} · ${[m.valence, ...m.moods].filter(Boolean).join(", ")}`),
+      ...day.symptoms.map((s) => `${day.day} ${s.at} · ${s.symptoms.join(", ")}`),
+    ])
+    return <div className="space-y-2"><Card title={`Log · ${d.start} to ${d.end}`}>
+      {lines.length ? lines.slice(0, 8).map((line, i) => <p key={i} className="text-[13px] leading-5">{line}</p>) : <p className="text-[13px] text-muted-foreground">Nothing logged in this period.</p>}
+      {lines.length > 8 && <p className="mt-2 text-[12px] text-muted-foreground">Showing 8 of {lines.length} entries.</p>}
+    </Card><BasedOn href="/journal">Journal · {d.start} to {d.end}</BasedOn></div>
+  }
   if (name === "get_journal_impacts") {
     const d = output as CoachOutputs["get_journal_impacts"]
     return <div className="space-y-2"><Card title={`Habit associations · ${d.outcome}`}>

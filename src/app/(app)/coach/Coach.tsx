@@ -39,6 +39,7 @@ const RUNNING: Record<string, string> = {
   get_trend: "Checking your trends…",
   get_activities: "Looking at your workouts…",
   get_journal_impacts: "Reading your journal…",
+  get_log: "Reading what you logged…",
   get_health: "Checking your Health Monitor…",
   get_report: "Reading your report…",
   get_profile: "Checking your profile…",
