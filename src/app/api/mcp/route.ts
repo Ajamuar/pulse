@@ -7,6 +7,7 @@ import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/
 import { getDb } from "@/server/db";
 import { createMcpServer } from "@/server/mcp/server";
 import { TOKEN_PREFIX, userForToken } from "@/server/mcp/tokens";
+import { issuerOf, resourceOf, userForOAuthToken } from "@/server/mcp/oauth";
 import { ctxOf } from "@/server/queries/common";
 
 const rpcError = (status: number, message: string, headers?: HeadersInit) =>
@@ -15,8 +16,8 @@ const rpcError = (status: number, message: string, headers?: HeadersInit) =>
 export async function POST(req: Request) {
   const token = /^Bearer (\S+)$/i.exec(req.headers.get("authorization") ?? "")?.[1];
   const db = getDb();
-  const userId = token?.startsWith(TOKEN_PREFIX) ? await userForToken(db, token) : null;
-  if (userId === null) return rpcError(401, "Unauthorized: send a Pulse access token as 'Authorization: Bearer pulse_…'.", { "WWW-Authenticate": "Bearer" });
+  const userId = token?.startsWith(TOKEN_PREFIX) ? await userForToken(db, token) : token?.startsWith("oat_") ? await userForOAuthToken(db, token, resourceOf(req.url)) : null;
+  if (userId === null) return rpcError(401, "Unauthorized: send a Pulse access token as Authorization: Bearer.", { "WWW-Authenticate": `Bearer resource_metadata="${issuerOf(req.url)}/.well-known/oauth-protected-resource", scope="pulse"` });
   const ctx = await ctxOf(db, userId).catch(() => null);
   if (!ctx) return rpcError(409, "Finish setting up your Pulse profile first.");
 

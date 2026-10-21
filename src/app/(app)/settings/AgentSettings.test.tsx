@@ -1,9 +1,9 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { createMcpTokenAction, revokeMcpTokenAction } from "@/server/actions/mcp"
+import { createMcpTokenAction, revokeMcpTokenAction, revokeMcpGrantAction } from "@/server/actions/mcp"
 import { AgentSettings } from "./AgentSettings"
 
-vi.mock("@/server/actions/mcp", () => ({ createMcpTokenAction: vi.fn(), revokeMcpTokenAction: vi.fn() }))
+vi.mock("@/server/actions/mcp", () => ({ createMcpTokenAction: vi.fn(), revokeMcpTokenAction: vi.fn(), revokeMcpGrantAction: vi.fn() }))
 const refresh = vi.fn()
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }))
 
@@ -57,4 +57,13 @@ describe("Settings › Agents", () => {
     await waitFor(() => expect(revokeMcpTokenAction).toHaveBeenCalledWith(7))
     await waitFor(() => expect(refresh).toHaveBeenCalled())
   })
+})
+
+it("lists OAuth grants by client name and revokes by client id", async () => {
+  vi.mocked(revokeMcpGrantAction).mockResolvedValue({ ok: true, data: undefined })
+  const clientId = "https://chatgpt.com/oauth/client.json"
+  render(<AgentSettings now={NOW} tokens={[]} grants={[{ clientId, clientName: "ChatGPT" }]} />)
+  expect(screen.getByText("OAuth connection")).toBeInTheDocument()
+  fireEvent.click(screen.getByRole("button", { name: "Revoke ChatGPT" }))
+  await waitFor(() => expect(revokeMcpGrantAction).toHaveBeenCalledWith(clientId))
 })

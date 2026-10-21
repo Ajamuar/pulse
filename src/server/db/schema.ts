@@ -583,6 +583,39 @@ export const mcpTokens = pgTable(
   (t) => [primaryKey({ columns: [t.userId, t.id] }), unique("mcp_tokens_hash").on(t.tokenHash)],
 );
 
+/** OAuth grants own all credentials, so revocation also invalidates pending codes atomically. */
+export const mcpOAuthGrants = pgTable("mcp_oauth_grants", {
+  userId: userId(),
+  clientId: text("client_id").notNull(),
+  clientName: text("client_name").notNull(),
+}, (t) => [primaryKey({ columns: [t.userId, t.clientId] })]);
+
+export const mcpOAuthCodes = pgTable("mcp_oauth_codes", {
+  userId: userId(),
+  clientId: text("client_id").notNull(),
+  codeHash: text("code_hash").notNull(),
+  codeChallenge: text("code_challenge").notNull(),
+  redirectUri: text("redirect_uri").notNull(),
+  resource: text("resource").notNull(),
+  expiresAt: ts("expires_at").notNull(),
+}, (t) => [primaryKey({ columns: [t.userId, t.codeHash] }), unique("mcp_oauth_codes_hash").on(t.codeHash), foreignKey({ columns: [t.userId, t.clientId], foreignColumns: [mcpOAuthGrants.userId, mcpOAuthGrants.clientId] }).onDelete("cascade")]);
+
+export const mcpOAuthAccessTokens = pgTable("mcp_oauth_access_tokens", {
+  userId: userId(),
+  clientId: text("client_id").notNull(),
+  tokenHash: text("token_hash").notNull(),
+  resource: text("resource").notNull(),
+  scope: text("scope").notNull(),
+  expiresAt: ts("expires_at").notNull(),
+}, (t) => [primaryKey({ columns: [t.userId, t.tokenHash] }), unique("mcp_oauth_access_tokens_hash").on(t.tokenHash), foreignKey({ columns: [t.userId, t.clientId], foreignColumns: [mcpOAuthGrants.userId, mcpOAuthGrants.clientId] }).onDelete("cascade")]);
+
+export const mcpOAuthRefreshTokens = pgTable("mcp_oauth_refresh_tokens", {
+  userId: userId(),
+  clientId: text("client_id").notNull(),
+  tokenHash: text("token_hash").notNull(),
+  resource: text("resource").notNull(),
+}, (t) => [primaryKey({ columns: [t.userId, t.tokenHash] }), unique("mcp_oauth_refresh_tokens_hash").on(t.tokenHash), foreignKey({ columns: [t.userId, t.clientId], foreignColumns: [mcpOAuthGrants.userId, mcpOAuthGrants.clientId] }).onDelete("cascade")]);
+
 /** Tables holding a user's synced Google data and what was computed from it (cleared on a Google account switch). */
 export const SYNCED_TABLES = [
   syncState, rawPayloads, hrDays, stepsDays, dailyMetrics, sleepSegments, sleepSessions, exercises, dailyValues,

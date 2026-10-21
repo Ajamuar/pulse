@@ -2,8 +2,9 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import type { Db } from "../db";
 import { addUser, freshDb, USER } from "../testing";
+import { createCode, listOAuthGrants } from "../mcp/oauth";
 import { createToken, listTokens, MAX_TOKENS, userForToken } from "../mcp/tokens";
-import { createMcpTokenAction, revokeMcpTokenAction } from "./mcp";
+import { createMcpTokenAction, revokeMcpTokenAction, revokeMcpGrantAction } from "./mcp";
 
 const h = vi.hoisted(() => ({ db: undefined as unknown, user: null as unknown }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -54,4 +55,17 @@ it("revokes the caller's own token and cannot touch another person's", async () 
   expect(await revokeMcpTokenAction((await listTokens(db, USER))[0].id)).toEqual({ ok: true, data: undefined });
   expect(await userForToken(db, mine)).toBeNull();
   expect(await revokeMcpTokenAction(1.5)).toMatchObject({ ok: false });
+});
+
+it("OAuth revoke requires a session and touches only the caller's grant", async () => {
+  const auth = { clientId: "https://chatgpt.com/oauth/client.json", clientName: "ChatGPT", resource: "https://pulse.test/api/mcp", redirectUri: "https://chatgpt.com/connector_platform_oauth_redirect", codeChallenge: "a".repeat(43) };
+  await createCode(db, USER, auth);
+  await createCode(db, other, auth);
+  h.user = null;
+  expect(await revokeMcpGrantAction(auth.clientId)).toMatchObject({ ok: false });
+  expect(await listOAuthGrants(db, USER)).toHaveLength(1);
+  h.user = ME;
+  expect(await revokeMcpGrantAction(auth.clientId)).toMatchObject({ ok: true });
+  expect(await listOAuthGrants(db, USER)).toEqual([]);
+  expect(await listOAuthGrants(db, other)).toHaveLength(1);
 });

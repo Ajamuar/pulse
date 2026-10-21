@@ -4,7 +4,21 @@ Pulse serves your data to AI agents (Hermes, Claude Desktop, Cursor, any MCP cli
 [Model Context Protocol](https://modelcontextprotocol.io). An agent reads your recovery, sleep, strain and health, and
 can log water, food, weight, mood and symptoms when you ask it to. It sees only your account.
 
-## Connect
+## Connect ChatGPT with OAuth
+
+1. Set `APP_URL=https://pulse.example.com` to your public HTTPS origin (no trailing slash). ChatGPT must be able to reach this server from the internet.
+2. In ChatGPT, add a custom connector with server URL `https://pulse.example.com/api/mcp` and authentication **OAuth**.
+3. Sign in to Pulse in the browser and choose **Allow** on the consent page. No pasted token is needed.
+4. Revoke the connection by client name in **Settings › Agents**.
+
+Pulse serves protected-resource and authorization-server discovery, accepts ChatGPT HTTPS Client ID Metadata Documents,
+and uses authorization codes with PKCE S256. Codes expire after 60 seconds; access tokens after one hour. Refresh tokens
+rotate on each use. Only hashes are stored. OAuth grants the same read and immediate log access as a personal token.
+A completed Pulse profile is required to call tools. Google Health OAuth is separate and unchanged.
+
+Protocol reference: [OpenAI authentication documentation](https://developers.openai.com/plugins/build/auth).
+
+## Connect with a personal token
 
 1. In Pulse, open **Settings › Agents**, name the agent and tap **Create**.
 2. Copy the token (`pulse_…`). It is shown once; Pulse keeps only its SHA-256.

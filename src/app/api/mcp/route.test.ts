@@ -6,6 +6,8 @@ import type { Db } from "@/server/db";
 import { loggedEntries, profile } from "@/server/db/schema";
 import { coachTools } from "@/server/coach/tools";
 import { createToken, revokeToken, listTokens } from "@/server/mcp/tokens";
+import { createCode, exchangeToken, revokeOAuthGrant } from "@/server/mcp/oauth";
+import { createHash } from "node:crypto";
 import { ctxFor, seeded, NOW, TZ, USER, addUser } from "@/server/testing";
 import * as route from "./route";
 
@@ -47,7 +49,7 @@ describe("authentication", () => {
     for (const auth of [undefined, "", "Bearer", "Bearer pulse_unknown", `Bearer ${revoked}`, `Basic ${mine}`, `Bearer ${mine.slice(6)}`, `Bearer ${mine} x`]) {
       const res = await POST(new Request("http://localhost/api/mcp", { method: "POST", headers: { ...HEADERS, ...(auth !== undefined && { authorization: auth }) }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }) }));
       expect(res.status, String(auth)).toBe(401);
-      expect(res.headers.get("www-authenticate")).toBe("Bearer");
+      expect(res.headers.get("www-authenticate")).toBe('Bearer resource_metadata="http://localhost/.well-known/oauth-protected-resource", scope="pulse"');
       expect(await res.json()).toMatchObject({ jsonrpc: "2.0", error: { code: -32000 }, id: null });
     }
   });
@@ -159,4 +161,21 @@ describe("one request, one user", () => {
     await revokeToken(db, USER, (await listTokens(db, USER)).find((x) => x.name === "short-lived")!.id);
     expect((await call(t, "tools/list")).status).toBe(401);
   });
+});
+
+
+it("OAuth reaches only its user's tools and revocation makes the next call 401", async () => {
+  const clientId = "https://chatgpt.com/oauth/client.json";
+  const resource = "http://localhost/api/mcp";
+  const redirectUri = "https://chatgpt.com/connector_platform_oauth_redirect";
+  const verifier = "a".repeat(43);
+  const code = await createCode(db, other, { clientId, clientName: "ChatGPT", redirectUri, resource, codeChallenge: createHash("sha256").update(verifier).digest("base64url") });
+  const result = await exchangeToken(db, new URLSearchParams({ grant_type: "authorization_code", client_id: clientId, resource, redirect_uri: redirectUri, code, code_verifier: verifier }), resource);
+  if (!("access_token" in result)) throw new Error("Exchange failed");
+  expect((await call(result.access_token, "tools/list")).status).toBe(200);
+  expect((await tool(result.access_token, "get_profile")).json).toMatchObject({ sex: "female", maxHr: 199 });
+  expect((await tool(result.access_token, "get_sleep", { day: "2026-10-02" })).json.asleepMinutes.value).toBeNull();
+  await revokeOAuthGrant(db, other, clientId);
+  expect((await call(result.access_token, "tools/list")).status).toBe(401);
+  expect((await call(mine, "tools/list")).status).toBe(200);
 });

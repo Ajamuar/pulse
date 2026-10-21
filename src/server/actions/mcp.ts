@@ -6,6 +6,7 @@ import { z } from "zod";
 import { currentUser, SIGNED_OUT } from "../auth";
 import { getDb } from "../db";
 import { createToken, listTokens, MAX_NAME, MAX_TOKENS, revokeToken } from "../mcp/tokens";
+import { revokeOAuthGrant } from "../mcp/oauth";
 import type { ActionResult } from "./journal";
 
 const Name = z.string().trim().min(1, "Name the agent that will use it").max(MAX_NAME, `Use at most ${MAX_NAME} characters`);
@@ -28,6 +29,15 @@ export async function revokeMcpTokenAction(id: number): Promise<ActionResult> {
   if (!me) return SIGNED_OUT;
   if (!Number.isInteger(id)) return { ok: false, error: "That token doesn’t exist." };
   await revokeToken(getDb(), me.userId, id);
+  revalidatePath("/settings");
+  return { ok: true, data: undefined };
+}
+
+export async function revokeMcpGrantAction(clientId: string): Promise<ActionResult> {
+  const me = await currentUser();
+  if (!me) return SIGNED_OUT;
+  if (typeof clientId !== "string" || clientId.length > 2048) return { ok: false, error: "Invalid client." };
+  await revokeOAuthGrant(getDb(), me.userId, clientId);
   revalidatePath("/settings");
   return { ok: true, data: undefined };
 }
