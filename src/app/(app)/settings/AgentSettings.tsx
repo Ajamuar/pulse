@@ -4,7 +4,8 @@ import * as React from "react"
 import { Check, Copy, LoaderCircle } from "lucide-react"
 import { toast } from "sonner"
 import { ago } from "@/lib/format"
-import { createMcpTokenAction, revokeMcpTokenAction } from "@/server/actions/mcp"
+import { createMcpTokenAction, revokeMcpTokenAction, revokeMcpGrantAction } from "@/server/actions/mcp"
+import type { OAuthGrant } from "@/server/mcp/oauth"
 import type { TokenRow } from "@/server/mcp/tokens"
 import { SectionShell } from "@/components/shells/SectionShell"
 import { Button } from "@/components/ui/button"
@@ -42,7 +43,7 @@ function CopyField({ label, value }: { label: string; value: string }) {
  * Settings › Agents: personal access tokens for AI agents that read (and log to) this person's Pulse over MCP. A new
  * token is shown once, here, next to the endpoint it goes with; afterwards only its name and last use remain.
  */
-export function AgentSettings({ tokens, now }: { tokens: TokenRow[]; now: number }) {
+export function AgentSettings({ tokens, now, grants = [] }: { tokens: TokenRow[]; now: number; grants?: OAuthGrant[] }) {
   const router = useRouter()
   const [pending, start] = React.useTransition()
   const [created, setCreated] = React.useState<{ name: string; token: string; endpoint: string } | null>(null)
@@ -69,8 +70,19 @@ export function AgentSettings({ tokens, now }: { tokens: TokenRow[]; now: number
   return (
     <SectionShell variant="card" level={2} id="agents" title="Agents">
       <p className={HINT}>
-        Let an AI agent read your Pulse data, and log water, food, weight, mood and symptoms when you ask it to, over MCP. Each agent gets its own token; it sees only your data and works until you revoke it.
+        Let an AI agent read your Pulse data, and log water, food, weight, mood and symptoms when you ask it to, over MCP. Connect ChatGPT with OAuth and approve access in your browser. Other agents can use a personal token. Each sees only your data until you revoke access.
       </p>
+      {grants.length > 0 && <ul className="mt-2 divide-y divide-border">
+        {grants.map((grant) => <li key={grant.clientId} className={ROW}>
+          <div className="min-w-0"><p className="truncate text-[15px] leading-[22px]">{grant.clientName}</p><p className={HINT}>OAuth connection</p></div>
+          <Button type="button" variant="secondary" size="touch" disabled={pending} aria-label={`Revoke ${grant.clientName}`} onClick={() => start(async () => {
+            const result = await revokeMcpGrantAction(grant.clientId).catch(() => ({ ok: false as const, error: "Couldn’t reach Pulse. Try again." }))
+            if (!result.ok) return void toast.error(result.error)
+            toast.success("Connection revoked.")
+            router.refresh()
+          })}>Revoke</Button>
+        </li>)}
+      </ul>}
       {tokens.length > 0 && (
         <ul className="mt-2 divide-y divide-border">
           {tokens.map((t) => (
