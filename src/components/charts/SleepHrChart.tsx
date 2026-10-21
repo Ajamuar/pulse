@@ -3,13 +3,12 @@
 import * as React from "react"
 import { Area, AreaChart, CartesianGrid, ReferenceDot, ReferenceLine, XAxis, YAxis } from "recharts"
 import { paddedDomain } from "@/lib/charts"
-import { clock } from "@/lib/format"
+import { useClock, useOptionalShellCalendar } from "@/components/shells/ShellStatus"
 import type { Metric } from "@/lib/reasons"
 import { ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { Skeleton } from "@/components/ui/skeleton"
 import { EmptyState } from "@/components/shells/EmptyState"
 import { MetricState } from "@/components/shells/MetricState"
-import { useOptionalShellCalendar } from "@/components/shells/ShellStatus"
 import { ReasonPlaceholder } from "@/components/metrics/ReasonPlaceholder"
 import { AXIS, ChartFigure, GlowDot, GRID, LINE_CURSOR, Pill, TOOLTIP_CLASS, TooltipLine, useSeriesAnimation } from "./ChartFrame"
 
@@ -32,6 +31,7 @@ const MIN = 60_000
 
 function Chart({ hr, highlight }: { hr: SleepHr; highlight?: { start: number; end: number }[] }) {
   const tz = useOptionalShellCalendar()?.timeZone
+  const at = useClock()
   const anim = useSeriesAnimation()
   const id = React.useId().replace(/:/g, "")
   const { bed, wake, points } = hr
@@ -53,7 +53,7 @@ function Chart({ hr, highlight }: { hr: SleepHr; highlight?: { start: number; en
   const avg = night.length ? Math.round(night.reduce((a, b) => a + b, 0) / night.length) : null
   // The night's lowest minute, marked as a point with a pill: the number people look for on this chart.
   const low = points.reduce<{ t: number; v: number } | null>((m, p) => (p.t >= bed && p.t < wake && p.v !== null && (!m || p.v < m.v) ? { t: p.t, v: p.v } : m), null)
-  const summary = `Heart rate during sleep from ${clock(bed, tz)} to ${clock(wake, tz)}: low ${Math.min(...night)}, average ${avg}, high ${Math.max(...night)} beats per minute.`
+  const summary = `Heart rate during sleep from ${at(bed, tz)} to ${at(wake, tz)}: low ${Math.min(...night)}, average ${avg}, high ${Math.max(...night)} beats per minute.`
 
   return (
     <ChartFigure summary={summary} config={{ night: { label: "Heart rate", color: "var(--foreground)" } }} className={H}>
@@ -71,7 +71,7 @@ function Chart({ hr, highlight }: { hr: SleepHr; highlight?: { start: number; en
           scale="time"
           domain={[points[0].t, points.at(-1)!.t]}
           ticks={[bed, wake]}
-          tickFormatter={(v: number) => clock(v, tz)}
+          tickFormatter={(v: number) => at(v, tz)}
           {...AXIS}
           tick={{ fill: "var(--foreground-secondary)" }}
         />
@@ -100,7 +100,7 @@ function Chart({ hr, highlight }: { hr: SleepHr; highlight?: { start: number; en
             <ChartTooltipContent
               className={TOOLTIP_CLASS}
               hideIndicator
-              labelFormatter={(_, payload) => clock(Number(payload?.[0]?.payload?.t), tz)}
+              labelFormatter={(_, payload) => at(Number(payload?.[0]?.payload?.t), tz)}
               formatter={(v) => <TooltipLine color="var(--foreground)">{Number(v)} bpm</TooltipLine>}
             />
           }

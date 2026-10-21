@@ -250,7 +250,7 @@ export function DeleteAccountButton() {
   )
 }
 
-/** Settings › Profile's "Edit": the onboarding fields in a sheet (U19). Saving recomputes every day's scores. */
+/** Settings › Profile's "Edit": the onboarding fields in a sheet (U19). Scoring inputs recompute every day's scores; time format does not. */
 export function EditProfileButton({ defaults }: { defaults: ProfileDefaults }) {
   const [open, setOpen] = React.useState(false)
   const saved = React.useCallback(() => {
@@ -268,7 +268,7 @@ export function EditProfileButton({ defaults }: { defaults: ProfileDefaults }) {
         <Pencil aria-hidden strokeWidth={2} className="size-3.5" />
         Edit
       </Button>
-      <ResponsiveSheet open={open} onOpenChange={setOpen} title="Profile" description="Changing it recomputes every day’s scores.">
+      <ResponsiveSheet open={open} onOpenChange={setOpen} title="Profile" description="Time format only changes how times are shown. Other changes recompute your scores.">
         <div className="px-4 pb-[max(env(safe-area-inset-bottom),16px)] md:px-6 md:pb-6">
           <ProfileForm defaults={defaults} onSaved={saved} footer={(pending) => <SaveButton pending={pending} label="Save profile" />} />
         </div>

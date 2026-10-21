@@ -3,7 +3,7 @@ import { CalendarRange, Check, ChevronRight, CircleAlert, Info, Lightbulb, Maxim
 import { cn } from "@/lib/utils"
 import { isDashboardKey } from "@/lib/dashboard"
 import { FEATURES } from "@/lib/features"
-import { clock, DAY, formatDay, formatValue, MISSING, rangeLabel } from "@/lib/format"
+import { clock, DAY, formatDay, formatValue, MISSING, rangeLabel, type TimeFormat } from "@/lib/format"
 import { reasonCopy } from "@/lib/reasons"
 import { dayHref, activityHref, napHref } from "@/lib/url"
 import { Wordmark } from "@/components/brand/Wordmark"
@@ -63,7 +63,7 @@ const ICON_LINK =
 
 /** Home `/` (spec §7.1). */
 export default async function HomePage({ searchParams }: PageProps<"/">) {
-  const { d, today, timeZone, ctx } = await pageDay(searchParams as SearchParams, "/")
+  const { d, today, timeZone, timeFormat, ctx } = await pageDay(searchParams as SearchParams, "/")
   const vm = await getHome(d, ctx)
   const at = (href: string) => dayHref(href, d, today)
   const { dials } = vm
@@ -141,7 +141,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
               {!vm.phone && (
                 <div className="grid grid-cols-2 gap-3 xl:col-start-2 xl:row-start-1 xl:grid-cols-1 xl:gap-4">
                   <MonitorCard vm={vm} href={at("/health/monitor")} />
-                  <StressCard vm={vm} href={at("/health/stress")} timeZone={timeZone} />
+                  <StressCard vm={vm} href={at("/health/stress")} timeZone={timeZone} timeFormat={timeFormat} />
                 </div>
               )}
               {vm.insights.length > 0 && (
@@ -242,7 +242,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
                 </SectionShell>
                 )}
                 <JournalWeek vm={vm} at={at} className="xl:order-first xl:col-span-2" />
-                <EnergyCard vm={vm} timeZone={timeZone} className={cn(!vm.isToday && "xl:col-span-2")} />
+                <EnergyCard vm={vm} timeZone={timeZone} timeFormat={timeFormat} className={cn(!vm.isToday && "xl:col-span-2")} />
               </div>
             </div>
           </SectionShell>
@@ -262,7 +262,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
               {vm.keyStats.map((s) => (
                 <li key={s.key}>
                   {s.key === "stress" ? (
-                    <StressTile vm={vm} href={at("/health/stress")} timeZone={timeZone} />
+                    <StressTile vm={vm} href={at("/health/stress")} timeZone={timeZone} timeFormat={timeFormat} />
                   ) : (
                     <KeyStatRow variant="card" {...statProps(s, { d, today })} />
                   )}
@@ -455,7 +455,7 @@ function MonitorCard({ vm, href }: { vm: HomeVM; href: string }) {
   )
 }
 
-function StressCard({ vm, href, timeZone }: { vm: HomeVM; href: string; timeZone: string }) {
+function StressCard({ vm, href, timeZone, timeFormat }: { vm: HomeVM; href: string; timeZone: string; timeFormat: TimeFormat }) {
   const s = vm.stress
   if (s.value === null)
     return (
@@ -477,14 +477,14 @@ function StressCard({ vm, href, timeZone }: { vm: HomeVM; href: string; timeZone
         chipClass={cn("font-numeric text-lg font-bold tabular-nums", tone.chip)}
         top={tone.word}
         topClass={tone.text}
-        bottom={s.value.at !== null ? clock(s.value.at, timeZone) : "Day average"}
+        bottom={s.value.at !== null ? clock(s.value.at, timeZone, timeFormat) : "Day average"}
       />
     </SectionShell>
   )
 }
 
 /** My Dashboard's Stress Monitor tile: the latest level and the day's line (the reference app, dashboard-tiles-list). */
-function StressTile({ vm, href, timeZone }: { vm: HomeVM; href: string; timeZone: string }) {
+function StressTile({ vm, href, timeZone, timeFormat }: { vm: HomeVM; href: string; timeZone: string; timeFormat: TimeFormat }) {
   const s = vm.stress.value
   const tone = s && STRESS_TONE[s.level]
   return (
@@ -494,7 +494,7 @@ function StressTile({ vm, href, timeZone }: { vm: HomeVM; href: string; timeZone
           <p className={cn(CAPTION, "text-foreground-secondary")}>
             {s.at !== null ? (
               <>
-                Last updated <span className="font-numeric tabular-nums">{clock(s.at, timeZone)}</span>
+                Last updated <span className="font-numeric tabular-nums">{clock(s.at, timeZone, timeFormat)}</span>
               </>
             ) : (
               "Day average"
@@ -511,7 +511,7 @@ function StressTile({ vm, href, timeZone }: { vm: HomeVM; href: string; timeZone
   )
 }
 
-function EnergyCard({ vm, timeZone, className }: { vm: HomeVM; timeZone: string; className?: string }) {
+function EnergyCard({ vm, timeZone, timeFormat, className }: { vm: HomeVM; timeZone: string; timeFormat: TimeFormat; className?: string }) {
   const e = vm.energyBank
   return (
     <SectionShell variant="card" title="Energy Bank" info={ENERGY_INFO} aside={e.value && e.provisional ? <MetricTags provisional /> : undefined} fill className={className}>
@@ -531,7 +531,7 @@ function EnergyCard({ vm, timeZone, className }: { vm: HomeVM; timeZone: string;
               <TickScale variant="meter" label="Energy" metric={{ value: eb.current, reason: null, provisional: false }} min={0} max={100} format="int" unit="%" />
               <p className={CAPTION}>
                 Started at <span className="font-numeric tabular-nums">{formatValue("int", eb.startLevel)}%</span> at{" "}
-                <span className="font-numeric tabular-nums">{clock(eb.startAt, timeZone)}</span>
+                <span className="font-numeric tabular-nums">{clock(eb.startAt, timeZone, timeFormat)}</span>
               </p>
             </div>
             <EnergyBankChart data={{ value: energySeries(eb), reason: null, provisional: false }} />
@@ -543,7 +543,7 @@ function EnergyCard({ vm, timeZone, className }: { vm: HomeVM; timeZone: string;
               <ul className="space-y-1">
                 {eb.drains.slice(0, 3).map((dr) => (
                   <li key={`${dr.label}-${dr.start}`} className={cn(CAPTION, "text-foreground-secondary")}>
-                    {dr.label} at <span className="font-numeric tabular-nums">{clock(dr.start, timeZone)}</span> ·{" "}
+                    {dr.label} at <span className="font-numeric tabular-nums">{clock(dr.start, timeZone, timeFormat)}</span> ·{" "}
                     <span className="font-numeric tabular-nums">{formatValue("signedInt", -Math.abs(dr.amount))}</span>
                   </li>
                 ))}

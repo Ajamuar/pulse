@@ -6,7 +6,7 @@ import { clock, dayLabel, formatValue } from "@/lib/format"
 import { dayHref } from "@/lib/url"
 import { IntradayHrChart } from "@/components/charts/IntradayHrChart"
 import { ZoneBars } from "@/components/charts/ZoneBars"
-import { ACTIVITY_ICON } from "@/components/metrics/ActivityCard"
+import { ACTIVITY_ICON } from "@/components/metrics/activityIcon"
 import { InsightCard } from "@/components/metrics/InsightCard"
 import { KeyStatRow } from "@/components/metrics/KeyStatRow"
 import { ReasonPlaceholder } from "@/components/metrics/ReasonPlaceholder"
@@ -31,7 +31,7 @@ export default async function ActivityPage({ params }: PageProps<"/activity/[id]
   const ctx = await userCtx()
   const [vm, coach] = await Promise.all([getActivity(decodeURIComponent(id), ctx), coachReady(ctx.db, ctx.userId)])
   if (!vm) notFound()
-  const { timeZone } = ctx
+  const { timeZone, profile } = ctx
   const today = todayOf(ctx)
 
   const Icon = ACTIVITY_ICON[vm.kind]
@@ -44,7 +44,7 @@ export default async function ActivityPage({ params }: PageProps<"/activity/[id]
   return (
     <DetailShell
       title={vm.name}
-      subtitle={`${dayLabel(vm.day, today)} ${clock(vm.start, timeZone)} to ${clock(vm.end, timeZone)}`}
+      subtitle={`${dayLabel(vm.day, today)} ${clock(vm.start, timeZone, profile.timeFormat)} to ${clock(vm.end, timeZone, profile.timeFormat)}`}
       align="start"
       titleIcon={<Icon />}
       backHref={strainHref}

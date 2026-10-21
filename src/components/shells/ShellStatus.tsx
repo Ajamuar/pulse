@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
+import { clock, type TimeFormat } from "@/lib/format"
 
 /** Global shell state read by the headers, nav, sync status and ConnectionBanner (spec §4.2, D2). */
 export type ShellStatus = {
@@ -15,6 +16,8 @@ export type ShellStatus = {
   firstDay?: string
   /** IANA zone for clock times in client-rendered charts. */
   timeZone?: string
+  /** 24-hour or 12-hour clock. Missing means 24-hour. */
+  timeFormat?: TimeFormat
   /** Consecutive worn days (Home header streak pill, spec §4.3); null or missing at 0. */
   streak?: { days: number; asOf: string } | null
   /** The avatar photo (src/server/avatar.ts); null draws the outline person icon. */
@@ -28,7 +31,7 @@ export type ShellStatus = {
 const Ctx = React.createContext<ShellStatus | null>(null)
 
 /** The calendar facts most components need: they change once a day, not on every sync. */
-export type ShellCalendar = Pick<ShellStatus, "today" | "firstDay" | "timeZone">
+export type ShellCalendar = Pick<ShellStatus, "today" | "firstDay" | "timeZone" | "timeFormat">
 const CalendarCtx = React.createContext<ShellCalendar | null>(null)
 /** AppLifecycle's resume check (see useShellRecheck). */
 const RecheckCtx = React.createContext<(() => Promise<void>) | null>(null)
@@ -93,8 +96,8 @@ export function ShellStatusProvider({ value, live = false, children }: { value: 
     }
   }, [live, value, current, router])
 
-  const { today, firstDay, timeZone } = current
-  const calendar = React.useMemo(() => ({ today, firstDay, timeZone }), [today, firstDay, timeZone])
+  const { today, firstDay, timeZone, timeFormat } = current
+  const calendar = React.useMemo(() => ({ today, firstDay, timeZone, timeFormat }), [today, firstDay, timeZone, timeFormat])
   const key = JSON.stringify(current)
   // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on content: a new object with the same fields is the same status
   const status = React.useMemo(() => current, [key])
@@ -126,6 +129,12 @@ export function useShellCalendar() {
 
 /** Like useShellCalendar, for kit components that also render outside a shell (tests, gallery). */
 export const useOptionalShellCalendar = () => React.useContext(CalendarCtx)
+
+/** Epoch ms → the signed-in user's clock string. Outside a shell, 24-hour in the runtime zone. */
+export function useClock() {
+  const cal = useOptionalShellCalendar()
+  return React.useCallback((ms: number, timeZone?: string) => clock(ms, timeZone ?? cal?.timeZone, cal?.timeFormat ?? "24"), [cal?.timeZone, cal?.timeFormat])
+}
 
 /** The resume check: one `/status` request, and a refresh only when the server has something new. */
 export function useShellRecheck() {

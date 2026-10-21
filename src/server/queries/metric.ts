@@ -468,7 +468,7 @@ async function hourly(s: SectionCtx, still: boolean): Promise<Extract<Section, {
   const now = s.isToday ? Math.floor((s.ctx.now - start) / 3600) : n;
   const sums = new Array<number>(n).fill(0);
   for (const m of mins) sums[Math.min(n - 1, Math.floor((m.ts - start) / 3600))] += m.steps;
-  const hours = sums.map((v, h) => ({ t: ms(start + h * 3600), label: clock(ms(start + h * 3600), s.ctx.timeZone), value: h > now ? null : v }));
+  const hours = sums.map((v, h) => ({ t: ms(start + h * 3600), label: clock(ms(start + h * 3600), s.ctx.timeZone, s.ctx.profile.timeFormat), value: h > now ? null : v }));
   let gap: { from: number; to: number; minutes: number } | null = null;
   if (still) {
     // Exclude overnight hours so sleep is not counted as sedentary time.

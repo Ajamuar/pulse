@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { BirthDatePicker } from "./BirthDatePicker"
 import { canonicalZone, describeZone, TimeZoneCombobox } from "./TimeZoneCombobox"
 
-export type ProfileDefaults = { birthDate: string; sex: "male" | "female" | null; maxHr: number | null; heightCm: number | null; timeZone: string | null }
+export type ProfileDefaults = { birthDate: string; sex: "male" | "female" | null; maxHr: number | null; heightCm: number | null; timeZone: string | null; timeFormat?: "24" | "12" | null }
 
 const noSubscribe = () => () => {}
 
@@ -123,6 +123,36 @@ export function ProfileForm({
             Change
           </Button>
         </div>
+      )}
+
+      {!onboarding && (
+        <fieldset className="flex flex-col gap-2" aria-describedby={f?.timeFormat ? "timeFormat-error" : "timeFormat-hint"}>
+          <legend className={cn(LABEL, "mb-2")}>Time format</legend>
+          <div className="grid grid-cols-2 gap-1 rounded-[14px] bg-field p-1">
+            {(["24", "12"] as const).map((v) => (
+              <label key={v} className="relative">
+                <input type="radio" name="timeFormat" value={v} defaultChecked={(defaults.timeFormat ?? "24") === v} className="peer sr-only" />
+                <span
+                  className={cn(
+                    "flex h-11 cursor-pointer items-center justify-center rounded-[10px] text-[15px] font-semibold text-foreground-secondary transition-[background-color,color,scale] duration-150 ease-standard select-none active:scale-[0.96]",
+                    "peer-checked:bg-foreground peer-checked:text-background peer-focus-visible:ring-2 peer-focus-visible:ring-foreground/70",
+                  )}
+                >
+                  {v === "24" ? "24-hour" : "12-hour"}
+                </span>
+              </label>
+            ))}
+          </div>
+          {f?.timeFormat ? (
+            <p id="timeFormat-error" className={ERROR}>
+              {f.timeFormat}
+            </p>
+          ) : (
+            <p id="timeFormat-hint" className={HINT}>
+              22:30, or 10:30 PM. This only changes how times are shown.
+            </p>
+          )}
+        </fieldset>
       )}
 
       {!onboarding && (

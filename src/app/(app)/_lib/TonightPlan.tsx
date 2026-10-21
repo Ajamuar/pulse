@@ -6,7 +6,8 @@ import { FEATURES } from "@/lib/features"
 import { cn } from "@/lib/utils"
 import { CARD_BUTTON } from "@/components/metrics/primitives"
 import { openSheet } from "@/components/shells/SheetTrigger"
-import { clock, hmm } from "@/lib/format"
+import { hmm } from "@/lib/format"
+import { useClock } from "@/components/shells/ShellStatus"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import type { SleepPlanVM } from "@/server/queries/types"
 
@@ -23,10 +24,11 @@ export type SleepAlarmVM = { at: number; mode: "exact" | "window" }
  * alarm (the reference app, home-tonights-sleep-card-scrolled) the right block is the alarm and an "Edit alarm" button closes the card.
  */
 export function TonightPlan({ plan, timeZone, alarm }: { plan: SleepPlanVM; timeZone: string; alarm?: SleepAlarmVM | null }) {
+  const formatClock = useClock()
   const wake = FEATURES.sleepAlarm && alarm ? alarm : null
   const [key, setKey] = React.useState<SleepPlanVM["plans"][number]["key"]>("peak")
   const chosen = plan.plans.find((p) => p.key === key) ?? plan.plans[0]
-  const bed = clock(chosen.bedtimeAt, timeZone)
+  const bed = formatClock(chosen.bedtimeAt, timeZone)
   return (
     <div role="group" aria-label={`Bed by ${bed} for ${chosen.label.toLowerCase()}`} className="@container flex flex-1 flex-col gap-4">
       {/* the reference app's "(sunset) 11:20 - - - - (alarm) 8:30" [latest-home-top-1]: two time blocks joined by a dashed rule. */}
@@ -41,7 +43,7 @@ export function TonightPlan({ plan, timeZone, alarm }: { plan: SleepPlanVM; time
         <span aria-hidden className="h-0 w-full max-w-28 justify-self-center border-t-2 border-dashed border-foreground/20" />
         <span className="flex items-center gap-2">
           <AlarmClock aria-hidden className="size-6 shrink-0 text-foreground-secondary" strokeWidth={1.5} />
-          <span className={TIME}>{clock(wake ? wake.at : plan.wakeAt, timeZone)}</span>
+          <span className={TIME}>{formatClock(wake ? wake.at : plan.wakeAt, timeZone)}</span>
         </span>
         <span className={LABEL}>Recommended bedtime</span>
         <span />

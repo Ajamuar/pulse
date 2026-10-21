@@ -464,6 +464,8 @@ export const profile = pgTable("profile", {
   heightCm: real("height_cm"),
   /** IANA zone the person lives in: their days start at local midnight there. Chosen at onboarding. */
   timeZone: text("time_zone").notNull(),
+  /** How clock times are shown. Display only: a change does not recompute scores. */
+  timeFormat: text("time_format", { enum: ["24", "12"] }).notNull().default("24"),
   updatedAt: ts("updated_at").notNull(),
 });
 
