@@ -61,6 +61,10 @@ dashboard's wording is not applied: MCP uses the defaults in `texts.ts`).
 A metric with no value returns a reason (`calibrating`, `awaiting_sleep_sync`, `band_not_worn`, `no_data`) instead of a
 number. Days are your local days.
 
+A read tool syncs your data first when the last sync is more than 10 minutes old, and waits up to 20 seconds for it
+before it answers from what is stored (the sync carries on). Parallel calls share one sync; log tools don't wait. A sync
+only finds what your band has already sent to Google Health.
+
 ## Writes
 
 In the coach chat you tap **Log** before a log tool runs. Over MCP there is no such step: the token is your consent, and a

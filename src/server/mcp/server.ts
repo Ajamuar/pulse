@@ -5,13 +5,20 @@
 // One difference from the chat: the coach asks the user to tap Log before a log tool runs (`coachApproval`, applied by
 // the chat route, not by the tool). An MCP client is the user's own authenticated agent and the token is the consent,
 // so the log tools run as called, and their descriptions say so instead of "waits for the user".
+//
+// An agent can't press Sync now, so a read tool first syncs the user when their last sync is older than
+// SYNC_MAX_AGE_MS, waiting at most SYNC_WAIT_MS before it answers from what is stored.
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { z } from "zod";
 import { isLogTool } from "@/lib/log";
 import { APP_VERSION } from "../queries/settings";
 import type { QueryCtx } from "../queries/common";
 import { coachTools } from "../coach/tools";
+import { syncIfStale } from "../worker";
 import { defaultTexts, LOG_WAITS, type Texts } from "../coach/texts";
+
+const SYNC_MAX_AGE_MS = 10 * 60_000;
+const SYNC_WAIT_MS = 20_000;
 
 const INSTRUCTIONS =
   "Pulse: one person's recovery, strain, sleep and health data from their own Pulse server. Read tools return digests of what the app shows; " +
@@ -27,10 +34,12 @@ type CoachTool = { description: string; inputSchema: z.ZodObject; execute: (inpu
 export function createMcpServer(ctx: QueryCtx): McpServer {
   const server = new McpServer({ name: "pulse", version: APP_VERSION }, { instructions: INSTRUCTIONS });
   for (const [name, tool] of Object.entries(coachTools(ctx, mcpTexts)) as unknown as [string, CoachTool][]) {
+    const reads = !isLogTool(name);
     server.registerTool(
       name,
-      { description: tool.description, inputSchema: tool.inputSchema, annotations: isLogTool(name) ? { readOnlyHint: false, destructiveHint: false } : { readOnlyHint: true } },
+      { description: tool.description, inputSchema: tool.inputSchema, annotations: reads ? { readOnlyHint: true } : { readOnlyHint: false, destructiveHint: false } },
       async (args: object) => {
+        if (reads) await syncIfStale(ctx.userId, { maxAgeMs: SYNC_MAX_AGE_MS, timeoutMs: SYNC_WAIT_MS });
         try {
           const out = await tool.execute(args as never, { toolCallId: `mcp-${name}`, messages: [] } as never);
           return { content: [{ type: "text" as const, text: JSON.stringify(out) }] };
