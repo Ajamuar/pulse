@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createWorker, syncAndWait, withUserLock } from "./worker";
+import { createWorker, syncAndWait, syncIfStale, withUserLock } from "./worker";
 import { freshDb } from "./testing";
 import { GoogleError } from "./sources/google/oauth";
 
@@ -259,6 +259,80 @@ describe("syncAndWait", () => {
     fail = true;
     expect(await syncAndWait(U, 5_000)).toEqual({ ok: false, error: "[google] sleep: http_503 (HTTP 503)" });
     delete g.__pulseWorker;
+  });
+});
+
+describe("syncIfStale", () => {
+  it("returns at once while the last run is fresh, and runs once it is older than maxAge", async () => {
+    const { worker, pull } = setup();
+    worker.start();
+    await tick();
+    expect(pull).toHaveBeenCalledTimes(1);
+    await tick(9 * MIN);
+    await worker.syncIfStale(U, 10 * MIN);
+    expect(pull).toHaveBeenCalledTimes(1);
+    await tick(2 * MIN);
+    await worker.syncIfStale(U, 10 * MIN);
+    expect(pull).toHaveBeenCalledTimes(2);
+  });
+
+  it("parallel callers share one run, and a call during a run waits for it instead of starting another", async () => {
+    let finish!: () => void;
+    const pull = vi.fn(() => new Promise<{ changed: boolean }>((r) => (finish = () => r({ changed: true }))));
+    const { worker } = setup(pull, async () => []);
+    worker.start();
+    await tick();
+    let done = 0;
+    const calls = [worker.syncIfStale(U, 10 * MIN), worker.syncIfStale(U, 10 * MIN), worker.syncIfStale(U, 10 * MIN)].map((p) => p.then(() => done++));
+    await tick();
+    expect(pull).toHaveBeenCalledTimes(1);
+    expect(done).toBe(0);
+    finish();
+    await Promise.all(calls);
+    expect(done).toBe(3);
+    expect(pull).toHaveBeenCalledTimes(1);
+  });
+
+  it("joins a scheduled run in progress", async () => {
+    let finish!: () => void;
+    const pull = vi.fn(() => new Promise<{ changed: boolean }>((r) => (finish = () => r({ changed: true }))));
+    const { worker } = setup(pull);
+    worker.start();
+    await tick();
+    let done = false;
+    const call = worker.syncIfStale(U, 10 * MIN).then(() => (done = true));
+    await tick();
+    expect(done).toBe(false);
+    finish();
+    await call;
+    expect(pull).toHaveBeenCalledTimes(1);
+  });
+
+  it("before start() does nothing", async () => {
+    const { worker, pull } = setup();
+    await worker.syncIfStale(U, 10 * MIN);
+    expect(pull).not.toHaveBeenCalled();
+  });
+
+  it("the exported helper gives up waiting after timeoutMs, never throws, and the run carries on", async () => {
+    const g = globalThis as typeof globalThis & { __pulseWorker?: unknown };
+    let finish!: () => void;
+    const pull = vi.fn(() => new Promise<{ changed: boolean }>((r) => (finish = () => r({ changed: true }))));
+    const { worker, state } = setup(pull, async () => []);
+    g.__pulseWorker = worker;
+    worker.start();
+    let done = false;
+    const call = syncIfStale(U, { maxAgeMs: 10 * MIN, timeoutMs: 20_000 }).then(() => (done = true));
+    await tick(19_000);
+    expect(done).toBe(false);
+    await tick(1_000);
+    await call;
+    expect(state().running).toBe(true);
+    finish();
+    await tick();
+    expect(state().running).toBe(false);
+    delete g.__pulseWorker;
+    await syncIfStale(U, { maxAgeMs: 0, timeoutMs: 1 });
   });
 });
 

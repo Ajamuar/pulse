@@ -54,10 +54,11 @@ export function createWorker({ name, source, recompute, users, lock = (_, fn) =>
   let timer: ReturnType<typeof setTimeout> | undefined;
   /** `liveAt`: the last live heart-rate pull's start; `live`: that pull while it runs. `liveStopped`: a 429 or a lost grant, cleared by the next full run. */
   /** `again`: a run queued behind the current one; `againPull`: that run pulls from the source too. */
-  const states = new Map<number, UserState & { again: boolean; againPull: boolean; liveAt: number | null; live: Promise<void> | null; liveStopped: boolean }>();
+  /** `current`: the user's run while it goes, including the queued run behind it. */
+  const states = new Map<number, UserState & { again: boolean; againPull: boolean; liveAt: number | null; live: Promise<void> | null; liveStopped: boolean; current: Promise<void> | null }>();
   const stateOf = (userId: number) => {
     let s = states.get(userId);
-    if (!s) states.set(userId, (s = { running: false, lastRunAt: null, lastSuccessAt: null, lastError: null, again: false, againPull: false, liveAt: null, live: null, liveStopped: false }));
+    if (!s) states.set(userId, (s = { running: false, lastRunAt: null, lastSuccessAt: null, lastError: null, again: false, againPull: false, liveAt: null, live: null, liveStopped: false, current: null }));
     return s;
   };
 
@@ -91,12 +92,20 @@ export function createWorker({ name, source, recompute, users, lock = (_, fn) =>
     }
   }
 
+  function run(userId: number, pull = true): Promise<void> {
+    const s = stateOf(userId);
+    s.current = runUser(userId, pull).finally(() => {
+      s.current = null;
+    });
+    return s.current;
+  }
+
   async function cycle() {
     clearTimeout(timer);
     try {
       const queue = (await users()).filter((userId) => !stateOf(userId).running);
       const next = async () => {
-        for (let userId = queue.shift(); userId !== undefined; userId = queue.shift()) await runUser(userId);
+        for (let userId = queue.shift(); userId !== undefined; userId = queue.shift()) await run(userId);
       };
       await Promise.all(Array.from({ length: CYCLE_CONCURRENCY }, next));
     } catch (err) {
@@ -131,7 +140,19 @@ export function createWorker({ name, source, recompute, users, lock = (_, fn) =>
         return;
       }
       if (!force && s.lastRunAt !== null && Date.now() - s.lastRunAt < FRESH_MS) return;
-      void runUser(userId, pull);
+      void run(userId, pull);
+    },
+    /**
+     * Resolves once the user's data is no older than `maxAgeMs`: joins the run in progress, else starts one when
+     * the last finished run is older than that (or there is none), else returns at once. Never forces or queues an
+     * extra run, so parallel callers share one pull. Gated on the last finished run, like requestSync().
+     */
+    async syncIfStale(userId: number, maxAgeMs: number): Promise<void> {
+      if (!started) return;
+      const s = stateOf(userId);
+      if (s.current) return s.current;
+      if (s.lastRunAt !== null && Date.now() - s.lastRunAt < maxAgeMs) return;
+      return run(userId);
     },
     /**
      * The live heart-rate pull, resolved when it is done or skipped: skipped while the user's full run is going (or
@@ -253,6 +274,18 @@ export function startWorker() {
  */
 export function requestSync(opts: { userId: number; force?: boolean; pull?: boolean }) {
   g.__pulseWorker?.requestSync(opts);
+}
+
+/**
+ * For agents reading data (MCP): waits for a sync when the last one is older than `maxAgeMs`, but no longer than
+ * `timeoutMs`; the run itself carries on. Never throws: the caller answers from what is stored either way.
+ */
+export async function syncIfStale(userId: number, { maxAgeMs, timeoutMs }: { maxAgeMs: number; timeoutMs: number }): Promise<void> {
+  const w = g.__pulseWorker;
+  if (!w) return;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  await Promise.race([w.syncIfStale(userId, maxAgeMs).catch(() => {}), new Promise<void>((r) => (timer = setTimeout(r, timeoutMs)))]);
+  clearTimeout(timer);
 }
 
 /** The live heart-rate view's throttled pull (createWorker's pullHeartRate); nothing without a worker. */

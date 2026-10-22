@@ -9,12 +9,13 @@ import { createToken, revokeToken, listTokens } from "@/server/mcp/tokens";
 import { createCode, exchangeToken, revokeOAuthGrant } from "@/server/mcp/oauth";
 import { createHash } from "node:crypto";
 import { ctxFor, seeded, NOW, TZ, USER, addUser } from "@/server/testing";
+import { syncIfStale } from "@/server/worker";
 import * as route from "./route";
 
 const { POST } = route;
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
-vi.mock("@/server/worker", () => ({ requestSync: vi.fn() }));
+vi.mock("@/server/worker", () => ({ requestSync: vi.fn(), syncIfStale: vi.fn(async () => {}) }));
 
 const HEADERS = { "content-type": "application/json", accept: "application/json, text/event-stream" };
 const call = (token: string | null, method: string, params?: unknown, id = 1) =>
@@ -160,6 +161,31 @@ describe("one request, one user", () => {
     expect((await call(t, "tools/list")).status).toBe(200);
     await revokeToken(db, USER, (await listTokens(db, USER)).find((x) => x.name === "short-lived")!.id);
     expect((await call(t, "tools/list")).status).toBe(401);
+  });
+});
+
+describe("fresh data", () => {
+  it("a read tool syncs the token's user first when stale; a log tool and tools/list don't", async () => {
+    const sync = vi.mocked(syncIfStale);
+    sync.mockClear();
+    await call(mine, "tools/list");
+    await tool(mine, "log_water", { ml: 250 });
+    expect(sync).not.toHaveBeenCalled();
+    await tool(theirs, "get_day", { day: "2026-10-02" });
+    expect(sync).toHaveBeenCalledTimes(1);
+    expect(sync).toHaveBeenCalledWith(other, { maxAgeMs: 10 * 60_000, timeoutMs: 20_000 });
+  });
+
+  it("the read runs after the sync has resolved", async () => {
+    const sync = vi.mocked(syncIfStale);
+    let release!: () => void;
+    sync.mockImplementationOnce(() => new Promise<void>((r) => (release = r)));
+    let answered = false;
+    const pending = tool(mine, "get_day", { day: "2026-10-02" }).then((r) => ((answered = true), r));
+    await vi.waitFor(() => expect(release).toBeTypeOf("function"));
+    expect(answered).toBe(false);
+    release();
+    expect((await pending).isError).toBe(false);
   });
 });
 
